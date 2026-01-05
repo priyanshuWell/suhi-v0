@@ -3,7 +3,14 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
-  sendFaceCapture: (payload)=> ipcRenderer.invoke('face-capture',payload)
+  sendFaceCapture: (payload)=> ipcRenderer.invoke('face-capture',payload),
+   getPorts: ()=> ipcRenderer.invoke("get-ports"),
+  connectHeightPort: (portPath)=>ipcRenderer.invoke('connect-heightPort',portPath),
+  connectBiaPort: (portPath)=>ipcRenderer.invoke('connect-biaPort',portPath),
+  startHeightMeasurement : ()=>ipcRenderer.invoke('start-height-measurement'),
+  startWeightMeasurement : ()=>ipcRenderer.invoke('start-weight-measurement'),
+  startImpedanceMeasurement : (impFreq)=>ipcRenderer.invoke('start-impedance-measurement',impFreq),
+  calculateBIA: (payload) => ipcRenderer.invoke("calculate-bia", payload),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
