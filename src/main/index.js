@@ -92,51 +92,44 @@ ipcMain.handle("start-weight-measurement", async () => {
     });
 
   try {
+    // Reset + enter weight mode
     await writeOnce(STOP);
     await new Promise(r => setTimeout(r, 200));
     await writeOnce(SET_WEIGHT);
     await new Promise(r => setTimeout(r, 200));
 
-    const weights = [];
+    const ZERO_OFFSET = 0.34;
     const CALIBRATION_FACTOR = 1.84;
 
+    // Try up to 20 reads, return first valid one
     for (let i = 0; i < 20; i++) {
       const data = await writeOnce(QUERY);
 
-      if (data[0] !== 0xAA || data[2] !== 0xA1) continue;
+      // Validate response frame
+      if (data[0] !== 0xAA || data[2] !== 0xA1) {
+        await new Promise(r => setTimeout(r, 150));
+        continue;
+      }
 
-      const status = data[3];
       const rawWeight = ((data[6] << 8) | data[5]) / 10;
-    const ZERO_OFFSET = 0.34; 
-const calibratedWeight = (rawWeight - ZERO_OFFSET) * 1.84;
-      const stable = (status & 0x01) !== 0;
+      const calibratedWeight =
+        (rawWeight - ZERO_OFFSET) * CALIBRATION_FACTOR;
 
       console.log(
-        `[WEIGHT] raw=${rawWeight.toFixed(2)} kg calibrated=${calibratedWeight.toFixed(2)} stable=${stable}`
+        `[WEIGHT] raw=${rawWeight.toFixed(2)} kg calibrated=${calibratedWeight.toFixed(2)}`
       );
 
-      if (stable && calibratedWeight > 0) {
-        weights.push(calibratedWeight);
+      if (calibratedWeight > 0) {
+        return {
+          success: true,
+          weight: Number(rawWeight.toFixed(2))
+        };
       }
 
-      if (weights.length >= 5) {
-        const last = weights.slice(-5);
-        const max = Math.max(...last);
-        const min = Math.min(...last);
-        const variation = (max - min) / max;
-
-        if (variation < 0.1) {
-          return {
-            success: true,
-            weight: Number(last[last.length - 1].toFixed(2))
-          };
-        }
-      }
-
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 150));
     }
 
-    return { success: false, error: "Weight unstable or timeout" };
+    return { success: false, error: "No valid weight received" };
   } catch (e) {
     return { success: false, error: e.message };
   }

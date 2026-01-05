@@ -3,6 +3,7 @@ import bg from "../assets/background.png";
 import video1 from "../assets/avatar.mp4";
 import { useNavigate } from "react-router";
 import { openCamerasInBackground } from "../utils/cameraSession";
+import Frame from "./Frame";
 
 export const StartScreen = () => {
     const [isCameraReady,setIsCameraReady] = React.useState(false);
@@ -56,15 +57,18 @@ export const StartScreen = () => {
           loop
           playsInline
           className="
-          rounded-2xl
+          mb-44
             w-full h-full
             object-contain
-            max-w-[90vw]
-            max-h-[90vh]
+            max-w-[80vw]
+            max-h-[70vh]
             will-change-transform
           "
         />
+        <Frame frame={`w-[62%] `}/>
       </div>
+
+      
       {/* Start Button */}
       <div
         className="
@@ -74,15 +78,15 @@ export const StartScreen = () => {
         "
       >
         <button
-  onClick={() => navigate("/capture")}
+  onClick={() => navigate("/verified")}
   style={{
     borderImageSource:
       "radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)",
     borderImageSlice: 1,
   }}
   className="
-    w-40 h-14 xl:w-[350px] xl:h-[80px]
-     flex items-center justify-center px-32
+    w-40 h-14 xl:w-[500px] xl:h-[100px]
+     flex items-center justify-center px-52
     text-center
     rounded-2xl
     border-[4.19px]
