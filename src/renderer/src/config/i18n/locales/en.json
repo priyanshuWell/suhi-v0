@@ -1,0 +1,21 @@
+{
+  "common": {
+    "start": "Start",
+    "new_user": "New user? Register here",
+    "yes_me":"Yes It's me",
+    "not_me":"Not You?"
+  },
+  "profile":{
+    "name":"Name",
+    "class":"Class",
+    "age":"Age",
+    "number":"Mobile Number"
+
+  },
+  "measurement": {
+    "let_measure": "Let’s measure your height and weight",
+    "standStill": "Stand straight and still on the platform, facing forward.",
+    "good_job":"Good Job!",
+    "holdThe_Hands":"Hold the two handles and keep your elbows straight and relaxed."
+  }
+}

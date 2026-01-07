@@ -328,7 +328,7 @@ ipcMain.handle("face-capture", async (_, payload) => {
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
-    width: 800,
+    width: 900,
     height: 900,
     show: false,
     autoHideMenuBar: false,

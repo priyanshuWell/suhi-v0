@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
-import bg from "../../assets/background.png";
+import bg1 from "../../assets/lightbg.png";
 import measureWH from "../../assets/videos/measureHeightWeight.mp4";
 import { useParams } from "react-router";
+import ErrorAlert from "../ErrorAlert";
 
 export const BIAComponent = ({ texts }) => {
   const { screenType } = useParams();
   const currentText = texts[screenType];
+  const [error, setError] = useState(null);
   /* =======================
      PROGRESS (IM ONLY)
   ======================= */
@@ -32,7 +34,7 @@ export const BIAComponent = ({ texts }) => {
       {/* Background */}
       <div
         className="absolute inset-0 bg-center bg-cover z-0"
-        style={{ backgroundImage: `url(${bg})` }}
+        style={{ backgroundImage: `url(${bg1})` }}
       />
 
       {/* TEXT + PROGRESS */}
@@ -42,7 +44,7 @@ export const BIAComponent = ({ texts }) => {
             {currentText.title}
           </h1>
 
-          <p className="text-white font-medium tracking-wide landscape:text-4xl portrait:text-5xl">
+          <p className="text-white font-medium  landscape:text-4xl portrait:text-5xl">
             {currentText.description}
           </p>
 
@@ -71,6 +73,7 @@ export const BIAComponent = ({ texts }) => {
           className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
         />
       </div>
+      <ErrorAlert visible={false} title={"Weight is not measured! Try Again"}/>
     </div>
   );
 };

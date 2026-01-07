@@ -1,22 +1,38 @@
 // AutoBIAFlow.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState,  } from "react";
 import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
+import i18n from "i18next"
+import { useTranslation } from "react-i18next";
+import BIAResult from "./BIAResult";
 
-const texts = {
- wh: {
-     title: "Let’s measure your body composition",
-  description: "Please stand still. Measurement will start automatically."
- },
- im: {
-     title : "Good Job!",
-    description: "Hold the two handles and keep your elbows straight and relaxed."
- }
-};
+// const texts = {
+//   wh: {
+//     title: "Let’s measure your height and weight",
+//     description: "Stand straight and still on the platform, facing forward."
+//   },
+//   im: {
+//     title: "Good Job!",
+//     description: "Hold the two handles and keep your elbows straight and relaxed."
+//   }
+// };
 
-export default function BIACalcuate({ user, onComplete }) {
+export default function BIACalculate({ user, onComplete }) {
+  const {t} = useTranslation();
   const [ports, setPorts] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+ const getTexts = (t) => ({
+    wh: {
+      title: t("measurement.let_measure"),
+      description: t("measurement.standStill"),
+    },
+    im: {
+      title: t("measurement.good_job"),
+      description: t("measurement.holdThe_Hands"),
+    },
+  });
+
+  const texts = getTexts(t)
   const navigate = useNavigate();
   const resultsRef = useRef({
     weight: null,
@@ -35,13 +51,16 @@ export default function BIACalcuate({ user, onComplete }) {
         return await fn();
       } catch (e) {
         lastError = e;
-        console.warn(`Retry ${i + 1} failed`, e.message);
+        console.warn(`Attempt ${i + 1} failed, retrying...`, e.message);
+        // Optional: Add a small delay between retries
+        await new Promise(r => setTimeout(r, 500)); 
       }
     }
     throw lastError;
   };
 
   const measureWeight = async () => {
+    console.log("Measuring Weight...");
     await window.api.connectBiaPort(ports?.[1]?.path);
     const res = await window.api.startWeightMeasurement();
     if (!res?.weight) throw new Error("Weight measurement failed");
@@ -53,6 +72,7 @@ export default function BIACalcuate({ user, onComplete }) {
   };
 
   const measureHeight = async () => {
+    console.log("Measuring Height...");
     await window.api.connectHeightPort(ports?.[0]?.path);
     const res = await window.api.startHeightMeasurement();
     if (!res?.height) throw new Error("Height measurement failed");
@@ -64,6 +84,7 @@ export default function BIACalcuate({ user, onComplete }) {
   };
 
   const measureImpedance = async (freq) => {
+    console.log(`Measuring Impedance ${freq}kHz...`);
     await window.api.connectBiaPort(ports?.[1]?.path);
     const res = await window.api.startImpedanceMeasurement(freq);
     if (!res?.success) throw new Error(res?.error || "Impedance failed");
@@ -85,55 +106,68 @@ export default function BIACalcuate({ user, onComplete }) {
     setIsRunning(true);
 
     try {
-      // WEIGHT + HEIGHT
-      console.log("Weight and height started");
-      await retry(async () => {
-        await measureWeight();
-        await measureHeight();
-      });
-      console.log("Weight and height started measureed");
+      // --- STEP 1: WEIGHT ---
+      if (!resultsRef.current.weight) {
+        await retry(measureWeight);
+      }
 
-      // IMPEDANCE
-      navigate('/bia/imp')
-      await retry(async () => {
-        await measureImpedance("20");
-        await measureImpedance("100");
-      });
+      // --- STEP 2: HEIGHT ---
+      if (!resultsRef.current.height) {
+        await retry(measureHeight);
+      }
+
+      console.log("WH Step Done:", resultsRef.current);
+
+      // --- TRANSITION ---
+      // Navigate only if we are moving to impedance phase
+      navigate('/bia/im');
+      
+      // Delay for UI transition (only if we are just entering this phase)
+      if (!resultsRef.current.impedance.k20) {
+        console.log("Preparing for Impedance...");
+        await new Promise(r => setTimeout(r, 2000));
+      }
+
+      // --- STEP 3: IMPEDANCE 20 ---
+      if (!resultsRef.current.impedance.k20) {
+        await retry(() => measureImpedance("20"));
+      }
+
+      // --- STEP 4: IMPEDANCE 100 ---
+      if (!resultsRef.current.impedance.k100) {
+        await retry(() => measureImpedance("100"));
+      }
+
+      console.log("All Completed:", resultsRef.current);
 
       // DONE → calculate BIA
-      // const bia = await window.api.calculateBIA({
-      //   height: resultsRef.current.height.value,
-      //   weight: resultsRef.current.weight.value,
-      //   age: user.age,
-      //   gender: user.gender,
-      //   impedance20: resultsRef.current.impedance.k20.segments,
-      //   impedance100: resultsRef.current.impedance.k100.segments
-      // });
+      const bia = await window.api.calculateBIA({
+        height: resultsRef.current.height.value,
+        weight: resultsRef.current.weight.value,
+        age: 23,
+        gender: "male",
+        impedance20: resultsRef.current.impedance.k20.segments,
+        impedance100: resultsRef.current.impedance.k100.segments
+      });
 
       console.log("completed with the impedance")
-      // if (!bia?.success) {
-      //   throw new Error(bia?.error || "BIA calculation failed");
-      // }
+      if (!bia?.success) {
+       navigate('/bia/result', { state: { biaResult: bia } });
+      }
 
       // onComplete?.(bia);
 
     } catch (err) {
-      alert(err.message || "Measurement failed. Restarting…");
-      resultsRef.current = {
-        weight: null,
-        height: null,
-        impedance: { k20: null, k100: null }
-      };
+      console.error("Flow failed at current step:", err.message);
+      
+      alert(`Measurement interrupted: ${err.message}. Resuming...`);
+      setTimeout(runFlow, 1000); 
 
-      setTimeout(runFlow, 1000); // auto-restart
     } finally {
       setIsRunning(false);
     }
   };
 
-  /* =======================
-     AUTO START
-  ======================= */
   useEffect(() => {
     if (ports.length >= 2) {
       runFlow();
