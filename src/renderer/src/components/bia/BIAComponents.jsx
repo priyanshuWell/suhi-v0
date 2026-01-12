@@ -8,9 +8,6 @@ export const BIAComponent = ({ texts }) => {
   const { screenType } = useParams();
   const currentText = texts[screenType];
   const [error, setError] = useState(null);
-  /* =======================
-     PROGRESS (IM ONLY)
-  ======================= */
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {

@@ -1,18 +1,56 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
-export default function ErrorAlert({ title, description, visible }) {
+export default function ErrorAlert({ 
+  title, 
+  description, 
+  visible, 
+  onClose,
+  onRetry,
+  autoRetryDelay = 3000 
+}) {
+  const [isExiting, setIsExiting] = useState(false)
+
+  useEffect(() => {
+    if (!visible) return
+
+    // Auto-dismiss timer
+    const holdTimer = setTimeout(() => {
+      setIsExiting(true)
+    }, autoRetryDelay)
+
+    // Complete exit and trigger callbacks
+    const exitTimer = setTimeout(() => {
+      setIsExiting(false)
+      onClose?.()
+      onRetry?.()
+    }, autoRetryDelay + 800) // 800ms for slide-down animation
+
+    return () => {
+      clearTimeout(holdTimer)
+      clearTimeout(exitTimer)
+    }
+  }, [visible, autoRetryDelay, onClose, onRetry])
+
   if (!visible) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div 
+      className={`
+        fixed inset-0 z-50 flex items-center justify-center 
+        transition-opacity duration-300
+        ${isExiting ? 'opacity-0' : 'bg-black/60'}
+      `}
+    >
       {/* SVG WRAPPER */}
       <div
-        className="
+        className={`
           relative
           w-[90%]
           max-w-[1427px]
           aspect-[1427/246]
-        "
+          transition-all duration-800 ease-in-out
+          ${isExiting ? 'translate-y-[150vh] opacity-0' : 'translate-y-0 opacity-100'}
+        `}
       >
         <svg
           width="1427"
@@ -28,8 +66,8 @@ export default function ErrorAlert({ title, description, visible }) {
             fill="#FFC568"
           />
           <path
-            fill-rule="evenodd"
-            clip-rule="evenodd"
+            fillRule="evenodd"
+            clipRule="evenodd"
             d="M1196.49 242.894H1194.8L32.0863 242.273L0 202.515V201.273L107.236 3.72461H459.342L488.051 43.4827L1424.47 44.1039L1364.52 154.681L1196.49 242.894ZM36.3082 236.061L1193.95 237.303L1358.61 150.954L1412.65 49.6949L483.829 49.0736L455.121 9.31555H113.147L8.44379 201.894L36.3082 236.061Z"
             fill="#FFC568"
           />
@@ -50,7 +88,14 @@ export default function ErrorAlert({ title, description, visible }) {
             px-16
           "
         >
-          <h2 className="flex mt-4 text-4xl font-semibold text-[#FFC568] ">{title}</h2>
+          <h2 className="flex mt-4 text-4xl font-semibold text-[#FFC568] whitespace-pre-line">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-2 text-lg text-[#FFC568]/80 whitespace-pre-line">
+              {description}
+            </p>
+          )}
         </div>
       </div>
     </div>

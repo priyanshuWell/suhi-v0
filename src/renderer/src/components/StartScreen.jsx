@@ -6,7 +6,7 @@ import { openCamerasInBackground } from '../utils/cameraSession'
 import Frame from './Frame'
 import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
-const Flag = false
+const Flag = false;
 export const StartScreen = () => {
   const { t } = useTranslation()
   const [isCameraReady, setIsCameraReady] = React.useState(false)
@@ -33,7 +33,7 @@ export const StartScreen = () => {
         bg-black
       "
     >
-       <div className="absolute top-0 right-0 z-50 p-4">
+       <div className={`absolute top-0 right-0 ${isActive ? "z-50" :"z-10"} p-4`}>
   <Setting setIsActive={setIsActive} isActive={isActive}/>
 </div>
       {/* Background */}
