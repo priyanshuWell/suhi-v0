@@ -6,6 +6,8 @@ import profilepic from '../assets/profile-pic.png'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 
+
+
 export default function RegisterCard() {
   const navigate = useNavigate()
   const {t}= useTranslation()
