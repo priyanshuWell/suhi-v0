@@ -1,0 +1,127 @@
+import React, { useEffect, useState } from "react";
+import bg1 from "../../assets/lightbg.png";
+import voiceImage from "../../assets/voice_image.png";
+
+const VoiceCapture = () => {
+    const [timeLeft, setTimeLeft] = useState(50);
+    const [isActive, setIsActive] = useState(false);
+
+    useEffect(() => {
+        let interval = null;
+        if (isActive && timeLeft > 0) {
+            interval = setInterval(() => {
+                setTimeLeft((timeLeft) => timeLeft - 1);
+            }, 1000);
+        } else if (timeLeft === 0) {
+            clearInterval(interval);
+            setIsActive(false);
+        }
+        return () => clearInterval(interval);
+    }, [isActive, timeLeft]);
+
+    const handleStart = () => {
+        setIsActive(true);
+    };
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    return (
+        <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
+            {/* Background */}
+            <div
+                className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
+                style={{ backgroundImage: `url(${bg1})` }}
+            />
+
+            {/* Content Container */}
+            <div className="relative z-10 flex flex-col items-center justify-around mb-20 w-full max-w-4xl h-full gap-8 p-4">
+
+                {/* Header Text */}
+                <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl">
+                    Look at the image, notice what it makes you feel or think,
+                    then click Start and speak freely for 50 seconds.
+                </h1>
+
+                {/* Image Container */}
+                <div className="relative w-full max-w-[1200px] aspect-video shadow-[0px_10px_50px_0px_#9AD9FF] rounded-[74px] overflow-hidden border border-[#9AD9FF]/30">
+                    <img
+                        src={voiceImage}
+                        alt="voice-image"
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
+                {/* Timer Section */}
+                <div className="relative flex flex-col items-center justify-center">
+                    <div className="relative w-[250px] h-[250px] flex items-center justify-center">
+                        {/* Timer SVG */}
+                        <svg
+                            width="250"
+                            height="250"
+                            viewBox="0 0 404 404"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <defs>
+                                <radialGradient id="paint0_radial_7767_5563" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)">
+                                    <stop stopColor="white" />
+                                    <stop offset="1" stopColor="#094EC6" />
+                                </radialGradient>
+                            </defs>
+
+                            {/* Static Track Background */}
+                            <path
+                                d="M404 202C404 313.561 313.561 404 202 404C90.4385 404 0 313.561 0 202C0 90.4385 90.4385 0 202 0C313.561 0 404 90.4385 404 202ZM32.32 202C32.32 295.712 108.288 371.68 202 371.68C295.712 371.68 371.68 295.712 371.68 202C371.68 108.288 295.712 32.32 202 32.32C108.288 32.32 32.32 108.288 32.32 202Z"
+                                fill="#DDF5FF"
+                            />
+
+                            {/* Animated Progress Circle matching the track dimensions */}
+                            {/* Inner R ~170, Outer R ~202, Thickness ~32, Center 202 */}
+                            <circle
+                                cx="202"
+                                cy="202"
+                                r="186"
+                                stroke="#094EC6"
+                                strokeWidth="32"
+                                fill="none"
+                                strokeLinecap="round"
+                                strokeDasharray={2 * Math.PI * 186}
+                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 50)}
+                                transform="rotate(-90 202 202)"
+                                style={{ transition: 'stroke-dashoffset 1s linear' }}
+                            />
+
+                            {/* Rotating Knob */}
+                            <g
+                                transform={`rotate(${(timeLeft / 50) * 360} 202 202)`}
+                                style={{ transition: 'transform 1s linear' }}
+                            >
+                                <path
+                                    d="M202 16.16C202 7.2351 209.246 -0.0671478 218.143 0.646078C219.372 0.744589 220.6 0.85436 221.826 0.975363C230.708 1.85137 236.545 10.3231 234.962 19.1065L234.779 20.1224C233.297 28.3448 225.429 33.7378 217.108 32.9939C208.786 32.2501 202 25.5471 202 17.1923L202 16.16Z"
+                                    fill="url(#paint0_radial_7767_5563)"
+                                />
+                            </g>
+                        </svg>
+                        <span className="absolute text-2xl font-mono text-white tracking-widest">
+                            {formatTime(timeLeft)}
+                        </span>
+                    </div>
+                </div>
+                {/* Start Button */}
+                <button
+                    onClick={handleStart}
+                    disabled={isActive || timeLeft === 0}
+                    className={`mt-8 px-16 py-3 bg-linear-to-r from-[#2FA4FF] to-[#00D4FF] text-white rounded-xl font-medium tracking-wide shadow-[0_0_20px_rgba(47,164,255,0.5)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                    Start
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default VoiceCapture;

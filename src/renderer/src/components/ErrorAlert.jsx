@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 
-export default function ErrorAlert({ 
-  title, 
-  description, 
-  visible, 
+export default function ErrorAlert({
+  title,
+  description,
+  visible,
   onClose,
   onRetry,
-  autoRetryDelay = 3000 
+  autoRetryDelay = 3000
 }) {
   const [isExiting, setIsExiting] = useState(false)
 
@@ -34,7 +34,7 @@ export default function ErrorAlert({
   if (!visible) return null
 
   return (
-    <div 
+    <div
       className={`
         fixed inset-0 z-50 flex items-center justify-center 
         transition-opacity duration-300

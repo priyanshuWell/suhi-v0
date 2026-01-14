@@ -1,15 +1,18 @@
 import fs from 'fs'
 import {SerialPort} from 'serialport'
 import  readline from 'readline';
+import { BrowserWindow } from 'electron';
+import { eventBus, EVENTS } from './eventbus';
 export let serialPort = null;
 export let heightPort = null;
 export let biaPort = null;
 let heightResponseTimeout = null;
 export const IS_ELECTRON = true;
+let heightCompleted = false;
+let weightCompleted = false;
 // ================================================================
 // GLOBAL ERROR HANDLER - BMH05108 PROTOCOL
 // ================================================================
-
 
 export const IMPEDANCE_ERROR_CODES = {
     0x00: {
@@ -20,7 +23,7 @@ export const IMPEDANCE_ERROR_CODES = {
         action: 'INFO',
         canRetry: false,
         nextStep: 'Continue with measurement',
-        userMessage: 'ℹDevice not initialized - measurement ready to start'
+        userMessage: 'Device not initialized - measurement ready to start'
     },
     0x01: {
         code: 'CHECK_ELECTRODE',
@@ -138,14 +141,14 @@ export const WEIGHT_ERROR_CODES = {
         action: 'INFO',
         canRetry: false,
         nextStep: 'Continue with weight measurement',
-        userMessage: 'ℹ️ Scale not initialized - measurement ready to start'
+        userMessage: 'Scale not initialized - measurement ready to start'
     },
     0x01: {
         code: 'ZERO_POINT',
         severity: 'WARNING',
-        message: 'WEIGHT_ZERO - Zero weight detected',
-        description: 'Scale reading is at zero point',
-        action: 'ACCEPT',
+        message: 'WEIGHT IS ZERO DETECTED',
+        description: 'Scale is currently empty or reading zero.',
+        action: 'WAIT',
         canRetry: false,
         nextStep: 'Accept zero reading (empty scale confirmed)',
         userMessage: '⚖️ Scale reading: 0 kg (Empty scale)',
@@ -221,7 +224,7 @@ export const WEIGHT_ERROR_CODES = {
         waitBeforeRetry: 1500,
         nextStep: 'Retry measurement after weight stabilization',
         userMessage: '⚠️ WEIGHT TOO LOW\n   • Check if user is on scale\n   • Ensure proper contact with scale\n   • Wait for scale to settle\n   • Retry measurement',
-        minThreshold: 20,  // kg
+        minThreshold: 1.0,  // kg
         issues: [
             'User not properly on scale',
             'Poor contact with scale',
@@ -291,7 +294,7 @@ export const WEIGHT_ERROR_CODES = {
         maxRetries: 3,
         waitBeforeRetry: 2000,
         nextStep: 'Retry measurement',
-        userMessage: '⏱️ MEASUREMENT TIMEOUT\n   • Scale did not respond\n   • Check connection\n   • Retry measurement',
+        userMessage: ' Scale did not responding! Please Check Connection!',
         issues: [
             'Serial connection interrupted',
             'Scale unresponsive',
@@ -363,19 +366,19 @@ export const HEIGHT_ERROR_CODES = {
         action: 'INFO',
         canRetry: false,
         nextStep: 'Continue with height measurement',
-        userMessage: 'ℹ️ Height sensor not initialized - measurement ready to start'
+        userMessage: 'Measurement ready to start!'
     },
     0x01: {
         code: 'OUT_OF_RANGE_LOW',
         severity: 'ERROR',
         message: 'HEIGHT_OUT_OF_RANGE_LOW - Height too low',
-        description: 'Measured height is below minimum range (< 80 cm)',
+        description: 'Height is below minimum range (< 80 cm)',
         action: 'RETRY',
         canRetry: true,
         maxRetries: 2,
         waitBeforeRetry: 1500,
         nextStep: 'Check user height and retry',
-        userMessage: 'HEIGHT OUT OF RANGE (TOO LOW)\n   • Measured height below 80 cm\n   • Check sensor alignment\n   • Ensure user standing straight\n   • Retry measurement',
+        userMessage: 'HEIGHT OUT OF RANGE (TOO LOW)',
         minHeight: 80,  // cm
         issues: [
             'User not standing straight',
@@ -396,13 +399,13 @@ export const HEIGHT_ERROR_CODES = {
         code: 'OUT_OF_RANGE_HIGH',
         severity: 'ERROR',
         message: 'HEIGHT_OUT_OF_RANGE_HIGH - Height too high',
-        description: 'Measured height exceeds maximum range (> 250 cm)',
+        description: 'Height exceeds maximum range (> 250 cm)',
         action: 'RETRY',
         canRetry: true,
         maxRetries: 2,
         waitBeforeRetry: 1500,
         nextStep: 'Check user height and retry',
-        userMessage: '⚠️ HEIGHT OUT OF RANGE (TOO HIGH)\n   • Measured height above 250 cm\n   • Check sensor alignment\n   • Verify measurement is realistic\n   • Retry measurement',
+        userMessage: 'HEIGHT OUT OF RANGE (TOO HIGH)',
         maxHeight: 250,  // cm
         issues: [
             'User standing on object',
@@ -419,7 +422,7 @@ export const HEIGHT_ERROR_CODES = {
             '6. Check for obstructions'
         ]
     },
-    0x03: {
+    0x03: { 
         code: 'UNSTABLE',
         severity: 'WARNING',
         message: 'HEIGHT_UNSTABLE - Unstable reading',
@@ -427,7 +430,7 @@ export const HEIGHT_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Wait for reading to stabilize',
-        userMessage: '⏳ Height reading unstable, please wait...',
+        userMessage: 'Height reading unstable, please wait...',
         waitTime: 2000,
         causes: [
             'User moving',
@@ -503,14 +506,14 @@ export const HEIGHT_ERROR_CODES = {
     0x07: {
         code: 'TIMEOUT',
         severity: 'ERROR',
-        message: 'HEIGHT_TIMEOUT - Measurement timeout',
+        message: 'MEASUREMENT_TIMEOUT - Measurement timeout',
         description: 'Height sensor did not respond to query',
         action: 'RETRY',
         canRetry: true,
         maxRetries: 3,
         waitBeforeRetry: 2000,
         nextStep: 'Retry measurement',
-        userMessage: '⏱️ MEASUREMENT TIMEOUT\n   • Sensor did not respond\n   • Check connection\n   • Retry measurement',
+        userMessage: 'Sensor did not respond | Measurement timeout',
         issues: [
             'Serial connection interrupted',
             'Sensor unresponsive',
@@ -845,7 +848,7 @@ export function handleHeightStatus(statusCode, height = null) {
         console.log(`⚠️ Unknown height status code: 0x${statusCode.toString(16)}`);
         return;
     }
-
+errorInfo
     console.log('\n' + '='.repeat(70));
     console.log(`📏 HEIGHT MEASUREMENT STATUS`);
     console.log('='.repeat(70));
@@ -875,6 +878,8 @@ export function handleHeightStatus(statusCode, height = null) {
     }
 
     console.log('='.repeat(70) + '\n');
+    console.log("RETURNING THE ERROR!!")
+    return  errorInfo
 }
 
 export function handleWeightStatus(statusCode, weight = null) {
@@ -914,6 +919,7 @@ export function handleWeightStatus(statusCode, weight = null) {
     }
 
     console.log('='.repeat(70) + '\n');
+    return errorInfo
 }
 
 
@@ -1264,6 +1270,41 @@ export function parseBodyCompositionResponse(data) {
 let bodyCompositionPackages = {};
 let totalPackages = 0;
 
+export function collectBodyCompositionOnce(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    let packages = {};
+    let expectedTotal = null;
+
+    const timer = setTimeout(() => {
+      biaPort.off("data", onData);
+      reject(new Error("BIA response timeout"));
+    }, timeout);
+
+    const onData = (data) => {
+      if (data[0] !== 0xAA || data[2] !== 0xD0) return;
+
+      const parsed = parseBodyCompositionResponse(data);
+      if (!parsed) return;
+
+      packages[parsed.currentPackage] = parsed.data;
+      expectedTotal = parsed.totalPackages;
+
+      if (Object.keys(packages).length === expectedTotal) {
+        clearTimeout(timer);
+        biaPort.off("data", onData);
+
+        const ordered = {};
+        for (let i = 1; i <= expectedTotal; i++) {
+          ordered[`package${i}`] = packages[i];
+        }
+
+        resolve(ordered);
+      }
+    };
+
+    biaPort.on("data", onData);
+  });
+}
 export function processBodyCompositionResponse(data) {
     const parsedData = parseBodyCompositionResponse(data);
 
@@ -1449,68 +1490,31 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
                     console.error('Error parsing body composition response:', error);
                 }
             }
-
-            /*  if (data[0] === 0xAA && data[2] === 0xB1) {
-                  // Check if it's a 4-electrode response (length >= 12)
-                  if (data.length >= 12) {
-                      try {
-                          const parsedPhaseAngleResult = parse4Electrode100kHzImpedance(data);
-  
-                          if (parsedPhaseAngleResult) {
-                              console.log('\n📐 Phase Angle Measurement:');
-                              console.log(`Frequency: ${parsedPhaseAngleResult.frequency}`);
-                              console.log(`Phase Angle: ${parsedPhaseAngleResult.phaseAngle.value.toFixed(1)}°`);
-                              console.log(`Impedance: ${parsedPhaseAngleResult.impedance.value.toFixed(1)} Ω`);
-                              console.log(`Measurement Status: ${parsedPhaseAngleResult.measurementStatus.description}`);
-                          }
-                      } catch (error) {
-                          console.error('Error parsing phase angle response:', error);
-                      }
-                  }
-              }*/
-
-            /* if (data[2] === 0xA1 && data.length >= 14) {
-                 console.log(`\n WEIGHT STATUS:`);
- 
-                 // Status byte interpretation
-                 const statusByte = data[3];
- 
-                 // Raw weight from device (little-endian)
-             
-                 const rawWeight = ((data[6] << 8) | data[5]) / 10.0;
- 
-                 // Calibration factor (adjust as needed)
-                 const CALIBRATION_FACTOR = 1.84;  // You might need to fine-tune this
- 
-                 // Calibrated weight
-                 const calibratedWeight = rawWeight * CALIBRATION_FACTOR;
-                 finalweight = rawWeight * CALIBRATION_FACTOR;
- 
-                 // Status interpretation
-                 const isStable = (statusByte & 0x01) !== 0;
-                 const isZero = (statusByte & 0x02) !== 0;
-                 const isOverload = (statusByte & 0x10) !== 0;
-                 const peeling = data[4];
-                 const adcValue = ((data[10] << 24) | (data[9] << 16) | (data[8] << 8) | data[7]);
- 
-                 console.log(`   Status Byte: 0x${statusByte.toString(16).toUpperCase()}`);
-                 console.log(`   Stability: ${isStable ? '✅ Stable' : '❌ Unstable'}`);
-                 console.log(`   Raw Weight: ${rawWeight.toFixed(2)} kg`);
-                 console.log(`   ➝ Calibrated Weight: ${calibratedWeight.toFixed(2)} kg`);
- 
- 
-                 if (isZero) console.log('   🔶 Zero Weight Detected');
-                 if (isOverload) console.log('   ⚠️ OVERLOAD!');
-             }*/
-
             console.log(`${'='.repeat(60)}\n`);
 
-            heightWaitingForResponse = false;
+            // heightWaitingForResponse = false;
             if(!IS_ELECTRON) showMenu();
         });
 
-        biaPort.on('error', (err) => {
-            handleError('SERIAL_ERROR', `BIA Serial Error: ${err.message}`, 'ERROR');
+        // biaPort.on('error', (err) => {
+        //     handleError('SERIAL_ERROR', `BIA Serial Error: ${err.message}`, 'ERROR');
+        // });
+         biaPort.on('error', (err) => {
+            // if (weightCompleted) return;
+            console.error(`❌ Weight port error: ${err.message}`);
+               let errorInfo;
+  if (err.message.includes('Permission denied')) {
+    errorInfo = WEIGHT_ERROR_CODES[0x08]; // PORT_ERROR
+  } else {
+    errorInfo = WEIGHT_ERROR_CODES[0x05]; // SENSOR_ERROR
+  }
+
+  eventBus.emit('weight:error', {
+    source: 'WEIGHT',
+    osError: err.message,
+    ...errorInfo
+  });
+            isMeasurementStopped = true;
         });
 
         return new Promise((resolve, reject) => {
@@ -1529,6 +1533,120 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
         throw error;
     }
 }
+
+
+
+
+// EMIT Status and Error handler
+function emitHeightStatus(statusCode, height = null) {
+  const info = handleHeightStatus(statusCode, height);
+  if (!info) return;
+
+const normalizedAction = info.action || 'INFO';
+
+eventBus.emit(
+  normalizedAction === 'ABORT'
+    ? EVENTS.HEIGHT_ERROR
+    : EVENTS.HEIGHT_STATUS,
+  {
+    source: 'HEIGHT',
+    ...info,
+    action: normalizedAction,
+    height
+  }
+);
+
+
+  return info;
+}
+
+export function emitWeightStatus(statusCode, weight = null) {
+  const info = handleWeightStatus(statusCode,weight);
+  console.log("INFFFFFFFFFFFFFFFFF",info)
+  if (!info) return;
+
+  eventBus.emit(
+    info.action === 'ABORT' ? EVENTS.WEIGHT_ERROR : EVENTS.WEIGHT_STATUS,
+    {
+      source: 'WEIGHT',
+      ...info,
+      weight
+    }
+  );
+
+  return info;
+}
+
+function emitImpedanceStatus(statusCode, meta = {}) {
+  const info = IMPEDANCE_ERROR_CODES[statusCode];
+  if (!info) return;
+
+  eventBus.emit(
+    info.action === 'ABORT' ? EVENTS.IMPEDANCE_ERROR : EVENTS.IMPEDANCE_STATUS,
+    {
+      source: 'IMPEDANCE',
+      ...info,
+      ...meta   // frequency, attempt, segments etc.
+    }
+  );
+
+  return info;
+}
+
+
+// measure height
+export async function height_measurement() {
+  return new Promise((resolve) => {
+    isMeasurementStopped = false;
+    heightCompleted = false;
+    stableReadings = [];
+    finalheight = null;
+
+    emitHeightStatus(0x00); // INFO
+
+    const interval = setInterval(() => {
+      /* ---------- SUCCESS ---------- */
+      if (heightCompleted) {
+        clearInterval(interval);
+
+        try {
+          heightPort?.close(); // intentional close
+        } catch {}
+
+        return resolve({
+          success: true,
+          height: finalheight
+        });
+      }
+
+      /* ---------- ABORT ---------- */
+      if (isMeasurementStopped && !heightCompleted) {
+        clearInterval(interval);
+        return resolve({
+          success: false,
+          handledByEvent: true
+        });
+      }
+
+      /* ---------- SEND READ CMD ---------- */
+      try {
+        heightPort.write(READ_CMD);
+      } catch (err) {
+        clearInterval(interval);
+        emitHeightStatus(0x08); // PORT_ERROR
+        isMeasurementStopped = true;
+
+        return resolve({
+          success: false,
+          handledByEvent: true
+        });
+      }
+    }, 200);
+  });
+}
+
+
+
 
 // Connect to Height port
 export async function connectHeightPort(portPath, baudRate = 9600) {
@@ -1551,131 +1669,217 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
         // DATA HANDLER WITH ERROR CHECKING
         // ====================================================================
 
-        heightPort.on('data', (data) => {
-            try {
-                if (isMeasurementStopped) return;
+        // heightPort.on('data', (data) => {
+        //     try {
+        //         if (isMeasurementStopped) return;
 
-                heightBuffer = Buffer.concat([heightBuffer, data]);
+        //         heightBuffer = Buffer.concat([heightBuffer, data]);
 
-                while (heightBuffer.length >= 7) {
-                    const start = heightBuffer.indexOf(Buffer.from([0x55, 0xaa]));
+        //         while (heightBuffer.length >= 7) {
+        //             const start = heightBuffer.indexOf(Buffer.from([0x55, 0xaa]));
 
-                    // No frame found
-                    if (start === -1) {
-                        heightBuffer = Buffer.alloc(0);
-                        return;
-                    }
+        //             // No frame found
+        //             if (start === -1) {
+        //                 heightBuffer = Buffer.alloc(0);
+        //                 return;
+        //             }
 
-                    // Frame incomplete
-                    if (heightBuffer.length - start < 7) return;
+        //             // Frame incomplete
+        //             if (heightBuffer.length - start < 7) return;
 
-                    const frame = heightBuffer.slice(start, start + 7);
-                    heightBuffer = heightBuffer.slice(start + 7);
+        //             const frame = heightBuffer.slice(start, start + 7);
+        //             heightBuffer = heightBuffer.slice(start + 7);
 
-                    // ══════════════════════════════════════════════════════
-                    // CHECKSUM VERIFICATION
-                    // ══════════════════════════════════════════════════════
+        //             // ══════════════════════════════════════════════════════
+        //             // CHECKSUM VERIFICATION
+        //             // ══════════════════════════════════════════════════════
 
-                    if (!verifyChecksum(frame)) {
-                        handleHeightStatus(0x09);  // INVALID_RESPONSE
-                        console.log('❌ Checksum verification failed');
-                        continue;
-                    }
+        //             if (!verifyChecksum(frame)) {
+        //                 console.log('❌ Checksum verification failed');
+        //                 const err = handleHeightStatus(0x09); // INVALID_RESPONSE
+        //                 continue;
+        //             }
 
-                    // ══════════════════════════════════════════════════════
-                    // PARSE DISTANCE & CALCULATE HEIGHT
-                    // ══════════════════════════════════════════════════════
+        //             // ══════════════════════════════════════════════════════
+        //             // PARSE DISTANCE & CALCULATE HEIGHT
+        //             // ══════════════════════════════════════════════════════
 
-                    try {
-                        const distance = parseDistance(frame);
+        //             try {
+        //                 const distance = parseDistance(frame);
 
-                        // Validate distance
-                        if (distance < 0 || distance > 3000) {
-                            handleHeightStatus(0x09);  // INVALID_RESPONSE
-                            console.log(`❌ Invalid distance: ${distance} mm`);
-                            continue;
-                        }
+        //                 // Validate distance
+        //                 if (distance < 0 || distance > 3000) {
+        //                     handleHeightStatus(0x09);  // INVALID_RESPONSE
+        //                     console.log(`❌ Invalid distance: ${distance} mm`);
+        //                     continue;
+        //                 }
 
-                        const distanceCm = distance / 10;
-                        const calculatedHeight = 194 - distanceCm;
+        //                 const distanceCm = distance / 10;
+        //                 const calculatedHeight = 194 - distanceCm;
 
-                        // ════════════════════════════════════════════════════
-                        // VALIDATE HEIGHT RANGE
-                        // ════════════════════════════════════════════════════
+        //                 // ════════════════════════════════════════════════════
+        //                 // VALIDATE HEIGHT RANGE
+        //                 // ════════════════════════════════════════════════════
 
-                        let statusCode = 0x04;  // Default STABLE
+        //                 let statusCode = 0x04;  // Default STABLE
 
-                        if (calculatedHeight < 80) {
-                            statusCode = 0x01;  // OUT_OF_RANGE_LOW
-                        } else if (calculatedHeight > 250) {
-                            statusCode = 0x02;  // OUT_OF_RANGE_HIGH
-                        }
+        //                 if (calculatedHeight < 80) {
+        //                     statusCode = 0x01;  // OUT_OF_RANGE_LOW
+        //                 } else if (calculatedHeight > 250) {
+        //                     statusCode = 0x02;  // OUT_OF_RANGE_HIGH
+        //                 }
 
-                        // Show error if out of range
-                        if (statusCode !== 0x04) {
-                            handleHeightStatus(statusCode, calculatedHeight);
-                            isMeasurementStopped = true;
-                            heightPort.close();
-                            console.log('\n❌ Height measurement stopped (out of range)');
-                            stableReadings = [];
-                           if(!IS_ELECTRON) showMenu();
-                            return;
-                        }
+        //                 // Show error if out of range
+        //                 if (statusCode !== 0x04) {
+        //                     emitHeightStatus(0x04, calculatedHeight);
+        //                     isMeasurementStopped = true;
+        //                     heightPort.close();
+        //                     console.log('\n❌ Height measurement stopped (out of range)');
+        //                     stableReadings = [];
+        //                    if(!IS_ELECTRON) showMenu();
+        //                     return;
+        //                 }
 
-                        finalheight = calculatedHeight;
+        //                 finalheight = calculatedHeight;
 
-                        console.log(`\n${'='.repeat(60)}`);
-                        console.log('📏 HEIGHT MEASUREMENT');
-                        console.log(`${'='.repeat(60)}`);
-                        console.log(`Distance: ${distance} mm (${distanceCm.toFixed(1)} cm)`);
-                        console.log(`Calculated Height: ${calculatedHeight.toFixed(1)} cm`);
+        //                 console.log(`\n${'='.repeat(60)}`);
+        //                 console.log('📏 HEIGHT MEASUREMENT');
+        //                 console.log(`${'='.repeat(60)}`);
+        //                 console.log(`Distance: ${distance} mm (${distanceCm.toFixed(1)} cm)`);
+        //                 console.log(`Calculated Height: ${calculatedHeight.toFixed(1)} cm`);
 
-                        // ════════════════════════════════════════════════════
-                        // CHECK STABILITY
-                        // ════════════════════════════════════════════════════
+        //                 // ════════════════════════════════════════════════════
+        //                 // CHECK STABILITY
+        //                 // ════════════════════════════════════════════════════
 
-                        if (checkStability(distance)) {
-                            if (stableReadings.length >= STABILITY_COUNT) {
-                                handleHeightStatus(0x04, calculatedHeight);  // STABLE success
-                                console.log(`\n${'='.repeat(60)}`);
-                                console.log(`✅ STABLE HEIGHT FOUND: ${calculatedHeight.toFixed(1)} cm`);
-                                console.log(`${'='.repeat(60)}\n`);
+        //                 if (checkStability(distance)) {
+        //                     if (stableReadings.length >= STABILITY_COUNT) {
+        //                         emitHeightStatus(0x04, calculatedHeight);  // STABLE success
+        //                         console.log(`\n${'='.repeat(60)}`);
+        //                         console.log(`✅ STABLE HEIGHT FOUND: ${calculatedHeight.toFixed(1)} cm`);
+        //                         console.log(`${'='.repeat(60)}\n`);
 
-                                isMeasurementStopped = true;
-                                heightPort.close();
-                                console.log('🛑 Height measurement stopped.\n');
-                                stableReadings = [];
-                                showMenu();
-                                return;
-                            }
-                        } else {
-                            handleHeightStatus(0x03);  // UNSTABLE
-                            console.log(`   Readings: ${stableReadings.length}/${STABILITY_COUNT}`);
-                            console.log(`${'='.repeat(60)}\n`);
-                        }
+        //                         isMeasurementStopped = true;
+        //                         heightPort.close();
+        //                         console.log('🛑 Height measurement stopped.\n');
+        //                         stableReadings = [];
+        //                         showMenu();
+        //                         return;
+        //                     }
+        //                 } else {
+        //                    emitHeightStatus(0x03);   // UNSTABLE
+        //                     console.log(`   Readings: ${stableReadings.length}/${STABILITY_COUNT}`);
+        //                     console.log(`${'='.repeat(60)}\n`);
+        //                 }
 
-                    } catch (parseError) {
-                        handleHeightStatus(0x09);  // INVALID_RESPONSE
-                        console.error(`❌ Parse error: ${parseError.message}`);
-                        continue;
-                    }
-                }
+        //             } catch (parseError) {
+        //                emitHeightStatus(0x09);  // INVALID_RESPONSE
+        //                 console.error(`❌ Parse error: ${parseError.message}`);
+        //                 continue;
+        //             }
+        //         }
 
-            } catch (error) {
-                console.error(`❌ Data handler error: ${error.message}`);
-                handleHeightStatus(0x05);  // SENSOR_ERROR
-                isMeasurementStopped = true;
-                heightPort.close();
-            }
-        });
+        //     } catch (error) {
+        //         console.error(`❌ Data handler error: ${error.message}`);
+        //        emitHeightStatus(0x05);  // SENSOR_ERROR
+        //         isMeasurementStopped = true;
+        //         heightPort.close();
+        //         return {success:false}
+        //     }
+        // });
+            heightPort.on('data', (data) => {
+  if (isMeasurementStopped || heightCompleted) return;
+
+  try {
+    heightBuffer = Buffer.concat([heightBuffer, data]);
+
+    while (heightBuffer.length >= 7) {
+      const start = heightBuffer.indexOf(Buffer.from([0x55, 0xaa]));
+
+      // No frame header
+      if (start === -1) {
+        heightBuffer = Buffer.alloc(0);
+        return;
+      }
+
+      // Incomplete frame
+      if (heightBuffer.length - start < 7) return;
+
+      const frame = heightBuffer.slice(start, start + 7);
+      heightBuffer = heightBuffer.slice(start + 7);
+
+      /* ---------- CHECKSUM ---------- */
+      if (!verifyChecksum(frame)) {
+        emitHeightStatus(0x09); // INVALID_RESPONSE
+        continue;
+      }
+
+      /* ---------- PARSE DISTANCE ---------- */
+      const distance = parseDistance(frame);
+
+      if (distance < 0 || distance > 3000) {
+        emitHeightStatus(0x09); // INVALID_RESPONSE
+        continue;
+      }
+
+      const distanceCm = distance / 10;
+      const calculatedHeight = 194 - distanceCm;
+
+      /* ---------- RANGE CHECK ---------- */
+      if (calculatedHeight < 80) {
+        emitHeightStatus(0x01, calculatedHeight); // TOO LOW
+        continue;
+      }
+
+      if (calculatedHeight > 250) {
+        emitHeightStatus(0x02, calculatedHeight); // TOO HIGH
+        continue;
+      }
+
+      /* ---------- STABILITY CHECK ---------- */
+      if (!checkStability(distance)) {
+        emitHeightStatus(0x03); // UNSTABLE / WAIT
+        continue;
+      }
+
+      /* ---------- SUCCESS ---------- */
+      if (stableReadings.length >= STABILITY_COUNT) {
+        finalheight = calculatedHeight;
+        heightCompleted = true;
+        isMeasurementStopped = true;
+
+        emitHeightStatus(0x04, calculatedHeight); // STABLE / ACCEPT
+        return;
+      }
+    }
+  } catch (err) {
+    if (heightCompleted) return;
+
+    emitHeightStatus(0x05); // SENSOR_ERROR
+    isMeasurementStopped = true;
+  }
+});
+
 
         // ====================================================================
         // ERROR HANDLER
         // ====================================================================
 
         heightPort.on('error', (err) => {
+            if (heightCompleted) return;
             console.error(`❌ Height port error: ${err.message}`);
-            handleHeightStatus(0x05);  // SENSOR_ERROR
+               let errorInfo;
+  if (err.message.includes('Permission denied')) {
+    errorInfo = HEIGHT_ERROR_CODES[0x08]; // PORT_ERROR
+  } else {
+    errorInfo = HEIGHT_ERROR_CODES[0x05]; // SENSOR_ERROR
+  }
+
+  eventBus.emit('height:error', {
+    source: 'HEIGHT',
+    osError: err.message,
+    ...errorInfo
+  });
             isMeasurementStopped = true;
         });
 
@@ -1707,13 +1911,16 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
 
             heightPort.on('error', (err) => {
                 clearTimeout(timeout);
-                reject(new Error(`Connection error: ${err.message}`));
+                resolve({
+                    success:false,
+                    handleByEvent:false
+                });
             });
         });
 
     } catch (error) {
         console.error(`❌ Height connection failed: ${error.message}`);
-        handleHeightStatus(0x08);  // PORT_ERROR
+       const errorInfo = handleHeightStatus(0x08);  // PORT_ERROR
         if (heightPort) {
             try {
                 heightPort.close();
@@ -1721,7 +1928,13 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
                 // Ignore close error
             }
         }
-        throw error;
+        return {
+    success: false,
+    error: {
+      source: 'HEIGHT',
+      ...errorInfo
+    }
+  };
     }
 }
 
@@ -1842,7 +2055,7 @@ function getResponseTypeName(responseTypeCode) {
 
 
 
-async function case38_20kHzImpedanceQuery() {
+export async function case38_20kHzImpedanceQuery() {
     try {
         // Step 1: Stop current test
         await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
@@ -1901,6 +2114,11 @@ async function case38_20kHzImpedanceQuery() {
                 const statusCode = responseData[4];
                 console.log("statusCode",statusCode)
                 const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(statusCode, attempt);
+                emitImpedanceStatus(statusCode, {
+                    frequency: '20kHz',
+                    attempt,
+                     decision: statusResult.decision
+                });
                 console.log("------statusResult-------");
                 console.log(statusResult);
                 // Track errors
@@ -1981,11 +2199,15 @@ async function case38_20kHzImpedanceQuery() {
             console.log(JSON.stringify(finalResponse, null, 2));
         }
         // Save the results globally
-        impedance20kHzResults = results.meaningfulResponses.length > 0
-            ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-            : null;
-
-        return results;
+        // impedance20kHzResults = results.meaningfulResponses.length > 0
+        //     ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+        //     : null;
+const finalResult =
+  results.meaningfulResponses.length > 0
+    ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+    : null;
+    impedance20kHzResults = finalResult
+        return finalResult;
     } catch (error) {
         console.error('Overall 20 kHz impedance query failed:', error);
         throw error;
@@ -2027,7 +2249,7 @@ function isMeaningful20kHzResult(result) {
     return Object.values(result.segments).some(value => value > 0);
 }
 
-async function case39_100kHzImpedanceQuery() {
+export async function case39_100kHzImpedanceQuery() {
     try {
         // Step 1: Stop current test
         console.log('   Stopping previous measurement...');
@@ -2377,12 +2599,17 @@ async function case39_100kHzImpedanceQuery() {
 
         console.log('='.repeat(70));
 
+        const finalResult =
+  results.meaningfulResponses.length > 0
+    ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+    : null;
         // Store final result
-        impedance100kHzResults = results.meaningfulResponses.length > 0
-            ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-            : null;
+        // impedance100kHzResults = results.meaningfulResponses.length > 0
+        //     ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+        //     : null;
+        impedance100kHzResults = finalResult
 
-        return results;
+        return finalResult;
 
     } catch (error) {
         console.error('Overall 100 kHz impedance query failed:', error);
@@ -2899,50 +3126,72 @@ function interpretMeasurementStatus(statusByte) {
     return statusDescriptions[statusByte] || 'Unknown status';
 }
 
+
 //weight case
-async function case41_WeightMeasurement() {
+export async function case41_WeightMeasurement() {
     try {
         // ====================================================================
         // PORT CHECK
         // ====================================================================
 
         if (!biaPort || !biaPort.isOpen) {
-            handleWeightStatus(0x09);  // PORT_ERROR
+            emitWeightStatus(0x09);  // PORT_ERROR
             console.log('❌ BIA port not connected');
-            showMenu();
+           if(!IS_ELECTRON) showMenu();
             return;
         }
 
         // ====================================================================
         // RESULTS STORAGE
         // ====================================================================
-
+        emitWeightStatus(0x00); // INFO / START
         const weightResults = {
             attempts: 0,
             measurements: [],
             stabilityChecks: [],
             errors: []
         };
+        let finalweight = 0;
 
         // ====================================================================
         // STABILITY CHECK FUNCTION
         // ====================================================================
 
         const isStableWeight = (measurements) => {
+            if (measurements.length < 4) return false;
+
+            // 1. QUICK EXIT: CHECK FOR 4 CONSISTENT READINGS
+            const lastThree = measurements.slice(-4);
+            const weights3 = lastThree.map(m => m.calibratedWeight);
+            
+            // Ignore low weights
+            if (weights3.some(w => w < 0.5)) return false;
+
+            // Check max difference is minimal (< 0.1kg)
+            const maxW = Math.max(...weights3);
+            const minW = Math.min(...weights3);
+            const range = maxW - minW;
+            
+            if (range < 0.1) {
+                console.log(`\n✅ 4 Stable readings detected: ${weights3[weights3.length-1].toFixed(2)} kg (Range: ${range.toFixed(3)}kg). Stopping early.`);
+                return true;
+            }
+
+            // 2. STANDARD VARIATION CHECK (Original Logic)
             if (measurements.length < 5) return false;
 
             // Get the last 5 measurements
             const lastFive = measurements.slice(-5);
 
             // Ensure all measurements have valid weight
-            const validMeasurements = lastFive.filter(m =>
-                m && m.calibratedWeight !== undefined && m.calibratedWeight > 0
+            let validMeasurements = lastFive.filter(m =>
+                m && m.calibratedWeight !== undefined && m.calibratedWeight > 0.5
             );
 
             if (validMeasurements.length < 5) return false;
 
             // Calculate weight variations
-            const weights = validMeasurements.map(m => m.calibratedWeight);
+            let weights = validMeasurements.map(m => m.calibratedWeight);
             const maxWeight = Math.max(...weights);
             const minWeight = Math.min(...weights);
             const weightVariation = (maxWeight - minWeight) / maxWeight;
@@ -2950,9 +3199,9 @@ async function case41_WeightMeasurement() {
             console.log('Weight Stability Check:');
             console.log(`Weights: [${weights.map(w => w.toFixed(2)).join(', ')} kg]`);
             console.log(`Weight Variation: ${(weightVariation * 100).toFixed(2)}%`);
-
-            // Stability criteria: within 10% variation
-            return weightVariation < 0.1;
+            measurements.statusCode = 0x03;
+            // Stability criteria: within 5% variation
+            return weightVariation < 0.05;
         };
 
         // ====================================================================
@@ -2975,9 +3224,9 @@ async function case41_WeightMeasurement() {
             await sendBiaCommand(setWeightModeCommand);
             await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
-            handleWeightStatus(0x08);  // TIMEOUT
+            emitWeightStatus(0x08);  // TIMEOUT
             console.log('❌ Failed to set weight mode');
-            showMenu();
+           if(!IS_ELECTRON) showMenu();
             return;
         }
 
@@ -3004,8 +3253,8 @@ async function case41_WeightMeasurement() {
                         verbose: false
                     });
                 } catch (error) {
-                    handleWeightStatus(0x08);  // TIMEOUT
-                    console.log(`⚠️  Attempt ${weightResults.attempts}: No response`);
+                    emitWeightStatus(0x08);  // TIMEOUT
+                    console.log(` Attempt ${weightResults.attempts}: No response`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
                         error: 'Timeout'
@@ -3025,7 +3274,7 @@ async function case41_WeightMeasurement() {
                 // ══════════════════════════════════════════════════════════
 
                 if (!responseData || responseData.length < 14) {
-                    handleWeightStatus(0x0A);  // INVALID_RESPONSE
+                    emitWeightStatus(0x0A);  // INVALID_RESPONSE
                     console.log(` Attempt ${weightResults.attempts}: Invalid response format`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3036,7 +3285,7 @@ async function case41_WeightMeasurement() {
                 }
 
                 if (responseData[0] !== 0xAA || responseData[2] !== 0xA1) {
-                    handleWeightStatus(0x0A);  // INVALID_RESPONSE
+                    emitWeightStatus(0x0A);  // INVALID_RESPONSE
                     console.log(` Attempt ${weightResults.attempts}: Invalid response header`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3055,7 +3304,7 @@ async function case41_WeightMeasurement() {
 
                 // Validate raw weight
                 if (isNaN(rawWeight) || rawWeight < 0) {
-                    handleWeightStatus(0x0A);  // INVALID_RESPONSE
+                    emitWeightStatus(0x0A);  // INVALID_RESPONSE
                     console.log(`Attempt ${weightResults.attempts}: Invalid weight value`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3063,21 +3312,20 @@ async function case41_WeightMeasurement() {
                     });
                     await new Promise(resolve => setTimeout(resolve, 500));
                     continue;
-                }
+        }   
 
                 // ══════════════════════════════════════════════════════════
                 // APPLY CALIBRATION
                 // ══════════════════════════════════════════════════════════
 
-                // IMPORTANT: Update these from your case 15 calibration
-                   const WEIGHT_ZERO_OFFSET = 0.0;    // Set from case 15
-                   const CALIBRATION_FACTOR = 1.100122;     // Set from case 15
-
-                const calibratedWeight = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR;
-               // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;
+                const WEIGHT_ZERO_OFFSET = 0.0;    // Set from case 15
+                const CALIBRATION_FACTOR = 2.200244;     // Set from case 15
+                const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR;
+                const calibratedWeight = calibratedWeightCatty * 0.5;
+                // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;
                 // Validate calibrated weight
                 if (isNaN(calibratedWeight) || calibratedWeight < 0) {
-                    handleWeightStatus(0x06);  // CALIBRATION_ERROR
+                    emitWeightStatus(0x06);  // CALIBRATION_ERROR
                     console.log(` Attempt ${weightResults.attempts}: Calibration error`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3090,14 +3338,14 @@ async function case41_WeightMeasurement() {
                     await new Promise(resolve => setTimeout(resolve, 500));
                     continue;
                 }
-
                 // ══════════════════════════════════════════════════════════
                 // PARSE STATUS BITS
                 // ══════════════════════════════════════════════════════════
 
-                const isStable = (statusByte & 0x01) !== 0;
-                const isZero = (statusByte & 0x02) !== 0;
-                const isOverload = (statusByte & 0x10) !== 0;
+                let isStable = false;
+                let isZero = false;
+                let isOverload = false;
+                let isUnderload = false;
 
                 // ══════════════════════════════════════════════════════════
                 // DETERMINE ERROR CODE & CHECK VALIDITY
@@ -3106,13 +3354,17 @@ async function case41_WeightMeasurement() {
                 let statusCode = 0x03;  // Default STABLE
 
                 // Check for zero weight
-                if (isZero || calibratedWeight === 0) {
+                if (calibratedWeight === 0) {
+                    
+                    isZero = true;
                     statusCode = 0x01;  // ZERO_POINT
+                   // emitWeightStatus(statusCode, calibratedWeight);
                 }
                 // Check for overload
-                else if (isOverload || calibratedWeight > 150) {
+                else if (calibratedWeight > 150) {
+                    isOverload =true
                     statusCode = 0x04;  // OVERLOAD
-                    handleWeightStatus(statusCode, calibratedWeight);
+                    emitWeightStatus(statusCode, calibratedWeight);
                     console.log(' Scale overloaded - measurement aborted');
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3122,10 +3374,11 @@ async function case41_WeightMeasurement() {
                     });
                     break;  // Stop on overload
                 }
-                // Check for underload
-                else if (calibratedWeight < 20) {
+                // Check for underload - user standing but weight very low
+                else if (calibratedWeight < 1.0) {
+                    isUnderload = true;
                     statusCode = 0x05;  // UNDERLOAD
-                    handleWeightStatus(statusCode, calibratedWeight);
+                    emitWeightStatus(statusCode, calibratedWeight);
                     console.log(`  Weight too low: ${calibratedWeight.toFixed(2)} kg`);
                     weightResults.errors.push({
                         attempt: weightResults.attempts,
@@ -3138,11 +3391,12 @@ async function case41_WeightMeasurement() {
                     continue;
                 }
                 // Check for unstable
-                else if (!isStable) {
-                    statusCode = 0x02;  // UNSTABLE
-                }
+                // else if (!isStable) {
+                //     statusCode = 0x02;  // UNSTABLE
+                // }
                 // Valid stable weight
-                else if (isStable && calibratedWeight > 20 && calibratedWeight <= 150) {
+                else if (calibratedWeight > 20 && calibratedWeight <= 150) {
+                    isStable = true;
                     statusCode = 0x03;  // STABLE
                 }
 
@@ -3150,7 +3404,7 @@ async function case41_WeightMeasurement() {
                 // HANDLE STATUS
                 // ══════════════════════════════════════════════════════════
 
-                handleWeightStatus(statusCode, calibratedWeight);
+                emitWeightStatus(statusCode, calibratedWeight);
 
                 console.log(`   Raw Weight: ${rawWeight.toFixed(2)} kg`);
                 console.log(`   Calibrated Weight: ${calibratedWeight.toFixed(2)} kg`);
@@ -3167,8 +3421,9 @@ async function case41_WeightMeasurement() {
                     statusByte: statusByte,
                     statusCode: statusCode,
                     isStable: isStable,
-                    isZero: isZero,
-                    isOverload: isOverload
+                    isOverload: isOverload,
+                    isUnderload: isUnderload,
+                    isZero: isZero
                 };
 
                 weightResults.measurements.push(measurementDetails);
@@ -3177,8 +3432,10 @@ async function case41_WeightMeasurement() {
                 // CHECK FOR STABILITY
                 // ══════════════════════════════════════════════════════════
 
-                if (statusCode === 0x03) {  // Only check stability for valid weights
+                if (calibratedWeight > 0.5) {  // Only check stability for valid weights
                     if (isStableWeight(weightResults.measurements)) {
+                        console.log("------neetu------");
+                        console.log(weightResults.measurements);
                         console.log('\n Stable weight measurement detected!');
                         break;
                     }
@@ -3188,7 +3445,7 @@ async function case41_WeightMeasurement() {
                 await new Promise(resolve => setTimeout(resolve, 500));
 
             } catch (queryError) {
-                handleWeightStatus(0x07);  // SENSOR_ERROR
+                emitWeightStatus(0x07);  // SENSOR_ERROR
                 console.error(` Attempt ${weightResults.attempts} error: ${queryError.message}`);
                 weightResults.errors.push({
                     attempt: weightResults.attempts,
@@ -3246,12 +3503,12 @@ async function case41_WeightMeasurement() {
 
                 const finalMeasurement = weightResults.measurements[weightResults.measurements.length - 1];
                 console.log(`\n✅ FINAL WEIGHT: ${finalMeasurement.calibratedWeight.toFixed(2)} kg`);
+                finalweight = finalMeasurement.calibratedWeight
 
-                finalweight = finalMeasurement.calibratedWeight;
             } else {
                 console.log('\n No valid stable measurements collected');
             }
-
+            
         } else {
             console.log('\n No measurements collected');
         }
@@ -3269,18 +3526,27 @@ async function case41_WeightMeasurement() {
 
         console.log('='.repeat(70) + '\n');
 
-        showMenu();
+         if(!IS_ELECTRON)showMenu();
+        
+         const finalResult = {
+            success: true,
+            weight: finalweight
+         };
+         console.log(`\n📤 Sending Final Result to UI:`, finalResult);
+         
+         return finalResult;
 
     } catch (error) {
-        handleWeightStatus(0x07);  // SENSOR_ERROR
+        emitWeightStatus(0x07);  // SENSOR_ERROR
         console.error(' Weight measurement failed:', error.message);
         console.error(error);
-        showMenu();
+      if(!IS_ELECTRON)showMenu();
     }
 }
 
 // Show menu
 function showMenu() {
+     if(IS_ELECTRON) return;
     console.log('1. List available ports');
     console.log('2. Connect Height Sensor (9600 baud)');
     console.log('3. Connect BIA Scale (38400 baud)');
@@ -3299,919 +3565,17 @@ function showMenu() {
     console.log('15. Tare the machine');
     console.log('0. Exit');
     console.log('='.repeat(60));
-    rl.question('\nSelect option: ', handleMenuChoice);
 }
 
 // Handle menu choice
-async function handleMenuChoice(choice) {
-    try {
-        switch (choice.trim()) {
-            case '1':
-                await getPorts();
-                showMenu();
-                break;
-
-            case '2':
-                rl.question('Enter HEIGHT sensor port path (e.g., /dev/tty.usbserial-XXXX or COM3): ', async (portPath) => {
-                    try {
-                        await connectHeightPort(portPath, 9600);
-                        showMenu();
-                    } catch (error) {
-                        console.error('Failed:', error.message);
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '3':
-                rl.question('Enter BIA scale port path (e.g., /dev/tty.usbserial-YYYY or COM6): ', async (portPath) => {
-                    try {
-                        await connectBiaPort(portPath, 38400);
-                        showMenu();
-                    } catch (error) {
-                        console.error('Failed:', error.message);
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '4':
-                if (heightPort && heightPort.isOpen) {
-                    await new Promise((resolve) => heightPort.close(resolve));
-                    heightPort = null;
-                    console.log('✅ Height disconnected');
-                } else {
-                    console.log('⚠️  Height not connected');
-                }
-                showMenu();
-                break;
-
-            case '5':
-                if (biaPort && biaPort.isOpen) {
-                    await new Promise((resolve) => biaPort.close(resolve));
-                    biaPort = null;
-                    console.log('✅ BIA disconnected');
-                } else {
-                    console.log('⚠️  BIA not connected');
-                }
-                showMenu();
-                break;
-
-            case '6':
-                if (!heightPort || !heightPort.isOpen) {
-                    handleHeightStatus(0x08);  // PORT_ERROR
-                    console.log('❌ Height sensor not connected');
-                    showMenu();
-                    return;
-                }
-
-                console.log('\n' + '='.repeat(60));
-                console.log('📏 STARTING HEIGHT MEASUREMENT');
-                console.log('='.repeat(60));
-                console.log('Please stand still and prepare for measurement.');
-                console.log('='.repeat(60));
-
-                rl.question('Press ENTER to start measuring: ', async () => {
-                    try {
-                        isMeasurementStopped = false;
-                        stableReadings = [];
-                        let attemptCount = 0;
-                        const maxAttempts = 60;  // ~12 seconds at 200ms interval
-
-                        const interval = setInterval(() => {
-                            attemptCount++;
-
-                            // Check max attempts
-                            if (attemptCount > maxAttempts) {
-                                clearInterval(interval);
-                                if (stableReadings.length === 0) {
-                                    handleHeightStatus(0x07);  // TIMEOUT error
-                                    console.log('\n❌ No height readings collected');
-                                    isMeasurementStopped = true;
-                                    heightPort.close();
-                                    showMenu();
-                                }
-                                return;
-                            }
-
-                            // Check port still open
-                            if (!heightPort || !heightPort.isOpen) {
-                                clearInterval(interval);
-                                handleHeightStatus(0x08);  // PORT_ERROR
-                                isMeasurementStopped = true;
-                                showMenu();
-                                return;
-                            }
-
-                            // Send command
-                            if (!isMeasurementStopped) {
-                                try {
-                                    heightPort.write(READ_CMD);
-                                } catch (error) {
-                                    console.error(`❌ Write error: ${error.message}`);
-                                    clearInterval(interval);
-                                    isMeasurementStopped = true;
-                                    heightPort.close();
-                                    showMenu();
-                                }
-                            } else {
-                                clearInterval(interval);
-                            }
-                        }, 200);
-                    } catch (error) {
-                        console.error('❌ Measurement error:', error.message);
-                        isMeasurementStopped = true;
-                        if (heightPort && heightPort.isOpen) {
-                            heightPort.close();
-                        }
-                        showMenu();
-                    }
-                });
-                break;
-
-
-            case '7':
-                await case41_WeightMeasurement();
-
-                break;
-
-
-            case '8':
-                try {
-                    if (!biaPort || !biaPort.isOpen) {
-                        console.log(' BIA not connected');
-                        showMenu();
-                        return;
-                    }
-                    const cmd = createCommand(0xA1, [0x00]);
-                    await sendBiaCommand(cmd, true);
-                } catch (error) {
-                    console.error('Failed:', error.message);
-                    showMenu();
-                }
-                break;
-
-            case '9':
-                console.log('\n 20 kHz Impedance Query with Controlled Delay');
-                rl.question('Press ENTER to start 20 kHz impedance measurement, or "q" to quit: ', async (input) => {
-                    if (input.toLowerCase() === 'q') {
-                        showMenu();
-                        return;
-                    }
-
-                    try {
-                        // Call the 20 kHz impedance query function
-                        await case38_20kHzImpedanceQuery();
-                    } catch (error) {
-                        console.error('Error in 20 kHz impedance query:', error);
-                    } finally {
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '10':
-                console.log('\n 100 kHz Impedance Query with Stability Check');
-                rl.question('Press ENTER to start 100 kHz impedance measurement, or "q" to quit: ', async (input) => {
-                    if (input.toLowerCase() === 'q') {
-                        showMenu();
-                        return;
-                    }
-
-                    try {
-                        // Call the 100 kHz impedance query function
-                        await case39_100kHzImpedanceQuery();
-                    } catch (error) {
-                        console.error('Error in 100 kHz impedance query:', error);
-                    } finally {
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '11':
-                try {
-                    if (!biaPort || !biaPort.isOpen) {
-                        console.log('❌ BIA not connected');
-                        showMenu();
-                        return;
-                    }
-
-                    // Check if impedance results are available
-                    if (!impedance20kHzResults || !impedance100kHzResults) {
-                        console.log('❌ Please run 20 kHz and 100 kHz impedance queries first');
-                        showMenu();
-                        return;
-                    }
-
-                    //  console.log(' Automatically using impedance and height/weight values from previous measurements');
-
-                    // Use finalheight and finalweight directly
-                    const height = finalheight;
-                    const weight = finalweight;
-
-                    // Prompt for gender and age
-                    rl.question('Gender (0=Female, 1=Male): ', (gender) => {
-                        rl.question('Age (years): ', async (age) => {
-                            try {
-                                const cmd = create8ElectrodeBodyCompositionCommand(
-                                    parseInt(gender),
-                                    parseInt(height),
-                                    parseInt(age),
-                                    parseFloat(weight),
-                                    // 20 kHz impedance values
-                                    impedance20kHzResults.segments.rightHand,
-                                    impedance20kHzResults.segments.leftHand,
-                                    impedance20kHzResults.segments.trunk,
-                                    impedance20kHzResults.segments.rightFoot,
-                                    impedance20kHzResults.segments.leftFoot,
-                                    // 100 kHz impedance values
-                                    impedance100kHzResults.segments.rightHand,
-                                    impedance100kHzResults.segments.leftHand,
-                                    impedance100kHzResults.segments.trunk,
-                                    impedance100kHzResults.segments.rightFoot,
-                                    impedance100kHzResults.segments.leftFoot
-                                );
-
-                                console.log('\nBody Composition Command Details:');
-                                console.log(`Gender: ${gender === '1' ? 'Male' : 'Female'}`);
-                                console.log(`Height: ${height} cm`);
-                                console.log(`Age: ${age} years`);
-                                console.log(`Weight: ${weight} kg`);
-
-                                await sendBiaCommand(cmd, true);
-                            } catch (error) {
-                                console.error('Failed to create body composition command:', error.message);
-                                showMenu();
-                            }
-                        });
-                    });
-                } catch (error) {
-                    console.error('Failed:', error.message);
-                    showMenu();
-                }
-                break;
-            case '12':
-                await case40_PhaseAngleDetailedQuery();
-                break;
-            case '13': // Custom command
-                rl.question('Enter hex command (e.g., 55 05 A1 00 05): ', async (cmd) => {
-                    try {
-                        // Parse the hex string input into an array of bytes
-                        const hexArray = cmd.trim().split(/\s+/).map(byte => {
-                            const parsed = parseInt(byte, 16);
-                            if (isNaN(parsed) || parsed < 0 || parsed > 255) {
-                                throw new Error(`Invalid hex value: ${byte}`);
-                            }
-                            return parsed;
-                        });
-
-                        if (hexArray.length === 0) {
-                            throw new Error('No command bytes provided');
-                        }
-
-                        // Convert array to Buffer and send
-                        const commandBuffer = Buffer.from(hexArray);
-
-                        await sendBiaCommand(commandBuffer, {
-                            waitForResponse: true,
-                            timeout: 10000,
-                            verbose: true,
-                            responseHandler: (data) => {
-                                console.log(`\n${'='.repeat(60)}`);
-                                console.log(` RECEIVED BIA RESPONSE`);
-                                console.log(`${'='.repeat(60)}`);
-                                console.log(` Hex: ${data.toString('hex').toUpperCase()}`);
-                                console.log(` Length: ${data.length} bytes`);
-                                console.log(` Raw: [${Array.from(data).join(', ')}]`);
-                                console.log(`${'='.repeat(60)}\n`);
-                            }
-                        });
-
-                        showMenu();
-
-                    } catch (error) {
-                        console.error(' Failed to send command:', error.message);
-                        console.error(' Please enter hex values separated by spaces (e.g., 55 05 A1 00 05)');
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '14':  // Single-Point Weight Calibration - NO LOOP
-                (async () => {
-                    try {
-                        console.log('\n' + '='.repeat(70));
-                        console.log('⚖️  SINGLE-POINT WEIGHT CALIBRATION');
-                        console.log('='.repeat(70));
-                        console.log('\nCalibrate ONE point at a time.\n');
-                        console.log('Options:');
-                        console.log('  1. Calibrate 0 kg (Empty Scale)');
-                        console.log('  2. Calibrate 50 kg (Known Weight)');
-                        console.log('  3. Calibrate 100 kg (Known Weight)');
-                        console.log('  0. Cancel\n');
-
-                        // ================================================================
-                        // HELPER FUNCTION: Ask question
-                        // ================================================================
-
-                        const askQuestion = (prompt) => {
-                            return new Promise((resolve) => {
-                                process.stdout.write(prompt);
-
-                                const lineHandler = (answer) => {
-                                    rl.removeListener('line', lineHandler);
-                                    resolve(answer);
-                                };
-
-                                rl.on('line', lineHandler);
-                            });
-                        };
-
-                        // ================================================================
-                        // GET USER SELECTION
-                        // ================================================================
-
-                        const selection = await askQuestion('Select calibration point (1-3 or 0 to cancel): ');
-
-                        let calibrationWeight = null;
-                        let calibrationInstruction = null;
-                        let pointName = null;
-
-                        if (selection === '1') {
-                            calibrationWeight = 0;
-                            calibrationInstruction = '🔴 Remove ALL weight from the scale';
-                            pointName = 'POINT 0 (0 kg - Empty Scale)';
-                        } else if (selection === '2') {
-                            calibrationWeight = 50;
-                            calibrationInstruction = '🟡 Place 50 kg calibration weight on scale';
-                            pointName = 'POINT 1 (50 kg - Known Weight)';
-                        } else if (selection === '3') {
-                            calibrationWeight = 100;
-                            calibrationInstruction = '🟢 Place 100 kg calibration weight on scale';
-                            pointName = 'POINT 2 (100 kg - Known Weight)';
-                        } else if (selection === '0') {
-                            console.log('\n❌ Calibration cancelled\n');
-                            showMenu();
-                            return;
-                        } else {
-                            console.log('\n❌ Invalid option\n');
-                            showMenu();
-                            return;
-                        }
-
-                        // ================================================================
-                        // SINGLE CALIBRATION POINT
-                        // ================================================================
-
-                        console.log(`\n${'='.repeat(70)}`);
-                        console.log(`📍 CALIBRATION: ${pointName}`);
-                        console.log(`   Expected Weight: ${calibrationWeight} kg`);
-                        console.log(`${'='.repeat(70)}\n`);
-
-                        // ================================================================
-                        // PHASE 1: USER PREPARATION
-                        // ================================================================
-
-                        console.log(`${calibrationInstruction}\n`);
-                        console.log('Make sure the scale is stable before proceeding.\n');
-
-                        const userReady = await askQuestion('✓ Press ENTER when ready (or type "cancel"): ');
-
-                        if (userReady.toLowerCase() === 'cancel') {
-                            console.log('\n❌ Calibration cancelled by user\n');
-                            showMenu();
-                            return;
-                        }
-
-                        console.log(`\n🔄 Starting calibration for ${calibrationWeight} kg...\n`);
-
-                        // ================================================================
-                        // PHASE 2: ENTER CALIBRATION MODE
-                        // ================================================================
-
-                        console.log('📡 Step 1: Entering calibration mode...');
-
-                        try {
-                            await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        } catch (error) {
-                            console.log('⚠️ Warning: Could not stop current test');
-                        }
-                        try {
-                            const modeResponse = await sendBiaCommand([0x55, 0x05, 0xA0, 0x03, 0x03], {
-                                waitForResponse: true,
-                                timeout: 5000,
-                                verbose: false
-                            });
-                            console.log('   ✅ Calibration mode activated\n');
-                        } catch (error) {
-                            console.log('   ⚠️  Calibration mode timeout (continuing anyway)...\n');
-                        }
-
-                        await new Promise(resolve => setTimeout(resolve, 1500));
-
-                        // ================================================================
-                        // PHASE 2b: SET WEIGHT MEASUREMENT MODE
-                        // ================================================================
-
-                        console.log('📡 Step 1b: Setting weight measurement mode...');
-                        try {
-                            const weightModeResponse = await sendBiaCommand([0x55, 0x05, 0xA0, 0x01, 0x05], {
-                                waitForResponse: true,
-                                timeout: 3000,
-                                verbose: false
-                            });
-                            console.log('   ✅ Weight measurement mode activated\n');
-                        } catch (error) {
-                            console.log('   ⚠️  Weight mode timeout (continuing anyway)...\n');
-                        }
-
-                        await new Promise(resolve => setTimeout(resolve, 800));
-
-                        // ================================================================
-                        // PHASE 3: COLLECT READINGS - NO LOOP, JUST COLLECT
-                        // ================================================================
-
-                        console.log('📡 Step 2: Collecting weight readings...\n');
-
-                        const readings = [];
-                        let successfulReadings = 0;
-                        const maxAttempts = 10;
-                        const stabilityThreshold = 1.0;
-                        let stableAchieved = false;
-
-                        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-                            try {
-                                const response = await sendBiaCommand([0x55, 0x05, 0xA1, 0x00, 0x05], {
-                                    waitForResponse: true,
-                                    timeout: 3000,
-                                    verbose: false
-                                });
-
-                                if (response && response.length >= 14) {
-                                    if (response[0] === 0xAA && response[2] === 0xA1) {
-                                        // Extract weight from bytes 5-6
-                                        const lowByte = response[5];
-                                        const highByte = response[6];
-                                        const rawValue = (highByte << 8) | lowByte;
-                                        const weightKg = rawValue / 10.0;
-
-                                        readings.push(weightKg);
-                                        successfulReadings++;
-
-                                        console.log(`   Reading ${successfulReadings}/${maxAttempts}: ${weightKg.toFixed(2)} kg`);
-                                        console.log(`      (raw bytes: 0x${lowByte.toString(16).padStart(2, '0').toUpperCase()} 0x${highByte.toString(16).padStart(2, '0').toUpperCase()} = ${rawValue})`);
-
-                                        // ================================================================
-                                        // CHECK FOR STABILITY
-                                        // ================================================================
-
-                                        if (readings.length >= 3) {
-                                            const lastThree = readings.slice(-3);
-                                            const maxReading = Math.max(...lastThree);
-                                            const minReading = Math.min(...lastThree);
-                                            const variation = maxReading - minReading;
-
-                                            console.log(`      (variation: ${variation.toFixed(2)} kg)`);
-
-                                            if (variation < stabilityThreshold) {
-                                                console.log(`   ✅ Readings are stable! (variation < ${stabilityThreshold} kg)\n`);
-                                                stableAchieved = true;
-                                                break;
-                                            }
-                                        }
-
-                                        // ================================================================
-                                        // DEBUG: Show if reading is 0
-                                        // ================================================================
-
-                                        if (weightKg === 0 && attempt < 2) {
-                                            console.log(`   ⚠️  DEBUG: Weight is 0, checking response...\n`);
-                                            console.log(`      Full response hex: ${response.toString('hex').toUpperCase()}`);
-                                            console.log(`      Byte 0 (header): 0x${response[0].toString(16).toUpperCase()}`);
-                                            console.log(`      Byte 2 (type): 0x${response[2].toString(16).toUpperCase()}`);
-                                            console.log(`      Byte 3 (status): 0x${response[3].toString(16).toUpperCase()}`);
-                                            console.log(`      Byte 5 (low): 0x${response[5].toString(16).padStart(2, '0').toUpperCase()}`);
-                                            console.log(`      Byte 6 (high): 0x${response[6].toString(16).padStart(2, '0').toUpperCase()}\n`);
-                                        }
-
-                                    } else {
-                                        console.log(`   ⚠️  Reading ${attempt + 1}: Invalid response header`);
-                                        console.log(`      Expected: 0xAA...0xA1, Got: 0x${response[0].toString(16).toUpperCase()}...0x${response[2].toString(16).toUpperCase()}`);
-                                    }
-                                } else {
-                                    console.log(`   ⚠️  Reading ${attempt + 1}: Response too short (${response ? response.length : 0} bytes)`);
-                                }
-
-                            } catch (error) {
-                                console.log(`   ⚠️  Reading ${attempt + 1}: Timeout`);
-                            }
-
-                            if (attempt < maxAttempts - 1) {
-                                await new Promise(resolve => setTimeout(resolve, 300));
-                            }
-                        }
-
-                        // ================================================================
-                        // PHASE 4: PROCESS RESULTS
-                        // ================================================================
-
-                        console.log(`\n${'='.repeat(70)}`);
-                        console.log('📋 CALIBRATION RESULTS');
-                        console.log(`${'='.repeat(70)}\n`);
-
-                        if (readings.length > 0) {
-                            const averageWeight = readings.reduce((a, b) => a + b, 0) / readings.length;
-                            const minWeight = Math.min(...readings);
-                            const maxWeight = Math.max(...readings);
-                            const variation = maxWeight - minWeight;
-
-                            console.log(`Point: ${pointName}`);
-                            console.log(`Expected: ${calibrationWeight} kg`);
-                            console.log(`Average: ${averageWeight.toFixed(2)} kg`);
-                            console.log(`Min: ${minWeight.toFixed(2)} kg`);
-                            console.log(`Max: ${maxWeight.toFixed(2)} kg`);
-                            console.log(`Variation: ${variation.toFixed(2)} kg`);
-                            console.log(`Total Readings: ${readings.length}\n`);
-
-                            if (stableAchieved) {
-                                console.log('✅ STABLE READINGS ACHIEVED\n');
-                            }
-
-                            // ================================================================
-                            // VALIDATION WARNING
-                            // ================================================================
-
-                            if (averageWeight === 0 && calibrationWeight > 0) {
-                                console.log(`\n⚠️  WARNING: Got 0 kg readings for expected ${calibrationWeight} kg\n`);
-                                console.log(`Possible causes:`);
-                                console.log(`  1. Scale not in proper weight measurement mode`);
-                                console.log(`  2. Weight data not in bytes 5-6 of response`);
-                                console.log(`  3. Incorrect weight was placed on scale`);
-                                console.log(`  4. Scale calibration issue\n`);
-                                console.log(`Check the debug hex dump above to find correct byte positions.\n`);
-                            } else if (Math.abs(averageWeight - calibrationWeight) > 10) {
-                                console.log(`\n⚠️  WARNING: Measured weight differs from expected by more than 10 kg\n`);
-                                console.log(`  Expected: ${calibrationWeight} kg`);
-                                console.log(`  Measured: ${averageWeight.toFixed(2)} kg`);
-                                console.log(`  Difference: ${Math.abs(averageWeight - calibrationWeight).toFixed(2)} kg\n`);
-                                console.log(`Please verify the correct weight was placed on the scale.\n`);
-                            } else {
-                                console.log(`✅ READINGS LOOK GOOD\n`);
-                            }
-
-                            // ================================================================
-                            // SAVE RESULTS
-                            // ================================================================
-
-                            const calibrationData = {
-                                timestamp: new Date().toISOString(),
-                                calibrationPoint: calibrationWeight,
-                                expectedWeight: calibrationWeight,
-                                averageReading: averageWeight,
-                                minReading: minWeight,
-                                maxReading: maxWeight,
-                                variation: variation,
-                                totalReadings: readings.length,
-                                readings: readings,
-                                stable: stableAchieved
-                            };
-
-                            const filename = `calibration-point-${calibrationWeight}kg-${Date.now()}.json`;
-                            fs.writeFileSync(filename, JSON.stringify(calibrationData, null, 2));
-                            console.log(`✅ Results saved to: ${filename}\n`);
-
-                        } else {
-                            console.log('❌ NO READINGS COLLECTED\n');
-                        }
-
-                        // ================================================================
-                        // NEXT STEPS
-                        // ================================================================
-
-                        console.log('═' + '═'.repeat(68));
-                        console.log('📋 NEXT STEPS');
-                        console.log('═' + '═'.repeat(68) + '\n');
-
-                        console.log('To complete calibration, run Case 14 again and select:');
-                        console.log('  1. Other calibration points (0, 50, or 100 kg)');
-                        console.log('  2. Repeat this point if readings are 0 kg\n');
-
-                        console.log('After all 3 points (0, 50, 100 kg), you can calculate:');
-                        console.log('  - Zero offset');
-                        console.log('  - Calibration factor');
-                        console.log('  - Accuracy\n');
-
-                        console.log('═' + '═'.repeat(68) + '\n');
-
-                        showMenu();
-
-                    } catch (error) {
-                        console.error('\n❌ Calibration Error:', error.message);
-                        console.log('='.repeat(70) + '\n');
-                        showMenu();
-                    }
-                })();
-                break;
-
-
-            case '16': // Calibration Status Check
-                console.log('\n' + '='.repeat(60));
-                console.log(' CALIBRATION STATUS CHECK');
-                console.log('='.repeat(60) + '\n');
-
-                rl.question('Place scale on flat surface and press Enter: ', async () => {
-                    try {
-                        await sendBiaCommand([0x55, 0x05, 0xA1, 0x00, 0x05], {
-                            waitForResponse: true,
-                            timeout: 5000,
-                            verbose: true,
-                            responseHandler: (data) => {
-                                if (data.length >= 14) {
-                                    const weightStatus = (data[3] >> 4) & 0x0F;
-                                    const calibStatus = data[3] & 0x0F;
-                                    const stableWeightRaw = data.readInt16LE(5);
-                                    const realtimeWeightRaw = data.readInt16LE(7);
-                                    const adcValue = data.readInt32LE(9);
-
-                                    console.log('\n' + '='.repeat(60));
-                                    console.log(' DETAILED CALIBRATION STATUS');
-                                    console.log('='.repeat(60));
-                                    console.log(` Weight Status (High nibble): 0x${weightStatus.toString(16).toUpperCase()}`);
-                                    console.log(` Calibration Status (Low nibble): 0x${calibStatus.toString(16).toUpperCase()}`);
-                                    console.log(` Stable Weight: ${(stableWeightRaw / 10).toFixed(1)} kg`);
-                                    console.log(` Real-time Weight: ${(realtimeWeightRaw / 10).toFixed(1)} kg`);
-                                    console.log(` ADC Value: ${adcValue} (for debugging)`);
-
-                                    const calibStatusMap = {
-                                        0: '🔄 Calibrating zero point',
-                                        1: '🔄 Calibrating point 1 (50kg)',
-                                        2: '🔄 Calibrating point 2 (100kg)',
-                                        3: '🔄 Calibrating point 3',
-                                        4: '🔍 Calibration judgment',
-                                        5: '✅ Calibration successful',
-                                        6: '❌ Calibration failed'
-                                    };
-
-                                    console.log(` Status: ${calibStatusMap[calibStatus] || 'Unknown'}`);
-                                    console.log('='.repeat(60) + '\n');
-                                }
-                            }
-                        });
-
-                        showMenu();
-
-                    } catch (error) {
-                        console.error('❌ Error:', error.message);
-                        showMenu();
-                    }
-                });
-                break;
-
-            case '15':
-                (async () => {
-                    try {
-                        // ================================================================
-                        // PORT CHECK
-                        // ================================================================
-
-                        if (!biaPort || !biaPort.isOpen) {
-                            handleWeightStatus(0x09);  // PORT_ERROR
-                            console.log('❌ BIA port not connected');
-                            showMenu();
-                            return;
-                        }
-
-                        console.log('\n' + '='.repeat(70));
-                        console.log(' WEIGHT SCALE TARE (ZERO)');
-                        console.log('='.repeat(70));
-                        console.log('\nThis will zero the scale to remove any offset.\n');
-
-                        // ================================================================
-                        // USER CONFIRMATION
-                        // ================================================================
-
-                        console.log('IMPORTANT:');
-                        console.log('  1. Remove ALL weight from the scale');
-                        console.log('  2. Ensure scale is on level surface');
-                        console.log('  3. Scale must be empty\n');
-
-                        await new Promise((resolve) => {
-                            rl.question('✓ Press ENTER to proceed with TARE (or type "cancel"): ', (answer) => {
-                                if (answer.toLowerCase() === 'cancel') {
-                                    console.log('\n  TARE cancelled\n');
-                                    resolve('cancel');
-                                } else {
-                                    resolve('proceed');
-                                }
-                            });
-                        }).then(async (result) => {
-                            if (result === 'cancel') {
-                                showMenu();
-                                return;
-                            }
-
-                            // ============================================================
-                            // EXECUTE TARE SEQUENCE
-                            // ============================================================
-
-                            try {
-                                console.log('\n Executing TARE command...\n');
-
-                                // ════════════════════════════════════════════════════════
-                                // STEP 1: STOP CURRENT MEASUREMENT
-                                // ════════════════════════════════════════════════════════
-
-                                try {
-                                    console.log('Step 1: Stopping current measurement...');
-                                    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5], {
-                                        waitForResponse: false,
-                                        timeout: 2000
-                                    });
-                                    await new Promise(r => setTimeout(r, 500));
-                                    console.log(' Measurement stopped\n');
-                                } catch (error) {
-                                    console.log(' Note: Could not stop measurement\n');
-                                }
-
-                                // ════════════════════════════════════════════════════════
-                                // STEP 2: SEND TARE COMMAND
-                                // ════════════════════════════════════════════════════════
-
-                                console.log('Step 2: Sending TARE command to scale...');
-                                const tareCommand = [0x55, 0x05, 0xA0, 0x04, 0x01];
-
-                                try {
-                                    const tareResponse = await sendBiaCommand(tareCommand, {
-                                        waitForResponse: true,
-                                        timeout: 3000,
-                                        verbose: false
-                                    });
-
-                                    console.log('TARE command sent successfully\n');
-
-                                    // Show response info
-                                    if (tareResponse && tareResponse.length >= 5) {
-                                        console.log(`Response: [${Array.from(tareResponse).map(b => '0x' + b.toString(16).toUpperCase()).join(', ')}]`);
-                                    }
-
-                                } catch (error) {
-                                    console.error(` TARE command failed: ${error.message}`);
-                                    console.log('\n Scale may not have responded');
-                                    console.log('Continuing verification...\n');
-                                }
-
-                                // Wait for scale to process
-                                await new Promise(r => setTimeout(r, 1000));
-
-                                // ════════════════════════════════════════════════════════
-                                // STEP 3: SET NORMAL WEIGHT MODE
-                                // ════════════════════════════════════════════════════════
-
-                                console.log('Step 3: Setting scale to normal mode...');
-                                try {
-                                    await sendBiaCommand([0x55, 0x05, 0xA0, 0x01, 0x05], {
-                                        waitForResponse: true,
-                                        timeout: 2000,
-                                        verbose: false
-                                    });
-                                    console.log('Normal mode set\n');
-                                } catch (error) {
-                                    console.log('⚠️  Could not set normal mode\n');
-                                }
-
-                                await new Promise(r => setTimeout(r, 500));
-
-                                // ════════════════════════════════════════════════════════
-                                // STEP 4: VERIFY TARE WITH READING
-                                // ════════════════════════════════════════════════════════
-
-                                console.log('Step 4: Verifying TARE by reading weight...\n');
-
-                                const verifyResults = {
-                                    readings: [],
-                                    attempts: 0,
-                                    maxAttempts: 5
-                                };
-
-                                while (verifyResults.attempts < verifyResults.maxAttempts) {
-                                    try {
-                                        verifyResults.attempts++;
-
-                                        const verifyResponse = await sendBiaCommand([0x55, 0x05, 0xA1, 0x00, 0x05], {
-                                            waitForResponse: true,
-                                            timeout: 3000,
-                                            verbose: false
-                                        });
-
-                                        if (verifyResponse && verifyResponse.length >= 14) {
-                                            const rawWeight = ((verifyResponse[6] << 8) | verifyResponse[5]) / 10.0;
-                                            const WEIGHT_ZERO_OFFSET = 0.0;
-                                            const CALIBRATION_FACTOR = 1.0;
-                                            const weight = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR;
-
-                                            verifyResults.readings.push(weight);
-
-                                            console.log(`   Reading ${verifyResults.attempts}: ${weight.toFixed(2)} kg`);
-
-                                            // Check if zeroed
-                                            if (Math.abs(weight) < 0.5) {  // Within 0.5 kg of zero
-                                                console.log(`  Scale zeroed successfully!\n`);
-                                                break;
-                                            }
-                                        }
-
-                                        await new Promise(r => setTimeout(r, 300));
-
-                                    } catch (error) {
-                                        console.log(`   Reading ${verifyResults.attempts}: No response`);
-                                        await new Promise(r => setTimeout(r, 500));
-                                    }
-                                }
-
-                                // ════════════════════════════════════════════════════════
-                                // STEP 5: DISPLAY RESULTS
-                                // ════════════════════════════════════════════════════════
-
-                                console.log('\n' + '='.repeat(70));
-                                console.log(' TARE VERIFICATION RESULTS');
-                                console.log('='.repeat(70));
-
-                                if (verifyResults.readings.length > 0) {
-                                    const avgWeight = verifyResults.readings.reduce((a, b) => a + b, 0) / verifyResults.readings.length;
-                                    const minWeight = Math.min(...verifyResults.readings);
-                                    const maxWeight = Math.max(...verifyResults.readings);
-
-                                    console.log(`\nReadings collected: ${verifyResults.readings.length}`);
-                                    console.log(`Average weight: ${avgWeight.toFixed(2)} kg`);
-                                    console.log(`Range: ${minWeight.toFixed(2)} - ${maxWeight.toFixed(2)} kg`);
-
-                                    if (Math.abs(avgWeight) < 0.5) {
-                                        console.log('\nTARE SUCCESSFUL!');
-                                        console.log('   Scale is now zeroed.');
-                                        console.log('   Ready for weight measurement.');
-                                        handleWeightStatus(0x03, avgWeight);  // Show success
-                                    } else {
-                                        console.log('\n TARE MAY NOT BE COMPLETE');
-                                        console.log(`   Scale still reading: ${avgWeight.toFixed(2)} kg`);
-                                        console.log('   Possible causes:');
-                                        console.log('   1. Weight still on scale');
-                                        console.log('   2. Scale hardware issue');
-                                        console.log('   3. Scale needs recalibration');
-                                        console.log('\nTry again or check scale.');
-                                    }
-                                } else {
-                                    console.log('\n Could not verify TARE');
-                                    console.log('Scale did not respond to weight query.');
-                                }
-
-                                console.log('='.repeat(70) + '\n');
-
-                                showMenu();
-
-                            } catch (error) {
-                                console.error(' TARE sequence failed:', error.message);
-                                showMenu();
-                            }
-                        });
-
-                    } catch (error) {
-                        console.error(' TARE error:', error.message);
-                        showMenu();
-                    }
-                })();
-                break;
-
-            case '0':
-                console.log('\n Shutting down...');
-                if (heightPort && heightPort.isOpen) {
-                    await new Promise((resolve) => heightPort.close(resolve));
-                }
-                if (biaPort && biaPort.isOpen) {
-                    await new Promise((resolve) => biaPort.close(resolve));
-                }
-                rl.close();
-                process.exit(0);
-                break;
-
-            default:
-                console.log(' Invalid option');
-                showMenu();
-        }
-    } catch (error) {
-        console.error('Error:', error.message);
-        showMenu();
-    }
-}
 
 // Main startup
 showMenu();
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
+if (!IS_ELECTRON) {
+    process.on('SIGINT', async () => {
     console.log('\n Shutting down...');
-    errorStats.print();
     if (heightPort && heightPort.isOpen) {
         await new Promise((resolve) => heightPort.close(resolve));
     }
@@ -4220,3 +3584,5 @@ process.on('SIGINT', async () => {
     }
     process.exit(0);
 });
+}
+
