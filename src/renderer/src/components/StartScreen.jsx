@@ -108,8 +108,9 @@ export const StartScreen = () => {
           "
         >
           <button
-            // onClick={() => navigate(`${Flag ? '/capture' : '/verified'}`)}
-            onClick={() => navigate(skipBIA ? '/voice' : '/verified')} className="
+            onClick={() => navigate(`${Flag ? '/capture' : '/verified'}`)}
+            // onClick={() => navigate(skipBIA ? '/voice' : '/verified')}
+            className="
               w-[clamp(16rem,40vw,31.25rem)]
               h-[clamp(4rem,8vh,6.25rem)]
               flex items-center justify-center

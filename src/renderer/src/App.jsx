@@ -12,8 +12,8 @@ import VoiceAnalysis from './components/voice/VoiceAnalysis'
 function App() {
   return (
     <Routes>
-      {/* <Route path='/' element={<SplashScreen />} /> */}
-      <Route path='/' element={<VoiceAnalysis />} />
+      <Route path='/' element={<SplashScreen />} />
+      {/* <Route path='/' element={<VoiceAnalysis />} /> */}
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/verified' element={<RegisterCard />} />
