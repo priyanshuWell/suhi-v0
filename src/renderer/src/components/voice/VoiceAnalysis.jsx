@@ -3,24 +3,83 @@ import bg1 from "../../assets/lightbg.png";
 import voiceImage from "../../assets/voice_image.png";
 
 const VoiceCapture = () => {
-    const [timeLeft, setTimeLeft] = useState(50);
+    const [timeLeft, setTimeLeft] = useState(5);
     const [isActive, setIsActive] = useState(false);
+    const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
+    const mediaRecorderRef = React.useRef(null);
+    const chunksRef = React.useRef([]);
 
     useEffect(() => {
         let interval = null;
         if (isActive && timeLeft > 0) {
             interval = setInterval(() => {
-                setTimeLeft((timeLeft) => timeLeft - 1);
+                setTimeLeft((prev) => prev - 1);
             }, 1000);
-        } else if (timeLeft === 0) {
+        } else if (timeLeft === 0 && isActive) {
             clearInterval(interval);
             setIsActive(false);
+            stopRecording();
         }
         return () => clearInterval(interval);
     }, [isActive, timeLeft]);
 
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            console.log("stream", stream);
+            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+            mediaRecorderRef.current = mediaRecorder;
+            chunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    chunksRef.current.push(e.data);
+                }
+            };
+            console.log("mediaRecorder", mediaRecorder, chunksRef.current);
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                const arrayBuffer = await blob.arrayBuffer();
+                setStatus("processing");
+
+                try {
+                    const result = await window.api.saveVoiceBuffer(arrayBuffer);
+                    console.log("result", result);
+                    if (result.success) {
+                        setStatus("success");
+                        console.log("Voice analysis success:", result);
+                    } else {
+                        setStatus("error");
+                        console.error("Voice analysis failed:", result.error);
+                    }
+                } catch (err) {
+                    setStatus("error");
+                    console.error("IPC error:", err);
+                }
+
+                // Stop all tracks
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsActive(true);
+            setStatus("recording");
+        } catch (err) {
+            console.error("Microphone permission denied or error:", err);
+            setStatus("error");
+        }
+    };
+
     const handleStart = () => {
-        setIsActive(true);
+        if (status === "recording" || status === "processing") return;
+        setTimeLeft(5);
+        startRecording();
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
+        }
     };
 
     const formatTime = (seconds) => {
@@ -42,8 +101,10 @@ const VoiceCapture = () => {
 
                 {/* Header Text */}
                 <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl">
-                    Look at the image, notice what it makes you feel or think,
-                    then click Start and speak freely for 50 seconds.
+                    {status === 'processing' ? 'Processing Voice Data...' :
+                        status === 'success' ? 'Analysis Complete!' :
+                            status === 'error' ? 'Error. Please Try Again.' :
+                                'Look at the image, notice what it makes you feel or think, then click Start and speak freely for 5 seconds.'}
                 </h1>
 
                 {/* Image Container */}
@@ -90,14 +151,14 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 50)}
+                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 5)}
                                 transform="rotate(-90 202 202)"
                                 style={{ transition: 'stroke-dashoffset 1s linear' }}
                             />
 
                             {/* Rotating Knob */}
                             <g
-                                transform={`rotate(${(timeLeft / 50) * 360} 202 202)`}
+                                transform={`rotate(${(timeLeft / 5) * 360} 202 202)`}
                                 style={{ transition: 'transform 1s linear' }}
                             >
                                 <path
@@ -114,10 +175,10 @@ const VoiceCapture = () => {
                 {/* Start Button */}
                 <button
                     onClick={handleStart}
-                    disabled={isActive || timeLeft === 0}
+                    disabled={isActive || status === 'processing'}
                     className={`mt-8 px-16 py-3 bg-linear-to-r from-[#2FA4FF] to-[#00D4FF] text-white rounded-xl font-medium tracking-wide shadow-[0_0_20px_rgba(47,164,255,0.5)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                    Start
+                    {isActive ? 'Recording...' : status === 'processing' ? 'Processing...' : 'Start'}
                 </button>
             </div>
         </div>

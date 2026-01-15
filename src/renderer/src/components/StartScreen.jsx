@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router'
 import { openCamerasInBackground } from '../utils/cameraSession'
 import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
+const skipBIA = false;
 const Flag = false;
 export const StartScreen = () => {
   const { t } = useTranslation()
@@ -107,8 +108,8 @@ export const StartScreen = () => {
           "
         >
           <button
-            onClick={() => navigate(`${Flag ? '/capture' : '/verified'}`)}
-            className="
+            // onClick={() => navigate(`${Flag ? '/capture' : '/verified'}`)}
+            onClick={() => navigate(skipBIA ? '/voice' : '/verified')} className="
               w-[clamp(16rem,40vw,31.25rem)]
               h-[clamp(4rem,8vh,6.25rem)]
               flex items-center justify-center

@@ -6,25 +6,21 @@ import VideoCaptureScreen from './components/VideoCaptureScreen'
 import BIACalcuate from './components/bia/BIACalcuate'
 import RegisterCard from './components/RegisterCard'
 import DMITScreen from './components/dmit/DMITScreen'
-import FaceScan from './components/FaceScan'
-import ErrorAlert from './components/ErrorAlert'
 import BIAResult from './components/bia/BIAResult'
-import Progressbar from './components/ProgessBar'
-import VoiceCapture from './components/voice/VoiceAnalysis'
+import VoiceAnalysis from './components/voice/VoiceAnalysis'
 
 function App() {
   return (
     <Routes>
-      <Route path='/' element={<SplashScreen />} />
+      {/* <Route path='/' element={<SplashScreen />} /> */}
+      <Route path='/' element={<VoiceAnalysis />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
       <Route path='/screen1' element={<DMITScreen />} />
-      <Route path='/faceScan' element={<FaceScan />} />
       <Route path='/bia/result' element={<BIAResult />} />
-      {/* <Route path='/progress' element={<Progressbar />} /> */}
-      <Route path='/voice' element={<VoiceCapture />} />
+      <Route path='/voice' element={<VoiceAnalysis />} />
     </Routes>
   )
 }

@@ -4,6 +4,9 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as bia from '../../bia_apporoved'
 import * as biaa from './bia-script'
 import { eventBus } from './eventbus'
+import fs from 'fs'
+import crypto from 'crypto'
+import axios from 'axios'
 
 let mainWindow = null;
 
@@ -211,6 +214,49 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
   } catch (err) {
     console.error("[BIA] Error:", err);
     return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle("save-voice-buffer", async (event, arrayBuffer) => {
+  console.log("[MAIN] save-voice-buffer called");
+  try {
+    const buffer = Buffer.from(arrayBuffer);
+    const bufferId = "b47fd582-fb97-46e3-84ba-f56b54a58801"
+    const userId = "b47fd582-fb97-46e3-84ba-f56b54a58801" // Backend requires valid UUID
+    const sessionId = "b47fd582-fb97-46e3-84ba-f56b54a58801"
+    const fileName = `${bufferId}.webm`;
+    const shmPath = `/dev/shm/${fileName}`;
+
+    // Write file to /dev/shm
+    await fs.promises.writeFile(shmPath, buffer);
+    console.log(`[MAIN] Voice file saved to: ${shmPath}`);
+
+    const payload = {
+      buffer_id: bufferId,
+      status: "success",
+      kiosk_id: "test-kiosk-01",
+      shm_path: shmPath,
+      user_id: userId,
+      session_id: sessionId
+    };
+
+    console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`, payload);
+
+    try {
+      const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload);
+      console.log(`[MAIN] API Response:`, response.data);
+      return { success: true, data: response.data, filePath: shmPath };
+    } catch (apiError) {
+      console.error(`[MAIN] API Error:`, apiError.message);
+      if (apiError.response) {
+        console.error(`[MAIN] API Error Data:`, apiError.response.data);
+        return { success: false, error: "API_ERROR", details: apiError.response.data };
+      }
+      return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message };
+    }
+  } catch (error) {
+    console.error("[MAIN] save-voice-buffer error:", error);
+    return { success: false, error: error.message };
   }
 });
 
