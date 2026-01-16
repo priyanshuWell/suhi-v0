@@ -97,72 +97,15 @@ import { recordFromOpenCameras } from "../utils/recordSession";
 // import { sendVideoToBackend, runFPT } from "../utils/api";
 import { getVideoDuration, getKioskId } from "../utils/config";
 import { runFPT, sendVideoToBackend } from "../utils/api";
+import { useDispatch } from "react-redux";
+import { setUser } from "../features/common/commonSlice";
 
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);
   const [phase, setPhase] = useState('');
   const [status, setStatus] = useState('Initializing...');
-
-  // useEffect(() => {
-  //   const run = async () => {
-  //     try {
-  //       setStatus('Preparing...');
-  //       await new Promise(r => setTimeout(r, 1000)); // avatar lead-in
-
-  //       // Get dynamic configuration values
-  //       const videoDuration = getVideoDuration();
-  //       const kioskId = getKioskId();
-
-  //       setStatus(`Recording for ${videoDuration / 1000} seconds...`);
-        
-  //       // Record from three cameras with dynamic duration
-  //       const recordings = await recordFromOpenCameras(videoDuration);
-  //       console.log("recordings", recordings);
-
-  //       if (!recordings || recordings.length === 0) {
-  //         throw new Error("No recordings captured");
-  //       }
-
-  //       setStatus('Uploading video...');
-        
-  //       // Send only the first video to the backend (CENTER camera preferred)
-  //       // You can change this logic to select a different camera
-  //       const videoToSend = recordings.find(r => r.role === "CENTER") || recordings[0];
-  //       console.log(`Sending ${videoToSend.role} video to backend...`);
-        
-  //       const storeResponse = await sendVideoToBackend(videoToSend);
-  //       console.log("Store response:", storeResponse);
-
-  //       if (!storeResponse.success || !storeResponse.shm_path) {
-  //         throw new Error("Failed to store video or shm_path not received");
-  //       }
-
-  //       setStatus('Processing face verification...');
-        
-  //       // Call the FPT API with the received shm_path
-  //       console.log("Running FPT with shm_path:", storeResponse.shm_path);
-  //       const fptResponse = await runFPT(storeResponse.shm_path, kioskId);
-  //       console.log("FPT response:", fptResponse);
-
-  //       if (fptResponse.success) {
-  //         setStatus('Verification successful!');
-  //         setIsVerify(true);
-  //         await new Promise(r => setTimeout(r, 1000));
-  //         navigate('/verified');
-  //       } else {
-  //         throw new Error(fptResponse.error || "FPT verification failed");
-  //       }
-  //     } catch (error) {
-  //       console.error("Error in video capture flow:", error);
-  //       setPhase("ERROR");
-  //       setStatus(`Error: ${error.message}`);
-  //     }
-  //   };
-
-  //   run();
-  // }, [navigate]);
-
+  const dispatch=useDispatch();
 
 
 useEffect(() => {
@@ -204,6 +147,7 @@ useEffect(() => {
       console.log("Running FPT with shm_path:", shmPath);
       const fptResponse = await runFPT(shmPath, kioskId);
       console.log("FPT response:", fptResponse);
+       dispatch(setUser(fptResponse));
 
       if (fptResponse.success) {
         setStatus("Verification successful!");

@@ -7,6 +7,7 @@ import { eventBus } from './eventbus'
 import fs from 'fs'
 import crypto from 'crypto'
 import axios from 'axios'
+import express from "express";
 
 let mainWindow = null;
 
@@ -34,6 +35,24 @@ ipcMain.handle("connect-heightPort", async (_event, portPath) => {
     }
   };
 });
+
+const startImageServer = () => {
+  const app = express();
+
+  // ✅ Your images folder
+  const IMAGE_DIR = "/var/lib/suhi/.images";
+
+  // Serve folder
+  app.use("/images", express.static(IMAGE_DIR));
+
+  const PORT = 5174;
+
+  app.listen(PORT, "127.0.0.1", () => {
+    console.log(`✅ Image server running: http://127.0.0.1:${PORT}/images`);
+  });
+};
+
+startImageServer();
 
 ipcMain.handle("connect-biaPort", async (_event, portPath) => {
  console.log("[MAIN] connect-biaPOrt request:", portPath);

@@ -24,6 +24,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
+    "express": "^5.2.1",
     "framer-motion": "^12.25.0",
     "i18next": "^25.7.3",
     "lucide-react": "^0.562.0",
