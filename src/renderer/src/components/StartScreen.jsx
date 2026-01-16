@@ -7,8 +7,7 @@ import { useNavigate } from 'react-router'
 import { openCamerasInBackground } from '../utils/cameraSession'
 import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
-const skipBIA = false;
-const Flag = false;
+const Flag = true;
 export const StartScreen = () => {
   const { t } = useTranslation()
   const [isCameraReady, setIsCameraReady] = React.useState(false)

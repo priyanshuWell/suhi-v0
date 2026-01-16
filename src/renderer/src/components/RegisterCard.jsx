@@ -5,8 +5,20 @@ import frame1 from '../assets/verfied-frame.svg'
 import profilepic from '../assets/profile-pic.png'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
+import { useSelector } from 'react-redux'
+
 
 export default function RegisterCard() {
+const user = useSelector((state) => state.common.user);
+const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
+const folderName = imagePath?.split("/").pop(); // "<folder>"
+
+const profileImageSrc = folderName
+  ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+  : profilepic;
+
+
+console.log(user);
   const navigate = useNavigate()
   const {t}= useTranslation()
   return (
@@ -37,22 +49,33 @@ export default function RegisterCard() {
         >
           {/* profile pic */}
 
-          <div className="max-w-full h-auto">
+          {/* <div className="max-w-full h-auto">
             <img
               src={profilepic}
               alt=" profile pic"
               className="w-full portrait:max-w-105 landscape:max-w-60 h-auto"
             />
-          </div>
+          </div> */}
+          
+
+       <img
+  src={profileImageSrc}
+  onError={(e) => {
+    e.currentTarget.src = profilepic;
+  }}
+  alt="profile pic"
+  className="w-full portrait:max-w-105 landscape:max-w-60 h-auto"
+/>
+
 
           {/* text */}
 
           <div className="info max-w-full mt-8">
             <p className="portrait:text-3xl flex flex-col items-center landscape:text-xl text-center tracking-wider gap-y-3 text-white text-nowrap">
-              <span>{t('profile.name')} - Bhanu Pratap singh</span>
-              <span> {t('profile.class')}- 8th A</span>
-              <span>{t('profile.age')} - 13 years</span>
-              <span>{t('profile.number')} - 0987654321</span>
+              <span>{t('profile.name')} - {user?.data?.student_name} </span>
+              {user?.data?.class &&<span> {t('profile.class')}- 8th A</span>}
+             {user?.data?.age && <span>{t('profile.age')} - 13 years</span>}
+             {user?.data?.contact_number &&  <span>{t('profile.number')} - 0987654321</span>}
             </p>
           </div>
 
