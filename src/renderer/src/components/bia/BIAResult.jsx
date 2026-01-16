@@ -1,14 +1,24 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dumbbell, Ruler, Calculator } from 'lucide-react'
 import biaResult from '../../assets/biaRes.svg'
 import bg1 from '../../assets/lightbg.png'
 import { useLocation, useNavigate } from 'react-router'
+import ErrorAlert from '../ErrorAlert'
 
 const BIAResult = () => {
   const navigate = useNavigate()
   const location = useLocation();
   const bia = location.state?.biaResult; // Retrieve the data here
   console.log("bia from BIAResult", bia)
+
+  const [showError, setShowError] = useState(false)
+
+  // Check for errors when component mounts
+  useEffect(() => {
+    if (!bia) {
+      setShowError(true)
+    }
+  }, [bia])
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-black font-mono">
       <div
@@ -133,6 +143,15 @@ transition-transform duration-300 ease-in-out
           </div>
         </div>
       </div>
+
+      <ErrorAlert
+        visible={showError}
+        title="BIA Result Error"
+        description="Failed to load BIA result data. Redirecting to home..."
+        onClose={() => setShowError(false)}
+        onRetry={() => navigate('/')}
+        autoRetryDelay={3000}
+      />
     </div>
   )
 }

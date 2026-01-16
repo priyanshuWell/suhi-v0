@@ -17,7 +17,6 @@ const api = {
   startImpedanceMeasurement : (impFreq)=>ipcRenderer.invoke('start-impedance-measurement',impFreq),
   calculateBIA: (payload) => ipcRenderer.invoke("calculate-bia", payload),
   saveVoiceBuffer: (request) => ipcRenderer.invoke("save-voice-buffer", request),
-
   onHeightError: (callback) => heightErrorChannel.subscribe(callback),
    onHeightStatus: (callback) => heightStatusChannel.subscribe(callback),
     onWeightStatus: (callback) => weightStatusChannel.subscribe(callback),
@@ -35,7 +34,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', api)
   } catch (error) {
-    console.error(error)
+    console.error("Preload error:", error)
   }
 } else {
   window.electron = electronAPI

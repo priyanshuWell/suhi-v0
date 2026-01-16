@@ -1288,7 +1288,6 @@ let totalPackages = 0;
 export function collectBodyCompositionOnce(timeout = 8000) {
   return new Promise((resolve, reject) => {
     let packages = {};
-    let expectedTotal = null;
 
     const timer = setTimeout(() => {
       biaPort.off("data", onData);
@@ -1302,15 +1301,17 @@ export function collectBodyCompositionOnce(timeout = 8000) {
       if (!parsed) return;
 
       packages[parsed.currentPackage] = parsed.data;
-      expectedTotal = parsed.totalPackages;
 
-      if (Object.keys(packages).length === expectedTotal) {
+      // ✅ Resolve when LAST package arrives
+      if (parsed.currentPackage === parsed.totalPackages) {
         clearTimeout(timer);
         biaPort.off("data", onData);
 
         const ordered = {};
-        for (let i = 1; i <= expectedTotal; i++) {
-          ordered[`package${i}`] = packages[i];
+        for (let i = 1; i <= parsed.totalPackages; i++) {
+          if (packages[i]) {
+            ordered[`package${i}`] = packages[i];
+          }
         }
 
         resolve(ordered);
@@ -1957,7 +1958,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
 
 
 // Send BIA command
-async function sendBiaCommand(command, options = {}) {
+export async function sendBiaCommand(command, options = {}) {
     const defaultOptions = {
         waitForResponse: true,
         timeout: 10000,  // 10 seconds
