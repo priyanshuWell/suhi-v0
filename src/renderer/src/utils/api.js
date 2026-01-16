@@ -1,3 +1,5 @@
+import axios from "axios";
+
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 /**
@@ -97,3 +99,28 @@ export async function sendAllVideosToBackend(recordings) {
   const promises = recordings.map(recording => sendVideoToBackend(recording));
   return Promise.all(promises);
 }
+
+
+
+
+
+
+
+
+
+
+/**
+ * Calls: GET /sync/cloud-to-local
+ */
+export const cloudToLocalSync = async () => {
+  try {
+    const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, {
+      timeout: 60000, // sync may take time
+      headers: { "Content-Type": "application/json" },
+    });
+    return res.data;
+  } catch (error) {
+    console.error("❌ cloudToLocalSync API failed:", error?.message || error);
+    throw error;
+  }
+};
