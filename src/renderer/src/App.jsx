@@ -13,7 +13,6 @@ function App() {
   return (
     <Routes>
       <Route path='/' element={<SplashScreen />} />
-      {/* <Route path='/' element={<VoiceAnalysis />} /> */}
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/verified' element={<RegisterCard />} />
@@ -21,6 +20,7 @@ function App() {
       <Route path='/screen1' element={<DMITScreen />} />
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
+
     </Routes>
   )
 }

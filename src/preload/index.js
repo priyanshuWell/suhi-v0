@@ -16,7 +16,7 @@ const api = {
   startWeightMeasurement : ()=>ipcRenderer.invoke('start-weight-measurement'),
   startImpedanceMeasurement : (impFreq)=>ipcRenderer.invoke('start-impedance-measurement',impFreq),
   calculateBIA: (payload) => ipcRenderer.invoke("calculate-bia", payload),
-  saveVoiceBuffer: (buffer) => ipcRenderer.invoke("save-voice-buffer", buffer),
+  saveVoiceBuffer: (request) => ipcRenderer.invoke("save-voice-buffer", request),
 
   onHeightError: (callback) => heightErrorChannel.subscribe(callback),
    onHeightStatus: (callback) => heightStatusChannel.subscribe(callback),

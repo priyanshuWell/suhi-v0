@@ -124,7 +124,7 @@ ipcMain.handle("start-impedance-measurement", async (event, freq) => {
   }
 
   if (freq === "100") {
-    const result = await bia.case39_100kHzImpedanceQuery();
+    const result = await biaa.case39_100kHzImpedanceQuery();
 
     if (!result) {
       return { success: false, error: "100kHz impedance unstable" };
@@ -217,13 +217,11 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
   }
 });
 
-ipcMain.handle("save-voice-buffer", async (event, arrayBuffer) => {
-  console.log("[MAIN] save-voice-buffer called");
+ipcMain.handle("save-voice-buffer", async (event, request) => {
+  console.log("[MAIN] save-voice-buffer called",  request);
   try {
-    const buffer = Buffer.from(arrayBuffer);
-    const bufferId = "b47fd582-fb97-46e3-84ba-f56b54a58801"
-    const userId = "b47fd582-fb97-46e3-84ba-f56b54a58801" // Backend requires valid UUID
-    const sessionId = "b47fd582-fb97-46e3-84ba-f56b54a58801"
+    const buffer = Buffer.from(request.arrayBuffer);
+    const bufferId = crypto.randomUUID();
     const fileName = `${bufferId}.webm`;
     const shmPath = `/dev/shm/${fileName}`;
 
@@ -233,13 +231,11 @@ ipcMain.handle("save-voice-buffer", async (event, arrayBuffer) => {
 
     const payload = {
       buffer_id: bufferId,
-      status: "success",
-      kiosk_id: "test-kiosk-01",
-      shm_path: shmPath,
-      user_id: userId,
-      session_id: sessionId
+      kiosk_id: request.kiosk_id,
+      user_id: request.user_id,
+      session_id: request.session_id,
+      shm_path: shmPath
     };
-
     console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`, payload);
 
     try {

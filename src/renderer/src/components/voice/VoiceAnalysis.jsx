@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import bg1 from "../../assets/lightbg.png";
 import voiceImage from "../../assets/voice_image.png";
+import { useNavigate } from "react-router";
 
 const VoiceCapture = () => {
     const [timeLeft, setTimeLeft] = useState(5);
@@ -8,6 +9,7 @@ const VoiceCapture = () => {
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
     const mediaRecorderRef = React.useRef(null);
     const chunksRef = React.useRef([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let interval = null;
@@ -40,14 +42,24 @@ const VoiceCapture = () => {
             mediaRecorder.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
+                const sessionId = "38e075c8-1a49-450a-8bbb-ccd1bd6483faaa";
+                const userId = "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"
                 setStatus("processing");
+                const request = {
+                    kiosk_id: "test-kiosk-01",
+                    user_id: userId,
+                    session_id: sessionId,
+                    arrayBuffer: arrayBuffer
+                };
 
                 try {
-                    const result = await window.api.saveVoiceBuffer(arrayBuffer);
+                    const result = await window.api.saveVoiceBuffer(request);
                     console.log("result", result);
                     if (result.success) {
                         setStatus("success");
                         console.log("Voice analysis success:", result);
+                        navigate("/bia/result");
+
                     } else {
                         setStatus("error");
                         console.error("Voice analysis failed:", result.error);
@@ -128,10 +140,10 @@ const VoiceCapture = () => {
                             xmlns="http://www.w3.org/2000/svg"
                         >
                             <defs>
-                                <radialGradient id="paint0_radial_7767_5563" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)">
+                                {/* <radialGradient id="paint0_radial_7767_5563" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)">
                                     <stop stopColor="white" />
                                     <stop offset="1" stopColor="#094EC6" />
-                                </radialGradient>
+                                </radialGradient> */}
                             </defs>
 
                             {/* Static Track Background */}
