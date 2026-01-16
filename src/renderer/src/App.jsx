@@ -37,7 +37,6 @@ function App() {
 
     <Routes>
       <Route path='/' element={<SplashScreen />} />
-      {/* <Route path='/' element={<VoiceAnalysis />} /> */}
        <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
@@ -46,6 +45,7 @@ function App() {
       <Route path='/screen1' element={<DMITScreen />} />
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
+
     </Routes>
   )
 }

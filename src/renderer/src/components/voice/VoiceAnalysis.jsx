@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import bg1 from "../../assets/lightbg.png";
 import voiceImage from "../../assets/voice_image.png";
+import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 const VoiceCapture = () => {
-    const [timeLeft, setTimeLeft] = useState(5);
+    const { t } = useTranslation();
+    const [timeLeft, setTimeLeft] = useState(50);
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
     const mediaRecorderRef = React.useRef(null);
     const chunksRef = React.useRef([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         let interval = null;
@@ -40,14 +44,24 @@ const VoiceCapture = () => {
             mediaRecorder.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
+                const sessionId = "38e075c8-1a49-450a-8bbb-ccd1bd6483faaa";
+                const userId = "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"
                 setStatus("processing");
+                const request = {
+                    kiosk_id: "test-kiosk-01",
+                    user_id: userId,
+                    session_id: sessionId,
+                    arrayBuffer: arrayBuffer
+                };
 
                 try {
-                    const result = await window.api.saveVoiceBuffer(arrayBuffer);
+                    const result = await window.api.saveVoiceBuffer(request);
                     console.log("result", result);
                     if (result.success) {
                         setStatus("success");
                         console.log("Voice analysis success:", result);
+                        // navigate("/bia/result");
+
                     } else {
                         setStatus("error");
                         console.error("Voice analysis failed:", result.error);
@@ -72,7 +86,7 @@ const VoiceCapture = () => {
 
     const handleStart = () => {
         if (status === "recording" || status === "processing") return;
-        setTimeLeft(5);
+        setTimeLeft(50);
         startRecording();
     };
 
@@ -101,10 +115,7 @@ const VoiceCapture = () => {
 
                 {/* Header Text */}
                 <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl">
-                    {status === 'processing' ? 'Processing Voice Data...' :
-                        status === 'success' ? 'Analysis Complete!' :
-                            status === 'error' ? 'Error. Please Try Again.' :
-                                'Look at the image, notice what it makes you feel or think, then click Start and speak freely for 5 seconds.'}
+                    Look at the image, notice what it makes you feel or think, then click Start and speak freely for 50 seconds.
                 </h1>
 
                 {/* Image Container */}
@@ -128,10 +139,10 @@ const VoiceCapture = () => {
                             xmlns="http://www.w3.org/2000/svg"
                         >
                             <defs>
-                                <radialGradient id="paint0_radial_7767_5563" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)">
+                                {/* <radialGradient id="paint0_radial_7767_5563" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)">
                                     <stop stopColor="white" />
                                     <stop offset="1" stopColor="#094EC6" />
-                                </radialGradient>
+                                </radialGradient> */}
                             </defs>
 
                             {/* Static Track Background */}
@@ -151,7 +162,7 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 5)}
+                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 50)}
                                 transform="rotate(-90 202 202)"
                                 style={{ transition: 'stroke-dashoffset 1s linear' }}
                             />
@@ -172,14 +183,29 @@ const VoiceCapture = () => {
                         </span>
                     </div>
                 </div>
-                {/* Start Button */}
                 <button
                     onClick={handleStart}
-                    disabled={isActive || status === 'processing'}
-                    className={`mt-8 px-16 py-3 bg-linear-to-r from-[#2FA4FF] to-[#00D4FF] text-white rounded-xl font-medium tracking-wide shadow-[0_0_20px_rgba(47,164,255,0.5)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                    // onClick={() => navigate(skipBIA ? '/voice' : '/verified')}
+                    className="
+              w-[clamp(16rem,40vw,31.25rem)]
+              h-[clamp(4rem,8vh,6.25rem)]
+              flex items-center justify-center
+              text-center
+              rounded-[30px]
+              border-2 border-white/50
+              bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
+              shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
+              text-white
+              text-[clamp(1.5rem,3vw,3rem)]
+              tracking-wide
+              active:scale-[0.98]
+              transition-all duration-300 ease-in-out
+              hover:border-white
+            "
                 >
                     {isActive ? 'Recording...' : status === 'processing' ? 'Processing...' : 'Start'}
                 </button>
+
             </div>
         </div>
     );

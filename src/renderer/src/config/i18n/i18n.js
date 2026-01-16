@@ -5,7 +5,7 @@ import hi from './locales/hi.json'
 i18n
   .use(initReactI18next)
   .init({
-    lng: 'hi',
+    lng: 'en',
     debug: true,
     fallbackLng: 'en',
     returnObjects: true,
