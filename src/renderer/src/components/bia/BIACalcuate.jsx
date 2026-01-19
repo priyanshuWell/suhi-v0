@@ -280,8 +280,8 @@ export default function BIACalculate({ user, onComplete }) {
       }
 
       /* CALCULATE */
-      setIsCalculating(true);
-      setCurrentStatus("Processing body composition data...");
+     // setIsCalculating(true);
+      //setCurrentStatus("Processing body composition data...");
 
       console.log("[BIA] Calling calculateBIA with params:", {
         height: resultsRef.current.height.value,
