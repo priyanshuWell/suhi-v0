@@ -400,7 +400,7 @@ export default function BIACalculate({ user, onComplete }) {
         title={errorState?.title}
         description={errorState?.description}
         onClose={() => setErrorState(null)}
-        onRetry={errorState?.canRetry ? handleRetry : undefined}
+        onRetry={errorState?.canRetry ? 3000 : undefined}
       />
     </>
   );
