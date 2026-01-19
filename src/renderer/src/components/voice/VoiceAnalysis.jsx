@@ -9,7 +9,9 @@ const VoiceCapture = () => {
     const [timeLeft, setTimeLeft] = useState(50);
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const mediaRecorderRef = React.useRef(null);
+    const audioRef = React.useRef(null);
     const chunksRef = React.useRef([]);
     const navigate = useNavigate();
     const instructionAudio = "/src/assets/audio/voice.mp3";

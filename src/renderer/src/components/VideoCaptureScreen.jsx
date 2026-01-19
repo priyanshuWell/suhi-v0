@@ -105,7 +105,9 @@ const VideoCaptureScreen = () => {
   const [isVerify, setIsVerify] = useState(false);
   const [phase, setPhase] = useState('');
   const [status, setStatus] = useState('Initializing...');
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const dispatch=useDispatch();
+  const audioRef = React.useRef(null);
 
 const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 useEffect(() => {
@@ -206,7 +208,7 @@ useEffect(() => {
         onEnded={handleAudioEnd}
         onPlay={() => setIsAudioPlaying(true)}
       >
-      <source src={instructionAudio} type="audio/mpeg" />
+        <source src={instructionAudio} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
       {/* Avatar Video */}
