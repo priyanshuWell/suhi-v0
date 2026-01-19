@@ -4,12 +4,24 @@ import biaResult from '../../assets/biaRes.svg'
 import bg1 from '../../assets/lightbg.png'
 import { useLocation, useNavigate } from 'react-router'
 import ErrorAlert from '../ErrorAlert'
+import { useSelector } from 'react-redux'
 
 const BIAResult = () => {
   const navigate = useNavigate()
   const location = useLocation();
-  const bia = location.state?.biaResult; // Retrieve the data here
-  console.log("bia from BIAResult", bia)
+
+  // Read from Redux store (primary source)
+  const storeWeight = useSelector((state) => state.common.weight);
+  const storeHeight = useSelector((state) => state.common.height);
+  const storeBiaResult = useSelector((state) => state.common.biaResult);
+
+  // Fallback to navigation state for backward compatibility
+  const bia = storeBiaResult || location.state?.biaResult;
+  const weight = storeWeight || location.state?.weight;
+  const height = storeHeight || location.state?.height;
+
+  console.log("[BIAResult] Using data from store:", { weight, height, bia: !!bia });
+  console.log("[BIAResult] BIA data:", bia)
 
   const [showError, setShowError] = useState(false)
 
@@ -41,7 +53,7 @@ const BIAResult = () => {
                   <span className="uppercase tracking-widest text-xl font-bold">Weight</span>
                 </div>
                 <div className="text-6xl font-bold tracking-tight">
-                  42 <span className="text-3xl text-gray-400 font-medium">kg</span>
+                  {Number(weight).toFixed(2) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
                 </div>
               </div>
 
@@ -51,7 +63,7 @@ const BIAResult = () => {
                   <span className="uppercase tracking-widest text-xl font-bold">Height</span>
                 </div>
                 <div className="text-6xl font-bold tracking-tight">
-                  1.2 <span className="text-3xl text-gray-400 font-medium">m</span>
+                  {Number(height).toFixed(2) || 156.3}<span className="text-3xl text-gray-400 font-medium">m</span>
                 </div>
               </div>
             </div>
@@ -60,7 +72,7 @@ const BIAResult = () => {
                 <Calculator size={32} />
                 <span className="uppercase tracking-widest text-xl font-bold">Body mass index</span>
               </div>
-              <div className="text-6xl font-bold tracking-tight text-white drop-shadow-lg">22</div>
+              <div className="text-6xl font-bold tracking-tight text-white drop-shadow-lg">{bia.bmi || 22}</div>
             </div>
 
             <div className="flex-grow"></div>
