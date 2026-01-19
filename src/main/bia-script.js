@@ -1286,40 +1286,75 @@ let bodyCompositionPackages = {};
 let totalPackages = 0;
 
 export function collectBodyCompositionOnce(timeout = 8000) {
-  return new Promise((resolve, reject) => {
-    let packages = {};
+    return new Promise((resolve, reject) => {
+        let packages = {};
+        let totalPackages = 0;
+        let lastPackageTime = Date.now();
 
-    const timer = setTimeout(() => {
-      biaPort.off("data", onData);
-      reject(new Error("BIA response timeout"));
-    }, timeout);
+        const timer = setTimeout(() => {
+            biaPort.off("data", onData);
+            reject(new Error("BIA response timeout"));
+        }, timeout);
 
-    const onData = (data) => {
-      if (data[0] !== 0xAA || data[2] !== 0xD0) return;
+        const checkCompletion = () => {
+            if (totalPackages === 0) return false;
 
-      const parsed = parseBodyCompositionResponse(data);
-      if (!parsed) return;
+            let receivedCount = 0;
+            for (let i = 1; i <= totalPackages; i++) {
+                if (packages[i]) receivedCount++;
+            }
 
-      packages[parsed.currentPackage] = parsed.data;
+            return receivedCount === totalPackages;
+        };
 
-      // ✅ Resolve when LAST package arrives
-      if (parsed.currentPackage === parsed.totalPackages) {
-        clearTimeout(timer);
-        biaPort.off("data", onData);
+        const onData = (data) => {
+            if (data[0] !== 0xAA || data[2] !== 0xD0) return;
 
-        const ordered = {};
-        for (let i = 1; i <= parsed.totalPackages; i++) {
-          if (packages[i]) {
-            ordered[`package${i}`] = packages[i];
-          }
-        }
+            const parsed = parseBodyCompositionResponse(data);
+            if (!parsed) return;
 
-        resolve(ordered);
-      }
-    };
+            if (totalPackages === 0) {
+                totalPackages = parsed.totalPackages;
+            }
 
-    biaPort.on("data", onData);
-  });
+            packages[parsed.currentPackage] = parsed.data;
+            lastPackageTime = Date.now();
+
+            if (checkCompletion()) {
+                clearTimeout(timer);
+                biaPort.off("data", onData);
+
+                const ordered = {};
+                for (let i = 1; i <= totalPackages; i++) {
+                    if (packages[i]) {
+                        ordered[`package${i}`] = packages[i];
+                    }
+                }
+
+                resolve(ordered);
+            }
+        };
+
+        // Secondary timeout for delayed packages (e.g., if one package is slow)
+        const delayedTimeout = setInterval(() => {
+            if (checkCompletion()) {
+                clearInterval(delayedTimeout);
+                clearTimeout(timer);
+                biaPort.off("data", onData);
+
+                const ordered = {};
+                for (let i = 1; i <= totalPackages; i++) {
+                    if (packages[i]) {
+                        ordered[`package${i}`] = packages[i];
+                    }
+                }
+
+                resolve(ordered);
+            }
+        }, 500);
+
+        biaPort.on("data", onData);
+    });
 }
 export function processBodyCompositionResponse(data) {
     const parsedData = parseBodyCompositionResponse(data);
