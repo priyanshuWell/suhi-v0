@@ -5,7 +5,7 @@ import { StartScreen } from './components/StartScreen'
 import VideoCaptureScreen from './components/VideoCaptureScreen'
 import BIACalcuate from './components/bia/BIACalcuate'
 import RegisterCard from './components/RegisterCard'
-import DMITScreen from './components/dmit/DMITScreen'
+// import DMITScreen from './components/dmit/DMITScreen'
 // import FaceScan from './components/FaceScan'
 import ErrorAlert from './components/ErrorAlert'
 import BIAResult from './components/bia/BIAResult'
@@ -14,6 +14,8 @@ import VoiceCapture from './components/voice/VoiceAnalysis'
 import { useEffect } from 'react'
 import { cloudToLocalSync } from './utils/api'
 import VoiceAnalysis from './components/voice/VoiceAnalysis'
+import NewDmit from './components/dmit/NewDmit'
+import DMITScreen from './components/dmit/DMITScreen'
 
 function App() {
 
@@ -35,14 +37,15 @@ function App() {
 
   return (
 
+
     <Routes>
-      <Route path='/' element={<SplashScreen />} />
+      {/* <Route path='/' element={<NewDmit />} /> */}
        <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
-      <Route path='/screen1' element={<DMITScreen />} />
+      <Route path='/screen1' element={<NewDmit />} />
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
 
@@ -65,7 +68,7 @@ export default App
 
 
 
-
+// "hand": "RP - Right Palm (palm facing camera) , LP - Left Palm (palm facing camera), RB - Right Back (back of hand facing camera), LB - Left Back (back of hand facing camera)"
 
 
 

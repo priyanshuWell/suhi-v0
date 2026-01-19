@@ -107,6 +107,7 @@ transition-transform duration-300 ease-in-out
             </button>
 
             <button
+             onClick={() => navigate('/welcome')}
               className="
           
 w-[320px] h-[100px]
@@ -134,3 +135,25 @@ transition-transform duration-300 ease-in-out
     </div>
   )
 }
+
+
+
+
+
+
+// {
+//     "success": true,
+//     "data": {
+//         "buffer_id": "36d051db-99f2-447c-818e-44b0e06c923b",
+//         "status": "COMPLETED",
+//         "student_status": "REGISTERED",
+//         "user_id": "11e24be9-ed9b-4e65-8eeb-51a2561cb1da",
+//         "face_id": "8577d7b5-a227-4402-962b-78f0c11ffce1",
+//         "student_name": "Shivam Tripathi",
+//         "gender": "MALE",
+//         "age": 24,
+//         "video_path": "/var/lib/suhi/.videos/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001",
+//         "image_path": "/var/lib/suhi/.images/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001"
+//     },
+//     "error": null
+// }
