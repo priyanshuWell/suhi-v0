@@ -9,18 +9,62 @@ import { useSelector } from 'react-redux'
 
 
 export default function RegisterCard() {
-  const user = useSelector((state) => state.common.user);
-  const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
-  const folderName = imagePath?.split("/").pop(); // "<folder>"
+const user = useSelector((state) => state.common.user);
+const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
+const folderName = imagePath?.split("/").pop(); // "<folder>"
+const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+const audioRef = React.useRef(null);
+const instructionAudio = "/src/assets/audio/confirm_user.mp3";
+const profileImageSrc = folderName
+  ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+  : profilepic;
 
-  const profileImageSrc = folderName
-    ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-    : profilepic;
+useEffect(() => {
+  // Play audio when component mounts
+  playAudio();
+}, []);
 
+const playAudio = () => {
+    if (audioRef.current) {
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
 
   console.log(user);
   const navigate = useNavigate()
-  const { t } = useTranslation()
+  const {t}= useTranslation()
+    const handleYesClick = () => {
+    stopAudio();
+    navigate('/bia/wh');
+  };
+
+  const handleNoClick = () => {
+    stopAudio();
+    navigate('/start');
+  };
+    <audio
+    ref={audioRef}
+    onEnded={handleAudioEnd}
+    onPlay={() => setIsAudioPlaying(true)}
+  >
+    <source src={instructionAudio} type="audio/mpeg" />
+    Your browser does not support the audio element.
+  </audio>
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center">
       {/* Card Wrapper */}
@@ -81,7 +125,7 @@ export default function RegisterCard() {
 
           <div className="buttons mt-5">
             <button
-              onClick={() => navigate('/bia/wh')}
+            onClick={handleYesClick}
               style={{
                 borderImageSource:
                   'radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)',
@@ -103,7 +147,7 @@ transition-transform duration-300 ease-in-out
 
   "
             >
-              {t('common.yes_me')}
+              {handleNoClick}
             </button>
 
             <button

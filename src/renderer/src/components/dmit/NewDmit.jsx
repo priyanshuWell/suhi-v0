@@ -34,24 +34,28 @@ const CAPTURE_FLOW = [
     label: "Left Hand - Front",
     overlay: leftFront,
     handPayload: "LP",
+    audio: "/src/assets/audio/lp.mp3"
   },
   {
     key: "LEFT_BACK",
     label: "Left Hand - Back",
     overlay: leftBack,
     handPayload: "LB",
+    audio: "/src/assets/audio/lb.mp3"
   },
   {
     key: "RIGHT_FRONT",
     label: "Right Hand - Front",
     overlay: rightFront,
     handPayload: "RP",
+    audio: "/src/assets/audio/rp.mp3"
   },
   {
     key: "RIGHT_BACK",
     label: "Right Hand - Back",
     overlay: rightBack,
     handPayload: "RB",
+    audio: "/src/assets/audio/rb.mp3"
   },
 ];
 
@@ -63,18 +67,41 @@ const NewDmitScreen = () => {
   const streamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const runLockRef = useRef(false);
-
+  const audioRef = useRef(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
   const [status, setStatus] = useState("Preparing camera...");
   const [isRecording, setIsRecording] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // :white_check_mark: for status UI
   const [phase, setPhase] = useState("INFO"); // INFO | ERROR
   const [isVerify, setIsVerify] = useState(false);
 
   const currentStep = CAPTURE_FLOW[stepIndex];
+
+  const playAudio = (audioPath) => {
+    if (audioRef.current) {
+      audioRef.current.src = audioPath;
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
 
   // :white_check_mark: required payload values (replace with your real values / redux / localstorage)
   const kioskId = "KIOSK_001";
@@ -270,6 +297,7 @@ const NewDmitScreen = () => {
         setPhase("INFO");
         setIsVerify(true);
         setStatus("All hands completed :white_check_mark: Redirecting...");
+        stopAudio();
         setTimeout(() => {
           navigate("/voice");
         }, 700);
@@ -298,6 +326,7 @@ const NewDmitScreen = () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
+      stopAudio();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -313,6 +342,14 @@ const NewDmitScreen = () => {
 
   return (
     <div className="fixed inset-0 w-screen min-h-screen overflow-hidden bg-black">
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+        <source src={currentStep?.audio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* background */}
       <div
         className="absolute inset-0 bg-no-repeat bg-cover bg-center z-0"
@@ -343,7 +380,7 @@ const NewDmitScreen = () => {
             <video
               ref={videoRef}
               autoPlay
-              muted
+            //  muted
               playsInline
               className="w-full h-full object-cover"
             />
