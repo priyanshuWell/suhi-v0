@@ -478,7 +478,7 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
     app.on('window-all-closed', () => {
       if (process.platform !== 'darwin') {
         app.quit()
-      }
+      } 
     })
 
     /**
@@ -699,7 +699,7 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData) 
     // Package 3: Evaluation Suggestions
     body_score: p3.bodyScore || 1.11,
     physical_age_years: p3.physicalAge || 1.11,
-    body_type: getBodyType(p3.bodyType) || 1.11,
+    body_type: getBodyType(p3.bodyType) || "STANDARD",
     skeletal_muscle_mass_index: p3.skeletalMuscleMassIndex || 1.11,
     
     waist_hip_ratio: p3.waistToHipRatio || 1.11,
@@ -718,7 +718,7 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData) 
     bmi_min: p3.bodyMassIndexStandardMin || 1.11,
     bmi_max: p3.bodyMassIndexStandardMax || 1.11,
     
-    body_fat_percentage: p3.bodyFatPercentage || "20%" || 1.11,
+    body_fat_percentage: p3.bodyFatPercentage || 1.11,
     body_fat_percentage_min: p3.bodyFatPercentageStandardMin || 1.11,
     body_fat_percentage_max: p3.bodyFatPercentageStandardMax || 1.11,
     

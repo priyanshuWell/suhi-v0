@@ -5,6 +5,7 @@ const initialState = {
 
   user: null,
   lang: "en",
+  sessionId: null, // BIA session identifier
 
   // example shared states
   videoBase64: null,
@@ -14,6 +15,7 @@ const initialState = {
   height: null,
   weight: null,
   biaResult: null,
+  bmiResult:null,
 };
 
 const commonSlice = createSlice({
@@ -51,6 +53,13 @@ const commonSlice = createSlice({
     setBiaResult: (state, action) => {
       state.biaResult = action.payload;
     },
+     setBmiResult: (state, action) => {
+      state.bmiResult = action.payload;
+    },
+
+    setSessionId: (state, action) => {
+      state.sessionId = action.payload;
+    },
 
     resetCommonState: () => initialState,
   },
@@ -66,6 +75,8 @@ export const {
   setWeight,
   setBiaResult,
   resetCommonState,
+  setBmiResult,
+  setSessionId
 } = commonSlice.actions;
 
 export default commonSlice.reducer;

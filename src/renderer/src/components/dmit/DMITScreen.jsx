@@ -188,6 +188,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router";
 
 import bg1 from "../../assets/lightbg.png";
 import bg2 from "../../assets/dmt-bg.svg";
@@ -219,6 +220,7 @@ const CAPTURE_FLOW = [
 ];
 
 const DMITScreen = () => {
+  const navigate = useNavigate();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -402,7 +404,9 @@ const DMITScreen = () => {
         setStepIndex((prev) => prev + 1);
       } else {
         setStatus("All 4 buffers captured successfully ✅");
-        // optionally navigate next page here
+        // Navigate to voice analysis
+        await new Promise((r) => setTimeout(r, 1000));
+        navigate("/voice");
       }
     } catch (err) {
       console.error("runStep error:", err);
@@ -446,11 +450,11 @@ const DMITScreen = () => {
 
       {/* top text */}
       <div
-        className="absolute landscape:top-[1vh] portrait:top-[6vh]
+        className="absolute top-[20px]
         left-1/2 -translate-x-1/2 z-30
-        portrait:w-[80%] landscape:w-[40%]"
+        w-[600px]"
       >
-        <p className="xl:text-5xl landscape:text-3xl text-center font-light leading-snug text-white tracking-wider">
+        <p className="text-5xl text-center font-light leading-snug text-white tracking-wider">
           Align the front of your right hand fully inside the box and keep it still until the scan
           finishes.
         </p>
@@ -458,12 +462,12 @@ const DMITScreen = () => {
 
       {/* frame section */}
       <div
-        className="absolute landscape:bottom-[1vh] portrait:bottom-[4vh]
+        className="absolute bottom-[20px]
         left-1/2 -translate-x-1/2 z-20"
       >
         {/* status */}
         <p
-          className="xl:text-3xl landscape:text-xl text-center font-light leading-snug text-white tracking-wider
+          className="text-3xl text-center font-light leading-snug text-white tracking-wider
           absolute bottom-1/2 left-1/2 -translate-x-1/2"
         >
           {status}
@@ -474,7 +478,7 @@ const DMITScreen = () => {
           <img
             src={bg2}
             alt="dmit frame"
-            className="xl:w-[750px] landscape:w-[550px] max-w-none h-auto"
+            className="w-[750px] max-w-none h-auto"
           />
 
           {/* ✅ CAMERA INSIDE THE RECTANGLE ONLY */}
@@ -502,7 +506,7 @@ const DMITScreen = () => {
             className="
               absolute top-[47%] left-1/2
               -translate-x-1/2 -translate-y-1/2
-              xl:w-[280px] landscape:w-[220px]
+              w-[280px]
               opacity-90 pointer-events-none
             "
           />

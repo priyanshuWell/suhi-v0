@@ -3,10 +3,13 @@ import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
+import { useDispatch } from "react-redux";
+import { setHeight, setWeight, setBiaResult, setSessionId } from "../../features/common/commonSlice";
 
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
 
   const [ports, setPorts] = useState([]);
@@ -75,11 +78,19 @@ export default function BIACalculate({ user, onComplete }) {
     const currentAttempt = (attemptCount[step] || 0) + 1;
     setAttemptCount(p => ({ ...p, [step]: currentAttempt }));
 
+    // If this is the second failure, navigate to /screen1
+    if (currentAttempt >= 2) {
+      console.error(`[BIA] ${step} failed ${currentAttempt} times. Redirecting to /screen1`);
+      navigate("/screen1");
+      return;
+    }
+
     setErrorState({
       ...payload,
       step,
       title: payload.userMessage || payload.message,
       currentAttempt,
+      canRetry: true,
     });
     setFailedStep(step);
   }
@@ -205,12 +216,17 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA] BIA API Response:", bia?.apiResponse);
       console.log("[BIA] BIA API Error:", bia?.apiError);
 
-      navigate("/bia/result", {
-        state: {
-          biaResult: bia, height: resultsRef.current.height.value,
-          weight: resultsRef.current.weight.value
-        }
-      });
+      // Generate session ID and save to Redux store
+      const sessionId = crypto.randomUUID();
+      dispatch(setSessionId(sessionId));
+      dispatch(setHeight(resultsRef.current.height.value));
+      dispatch(setWeight(resultsRef.current.weight.value));
+      dispatch(setBiaResult(bia));
+
+      console.log("[BIA] Saved to Redux store with sessionId:", sessionId);
+
+      // Navigate to screen1 (DMIT) instead of result
+      navigate("/screen1");
 
     } catch (e) {
       console.error("Flow failed:", e.message);
@@ -260,14 +276,17 @@ export default function BIACalculate({ user, onComplete }) {
   ======================= */
   return (
     <>
-      <BIAComponent texts={texts} />
+      <BIAComponent
+        texts={texts}
+        attemptCount={attemptCount.impedance20 || attemptCount.impedance100 || 0}
+      />
 
       <ErrorAlert
         visible={!!errorState}
         title={errorState?.title}
         description={errorState?.description}
         onClose={() => setErrorState(null)}
-        onRetry={errorState?.canRetry ? 3000 : undefined}
+        onRetry={errorState?.canRetry ? handleRetry : undefined}
       />
     </>
   );
