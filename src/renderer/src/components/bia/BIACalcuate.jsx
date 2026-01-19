@@ -120,7 +120,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 
   const measureWeight = async () => {
-    setCurrentStatus("Measuring weight...");
+    setCurrentStatus("Now we are measuring your weight, please stand still!");
     const res = await window.api.startWeightMeasurement();
     if (!res?.weight) throw new Error("Weight failed");
 
@@ -131,7 +131,7 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   const measureHeight = async () => {
-    setCurrentStatus("Measuring height...");
+    setCurrentStatus("Now we are measuring your height, please stand still!");
     await window.api.connectHeightPort(ports[0]?.path);
     const res = await window.api.startHeightMeasurement();
     if (!res?.height) throw new Error("Height failed");
@@ -143,7 +143,7 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   const measureImpedance = async (freq) => {
-    setCurrentStatus(`Measuring impedance ${freq} kHz...`);
+    setCurrentStatus(`Please ensure you are barefoot, and holding the hand rails firmly! Measuring impedance ${freq} kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     if (!res?.success) throw new Error("Impedance failed");
 

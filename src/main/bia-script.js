@@ -23,7 +23,7 @@ export const IMPEDANCE_ERROR_CODES = {
         action: 'INFO',
         canRetry: false,
         nextStep: 'Continue with measurement',
-        userMessage: 'Device not initialized - measurement ready to start'
+        userMessage: 'Oops, couldn\'t get body composition analysis. Hold on, we will try once again'
     },
     0x01: {
         code: 'CHECK_ELECTRODE',
@@ -33,7 +33,7 @@ export const IMPEDANCE_ERROR_CODES = {
         action: 'ABORT',
         canRetry: false,
         nextStep: 'Stop measurement and check electrodes',
-        userMessage: 'CRITICAL: ELECTRODE PROBLEM DETECTED!\n   • Check all electrode connections\n   • Ensure electrodes are firmly attached\n   • Clean electrode pads\n   • Verify no loose wires',
+        userMessage: 'Please ensure you are barefoot, and holding the hand rails firmly! We will try once again\n   • Check all electrode connections\n   • Ensure electrodes are firmly attached\n   • Clean electrode pads\n   • Verify no loose wires',
         causes: [
             'Electrode not properly connected',
             'Loose electrode contact',
@@ -57,7 +57,7 @@ export const IMPEDANCE_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Wait for measurement to complete',
-        userMessage: 'Device is measuring... Please wait',
+        userMessage: 'Measurement in progress... Please wait',
         waitTime: 3000
     },
     0x03: {
@@ -106,7 +106,7 @@ export const IMPEDANCE_ERROR_CODES = {
         maxRetries: 3,
         waitBeforeRetry: 2000,
         nextStep: 'Retry the impedance measurement',
-        userMessage: 'Device detected abnormal data, Please Hold The Electrode Properly!',
+        userMessage: 'Oops, couldn\'t get body scan data. Hold on, we will try once again!',
         issues: [
             'Electrode connection lost during measurement',
             'User moved during measurement',
@@ -141,7 +141,7 @@ export const WEIGHT_ERROR_CODES = {
         action: 'INFO',
         canRetry: false,
         nextStep: 'Continue with weight measurement',
-        userMessage: 'Scale not initialized - measurement ready to start'
+        userMessage: 'Stand straight, weight measurement in progess...'
     },
     0x01: {
         code: 'ZERO_POINT',
@@ -151,7 +151,7 @@ export const WEIGHT_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Accept zero reading (empty scale confirmed)',
-        userMessage: '⚖️ Scale reading: 0 kg (Empty scale)',
+        userMessage: '⚖️ Step on the scale and stand still',
         expectation: 'No weight on scale'
     },
     0x02: {
@@ -162,7 +162,7 @@ export const WEIGHT_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Wait for weight to stabilize',
-        userMessage: '⏳ Weight is unstable, please wait...',
+        userMessage: '⏳ Weight reading is unstable, please stand still...',
         waitTime: 2000,
         causes: [
             'User moving on scale',
@@ -365,7 +365,7 @@ export const HEIGHT_ERROR_CODES = {
         description: 'Height sensor has not received measurement request',
         action: 'INFO',
         canRetry: false,
-        nextStep: 'Continue with height measurement',
+        nextStep: 'Now we are measuring your height, please stand still!',
         userMessage: 'Measurement ready to start!'
     },
     0x01: {
