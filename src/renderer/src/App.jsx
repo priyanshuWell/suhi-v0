@@ -40,10 +40,10 @@ function App() {
 
     <Routes>
       {/* <Route path='/' element={<NewDmit />} /> */}
-       <Route path='/' element={<SplashScreen />} />
+       {/* <Route path='/' element={<SplashScreen />} /> */}
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
-      <Route path='/verified' element={<RegisterCard />} />
+      <Route path='/' element={<RegisterCard />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
       <Route path='/screen1' element={<NewDmit />} />
       <Route path='/bia/result' element={<BIAResult />} />

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import lightbg from '../assets/lightbg.png'
 import lightblub from '../assets/lightblub.png'
 import frame1 from '../assets/verfied-frame.svg'
@@ -57,7 +57,10 @@ const playAudio = () => {
     stopAudio();
     navigate('/start');
   };
-    <audio
+
+  return (
+    <div className="w-screen h-screen bg-black flex items-center justify-center">
+          <audio
     ref={audioRef}
     onEnded={handleAudioEnd}
     onPlay={() => setIsAudioPlaying(true)}
@@ -65,8 +68,6 @@ const playAudio = () => {
     <source src={instructionAudio} type="audio/mpeg" />
     Your browser does not support the audio element.
   </audio>
-  return (
-    <div className="w-screen h-screen bg-black flex items-center justify-center">
       {/* Card Wrapper */}
       <div
         className="relative w-[900px] h-[1400px] bg-cover bg-center"
@@ -147,11 +148,11 @@ transition-transform duration-300 ease-in-out
 
   "
             >
-              {handleNoClick}
+             {t('common.yes_me')}
             </button>
 
             <button
-             onClick={() => navigate('/welcome')}
+              onClick={handleNoClick}
               className="
           
 w-[320px] h-[100px]
