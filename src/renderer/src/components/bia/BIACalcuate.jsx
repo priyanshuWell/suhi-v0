@@ -4,11 +4,10 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 
-const MAX_RETRIES = 2;
-
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
 
   const [ports, setPorts] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -35,9 +34,67 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
 
+  useEffect(() => {
+    const onWeightError = (p) => registerError("weight", p);
+    const onHeightError = (p) => registerError("height", p);
+    const onImpedanceError = (p) => {
+      const step = p.frequency === 20 ? "impedance20" : "impedance100";
+      registerError(step, p);
+    };
+
+    const onWeightStatus = handleStatus;
+    const onHeightStatus = handleStatus;
+    const onImpedanceStatus = handleStatus;
+
+    const unsubs = [
+      window.api?.onWeightError(onWeightError),
+      window.api?.onHeightError(onHeightError),
+      window.api?.onImpedanceError(onImpedanceError),
+      window.api?.onWeightStatus(onWeightStatus),
+      window.api?.onHeightStatus(onHeightStatus),
+      window.api?.onImpedanceStatus(onImpedanceStatus),
+    ];
+
+    return () => unsubs.forEach(u => u?.());
+  }, []);
+
+  function handleStatus(payload) {
+    // IMPORTANT: MEASURE / INFO = WAIT (do not advance flow)
+    if (payload.severity === "INFO" || payload.severity === "WARNING") {
+
+      setCurrentStatus(payload.userMessage || payload.message);
+      return;
+    }
+
+    if (payload.severity === "ERROR" || payload.severity === "CRITICAL") {
+      registerError(payload.step, payload);
+    }
+  }
+
+  function registerError(step, payload) {
+    const currentAttempt = (attemptCount[step] || 0) + 1;
+    setAttemptCount(p => ({ ...p, [step]: currentAttempt }));
+
+    setErrorState({
+      ...payload,
+      step,
+      title: payload.userMessage || payload.message,
+      currentAttempt,
+    });
+    setFailedStep(step);
+  }
+
+  /* =======================
+     LOAD PORTS
+  ======================= */
+  useEffect(() => {
+    window.api?.getPorts?.().then(setPorts);
+  }, []);
+
+
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  const retry = async (fn, retries = 0) => {
+  const retry = async (fn, retries = 1) => {
     let err;
     for (let i = 0; i <= retries; i++) {
       try {
@@ -49,84 +106,6 @@ export default function BIACalculate({ user, onComplete }) {
     }
     throw err;
   };
-
-  useEffect(() => {
-    const onWeightError = (p) => registerError("weight", p);
-    const onHeightError = (p) => registerError("height", p);
-    const onImpedanceError = (p) => {
-      const step = p.frequency === 20 ? "impedance20" : "impedance100";
-      registerError(step, p);
-    };
-
-    const onStatus = handleStatus;
-
-    const unsubs = [
-      window.api?.onWeightError(onWeightError),
-      window.api?.onHeightError(onHeightError),
-      window.api?.onImpedanceError(onImpedanceError),
-      window.api?.onWeightStatus(onStatus),
-      window.api?.onHeightStatus(onStatus),
-      window.api?.onImpedanceStatus(onStatus),
-    ];
-
-    return () => unsubs.forEach(u => u?.());
-  }, []);
-
-  function handleStatus(payload) {
-    if (payload.severity === "INFO" || payload.severity === "WARNING") {
-      setCurrentStatus(payload.userMessage || payload.message);
-      return;
-    }
-
-    if (payload.severity === "ERROR" || payload.severity === "CRITICAL") {
-      registerError(payload.step, payload);
-    }
-  }
-
-  function registerError(step, payload) {
-    setAttemptCount(prev => {
-      const next = (prev[step] || 0) + 1;
-
-      setErrorState({
-        ...payload,
-        step,
-        title: payload.userMessage || payload.message,
-        currentAttempt: next,
-      });
-
-      setFailedStep(step);
-      return { ...prev, [step]: next };
-    });
-  }
-
-  /* =======================
-     MAX RETRY REDIRECT
-  ======================= */
-  useEffect(() => {
-    if (!failedStep) return;
-
-    const attempts = attemptCount[failedStep] || 0;
-
-    if (attempts >= MAX_RETRIES) {
-      console.error(`[BIA] Max retries reached for ${failedStep}`);
-
-      setIsRunning(false);
-
-      navigate("/dmit", {
-        replace: true,
-        state: {
-          step: failedStep,
-          attempts,
-          error: errorState,
-        },
-      });
-    }
-  }, [attemptCount, failedStep, errorState, navigate]);
-
-
-  useEffect(() => {
-    window.api?.getPorts?.().then(setPorts);
-  }, []);
 
 
   const measureWeight = async () => {
@@ -170,13 +149,17 @@ export default function BIACalculate({ user, onComplete }) {
     setIsRunning(true);
 
     try {
+      /* CONNECT BIA ONCE */
       await window.api.connectBiaPort(ports[2]?.path);
+      // await sleep(800);
 
+      /* WEIGHT */
       if (!resultsRef.current.weight) {
         await retry(measureWeight);
-        await sleep(1200);
+        await sleep(1200); // :red_circle: REQUIRED SETTLE
       }
 
+      /* HEIGHT */
       if (!resultsRef.current.height) {
         await retry(measureHeight);
       }
@@ -184,27 +167,47 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/im");
       await sleep(800);
 
+      /* IMPEDANCE 20 kHz */
       if (!resultsRef.current.impedance.k20) {
         await retry(() => measureImpedance("20"));
       }
+      setCurrentStatus("Preparing next impedance...");
+      await sleep(1500);
 
+      /* IMPEDANCE 100 kHz */
       if (!resultsRef.current.impedance.k100) {
         await retry(() => measureImpedance("100"));
       }
 
-      const bia = await window.api.calculateBIA({
+      /* CALCULATE */
+      console.log("[BIA] Calling calculateBIA with params:", {
         height: resultsRef.current.height.value,
         weight: resultsRef.current.weight.value,
-        age: 30,
+        age: 23,
         gender: "male",
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments
       });
 
+      const bia = await window.api.calculateBIA({
+        height: resultsRef.current.height.value,
+        weight: resultsRef.current.weight.value,
+        age: 23,
+        gender: "male",
+        impedance20: resultsRef.current.impedance.k20.segments,
+        impedance100: resultsRef.current.impedance.k100.segments
+      });
+
+      console.log("[BIA] Full BIA Result:", bia);
+      console.log("[BIA] BIA Success:", bia?.success);
+      console.log("[BIA] BIA Packages:", bia?.bodyComposition);
+      console.log("[BIA] BIA Summary:", bia?.summary);
+      console.log("[BIA] BIA API Response:", bia?.apiResponse);
+      console.log("[BIA] BIA API Error:", bia?.apiError);
+
       navigate("/bia/result", {
         state: {
-          biaResult: bia,
-          height: resultsRef.current.height.value,
+          biaResult: bia, height: resultsRef.current.height.value,
           weight: resultsRef.current.weight.value
         }
       });
@@ -220,39 +223,41 @@ export default function BIACalculate({ user, onComplete }) {
     if (ports.length >= 2) runFlow();
   }, [ports]);
 
+  /* =======================
+     RETRY HANDLER
+  ======================= */
   const handleRetry = async () => {
     if (!failedStep || !errorState) return;
-    if (errorState.currentAttempt >= MAX_RETRIES) return;
 
     setErrorState(null);
     setCurrentStatus("");
 
-    await sleep(2000);
+    await sleep(2000); // :red_circle: cooldown before retry
 
-    try {
-      switch (failedStep) {
-        case "weight":
-          await retry(measureWeight);
-          break;
-        case "height":
-          await retry(measureHeight);
-          break;
-        case "impedance20":
-          await retry(() => measureImpedance("20"));
-          break;
-        case "impedance100":
-          await retry(() => measureImpedance("100"));
-          break;
-        default:
-          break;
-      }
-
-      setFailedStep(null);
-      runFlow();
-    } catch (e) {
-      console.error("Retry failed:", e.message);
+    switch (failedStep) {
+      case "weight":
+        await retry(measureWeight);
+        break;
+      case "height":
+        await retry(measureHeight);
+        break;
+      case "impedance20":
+        await retry(() => measureImpedance("20"));
+        break;
+      case "impedance100":
+        await retry(() => measureImpedance("100"));
+        break;
+      default:
+        break;
     }
+
+    setFailedStep(null);
+    runFlow();
   };
+
+  /* =======================
+     RENDER
+  ======================= */
   return (
     <>
       <BIAComponent texts={texts} />
@@ -262,11 +267,7 @@ export default function BIACalculate({ user, onComplete }) {
         title={errorState?.title}
         description={errorState?.description}
         onClose={() => setErrorState(null)}
-        onRetry={
-          errorState && errorState.currentAttempt < MAX_RETRIES
-            ? handleRetry
-            : undefined
-        }
+        onRetry={errorState?.canRetry ? 3000 : undefined}
       />
     </>
   );
