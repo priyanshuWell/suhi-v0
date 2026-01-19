@@ -95,10 +95,19 @@ export default function BIACalculate({ user, onComplete }) {
     const currentAttempt = (attemptCount[step] || 0) + 1;
     setAttemptCount(p => ({ ...p, [step]: currentAttempt }));
 
-    // If this is the second failure, navigate to /screen1
+    // If this is the second failure, show alert then redirect to /screen1
     if (currentAttempt >= 2) {
-      console.error(`[BIA] ${step} failed ${currentAttempt} times. Redirecting to /screen1`);
-      navigate("/screen1");
+      console.error(`[BIA] ${step} failed ${currentAttempt} times. Showing error alert before redirect`);
+      setErrorState({
+        ...payload,
+        step,
+        title: "Measurement Failed",
+        description: `Unable to complete measurement after multiple attempts. Proceeding to next step.`,
+        currentAttempt,
+        canRetry: false,
+        shouldRedirect: true, // Flag to redirect after closing alert
+      });
+      setFailedStep(step);
       return;
     }
 
@@ -147,12 +156,19 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-  // Redirect to screen1 on timeout
+  // Show alert on timeout, then redirect to screen1
   const handleTimeout = (stepName) => {
-    console.error(`[BIA] ${stepName} timeout - redirecting to /screen1`);
+    console.error(`[BIA] ${stepName} timeout - showing error alert before redirect`);
     clearAllTimeouts();
     setIsRunning(false);
-    navigate("/screen1");
+    setErrorState({
+      step: stepName,
+      title: "Measurement Timeout",
+      description: `${stepName} is taking too long. Proceeding to next step.`,
+      severity: "ERROR",
+      canRetry: false,
+      shouldRedirect: true, // Flag to redirect after closing alert
+    });
   };
 
   // Wrap a promise with timeout
@@ -280,7 +296,7 @@ export default function BIACalculate({ user, onComplete }) {
       }
 
       /* CALCULATE */
-     // setIsCalculating(true);
+      // setIsCalculating(true);
       //setCurrentStatus("Processing body composition data...");
 
       console.log("[BIA] Calling calculateBIA with params:", {
@@ -314,7 +330,7 @@ export default function BIACalculate({ user, onComplete }) {
         throw new Error(bia?.error || "BIA calculation failed");
       }
 
-     // setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
+      // setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
       await sleep(800); // Brief moment to show success message
 
       // Generate session ID and save to Redux store
@@ -335,12 +351,16 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (e) {
       console.error("Flow failed:", e.message);
-      // Don't navigate to screen1 here if it's already handled by timeout
+      // Show error alert before redirecting
       if (!e.message.includes("timeout")) {
         clearAllTimeouts();
-        // Still redirect to screen1 on other errors after 2 failed attempts
-        console.error("[BIA] Flow error - redirecting to /screen1");
-        navigate("/screen1");
+        setErrorState({
+          title: "Measurement Error",
+          description: "An error occurred during the measurement process. Proceeding to next step.",
+          severity: "ERROR",
+          canRetry: false,
+          shouldRedirect: true,
+        });
       }
     } finally {
       setIsRunning(false);
@@ -386,6 +406,20 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   /* =======================
+     ERROR ALERT CLOSE HANDLER
+  ======================= */
+  const handleErrorClose = () => {
+    const shouldNavigate = errorState?.shouldRedirect;
+    setErrorState(null);
+
+    // If the error was flagged for redirect, navigate to /screen1
+    if (shouldNavigate) {
+      console.log("[BIA] User closed error alert - redirecting to /screen1");
+      navigate("/screen1");
+    }
+  };
+
+  /* =======================
      RENDER
   ======================= */
   return (
@@ -399,8 +433,8 @@ export default function BIACalculate({ user, onComplete }) {
         visible={!!errorState}
         title={errorState?.title}
         description={errorState?.description}
-        onClose={() => setErrorState(null)}
-        onRetry={errorState?.canRetry ? 3000 : undefined}
+        onClose={handleErrorClose}
+        onRetry={errorState?.canRetry ? handleRetry : undefined}
       />
     </>
   );
