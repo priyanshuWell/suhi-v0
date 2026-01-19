@@ -14,6 +14,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const [ports, setPorts] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [failedStep, setFailedStep] = useState(null);
@@ -25,13 +26,26 @@ export default function BIACalculate({ user, onComplete }) {
     impedance: { k20: null, k100: null }
   });
 
+  // Timeout configuration (in milliseconds)
+  const TIMEOUTS = {
+    GLOBAL: 60000,      // 60 seconds for entire flow
+    WEIGHT: 20000,      // 20 seconds for weight measurement
+    HEIGHT: 20000,      // 20 seconds for height measurement
+    IMPEDANCE: 25000,   // 25 seconds for each impedance measurement
+  };
+
+  const timeoutRefs = useRef({
+    global: null,
+    step: null,
+  });
+
   const texts = {
     wh: {
-      title: t("measurement.let_measure"),
+      title: isCalculating ? "Processing Results..." : t("measurement.let_measure"),
       description: currentStatus || t("measurement.standStill"),
     },
     im: {
-      title: t("measurement.good_job"),
+      title: isCalculating ? "Processing Results..." : t("measurement.good_job"),
       description: currentStatus || t("measurement.holdThe_Hands"),
     },
   };
@@ -58,7 +72,10 @@ export default function BIACalculate({ user, onComplete }) {
       window.api?.onImpedanceStatus(onImpedanceStatus),
     ];
 
-    return () => unsubs.forEach(u => u?.());
+    return () => {
+      unsubs.forEach(u => u?.());
+      clearAllTimeouts(); // Clean up timeouts on unmount
+    };
   }, []);
 
   function handleStatus(payload) {
@@ -118,6 +135,53 @@ export default function BIACalculate({ user, onComplete }) {
     throw err;
   };
 
+  // Cleanup all timeouts
+  const clearAllTimeouts = () => {
+    if (timeoutRefs.current.global) {
+      clearTimeout(timeoutRefs.current.global);
+      timeoutRefs.current.global = null;
+    }
+    if (timeoutRefs.current.step) {
+      clearTimeout(timeoutRefs.current.step);
+      timeoutRefs.current.step = null;
+    }
+  };
+
+  // Redirect to screen1 on timeout
+  const handleTimeout = (stepName) => {
+    console.error(`[BIA] ${stepName} timeout - redirecting to /screen1`);
+    clearAllTimeouts();
+    setIsRunning(false);
+    navigate("/screen1");
+  };
+
+  // Wrap a promise with timeout
+  const withTimeout = (promise, timeoutMs, stepName) => {
+    return new Promise((resolve, reject) => {
+      // Set step timeout
+      timeoutRefs.current.step = setTimeout(() => {
+        handleTimeout(stepName);
+        reject(new Error(`${stepName} timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      promise
+        .then((result) => {
+          if (timeoutRefs.current.step) {
+            clearTimeout(timeoutRefs.current.step);
+            timeoutRefs.current.step = null;
+          }
+          resolve(result);
+        })
+        .catch((error) => {
+          if (timeoutRefs.current.step) {
+            clearTimeout(timeoutRefs.current.step);
+            timeoutRefs.current.step = null;
+          }
+          reject(error);
+        });
+    });
+  };
+
 
   const measureWeight = async () => {
     setCurrentStatus("Measuring weight...");
@@ -145,7 +209,11 @@ export default function BIACalculate({ user, onComplete }) {
   const measureImpedance = async (freq) => {
     setCurrentStatus(`Measuring impedance ${freq} kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
-    if (!res?.success) throw new Error("Impedance failed");
+    if (!res?.success) {
+      console.error("Impedance failed");
+      navigate("/screen1");
+      return;
+    }
 
     resultsRef.current.impedance[freq === "20" ? "k20" : "k100"] = {
       freq: Number(freq),
@@ -159,6 +227,11 @@ export default function BIACalculate({ user, onComplete }) {
     if (isRunning || ports.length < 2) return;
     setIsRunning(true);
 
+    // Set global timeout for entire flow
+    timeoutRefs.current.global = setTimeout(() => {
+      handleTimeout("BIA Flow (Global)");
+    }, TIMEOUTS.GLOBAL);
+
     try {
       /* CONNECT BIA ONCE */
       await window.api.connectBiaPort(ports[2]?.path);
@@ -166,13 +239,21 @@ export default function BIACalculate({ user, onComplete }) {
 
       /* WEIGHT */
       if (!resultsRef.current.weight) {
-        await retry(measureWeight);
+        await withTimeout(
+          retry(measureWeight),
+          TIMEOUTS.WEIGHT,
+          "Weight Measurement"
+        );
         await sleep(1200); // :red_circle: REQUIRED SETTLE
       }
 
       /* HEIGHT */
       if (!resultsRef.current.height) {
-        await retry(measureHeight);
+        await withTimeout(
+          retry(measureHeight),
+          TIMEOUTS.HEIGHT,
+          "Height Measurement"
+        );
       }
 
       navigate("/bia/im");
@@ -180,17 +261,28 @@ export default function BIACalculate({ user, onComplete }) {
 
       /* IMPEDANCE 20 kHz */
       if (!resultsRef.current.impedance.k20) {
-        await retry(() => measureImpedance("20"));
+        await withTimeout(
+          retry(() => measureImpedance("20")),
+          TIMEOUTS.IMPEDANCE,
+          "Impedance 20kHz"
+        );
       }
       setCurrentStatus("Preparing next impedance...");
       await sleep(1500);
 
       /* IMPEDANCE 100 kHz */
       if (!resultsRef.current.impedance.k100) {
-        await retry(() => measureImpedance("100"));
+        await withTimeout(
+          retry(() => measureImpedance("100")),
+          TIMEOUTS.IMPEDANCE,
+          "Impedance 100kHz"
+        );
       }
 
       /* CALCULATE */
+      setIsCalculating(true);
+      setCurrentStatus("Processing body composition data...");
+
       console.log("[BIA] Calling calculateBIA with params:", {
         height: resultsRef.current.height.value,
         weight: resultsRef.current.weight.value,
@@ -199,6 +291,8 @@ export default function BIACalculate({ user, onComplete }) {
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments
       });
+
+      //setCurrentStatus("Waiting for all BIA packages (this may take up to 15s)...");
 
       const bia = await window.api.calculateBIA({
         height: resultsRef.current.height.value,
@@ -216,6 +310,13 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA] BIA API Response:", bia?.apiResponse);
       console.log("[BIA] BIA API Error:", bia?.apiError);
 
+      if (!bia?.success) {
+        throw new Error(bia?.error || "BIA calculation failed");
+      }
+
+     // setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
+      await sleep(800); // Brief moment to show success message
+
       // Generate session ID and save to Redux store
       const sessionId = crypto.randomUUID();
       dispatch(setSessionId(sessionId));
@@ -225,13 +326,26 @@ export default function BIACalculate({ user, onComplete }) {
 
       console.log("[BIA] Saved to Redux store with sessionId:", sessionId);
 
-      // Navigate to screen1 (DMIT) instead of result
+      // Clear global timeout on success
+      clearAllTimeouts();
+      setIsCalculating(false);
+
+      // Navigate to screen1 (DMIT) only after everything is complete
       navigate("/screen1");
 
     } catch (e) {
       console.error("Flow failed:", e.message);
+      // Don't navigate to screen1 here if it's already handled by timeout
+      if (!e.message.includes("timeout")) {
+        clearAllTimeouts();
+        // Still redirect to screen1 on other errors after 2 failed attempts
+        console.error("[BIA] Flow error - redirecting to /screen1");
+        navigate("/screen1");
+      }
     } finally {
       setIsRunning(false);
+      setIsCalculating(false);
+      clearAllTimeouts();
     }
   };
 

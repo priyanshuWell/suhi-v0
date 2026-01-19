@@ -72,7 +72,7 @@ const BIAResult = () => {
                 <Calculator size={32} />
                 <span className="uppercase tracking-widest text-xl font-bold">Body mass index</span>
               </div>
-              <div className="text-6xl font-bold tracking-tight text-white drop-shadow-lg">{bia.bmi || 22}</div>
+              <div className="text-6xl font-bold tracking-tight text-white drop-shadow-lg">{ 22}</div>
             </div>
 
             <div className="flex-grow"></div>
@@ -161,7 +161,7 @@ transition-transform duration-300 ease-in-out
         title="BIA Result Error"
         description="Failed to load BIA result data. Redirecting to home..."
         onClose={() => setShowError(false)}
-        onRetry={() => navigate('/')}
+        // onRetry={() => navigate('/')}
         autoRetryDelay={3000}
       />
     </div>
