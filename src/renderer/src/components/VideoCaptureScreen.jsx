@@ -107,11 +107,12 @@ const VideoCaptureScreen = () => {
   const [status, setStatus] = useState('Initializing...');
   const dispatch=useDispatch();
 
-
+const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 useEffect(() => {
   const run = async () => {
     try {
       setStatus("Preparing...");
+      playAudio();
       await new Promise((r) => setTimeout(r, 1000));
 
       const videoDuration = getVideoDuration();
@@ -152,6 +153,7 @@ useEffect(() => {
       if (fptResponse.success) {
         setStatus("Verification successful!");
         setIsVerify(true);
+        stopAudio();
         await new Promise((r) => setTimeout(r, 1000));
         navigate("/verified");
       } else {
@@ -161,13 +163,33 @@ useEffect(() => {
       console.error("Error in video capture flow:", error);
       setPhase("ERROR");
       setStatus(`Error: ${error.message}`);
+      stopAudio();
     }
   };
 
   run();
 }, [navigate]);
 
+  const playAudio = () => {
+    if (audioRef.current) {
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
 
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
 
   return (
     <div
@@ -178,6 +200,15 @@ useEffect(() => {
         bg-black
       "
     >
+      {/* Audio Element */}
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+      <source src={instructionAudio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* Avatar Video */}
       <div
         className="
@@ -192,7 +223,7 @@ useEffect(() => {
         <video
           src={video2}
           autoPlay
-          muted
+         // muted
           loop
           playsInline
           className="

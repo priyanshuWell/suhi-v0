@@ -212,16 +212,17 @@ const mapCameras = (cams) => {
 
 // ✅ Your 4 steps
 const CAPTURE_FLOW = [
-  { key: "LEFT_FRONT", label: "Left Hand - Front", role: "LEFT", overlay: leftFront },
-  { key: "LEFT_BACK", label: "Left Hand - Back", role: "LEFT", overlay: leftBack },
-  { key: "RIGHT_FRONT", label: "Right Hand - Front", role: "RIGHT", overlay: rightFront },
-  { key: "RIGHT_BACK", label: "Right Hand - Back", role: "RIGHT", overlay: rightBack },
+  { key: "LEFT_FRONT", label: "Left Hand - Front", role: "LEFT", overlay: leftFront, audio: "/src/assets/audio/lp.mp3"},
+  { key: "LEFT_BACK", label: "Left Hand - Back", role: "LEFT", overlay: leftBack, audio: "/src/assets/audio/lb.mp3"  },
+  { key: "RIGHT_FRONT", label: "Right Hand - Front", role: "RIGHT", overlay: rightFront, audio: "/src/assets/audio/rp.mp3"  },
+  { key: "RIGHT_BACK", label: "Right Hand - Back", role: "RIGHT", overlay: rightBack, audio: "/src/assets/audio/rb.mp3" },
 ];
 
 const DMITScreen = () => {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const audioRef = useRef(null);
 
   const [devices, setDevices] = useState([]);
   const [mapped, setMapped] = useState([]);
@@ -229,8 +230,10 @@ const DMITScreen = () => {
 
   const [status, setStatus] = useState("Preparing camera...");
   const [isRecording, setIsRecording] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const currentStep = CAPTURE_FLOW[stepIndex];
+
 
   // ✅ Load cameras list
   useEffect(() => {
@@ -251,6 +254,33 @@ const DMITScreen = () => {
 
     loadDevices();
   }, []);
+    useEffect(() => {
+    if (currentStep) {
+      playAudio(currentStep.audio);
+    }
+  }, [stepIndex]);
+
+  const playAudio = (audioPath) => {
+    if (audioRef.current) {
+      audioRef.current.src = audioPath;
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
 
   // ✅ Get camera deviceId by role
   const getCameraForRole = (role) => {
@@ -394,11 +424,20 @@ const DMITScreen = () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
+      stopAudio();
     };
   }, []);
 
   return (
     <div className="fixed inset-0 w-screen min-h-screen overflow-hidden bg-black">
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+        <source src={currentStep?.audio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* background */}
       <div
         className="absolute inset-0 bg-no-repeat bg-cover bg-center z-0"
@@ -450,7 +489,7 @@ const DMITScreen = () => {
             <video
               ref={videoRef}
               autoPlay
-              muted
+              //muted
               playsInline
               className="w-full h-full object-cover"
             />
