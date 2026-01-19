@@ -15,8 +15,8 @@ export async function selectThreeCameras() {
   //   { role: "RIGHT_HDR",  cam: hdrs[1] }
   // ];
    return [
-    { role: "LEFT",   cam: cams[0] },
-    { role: "CENTER", cam: cams[2] },
-    { role: "RIGHT",  cam: cams[1] }
+    { role: "LEFT",   cam: cams[2] },
+    { role: "CENTER", cam: cams[1] },
+    { role: "RIGHT",  cam: cams[0] }
   ];
 }
