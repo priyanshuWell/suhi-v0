@@ -103,6 +103,12 @@ const NewDmitScreen = () => {
     setIsAudioPlaying(false);
   };
 
+   useEffect(() => {
+    if (currentStep && currentStep.audio) {
+      playAudio(currentStep.audio);
+    }
+  }, [stepIndex]);
+
   // :white_check_mark: required payload values (replace with your real values / redux / localstorage)
   const kioskId = "KIOSK_001";
   const userId = user?.data?.user_id;
