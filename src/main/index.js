@@ -252,29 +252,40 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" };
     }
 
-    if (!impedance20 || !impedance100) {
+    // Validate impedance data
+    const validateImpedance = (imp) => {
+      return imp && imp.rightHand > 0 && imp.leftHand > 0 && 
+             imp.trunk > 0 && imp.rightFoot > 0 && imp.leftFoot > 0;
+    };
+
+    if (!validateImpedance(impedance20) || !validateImpedance(impedance100)) {
       return {
         success: false,
-        error: "Both 20kHz and 100kHz impedance are required"
+        error: "Invalid impedance values"
       };
     }
 
     const genderCode = gender === "male" ? 1 : 0;
 
+    // ✅ STEP 1: Ensure device is ready
+    try {
+      await biaa.sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) {
+      console.warn('Could not stop previous measurement');
+    }
+
+    // ✅ STEP 2: Create command
     const cmd = biaa.create8ElectrodeBodyCompositionCommand(
       genderCode,
       Math.round(height),
       Math.round(age),
       weight,
-
-      // 20 kHz
       impedance20.rightHand,
       impedance20.leftHand,
       impedance20.trunk,
       impedance20.rightFoot,
       impedance20.leftFoot,
-
-      // 100 kHz
       impedance100.rightHand,
       impedance100.leftHand,
       impedance100.trunk,
@@ -282,30 +293,45 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       impedance100.leftFoot
     );
 
-    // Send command (do NOT wait here)
-    await biaa.sendBiaCommand(cmd, { waitForResponse: false });
+    // ✅ STEP 3: Attach listener FIRST (before sending)
+    const compositionPromise = biaa.collectBodyCompositionOnce(15000);
 
-    // Wait for all 5 packages
-    const bodyComposition = await biaa.collectBodyCompositionOnce(8000);
-    // 🔥 Extract UI-friendly summary
+    // ✅ STEP 4: Send command
+    await biaa.sendBiaCommand(cmd, { waitForResponse: false });
+    
+    // ✅ STEP 5: Small delay for write to flush
+    await new Promise(r => setTimeout(r, 100));
+
+    // ✅ STEP 6: Wait for all packages
+    const bodyComposition = await compositionPromise;
+
+    // ✅ STEP 7: Validate packages received
+    if (!bodyComposition.package1 || !bodyComposition.package3) {
+      return {
+        success: false,
+        error: "Failed to receive all body composition packages",
+        receivedPackages: Object.keys(bodyComposition).length
+      };
+    }
+
     const p1 = bodyComposition.package1;
     const p3 = bodyComposition.package3;
 
     const result = {
       success: true,
-       raw:JSON.stringify(bodyComposition),
+      raw: JSON.stringify(bodyComposition),
       summary: {
-        bodyFatPercent: p3.bodyFatPercentage,
-        muscleMass: p1.muscleMass,
-        bmi: p3.bodyMassIndex,
-        visceralFat: p3.visceralFatLevel,
-        basalMetabolism: p3.basalMetabolism,
-        bodyScore: p3.bodyScore,
-        physicalAge: p3.physicalAge
+        bodyFatPercent: p3.bodyFatPercentage || 0,
+        muscleMass: p1.muscleMass || 0,
+        bmi: p3.bodyMassIndex || 0,
+        visceralFat: p3.visceralFatLevel || 0,
+        basalMetabolism: p3.basalMetabolism || 0,
+        bodyScore: p3.bodyScore || 0,
+        physicalAge: p3.physicalAge || 0
       }
     };
 
-    // 🔥 Send data to BIA measurements API
+    // Send to API
     try {
       const apiPayload = convertBIADataToAPIPayload(
         bodyComposition,
@@ -314,7 +340,6 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       );
 
       console.log('[MAIN] Sending BIA data to API:', apiPayload);
-      
       const apiResponse = await axios.post(
         'http://127.0.0.1:8000/bia/measurements',
         apiPayload
@@ -324,10 +349,9 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       result.apiResponse = apiResponse.data;
     } catch (apiError) {
       console.error('[MAIN] BIA API Error:', apiError.message);
-      if (apiError.response) {
+      if (apiError.response?.data) {
         console.error('[MAIN] BIA API Error Data:', apiError.response.data);
       }
-      // Don't fail the whole operation, just log the API error
       result.apiError = apiError.message;
     }
 

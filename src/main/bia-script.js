@@ -430,7 +430,7 @@ export const HEIGHT_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Wait for reading to stabilize',
-        userMessage: 'Height reading unstable, please wait...',
+        userMessage: 'We are measuring your Height, Please wait...',
         waitTime: 2000,
         causes: [
             'User moving',
