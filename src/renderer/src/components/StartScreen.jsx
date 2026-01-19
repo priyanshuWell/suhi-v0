@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router'
 import { openCamerasInBackground } from '../utils/cameraSession'
 import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
+
+
 const Flag = true;
 export const StartScreen = () => {
   const { t } = useTranslation()
@@ -14,6 +16,9 @@ export const StartScreen = () => {
   const [error, setError] = useState(false)
   const navigate = useNavigate()
   const [isActive, setIsActive] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = React.useRef(null);
+  const instructionAudio = "/src/assets/audio/welcome_screen.mp3";
   useEffect(() => {
     const openCameras = async () => {
       return await openCamerasInBackground()
@@ -21,10 +26,37 @@ export const StartScreen = () => {
     try {
       openCameras()
       setIsCameraReady(true)
+      playAudio()
     } catch (error) {
       console.log(error)
     }
   }, [])
+  const playAudio = () => {
+    if (audioRef.current) {
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
+
+  const handleStartClick = () => {
+    stopAudio();
+    navigate("/capture");
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -37,6 +69,16 @@ export const StartScreen = () => {
         bg-black
       "
     >
+      {/* Audio Element - plays kajal_neural_bmi.mp3 on load */}
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+        autoPlay
+      >
+      <source src={instructionAudio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       <div className={`absolute top-0 right-0 z-40 p-4`}>
         <Setting setIsActive={setIsActive} isActive={isActive} />
       </div>
@@ -81,6 +123,7 @@ export const StartScreen = () => {
           <video
             src={video1}
             autoPlay
+            //muted
             loop
             playsInline
             className="
@@ -106,7 +149,7 @@ export const StartScreen = () => {
           "
         >
           <button
-            onClick={() => navigate(`${Flag ? '/capture' : '/verified'}`)}
+            onClick={handleStartClick}
             // onClick={() => navigate(skipBIA ? '/voice' : '/verified')}
             className="
               w-[clamp(16rem,40vw,31.25rem)]

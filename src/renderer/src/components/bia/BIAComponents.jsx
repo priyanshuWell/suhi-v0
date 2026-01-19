@@ -9,7 +9,18 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
   const currentText = texts[screenType];
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = React.useRef(null);
   const activeCount = Math.round((percent / 100) * total)
+
+  // Map screen types to audio files
+  const getAudioPath = (type) => {
+    const audioMap = {
+      'wh': '/src/assets/audio/standstraight.mp3', // Weight/Height
+      'im': '/src/assets/audio/impedance.mp3',     // Impedance
+    };
+    return audioMap[type] || '/src/assets/audio/standstraight.mp3';
+  }
   useEffect(() => {
     if (screenType !== "im") {
       setProgress(0);
@@ -25,9 +36,44 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
 
     return () => clearInterval(interval);
   }, [screenType]);
+  useEffect(() => {
+    // Play audio when screen type changes
+    playAudio();
+  }, [screenType]);
+
+  const playAudio = () => {
+    if (audioRef.current) {
+      const audioPath = getAudioPath(screenType);
+      audioRef.current.src = audioPath;
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
+  };
 
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+        <source src={getAudioPath(screenType)} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* Background */}
       <div
         className="absolute inset-0 bg-center bg-cover z-0"
@@ -83,7 +129,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
         <video
           src={measureWH}
           autoPlay
-          muted
+         // muted
           loop
           playsInline
           className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"

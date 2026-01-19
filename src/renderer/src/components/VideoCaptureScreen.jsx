@@ -198,15 +198,18 @@ const VideoCaptureScreen = () => {
   const [showError, setShowError] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
   const [shouldRetry, setShouldRetry] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const dispatch = useDispatch();
+  const audioRef = React.useRef(null);
 
   const MAX_ATTEMPTS = 2;
-
+const instructionAudio = "/src/assets/audio/camera_scan.mp3";
   useEffect(() => {
     const run = async () => {
       try {
         setStatus("Preparing...");
-        await new Promise((r) => setTimeout(r, 1000));
+        playAudio();
+      await new Promise((r) => setTimeout(r, 1000));
 
         const videoDuration = getVideoDuration();
         const kioskId = getKioskId();
@@ -274,6 +277,7 @@ const VideoCaptureScreen = () => {
         dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
+        stopAudio();
         await new Promise((r) => setTimeout(r, 1000));
         navigate("/verified");
 
@@ -286,7 +290,8 @@ const VideoCaptureScreen = () => {
           setStatus(`Error: ${error.message}`);
           setShowError(true);
         }
-      }
+        stopAudio();
+    }
     };
 
     run();
@@ -308,6 +313,25 @@ const VideoCaptureScreen = () => {
         navigate("/welcome");
       }, 1000);
     }
+  };  const playAudio = () => {
+    if (audioRef.current) {
+      setIsAudioPlaying(true);
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err);
+      });
+    }
+  };
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  };
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false);
   };
 
   return (
@@ -319,6 +343,15 @@ const VideoCaptureScreen = () => {
         bg-black
       "
     >
+      {/* Audio Element */}
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+        <source src={instructionAudio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* Avatar Video */}
       <div
         className="
@@ -333,7 +366,7 @@ const VideoCaptureScreen = () => {
         <video
           src={video2}
           autoPlay
-          muted
+         // muted
           loop
           playsInline
           className="

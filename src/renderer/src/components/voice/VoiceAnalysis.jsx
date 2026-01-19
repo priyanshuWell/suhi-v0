@@ -17,8 +17,16 @@ const VoiceCapture = () => {
     const [timeLeft, setTimeLeft] = useState(50);
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
     const mediaRecorderRef = React.useRef(null);
+    const audioRef = React.useRef(null);
     const chunksRef = React.useRef([]);
+    const instructionAudio = "/src/assets/audio/voice.mp3";
+
+    useEffect(() => {
+        // Play audio when component mounts
+        playAudio();
+    }, []);
 
     useEffect(() => {
         let interval = null;
@@ -33,6 +41,27 @@ const VoiceCapture = () => {
         }
         return () => clearInterval(interval);
     }, [isActive, timeLeft]);
+
+    const playAudio = () => {
+        if (audioRef.current) {
+            setIsAudioPlaying(true);
+            audioRef.current.play().catch((err) => {
+                console.log("Audio playback failed:", err);
+            });
+        }
+    };
+
+    const stopAudio = () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+            setIsAudioPlaying(false);
+        }
+    };
+
+    const handleAudioEnd = () => {
+        setIsAudioPlaying(false);
+    };
 
     const startRecording = async () => {
         try {
@@ -72,6 +101,7 @@ const VoiceCapture = () => {
                     if (result.success) {
                         setStatus("success");
                         console.log("Voice analysis success:", result);
+                        stopAudio();
                         // Navigate to BIA result page
                         await new Promise((r) => setTimeout(r, 500));
                         navigate("/bia/result");
@@ -117,6 +147,14 @@ const VoiceCapture = () => {
 
     return (
         <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
+            <audio
+                ref={audioRef}
+                onEnded={handleAudioEnd}
+                onPlay={() => setIsAudioPlaying(true)}
+            >
+                <source src={instructionAudio} type="audio/mpeg" />
+                Your browser does not support the audio element.
+            </audio>
             {/* Background */}
             <div
                 className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
