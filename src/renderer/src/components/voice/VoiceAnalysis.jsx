@@ -3,9 +3,17 @@ import bg1 from "../../assets/lightbg.png";
 import voiceImage from "../../assets/voice_image.png";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
+import { getKioskId } from "../../utils/config";
 
 const VoiceCapture = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+
+    // Get data from Redux store
+    const user = useSelector((state) => state.common.user);
+    const sessionId = useSelector((state) => state.common.sessionId);
+
     const [timeLeft, setTimeLeft] = useState(50);
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
@@ -13,7 +21,6 @@ const VoiceCapture = () => {
     const mediaRecorderRef = React.useRef(null);
     const audioRef = React.useRef(null);
     const chunksRef = React.useRef([]);
-    const navigate = useNavigate();
     const instructionAudio = "/src/assets/audio/voice.mp3";
 
     useEffect(() => {
@@ -73,15 +80,20 @@ const VoiceCapture = () => {
             mediaRecorder.onstop = async () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
-                const sessionId = "38e075c8-1a49-450a-8bbb-ccd1bd6483faaa";
-                const userId = "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"
+
+                // Get data from Redux store and config
+                const kioskId = getKioskId();
+                const userId = user?.data?.id || "unknown"; // Get from user object
+
                 setStatus("processing");
                 const request = {
-                    kiosk_id: "test-kiosk-01",
+                    kiosk_id: kioskId,
                     user_id: userId,
                     session_id: sessionId,
                     arrayBuffer: arrayBuffer
                 };
+
+                console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
 
                 try {
                     const result = await window.api.saveVoiceBuffer(request);
@@ -90,8 +102,9 @@ const VoiceCapture = () => {
                         setStatus("success");
                         console.log("Voice analysis success:", result);
                         stopAudio();
-                        // navigate("/bia/result");
-
+                        // Navigate to BIA result page
+                        await new Promise((r) => setTimeout(r, 500));
+                        navigate("/bia/result");
                     } else {
                         setStatus("error");
                         console.error("Voice analysis failed:", result.error);
