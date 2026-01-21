@@ -20,7 +20,7 @@ const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
 
   // Calculate total for normalization (in case they don't add up to 100)
   const total = vataPercent + pittaPercent + kaphaPercent
-  
+
   // Normalize to 100% if needed
   const normalizedVata = total > 0 ? (vataPercent / total) * 100 : 0
   const normalizedPitta = total > 0 ? (pittaPercent / total) * 100 : 0
@@ -54,9 +54,9 @@ const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
   ]
 
   return (
-    <div className="w-full bg-transparent p-6">
+    <div className="w-full bg-transparent p-2">
       {/* Title */}
-      <h2 className="text-cyan-400 text-3xl xl:text-4xl font-bold text-center mb-8 tracking-wider">
+      <h2 className="text-[#29ABE2] text-3xl xl:text-4xl  text-center mb-4 tracking-wider">
         Body Constitution
       </h2>
 
@@ -91,9 +91,8 @@ const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
         {doshaConfig.map((dosha) => (
           <div key={dosha.key} className="flex items-center justify-center gap-2">
             <span className="text-2xl">{dosha.emoji}</span>
-            <span 
-              className="text-xl xl:text-2xl font-semibold tracking-wide"
-              style={{ color: dosha.color }}
+            <span
+              className="text-xl xl:text-2xl font-semibold tracking-wide text-gray-400"
             >
               {dosha.label}
             </span>

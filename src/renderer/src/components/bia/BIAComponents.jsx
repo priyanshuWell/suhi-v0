@@ -3,7 +3,7 @@ import bg1 from "../../assets/lightbg.png";
 import measureWH from "../../assets/videos/measureHeightWeight.mp4";
 import { useParams } from "react-router";
 import progessbg from '../../assets/progress-bg.svg'
-
+import textframe from '../../assets/textFrame.png'
 export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0 }) => {
   const { screenType } = useParams();
   const currentText = texts[screenType];
@@ -11,7 +11,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
   const [progress, setProgress] = useState(0);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = React.useRef(null);
-  const activeCount = Math.round((percent / 100) * total)
+  const activeCount = Math.round((progress / 100) * total)
 
   // Map screen types to audio files
   const getAudioPath = (type) => {
@@ -31,8 +31,11 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
     const interval = setInterval(() => {
       value += 1;
       setProgress(value);
-      if (value >= 100) clearInterval(interval);
-    }, 120); // ~12s
+      // Reset to 0 when reaching 100 to create a loop
+      if (value >= 100) {
+        value = 0;
+      }
+    }, 160); // ~12s per cycle
 
     return () => clearInterval(interval);
   }, [screenType]);
@@ -82,12 +85,14 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
 
       {/* TEXT + PROGRESS */}
       <div className="absolute portrait:mt-7 landscape:top-15 landscape:left-[20%] portrait:top-36 portrait:left-[20%] z-10 w-[60%]">
-        <div className="text-center flex flex-col portrait:gap-6 items-center justify-center">
-          <h1 className="text-white/90 leading-relaxed landscape:text-3xl portrait:text-[33px] xl:mt-6">
+        <div className="relative text-center flex flex-col items-center justify-center">
+          <img src={textframe} alt="text-frame" className="absolute top-0" />
+          <p className=" text-white text-center portrait:text-[32px]   tracking-wider my-6">
             {currentText.title}
-          </h1>
+          </p>
+          <img src={textframe} alt="text-frame" className="absolute top-[4.5rem] rotate-180" />
 
-          <p className="text-white font-medium  landscape:text-4xl portrait:text-5xl">
+          <p className="text-white font-medium tracking-tight  landscape:text-4xl portrait:text-[36px] mt-7">
             {currentText.description}
           </p>
 
@@ -129,7 +134,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
         <video
           src={measureWH}
           autoPlay
-         // muted
+          // muted
           loop
           playsInline
           className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
