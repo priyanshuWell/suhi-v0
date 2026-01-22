@@ -86,7 +86,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
       />
 
       {/* TEXT + PROGRESS */}
-      <div className="absolute portrait:mt-7 landscape:top-15 landscape:left-[20%] portrait:top-36 portrait:left-[20%] z-10 w-[60%]">
+      <div className="absolute  landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
         <div className="relative text-center flex flex-col items-center justify-center">
           <img src={textframe} alt="text-frame" className="absolute top-0" />
           <p className=" text-white text-center portrait:text-[32px]   tracking-wider my-6">
@@ -94,7 +94,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
           </p>
           <img src={textframe} alt="text-frame" className="absolute top-[4.5rem] rotate-180" />
 
-          <p className="text-white font-medium tracking-tight  landscape:text-4xl portrait:text-[36px] mt-[6rem]">
+          <p className="text-white font-medium tracking-tight  landscape:text-4xl portrait:text-[36px] mt-[4rem]">
             {currentText.description}
           </p>
 

@@ -278,7 +278,7 @@ const BIAResult = () => {
                 <div className="flex items-center justify-center gap-3">
                   <img src={droplet} className="text-cyan-400 w-7 h-7" />
 
-                  <h3 className="text-[#29ABE2] text-2xl  tracking-wide">
+                  <h3 className="text-[#29ABE2] text-[25px] tracking-wide">
                     {t('bia_result.hydration')} -{" "}
                     <span
                       className={
@@ -311,7 +311,7 @@ const BIAResult = () => {
               <div className="flex flex-col items-center justify-center text-center gap-3">
                 <div className="flex items-center justify-center gap-3">
                   <span className="text-4xl">{learnerEmoji}</span>
-                  <h3 className="text-[#2CEF94] text-2xl font-bold tracking-wide">
+                  <h3 className="text-[#2CEF94] text-[24px] font-bold tracking-wide">
                     {analysisData?.studyTip?.title || t('bia_result.study_tip_default')}
                   </h3>
                 </div>
@@ -339,8 +339,8 @@ const BIAResult = () => {
               }}
             >
               <div className="text-center mb-4">
-                <h3 className="text-orange-300 text-2xl font-bold">
-                  <span className="text-4xl mb-2 inline-block">
+                <h3 className="text-orange-300 text-3xl font-bold">
+                  <span className="text-5xl mb-2 inline-block">
                     {animalEmojis[analysisData?.personality?.animal] || "🦅"}
                   </span> {analysisData?.personality?.animal || "Lion"}
                 </h3>
