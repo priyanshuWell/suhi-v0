@@ -18,9 +18,13 @@ const VoiceCapture = () => {
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+    const [voiceBars, setVoiceBars] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0]); // Heights for 9 bars
     const mediaRecorderRef = React.useRef(null);
     const audioRef = React.useRef(null);
     const chunksRef = React.useRef([]);
+    const analyserRef = React.useRef(null);
+    const dataArrayRef = React.useRef(null);
+    const animationFrameRef = React.useRef(null);
     const instructionAudio = "/src/assets/audio/voice.mp3";
 
     useEffect(() => {
@@ -63,10 +67,70 @@ const VoiceCapture = () => {
         setIsAudioPlaying(false);
     };
 
+    // Visualize voice using Web Audio API
+    const visualizeVoice = () => {
+        if (!analyserRef.current || !dataArrayRef.current) return;
+
+        const analyser = analyserRef.current;
+        const dataArray = dataArrayRef.current;
+
+        analyser.getByteFrequencyData(dataArray);
+
+        // Map frequency data to 9 bars
+        const barCount = 9;
+        const bufferLength = dataArray.length;
+        const barWidth = Math.floor(bufferLength / barCount);
+
+        const newBars = [];
+        for (let i = 0; i < barCount; i++) {
+            let sum = 0;
+            const start = i * barWidth;
+            const end = start + barWidth;
+
+            for (let j = start; j < end; j++) {
+                sum += dataArray[j];
+            }
+
+            const average = sum / barWidth;
+            // Normalize to 0-1 range and smooth it out
+            const normalized = Math.min(1, average / 255);
+            newBars.push(normalized);
+        }
+
+        setVoiceBars(newBars);
+        animationFrameRef.current = requestAnimationFrame(visualizeVoice);
+    };
+
+    // Cleanup animation on unmount
+    useEffect(() => {
+        return () => {
+            if (animationFrameRef.current) {
+                cancelAnimationFrame(animationFrameRef.current);
+            }
+        };
+    }, []);
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log("stream", stream);
+
+            // Set up Web Audio API for visualization
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const analyser = audioContext.createAnalyser();
+
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            source.connect(analyser);
+            analyserRef.current = analyser;
+            dataArrayRef.current = dataArray;
+
+            // Start visualization
+            visualizeVoice();
+
             const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
             mediaRecorderRef.current = mediaRecorder;
             chunksRef.current = [];
@@ -78,6 +142,13 @@ const VoiceCapture = () => {
             };
             console.log("mediaRecorder", mediaRecorder, chunksRef.current);
             mediaRecorder.onstop = async () => {
+                // Stop visualization
+                if (animationFrameRef.current) {
+                    cancelAnimationFrame(animationFrameRef.current);
+                }
+                // Reset bars
+                setVoiceBars([0, 0, 0, 0, 0, 0, 0, 0, 0]);
+
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
 
@@ -116,6 +187,8 @@ const VoiceCapture = () => {
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
+                // Close audio context
+                audioContext.close();
             };
 
             mediaRecorder.start();
@@ -166,7 +239,7 @@ const VoiceCapture = () => {
 
                 {/* Header Text */}
                 <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl">
-                    Look at the image, notice what it makes you feel or think, then click Start and speak freely for 50 seconds.
+                    {t('voice.instruction')}
                 </h1>
 
                 {/* Image Container */}
@@ -179,7 +252,7 @@ const VoiceCapture = () => {
                 </div>
 
                 {/* Timer Section */}
-                <div className="relative flex flex-col items-center justify-center">
+                <div className="relative flex flex-col items-center justify-center gap-6">
                     <div className="relative w-[250px] h-[250px] flex items-center justify-center">
                         {/* Timer SVG */}
                         <svg
@@ -229,33 +302,100 @@ const VoiceCapture = () => {
                                 />
                             </g>
                         </svg>
-                        <span className="absolute text-2xl font-mono text-white tracking-widest">
+                        <span className="absolute text-4xl font-mono text-white tracking-widest">
                             {formatTime(timeLeft)}
                         </span>
                     </div>
+
+                    {/* Voice Visualization - Show when recording */}
+                    {status === 'recording' && (
+                        <div className="flex items-center justify-center gap-2">
+                            <svg
+                                width="400"
+                                height="200"
+                                viewBox="0 0 255 200"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                preserveAspectRatio="xMidYMid meet"
+                            >
+                                {(() => {
+                                    const BAR_WIDTH = 12.1111;
+                                    const BAR_RADIUS = 6.05556;
+                                    const CENTER_Y = 100;
+
+                                    const IDLE_HEIGHT = 20; // 👈 baseline height
+                                    const MAX_EXTRA_HEIGHT = 140; // growth above idle
+
+                                    const barPositions = [
+                                        { x: 0, scale: 0.3 },
+                                        { x: 30.2773, scale: 0.9 },
+                                        { x: 60.5547, scale: 0.25 },
+                                        { x: 90.832, scale: 1.1 },
+                                        { x: 121.109, scale: 0.6 },
+                                        { x: 151.391, scale: 0.4 },
+                                        { x: 181.668, scale: 0.7 },
+                                        { x: 211.945, scale: 0.25 },
+                                        { x: 242.223, scale: 0.9 }
+                                    ];
+
+                                    return voiceBars.map((intensity, index) => {
+                                        const bar = barPositions[index];
+
+                                        const height =
+                                            IDLE_HEIGHT +
+                                            MAX_EXTRA_HEIGHT * bar.scale * intensity;
+
+                                        const y = CENTER_Y - height / 2;
+
+                                        return (
+                                            <rect
+                                                key={index}
+                                                x={bar.x}
+                                                y={y}
+                                                width={BAR_WIDTH}
+                                                height={height}
+                                                rx={BAR_RADIUS}
+                                                fill="white"
+                                                style={{
+                                                    transition: 'height 0.1s ease-out, y 0.1s ease-out'
+                                                }}
+                                            />
+                                        );
+                                    });
+                                })()}
+                            </svg>
+                        </div>
+                    )}
+
+
                 </div>
-                <button
-                    onClick={handleStart}
-                    // onClick={() => navigate(skipBIA ? '/voice' : '/verified')}
-                    className="
-              w-[clamp(16rem,40vw,31.25rem)]
-              h-[clamp(4rem,8vh,6.25rem)]
-              flex items-center justify-center
-              text-center
-              rounded-[30px]
-              border-2 border-white/50
-              bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
-              shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
-              text-white
-              text-[clamp(1.5rem,3vw,3rem)]
-              tracking-wide
-              active:scale-[0.98]
-              transition-all duration-300 ease-in-out
-              hover:border-white
-            "
-                >
-                    {isActive ? 'Recording...' : status === 'processing' ? 'Processing...' : 'Start'}
-                </button>
+
+                {/* Start Button - Hide when recording or processing, Disable when audio playing */}
+                {status !== 'recording' && status !== 'processing' && (
+                    <button
+                        onClick={handleStart}
+                        disabled={isAudioPlaying}
+                        className={`
+                  w-[clamp(16rem,40vw,31.25rem)]
+                  h-[clamp(4rem,8vh,6.25rem)]
+                  flex items-center justify-center
+                  text-center
+                  rounded-[30px]
+                  border-2 border-white/50
+                  bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
+                  shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
+                  text-white
+                  text-[clamp(1.5rem,3vw,3rem)]
+                  tracking-wide
+                  active:scale-[0.98]
+                  transition-all duration-300 ease-in-out
+                  hover:border-white
+                  ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
+                `}
+                    >
+                        {t('voice.start')}
+                    </button>
+                )}
 
             </div>
         </div>

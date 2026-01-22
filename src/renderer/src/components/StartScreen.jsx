@@ -76,10 +76,10 @@ export const StartScreen = () => {
         onPlay={() => setIsAudioPlaying(true)}
         autoPlay
       >
-      <source src={instructionAudio} type="audio/mpeg" />
+        <source src={instructionAudio} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
-      <div className={`absolute top-0 right-0 z-40 p-4`}>
+      <div className={`absolute top-0 right-0  ${isActive ? 'z-51' : 'z-40'} p-4`}>
         <Setting setIsActive={setIsActive} isActive={isActive} />
       </div>
       {/* Background */}
@@ -161,7 +161,7 @@ export const StartScreen = () => {
               bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
               shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
               text-white
-              text-[clamp(1.5rem,3vw,3rem)]
+              text-[clamp(1.5rem,4vw,4rem)]
               tracking-wide
               active:scale-[0.98]
               transition-all duration-300 ease-in-out

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import lightbg from '../assets/lightbg.png'
 import lightblub from '../assets/lightblub.png'
+import projector from '../assets/projector.png'
 import frame1 from '../assets/verfied-frame.svg'
 import profilepic from '../assets/profile-pic.png'
 import { useNavigate } from 'react-router'
@@ -9,22 +10,22 @@ import { useSelector } from 'react-redux'
 
 
 export default function RegisterCard() {
-const user = useSelector((state) => state.common.user);
-const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
-const folderName = imagePath?.split("/").pop(); // "<folder>"
-const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-const audioRef = React.useRef(null);
-const instructionAudio = "/src/assets/audio/confirm_user.mp3";
-const profileImageSrc = folderName
-  ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-  : profilepic;
+  const user = useSelector((state) => state.common.user);
+  const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
+  const folderName = imagePath?.split("/").pop(); // "<folder>"
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = React.useRef(null);
+  const instructionAudio = "/src/assets/audio/confirm_user.mp3";
+  const profileImageSrc = folderName
+    ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+    : profilepic;
 
-useEffect(() => {
-  // Play audio when component mounts
-  playAudio();
-}, []);
+  useEffect(() => {
+    // Play audio when component mounts
+    playAudio();
+  }, []);
 
-const playAudio = () => {
+  const playAudio = () => {
     if (audioRef.current) {
       setIsAudioPlaying(true);
       audioRef.current.play().catch((err) => {
@@ -47,27 +48,27 @@ const playAudio = () => {
 
   console.log(user);
   const navigate = useNavigate()
-  const {t}= useTranslation()
-    const handleYesClick = () => {
+  const { t } = useTranslation()
+  const handleYesClick = () => {
     stopAudio();
     navigate('/bia/wh');
   };
 
   const handleNoClick = () => {
     stopAudio();
-    navigate('/start');
+    navigate('/');
   };
 
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center">
-          <audio
-    ref={audioRef}
-    onEnded={handleAudioEnd}
-    onPlay={() => setIsAudioPlaying(true)}
-  >
-    <source src={instructionAudio} type="audio/mpeg" />
-    Your browser does not support the audio element.
-  </audio>
+      <audio
+        ref={audioRef}
+        onEnded={handleAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      >
+        <source src={instructionAudio} type="audio/mpeg" />
+        Your browser does not support the audio element.
+      </audio>
       {/* Card Wrapper */}
       <div
         className="relative w-[900px] h-[1400px] bg-cover bg-center"
@@ -109,7 +110,7 @@ const playAudio = () => {
               e.currentTarget.src = profilepic;
             }}
             alt="profile pic"
-            className="w-[420px] h-auto object-cover"
+            className="w-full portrait:max-w-96 h-auto object-cover rounded-3xl"
           />
 
 
@@ -126,7 +127,7 @@ const playAudio = () => {
 
           <div className="buttons mt-5">
             <button
-            onClick={handleYesClick}
+              onClick={handleYesClick}
               style={{
                 borderImageSource:
                   'radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)',
@@ -148,7 +149,7 @@ transition-transform duration-300 ease-in-out
 
   "
             >
-             {t('common.yes_me')}
+              {t('common.yes_me')}
             </button>
 
             <button
@@ -176,6 +177,13 @@ transition-transform duration-300 ease-in-out
             </button>
           </div>
         </div>
+      </div>
+      <div className="absolute bottom-[9rem] w-[770px] left-[30rem]  -translate-x-1/2">
+        <img
+          src={projector}
+          alt="projector"
+          className=" drop-shadow-[0_0_40px_rgba(0,200,255,0.8)]"
+        />
       </div>
     </div>
   )

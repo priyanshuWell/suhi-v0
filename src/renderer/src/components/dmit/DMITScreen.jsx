@@ -189,6 +189,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 import bg1 from "../../assets/lightbg.png";
 import bg2 from "../../assets/dmt-bg.svg";
@@ -213,13 +214,14 @@ const mapCameras = (cams) => {
 
 // ✅ Your 4 steps
 const CAPTURE_FLOW = [
-  { key: "LEFT_FRONT", label: "Left Hand - Front", role: "LEFT", overlay: leftFront, audio: "/src/assets/audio/lp.mp3"},
-  { key: "LEFT_BACK", label: "Left Hand - Back", role: "LEFT", overlay: leftBack, audio: "/src/assets/audio/lb.mp3"  },
-  { key: "RIGHT_FRONT", label: "Right Hand - Front", role: "RIGHT", overlay: rightFront, audio: "/src/assets/audio/rp.mp3"  },
-  { key: "RIGHT_BACK", label: "Right Hand - Back", role: "RIGHT", overlay: rightBack, audio: "/src/assets/audio/rb.mp3" },
+  { key: "LEFT_FRONT", labelKey: "dmit.hand_labels.left_front", role: "LEFT", overlay: leftFront, audio: "/src/assets/audio/lp.mp3" },
+  { key: "LEFT_BACK", labelKey: "dmit.hand_labels.left_back", role: "LEFT", overlay: leftBack, audio: "/src/assets/audio/lb.mp3" },
+  { key: "RIGHT_FRONT", labelKey: "dmit.hand_labels.right_front", role: "RIGHT", overlay: rightFront, audio: "/src/assets/audio/rp.mp3" },
+  { key: "RIGHT_BACK", labelKey: "dmit.hand_labels.right_back", role: "RIGHT", overlay: rightBack, audio: "/src/assets/audio/rb.mp3" },
 ];
 
 const DMITScreen = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -230,7 +232,7 @@ const DMITScreen = () => {
   const [mapped, setMapped] = useState([]);
   const [stepIndex, setStepIndex] = useState(0);
 
-  const [status, setStatus] = useState("Preparing camera...");
+  const [status, setStatus] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
@@ -250,13 +252,13 @@ const DMITScreen = () => {
         setMapped(mappedCams);
       } catch (err) {
         console.error("enumerateDevices error:", err);
-        setStatus("Camera devices not accessible");
+        setStatus(t('dmit.status.failed_camera'));
       }
     };
 
     loadDevices();
   }, []);
-    useEffect(() => {
+  useEffect(() => {
     if (currentStep) {
       playAudio(currentStep.audio);
     }
@@ -293,7 +295,7 @@ const DMITScreen = () => {
   // ✅ Start camera in the box
   const startCamera = async (role) => {
     try {
-      setStatus("Opening camera...");
+      setStatus(t('dmit.status.opening'));
       const deviceId = getCameraForRole(role);
 
       if (!deviceId) {
@@ -317,10 +319,10 @@ const DMITScreen = () => {
         await videoRef.current.play();
       }
 
-      setStatus(`Camera ready: ${currentStep.label}`);
+      setStatus(`${t('dmit.status.ready')}: ${t(currentStep.labelKey)}`);
     } catch (err) {
       console.error("startCamera error:", err);
-      setStatus("Failed to open camera");
+      setStatus(t('dmit.status.failed_camera'));
     }
   };
 
@@ -349,7 +351,7 @@ const DMITScreen = () => {
 
         recorder.start();
         setIsRecording(true);
-        setStatus(`Recording 5 seconds... (${currentStep.label})`);
+        setStatus(`${t('dmit.status.recording')} (${t(currentStep.labelKey)})`);
 
         setTimeout(() => {
           recorder.stop();
@@ -363,7 +365,7 @@ const DMITScreen = () => {
 
   // ✅ Upload buffer to API
   const uploadBuffer = async (blob) => {
-    setStatus("Uploading buffer...");
+    setStatus(t('dmit.status.uploading'));
     const file = new File([blob], `${currentStep.key}.webm`, { type: "video/webm" });
 
     const formData = new FormData();
@@ -396,21 +398,21 @@ const DMITScreen = () => {
       const result = await uploadBuffer(buffer);
 
       // 5. success -> next
-      setStatus("Success ✅ moving next...");
+      setStatus(t('dmit.status.success'));
 
       await new Promise((r) => setTimeout(r, 800));
 
       if (stepIndex < CAPTURE_FLOW.length - 1) {
         setStepIndex((prev) => prev + 1);
       } else {
-        setStatus("All 4 buffers captured successfully ✅");
+        setStatus(t('dmit.status.all_captured'));
         // Navigate to voice analysis
         await new Promise((r) => setTimeout(r, 1000));
         navigate("/voice");
       }
     } catch (err) {
       console.error("runStep error:", err);
-      setStatus("Error occurred. Retrying...");
+      setStatus(t('dmit.status.error'));
       setTimeout(() => runStep(), 1500);
     }
   };
@@ -455,8 +457,7 @@ const DMITScreen = () => {
         w-[600px]"
       >
         <p className="text-5xl text-center font-light leading-snug text-white tracking-wider">
-          Align the front of your right hand fully inside the box and keep it still until the scan
-          finishes.
+          {t('dmit.instruction')}
         </p>
       </div>
 
@@ -514,7 +515,7 @@ const DMITScreen = () => {
           {/* small label */}
           <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2">
             <p className="text-white text-lg tracking-wide font-light">
-              {currentStep?.label} {isRecording ? "●" : ""}
+              {t(currentStep?.labelKey)} {isRecording ? "●" : ""}
             </p>
           </div>
         </div>

@@ -1,10 +1,33 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import settingbg from '../assets/setting-bg.svg'
 import soundIcon from '../assets/sound-btn.png'
 import langIcon from '../assets/language-btn.png'
 
-export const Setting = ({setIsActive,isActive}) => {
-  const [selectedLanguage, setSelectedLanguage] = useState('english')
+export const Setting = ({ setIsActive, isActive }) => {
+  const { i18n } = useTranslation()
+  const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en')
+
+  // Sync selectedLanguage with current i18n language
+  useEffect(() => {
+    setSelectedLanguage(i18n.language || 'en')
+  }, [i18n.language])
+
+  const handleLanguageChange = (lang) => {
+    setSelectedLanguage(lang)
+  }
+
+  const handleApply = () => {
+    // Change the language
+    i18n.changeLanguage(selectedLanguage)
+    // Close the settings modal
+    setIsActive(false)
+  }
+
+  const handleReset = () => {
+    // Reset to current language (cancel any unsaved changes)
+    setSelectedLanguage('en')
+  }
 
   return (
     <div
@@ -15,12 +38,12 @@ export const Setting = ({setIsActive,isActive}) => {
       `}
     >
       {/* sound and language btn */}
-      <div className="absolute right-[1vh] top-[2vh] landscape:top-[1vh] landscape:right-[3vw] flex gap-2">
+      <div className="absolute right-[1vh] top-[0vh] landscape:top-[1vh] landscape:right-[3vw] flex gap-2">
         <button className="max-w-full">
           <img src={soundIcon} alt="sound-btn" className="w-30" />
         </button>
         <button className='"max-w-full"'>
-          <img onClick={()=>setIsActive(!isActive)} src={langIcon} alt="sound-btn" className="w-30" />
+          <img onClick={() => setIsActive(!isActive)} src={langIcon} alt="sound-btn" className="w-30" />
         </button>
       </div>
 
@@ -37,9 +60,9 @@ export const Setting = ({setIsActive,isActive}) => {
             <input
               type="radio"
               name="language"
-              value="english"
-              checked={selectedLanguage === 'english'}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
+              value="en"
+              checked={selectedLanguage === 'en'}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="mr-4 w-5 h-5 accent-blue-500"
             />
             English
@@ -49,9 +72,9 @@ export const Setting = ({setIsActive,isActive}) => {
             <input
               type="radio"
               name="language"
-              value="hindi"
-              checked={selectedLanguage === 'hindi'}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
+              value="hi"
+              checked={selectedLanguage === 'hi'}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="mr-4 w-5 h-5 accent-blue-500"
             />
             Hindi
@@ -62,39 +85,46 @@ export const Setting = ({setIsActive,isActive}) => {
           {/* Buttons */}
           <div className="w-full  flex gap-x-10">
             <button
+              onClick={handleReset}
               className="
-w-40 h-14 xl:w-80 xl:h-25
-flex items-center justify-center
-text-center
-rounded-[25px]
- border-white
- 
-[border-image-source:radial-gradient(50%_50%_at_50%_50%,#ffffff_0%,rgba(255,255,255,0)_100%)]
-[border-image-slice:1]
-shadow-[0px_5px_40px_0px_#9AD9FF]
-
-text-white text-xl xl:text-4xl  
-active:scale-[0.98]
-tracking-wider
-transition-transform duration-300 ease-in-out
-              "
+              w-[clamp(16rem,30vw,31.25rem)]
+              h-[clamp(4rem,8vh,6.25rem)]
+              flex items-center justify-center
+              text-center
+              rounded-[30px]
+              border-2 border-white/30
+              bg-white/5
+              backdrop-blur-sm
+              shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
+              text-white
+              text-[clamp(1.25rem,3vw,3rem)]
+              tracking-wide
+              active:scale-[0.98]
+              transition-all duration-300 ease-in-out
+              hover:bg-white/10
+              hover:border-white/50
+            "
             >
               Reset
             </button>
-
             <button
+              onClick={handleApply}
               className="
-w-40 h-14 xl:w-80 xl:h-25
-                rounded-[25px]
-                text-3xl font-medium
-                text-white
-                tracking-wider
-                bg-linear-to-b from-cyan-400 to-cyan-600
-                shadow-[0_0_25px_rgba(14,165,233,0.8)]
-                hover:scale-[1.02]
-                active:scale-95
-                transition
-              "
+              w-[clamp(16rem,30vw,31.25rem)]
+              h-[clamp(4rem,8vh,6.25rem)]
+              flex items-center justify-center
+              text-center
+              rounded-[30px]
+              border-2 border-white/50
+              bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
+              shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
+              text-white
+              text-[clamp(1.5rem,3vw,3rem)]
+              tracking-wide
+              active:scale-[0.98]
+              transition-all duration-300 ease-in-out
+              hover:border-white
+            "
             >
               Apply
             </button>
