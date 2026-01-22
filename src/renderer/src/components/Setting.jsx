@@ -97,7 +97,7 @@ export const Setting = ({ setIsActive, isActive }) => {
               backdrop-blur-sm
               shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
               text-white
-              text-[clamp(1.25rem,2.5vw,2.5rem)]
+              text-[clamp(1.25rem,3vw,3rem)]
               tracking-wide
               active:scale-[0.98]
               transition-all duration-300 ease-in-out

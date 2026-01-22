@@ -56,7 +56,7 @@ export default function RegisterCard() {
 
   const handleNoClick = () => {
     stopAudio();
-    navigate('/start');
+    navigate('/');
   };
 
   return (
@@ -110,7 +110,7 @@ export default function RegisterCard() {
               e.currentTarget.src = profilepic;
             }}
             alt="profile pic"
-            className="w-full portrait:max-w-105 landscape:max-w-60 h-auto object-cover"
+            className="w-full portrait:max-w-96 h-auto object-cover rounded-3xl"
           />
 
 
