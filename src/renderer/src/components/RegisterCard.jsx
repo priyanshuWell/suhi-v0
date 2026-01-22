@@ -178,7 +178,7 @@ transition-transform duration-300 ease-in-out
           </div>
         </div>
       </div>
-      <div className="absolute bottom-[13rem] w-[750px] left-1/2 -translate-x-1/2">
+      <div className="absolute bottom-[9rem] w-[770px] left-[30rem]  -translate-x-1/2">
         <img
           src={projector}
           alt="projector"

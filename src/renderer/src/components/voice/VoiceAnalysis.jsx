@@ -239,7 +239,7 @@ const VoiceCapture = () => {
 
                 {/* Header Text */}
                 <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl">
-                    Look at the image, notice what it makes you feel or think, then click Start and speak freely for 50 seconds.
+                    {t('voice.instruction')}
                 </h1>
 
                 {/* Image Container */}
@@ -393,7 +393,7 @@ const VoiceCapture = () => {
                   ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
                 `}
                     >
-                        Start
+                        {t('voice.start')}
                     </button>
                 )}
 

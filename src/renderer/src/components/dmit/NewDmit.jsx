@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { useTranslation } from "react-i18next";
 // import { useNavigate } from "react-router-dom";
 
 import bg1 from "../../assets/lightbg.png";
@@ -31,28 +32,28 @@ const API_BASE_URL = "http://127.0.0.1:8000";
 const CAPTURE_FLOW = [
   {
     key: "LEFT_FRONT",
-    label: "Left Hand - Front",
+    labelKey: "dmit.hand_labels.left_front",
     overlay: leftFront,
     handPayload: "LP",
     audio: "/src/assets/audio/lp.mp3"
   },
   {
     key: "LEFT_BACK",
-    label: "Left Hand - Back",
+    labelKey: "dmit.hand_labels.left_back",
     overlay: leftBack,
     handPayload: "LB",
     audio: "/src/assets/audio/lb.mp3"
   },
   {
     key: "RIGHT_FRONT",
-    label: "Right Hand - Front",
+    labelKey: "dmit.hand_labels.right_front",
     overlay: rightFront,
     handPayload: "RP",
     audio: "/src/assets/audio/rp.mp3"
   },
   {
     key: "RIGHT_BACK",
-    label: "Right Hand - Back",
+    labelKey: "dmit.hand_labels.right_back",
     overlay: rightBack,
     handPayload: "RB",
     audio: "/src/assets/audio/rb.mp3"
@@ -60,6 +61,7 @@ const CAPTURE_FLOW = [
 ];
 
 const NewDmitScreen = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useSelector((state) => state.common.user);
 
@@ -71,7 +73,7 @@ const NewDmitScreen = () => {
   const [stepIndex, setStepIndex] = useState(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
-  const [status, setStatus] = useState("Preparing camera...");
+  const [status, setStatus] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
@@ -103,7 +105,7 @@ const NewDmitScreen = () => {
     setIsAudioPlaying(false);
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (currentStep && currentStep.audio) {
       playAudio(currentStep.audio);
     }
@@ -122,7 +124,7 @@ const NewDmitScreen = () => {
     try {
       setPhase("INFO");
       setIsVerify(false);
-      setStatus("Opening camera...");
+      setStatus(t('dmit.status.opening'));
 
       const all = await navigator.mediaDevices.enumerateDevices();
       const videoInputs = all.filter((d) => d.kind === "videoinput");
@@ -158,11 +160,11 @@ const NewDmitScreen = () => {
       }
 
       setIsCameraReady(true);
-      setStatus("Camera ready :white_check_mark:");
+      setStatus(t('dmit.status.ready'));
     } catch (err) {
       console.error("startSingleCamera error:", err);
       setPhase("ERROR");
-      setStatus("Failed to open camera");
+      setStatus(t('dmit.status.failed_camera'));
       setIsCameraReady(false);
     }
   };
@@ -194,7 +196,7 @@ const NewDmitScreen = () => {
 
         recorder.start();
         setIsRecording(true);
-        setStatus(`Recording 5 seconds... (${currentStep.label})`);
+        setStatus(`${t('dmit.status.recording')} (${t(currentStep.labelKey)})`);
 
         setTimeout(() => {
           recorder.stop();
@@ -212,7 +214,7 @@ const NewDmitScreen = () => {
   const storeHandBuffer = async (blob) => {
     setPhase("INFO");
     setIsVerify(false);
-    setStatus("Storing buffer...");
+    setStatus(t('dmit.status.storing'));
 
     const file = new File([blob], `${currentStep.key}.webm`, {
       type: "video/webm",
@@ -240,7 +242,7 @@ const NewDmitScreen = () => {
   const fireRegisterHandWith5SecWindow = (shmPath) => {
     setPhase("INFO");
     setIsVerify(false);
-    setStatus("Registering hand...");
+    setStatus(t('dmit.status.registering'));
 
     const payload = {
       shm_path: shmPath,
@@ -259,12 +261,12 @@ const NewDmitScreen = () => {
         // if response arrives within 5 sec, show green
         setIsVerify(true);
         setPhase("INFO");
-        setStatus("Hand registered :white_check_mark:");
+        setStatus(t('dmit.status.registered'));
       })
       .catch((err) => {
         console.error("/register/hand error:", err);
         setPhase("ERROR");
-        setStatus("Register failed :x: (moving next)");
+        setStatus(t('dmit.status.error'));
       });
 
     // :white_check_mark: always continue after 5 sec
@@ -302,7 +304,7 @@ const NewDmitScreen = () => {
       } else {
         setPhase("INFO");
         setIsVerify(true);
-        setStatus("All hands completed :white_check_mark: Redirecting...");
+        setStatus(t('dmit.status.all_complete'));
         stopAudio();
         setTimeout(() => {
           navigate("/voice");
@@ -311,7 +313,7 @@ const NewDmitScreen = () => {
     } catch (err) {
       console.error("runStep error:", err);
       setPhase("ERROR");
-      setStatus("Error occurred. Retrying...");
+      setStatus(t('dmit.status.error'));
       setTimeout(() => {
         runLockRef.current = false;
         runStep();
@@ -364,8 +366,8 @@ const NewDmitScreen = () => {
 
       {/* top text */}
       <div className="absolute top-[20px] left-1/2 -translate-x-1/2 z-30 w-[600px]">
-        <p className="text-5xl text-center font-light leading-snug text-white tracking-wider">
-          Align your hand inside the box and keep it still until the scan finishes.
+        <p className="text-4xl mt-[7rem] text-center font-light leading-snug text-white tracking-wider">
+          {t('dmit.instruction')}
         </p>
       </div>
 
@@ -386,7 +388,7 @@ const NewDmitScreen = () => {
             <video
               ref={videoRef}
               autoPlay
-            //  muted
+              //  muted
               playsInline
               className="w-full h-full object-cover"
             />
@@ -407,7 +409,7 @@ const NewDmitScreen = () => {
           {/* small label */}
           <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2">
             <p className="text-white text-lg tracking-wide font-light">
-              {currentStep?.label} {isRecording ? "●" : ""}
+              {t(currentStep?.labelKey)} {isRecording ? "●" : ""}
             </p>
           </div>
         </div>
@@ -417,13 +419,12 @@ const NewDmitScreen = () => {
       <div className="absolute bottom-10 left-0 right-0 flex justify-center z-20">
         <div className="bg-black bg-opacity-75 px-6 py-3 rounded-lg">
           <p
-            className={`text-lg font-medium ${
-              phase === "ERROR"
-                ? "text-red-500"
-                : isVerify
+            className={`text-lg font-medium ${phase === "ERROR"
+              ? "text-red-500"
+              : isVerify
                 ? "text-green-500"
                 : "text-white"
-            }`}
+              }`}
           >
             {status}
           </p>

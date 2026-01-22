@@ -9,6 +9,7 @@ import { Dumbbell, Ruler, Calculator, Droplets } from 'lucide-react'
 import axios from "axios"
 import BodyConstitution from './BodyConstitution'
 import droplet from '../../assets/droplet.png'
+import { useTranslation } from 'react-i18next'
 const BIAResult = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -22,7 +23,7 @@ const BIAResult = () => {
   const bia = storeBiaResult || location.state?.biaResult
   const weight = storeWeight || location.state?.weight
   const height = storeHeight || location.state?.height
-
+  const { t } = useTranslation()
   const [showError, setShowError] = useState(false)
 
   // ✅ API State
@@ -217,9 +218,9 @@ const BIAResult = () => {
 
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
         <h1 className="text-white w-[50%] text-center text-4xl leading-10 tracking-wider font-bold ">
-          Congratulations!
+          {t('bia_result.congratulations')}
           <br />
-          Here are your results </h1>
+          {t('bia_result.here_are_results')} </h1>
         {/* The Frame Container */}
         <div className="relative w-full max-w-[1080px]">
           <img
@@ -233,7 +234,7 @@ const BIAResult = () => {
               <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
                 <div className="flex items-center gap-3 text-cyan-400 mb-2">
                   <Dumbbell size={32} className="fill-cyan-400/20 rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">Weight</span>
+                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.weight')}</span>
                 </div>
                 <div className="text-3xl font-bold tracking-tight">
                   {Number(finalWeight) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
@@ -243,7 +244,7 @@ const BIAResult = () => {
               <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
                 <div className="flex items-center gap-3 text-cyan-400 mb-2">
                   <Ruler size={32} className="rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">Height</span>
+                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.height')}</span>
                 </div>
                 <div className="text-3xl font-bold tracking-tight">
                   {Number(finalHeight) || 156.3}
@@ -278,7 +279,7 @@ const BIAResult = () => {
                   <img src={droplet} className="text-cyan-400 w-7 h-7" />
 
                   <h3 className="text-[#29ABE2] text-2xl  tracking-wide">
-                    Hydration -{" "}
+                    {t('bia_result.hydration')} -{" "}
                     <span
                       className={
                         analysisData?.hydration?.level === "Low"
@@ -293,7 +294,7 @@ const BIAResult = () => {
 
                 <p className="text-white/90 text-2xl pt-1 tracking-wider">
                   {analysisData?.hydration?.message ||
-                    "How about having a glass of water after this?"}
+                    t('bia_result.hydration_low_message')}
                 </p>
               </div>
             </div>
@@ -311,13 +312,13 @@ const BIAResult = () => {
                 <div className="flex items-center justify-center gap-3">
                   <span className="text-4xl">{learnerEmoji}</span>
                   <h3 className="text-[#2CEF94] text-2xl font-bold tracking-wide">
-                    {analysisData?.studyTip?.title || "When studying your ears are your hero "}
+                    {analysisData?.studyTip?.title || t('bia_result.study_tip_default')}
                   </h3>
                 </div>
 
                 <p className="text-white/90 text-2xl tracking-wider">
                   {analysisData?.studyTip?.description ||
-                    "When studying your ears are your hero "}
+                    t('bia_result.study_tip_default')}
                 </p>
               </div>
             </div>
@@ -338,11 +339,10 @@ const BIAResult = () => {
               }}
             >
               <div className="text-center mb-4">
-                <span className="text-5xl mb-2 inline-block">
-                  {animalEmojis[analysisData?.personality?.animal] || "🦅"}
-                </span>
                 <h3 className="text-orange-300 text-2xl font-bold">
-                  {analysisData?.personality?.animal || "Lion"}
+                  <span className="text-4xl mb-2 inline-block">
+                    {animalEmojis[analysisData?.personality?.animal] || "🦅"}
+                  </span> {analysisData?.personality?.animal || "Lion"}
                 </h3>
               </div>
 
@@ -409,7 +409,7 @@ const BIAResult = () => {
     transition-transform duration-300 ease-in-out
   "
             >
-              Go to homepage
+              {t('bia_result.go_to_homepage')}
             </button>
 
 

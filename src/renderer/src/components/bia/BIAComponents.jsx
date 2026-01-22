@@ -4,7 +4,9 @@ import measureWH from "../../assets/videos/measureHeightWeight.mp4";
 import { useParams } from "react-router";
 import progessbg from '../../assets/progress-bg.svg'
 import textframe from '../../assets/textFrame.png'
+import { useTranslation } from 'react-i18next'
 export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0 }) => {
+  const { t } = useTranslation();
   const { screenType } = useParams();
   const currentText = texts[screenType];
   const [error, setError] = useState(null);
@@ -75,7 +77,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
         onPlay={() => setIsAudioPlaying(true)}
       >
         <source src={getAudioPath(screenType)} type="audio/mpeg" />
-        Your browser does not support the audio element.
+        {t('common.audio_not_supported')}
       </audio>
       {/* Background */}
       <div
@@ -92,7 +94,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
           </p>
           <img src={textframe} alt="text-frame" className="absolute top-[4.5rem] rotate-180" />
 
-          <p className="text-white font-medium tracking-tight  landscape:text-4xl portrait:text-[36px] mt-7">
+          <p className="text-white font-medium tracking-tight  landscape:text-4xl portrait:text-[36px] mt-[6rem]">
             {currentText.description}
           </p>
 
@@ -121,7 +123,7 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
               {/* Attempt counter */}
               {attemptCount > 0 && (
                 <div className="absolute -bottom-12 text-white/80 text-xl">
-                  Attempt {attemptCount}
+                  {t('bia_component.attempt')} {attemptCount}
                 </div>
               )}
             </div>

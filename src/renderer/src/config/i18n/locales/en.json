@@ -2,20 +2,81 @@
   "common": {
     "start": "Start",
     "new_user": "New user? Register here",
-    "yes_me":"Yes It's me",
-    "not_me":"Not You?"
+    "yes_me": "Yes It's me",
+    "not_me": "Not You?",
+    "congratulations": "Congratulations!",
+    "here_are_results": "Here are your results",
+    "go_to_homepage": "Go to homepage",
+    "audio_not_supported": "Your browser does not support the audio element."
   },
-  "profile":{
-    "name":"Name",
-    "class":"Class",
-    "age":"Age",
-    "number":"Mobile Number"
-
+  "profile": {
+    "name": "Name",
+    "class": "Class",
+    "age": "Age",
+    "number": "Mobile Number"
   },
   "measurement": {
     "let_measure": "Height and Weight and Measurement",
     "standStill": "Stand straight and still on the platform, facing forward.",
-    "good_job":"Good Job!",
-    "holdThe_Hands":"Hold the two handles and keep your elbows straight and relaxed."
+    "good_job": "Good Job!",
+    "holdThe_Hands": "Hold the two handles and keep your elbows straight and relaxed.",
+    "weight": "Weight",
+    "height": "Height"
+  },
+  "dmit": {
+    "hand_labels": {
+      "left_front": "Left Hand - Front",
+      "left_back": "Left Hand - Back",
+      "right_front": "Right Hand - Front",
+      "right_back": "Right Hand - Back"
+    },
+    "instruction": "Align your hand inside the box and keep it still until the scan finishes.",
+    "status": {
+      "preparing": "Preparing camera...",
+      "opening": "Opening camera...",
+      "ready": "Camera ready ✓",
+      "recording": "Recording 5 seconds...",
+      "storing": "Storing buffer...",
+      "uploading": "Uploading buffer...",
+      "registering": "Registering hand...",
+      "registered": "Hand registered ✓",
+      "success": "Success ✅ moving next...",
+      "all_complete": "All hands completed ✓ Redirecting...",
+      "all_captured": "All 4 buffers captured successfully ✅",
+      "error": "Error occurred. Retrying...",
+      "failed_camera": "Failed to open camera"
+    }
+  },
+  "voice": {
+    "instruction": "Look at the image, notice what it makes you feel or think, then click Start and speak freely for 50 seconds.",
+    "start": "Start",
+    "status": {
+      "idle": "idle",
+      "recording": "recording",
+      "processing": "processing",
+      "success": "success",
+      "error": "error"
+    }
+  },
+  "bia_result": {
+    "congratulations": "Congratulations!",
+    "here_are_results": "Here are your results",
+    "weight": "Weight",
+    "height": "Height",
+    "hydration": "Hydration",
+    "hydration_low_message": "How about having a glass of water after this?",
+    "study_tip_default": "When studying your ears are your hero",
+    "go_to_homepage": "Go to homepage",
+    "body_constitution": "Body Constitution",
+    "vata": "Vata",
+    "pitta": "Pitta",
+    "kapha": "Kapha"
+  },
+  "bia_component": {
+    "attempt": "Attempt"
+  },
+  "error": {
+    "no_result": "Failed to load result data",
+    "redirecting": "Redirecting to home..."
   }
 }
