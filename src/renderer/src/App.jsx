@@ -16,6 +16,7 @@ import { cloudToLocalSync } from './utils/api'
 import VoiceAnalysis from './components/voice/VoiceAnalysis'
 import NewDmit from './components/dmit/NewDmit'
 import DMITScreen from './components/dmit/DMITScreen'
+import UserDetailsForm from './components/forms/UserDetailsForm'
 
 function App() {
 
@@ -39,15 +40,15 @@ function App() {
 
 
     <Routes>
-      {/* <Route path='/' element={<BIAResult />} /> */}
-       <Route path='/' element={<SplashScreen />} />
+      <Route path='/' element={<UserDetailsForm />} />
+       {/* <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
       <Route path='/screen1' element={<NewDmit />} />
       <Route path='/bia/result' element={<BIAResult />} />
-      <Route path='/voice' element={<VoiceAnalysis />} />
+      <Route path='/voice' element={<VoiceAnalysis />} /> */}
 
     </Routes>
   )
