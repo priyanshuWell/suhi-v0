@@ -17,68 +17,55 @@ import VoiceAnalysis from './components/voice/VoiceAnalysis'
 import NewDmit from './components/dmit/NewDmit'
 import DMITScreen from './components/dmit/DMITScreen'
 import UserDetailsForm from './components/forms/UserDetailsForm'
+import FaceCapture from './components/forms/FaceCapture'
+import ConfirmationScreen from './components/forms/ConfirmationScreen'
+import LoginSuhi from './components/forms/LoginSuhi'
+import LoginDOB from './components/forms/LoginDOB'
+import LoginFather from './components/forms/LoginFather'
 
 function App() {
-
   useEffect(() => {
     const doSync = async () => {
       try {
-        console.log("🔄 Starting cloud-to-local sync...");
-        const data = await cloudToLocalSync();
-        console.log("✅ Sync success:", data);
+        console.log('🔄 Starting cloud-to-local sync...')
+        const data = await cloudToLocalSync()
+        console.log('✅ Sync success:', data)
       } catch (err) {
-        console.error("❌ Sync failed:", err?.message || err);
+        console.error('❌ Sync failed:', err?.message || err)
       }
-    };
+    }
 
-    doSync();
-  }, []);
-
-  
+    doSync()
+  }, [])
 
   return (
-
-
     <Routes>
-      <Route path='/' element={<UserDetailsForm />} />
-       {/* <Route path='/' element={<SplashScreen />} />
+      {/* <Route path="/" element={<UserDetailsForm />} /> */}
+      {/* <Route path="/facecapture" element={<FaceCapture />} /> */}
+      {/* <Route path="/confirmation" element={<ConfirmationScreen />} /> */}
+      <Route path="/login-suhi" element={<LoginSuhi />} />
+      <Route path="/login-dob" element={<LoginDOB />} />
+      <Route path="/login-father" element={<LoginFather />} />
+      <Route path='/verified' element={<RegisterCard />} />
+      <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
-      <Route path='/verified' element={<RegisterCard />} />
+
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
       <Route path='/screen1' element={<NewDmit />} />
       <Route path='/bia/result' element={<BIAResult />} />
-      <Route path='/voice' element={<VoiceAnalysis />} /> */}
-
+      <Route path='/voice' element={<VoiceAnalysis />} />
     </Routes>
   )
 }
 
 export default App
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 // "hand": "RP - Right Palm (palm facing camera) , LP - Left Palm (palm facing camera), RB - Right Back (back of hand facing camera), LB - Left Back (back of hand facing camera)"
-
-
-
-
-
 
 // /**
 //  * App.jsx for Kiosk Project with Background Video Recording
-//  * 
+//  *
 //  * This version is specifically for the kiosk electron project.
 //  * Copy this file to replace your existing App.jsx
 //  */
@@ -103,7 +90,7 @@ export default App
 
 // /**
 //  * App Component with Background Video Recording
-//  * 
+//  *
 //  * The BackgroundVideoProvider wraps all routes and automatically:
 //  * 1. Pre-warms the camera for instant access (camera opens immediately)
 //  * 2. Starts recording on monitored routes (/voice, /screen1, /progress)
@@ -119,20 +106,20 @@ export default App
 //     // Your API endpoint for receiving video uploads
 //     // The API will receive: video file, route, route_name, timestamp, duration
 //     apiEndpoint: 'https://your-api-endpoint.com/api/video-upload',
-    
+
 //     // Routes where background recording should be active
 //     // Recording automatically starts when user navigates to these routes
 //     // Recording automatically stops when user leaves these routes
 //     monitoredRoutes: ['/voice', '/screen1', '/progress', '/bia/result', '/welcome'],
-    
+
 //     // Pre-warm camera on app start for instant access
 //     // This ensures camera opens immediately when needed (no delay)
 //     prewarmCamera: true,
-    
+
 //     // Recording duration in seconds (each chunk)
 //     // After 30 seconds, video is sent to API and new recording starts
 //     recordingDuration: 30,
-    
+
 //     // Enable/disable the feature globally
 //     enabled: true
 //   }
@@ -152,7 +139,7 @@ export default App
 //         <Route path='/capture' element={<VideoCaptureScreen />} />
 //         <Route path='/verified' element={<RegisterCard />} />
 //         <Route path='/bia/:screenType' element={<BIACalcuate />} />
-        
+
 //         {/* Monitored routes - background recording is active */}
 //         <Route path='/screen1' element={<DMITScreen />} />
 //         <Route path='/bia/result' element={<BIAResult />} />
