@@ -47,17 +47,17 @@ const LoginSuhi = () => {
           </p>
 
           <div className="fingerprint flex flex-col justify-center items-center">
-            <button className="border border-white rounded-3xl p-6 w-[100px]">
+            <button onClick={() => navigate('/fingerprint')} className="border border-white cursor-pointer rounded-3xl p-6 w-[100px]">
               <img src={fingerprintImg} alt="finger-print" />
             </button>
           </div>
         </div>
       </div>
 
-      <div className="fixed  top-[60%] left-1/2 -translate-x-1/2 -translate-y-1/2">
+      <div className="fixed  top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2">
             <BlueGradientButton disabled={isButtonDisabled} width={'w-[clamp(16rem,32vw,31.25rem)]'}>Next </BlueGradientButton>
           </div>
-      <div className="fixed left-1/2 bottom-[30%] -translate-x-1/2">
+      {/* <div className="fixed left-1/2 bottom-[30%] -translate-x-1/2">
         <BlackGradientButton 
           width={'w-[clamp(16rem,33vw,31.25rem)]'} 
           padX={'px-3'}
@@ -66,7 +66,7 @@ const LoginSuhi = () => {
         >
           Login via name
         </BlackGradientButton>
-      </div>
+      </div> */}
     </>
   )
 }

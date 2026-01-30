@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
+import bmiWH from '../../assets/bia/bia-hwmeasuring.mp4'
+import biaComplete from '../../assets/bia/bia-complete.mp4'
 import bg1 from "../../assets/lightbg.png";
 import measureWH from "../../assets/videos/measureHeightWeight.mp4";
 import { useParams } from "react-router";
 import progessbg from '../../assets/progress-bg.svg'
 import textframe from '../../assets/textFrame.png'
 import { useTranslation } from 'react-i18next'
-export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0 }) => {
+export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0, isComplete = false, onVideoEnd }) => {
   const { t } = useTranslation();
   const { screenType } = useParams();
   const currentText = texts[screenType];
@@ -133,14 +135,23 @@ export const BIAComponent = ({ texts, total = 28, percent = 50, attemptCount = 0
 
       {/* Video */}
       <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
-        <video
-          src={measureWH}
-          autoPlay
-          // muted
-          loop
-          playsInline
-          className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
-        />
+        {isComplete ? (
+          <video
+            src={biaComplete}
+            autoPlay
+            playsInline
+            onEnded={onVideoEnd}
+            className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
+          />
+        ) : (
+          <video
+            src={bmiWH}
+            autoPlay
+            loop
+            playsInline
+            className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
+          />
+        )}
       </div>
     </div>
   );

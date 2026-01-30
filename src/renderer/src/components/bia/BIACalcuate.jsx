@@ -19,6 +19,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [errorState, setErrorState] = useState(null);
   const [failedStep, setFailedStep] = useState(null);
   const [attemptCount, setAttemptCount] = useState({});
+  const [isComplete, setIsComplete] = useState(false);
 
   const resultsRef = useRef({
     weight: null,
@@ -330,8 +331,8 @@ export default function BIACalculate({ user, onComplete }) {
       clearAllTimeouts();
       setIsCalculating(false);
 
-      // Navigate to screen1 (DMIT) only after everything is complete
-      navigate("/screen1");
+      // Show completion video before navigating
+      setIsComplete(true);
 
     } catch (e) {
       console.error("Flow failed:", e.message);
@@ -385,6 +386,11 @@ export default function BIACalculate({ user, onComplete }) {
     runFlow();
   };
 
+  // Handle video end - navigate to screen1
+  const handleVideoEnd = () => {
+    navigate("/screen1");
+  };
+
   /* =======================
      RENDER
   ======================= */
@@ -393,6 +399,8 @@ export default function BIACalculate({ user, onComplete }) {
       <BIAComponent
         texts={texts}
         attemptCount={attemptCount.impedance20 || attemptCount.impedance100 || 0}
+        isComplete={isComplete}
+        onVideoEnd={handleVideoEnd}
       />
 
       <ErrorAlert
