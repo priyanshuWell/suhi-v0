@@ -151,7 +151,7 @@ export const WEIGHT_ERROR_CODES = {
         action: 'WAIT',
         canRetry: false,
         nextStep: 'Accept zero reading (empty scale confirmed)',
-        userMessage: '⚖️ Step on the scale and stand still',
+        userMessage: 'Step on the scale and stand still',
         expectation: 'No weight on scale'
     },
     0x02: {

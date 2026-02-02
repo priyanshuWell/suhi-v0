@@ -82,7 +82,7 @@ export default function BIACalculate({ user, onComplete }) {
   function handleStatus(payload) {
     // IMPORTANT: MEASURE / INFO = WAIT (do not advance flow)
     if (payload.severity === "INFO" || payload.severity === "WARNING") {
-
+      console.log("[BIA STATUS]", payload);
       setCurrentStatus(payload.userMessage || payload.message);
       return;
     }
@@ -210,6 +210,7 @@ export default function BIACalculate({ user, onComplete }) {
   const measureImpedance = async (freq) => {
     setCurrentStatus(`Please ensure you are barefoot, and holding the hand rails firmly! Measuring impedance ${freq} kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
+    console.log("Impedance Result:", res);
     if (!res?.success) {
       console.error("Impedance failed");
       navigate("/screen1");
@@ -223,7 +224,7 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
   };
-
+console.log("BIACalculate rendered with ports:", resultsRef.current);
   const runFlow = async () => {
     if (isRunning || ports.length < 2) return;
     setIsRunning(true);
@@ -315,7 +316,7 @@ export default function BIACalculate({ user, onComplete }) {
         throw new Error(bia?.error || "BIA calculation failed");
       }
 
-     // setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
+     setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
       await sleep(800); // Brief moment to show success message
 
       // Generate session ID and save to Redux store
