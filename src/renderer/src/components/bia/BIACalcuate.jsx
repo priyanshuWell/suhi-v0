@@ -22,8 +22,10 @@ export default function BIACalculate({ user, onComplete }) {
   const [isComplete, setIsComplete] = useState(false);
 
   const resultsRef = useRef({
+    legImpedance: null,    // NEW: 50kHz legs - measured FIRST
     weight: null,
     height: null,
+    armImpedance: null,    // NEW: 50kHz arms
     impedance: { k20: null, k100: null }
   });
 
@@ -96,6 +98,16 @@ export default function BIACalculate({ user, onComplete }) {
     const currentAttempt = (attemptCount[step] || 0) + 1;
     setAttemptCount(p => ({ ...p, [step]: currentAttempt }));
 
+    // Error messages for different steps
+    const errorMessages = {
+      legImpedance: "Please make sure you are barefoot",
+      weight: "Please step on the platform barefoot",
+      height: "Please stand straight & still",
+      armImpedance: "Please hold the rods firmly",
+      impedance20: "Impedance measurement error",
+      impedance100: "Impedance measurement error"
+    };
+
     // If this is the second failure, navigate to /screen1
     if (currentAttempt >= 2) {
       console.error(`[BIA] ${step} failed ${currentAttempt} times. Redirecting to /screen1`);
@@ -106,7 +118,7 @@ export default function BIACalculate({ user, onComplete }) {
     setErrorState({
       ...payload,
       step,
-      title: payload.userMessage || payload.message,
+      title: errorMessages[step] || payload.userMessage || payload.message,
       currentAttempt,
       canRetry: true,
     });
@@ -207,6 +219,42 @@ export default function BIACalculate({ user, onComplete }) {
     };
   };
 
+  const measureLegImpedance = async () => {
+    setCurrentStatus("Please ensure you are barefoot and standing firmly on the platform!");
+    const res = await window.api.startLegImpedance50kHz();
+    console.log("Leg Impedance Result:", res);
+
+    if (!res?.success) {
+      console.error("Leg impedance failed");
+      throw new Error("Leg impedance failed");
+    }
+
+    resultsRef.current.legImpedance = {
+      phaseAngle: res.measurement.phaseAngle.value,
+      impedance: res.measurement.impedance.value,
+      unit: res.measurement.impedance.unit,
+      attempts: res.attempts
+    };
+  };
+
+  const measureArmImpedance = async () => {
+    setCurrentStatus("Please hold the hand rails firmly!");
+    const res = await window.api.startArmImpedance50kHz();
+    console.log("Arm Impedance Result:", res);
+
+    if (!res?.success) {
+      console.error("Arm impedance failed");
+      throw new Error("Arm impedance failed");
+    }
+
+    resultsRef.current.armImpedance = {
+      phaseAngle: res.measurement.phaseAngle.value,
+      impedance: res.measurement.impedance.value,
+      unit: res.measurement.impedance.unit,
+      attempts: res.attempts
+    };
+  };
+
   const measureImpedance = async (freq) => {
     setCurrentStatus(`Please ensure you are barefoot, and holding the hand rails firmly! Measuring impedance ${freq} kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
@@ -224,7 +272,7 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
   };
-console.log("BIACalculate rendered with ports:", resultsRef.current);
+  console.log("BIACalculate rendered with ports:", resultsRef.current);
   const runFlow = async () => {
     if (isRunning || ports.length < 2) return;
     setIsRunning(true);
@@ -237,19 +285,29 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
     try {
       /* CONNECT BIA ONCE */
       await window.api.connectBiaPort(ports[2]?.path);
-      // await sleep(800);
+      await sleep(800);
 
-      /* WEIGHT */
+      /* 1. LEG IMPEDANCE 50kHz - FIRST STEP */
+      if (!resultsRef.current.legImpedance) {
+        await withTimeout(
+          retry(measureLegImpedance),
+          TIMEOUTS.IMPEDANCE,
+          "Leg Impedance 50kHz"
+        );
+        await sleep(800);
+      }
+
+      /* 2. WEIGHT */
       if (!resultsRef.current.weight) {
         await withTimeout(
           retry(measureWeight),
           TIMEOUTS.WEIGHT,
           "Weight Measurement"
         );
-        await sleep(1200); // :red_circle: REQUIRED SETTLE
+        await sleep(1200); // REQUIRED SETTLE
       }
 
-      /* HEIGHT */
+      /* 3. HEIGHT */
       if (!resultsRef.current.height) {
         await withTimeout(
           retry(measureHeight),
@@ -261,7 +319,17 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
       navigate("/bia/im");
       await sleep(800);
 
-      /* IMPEDANCE 20 kHz */
+      /* 4. ARM IMPEDANCE 50kHz */
+      if (!resultsRef.current.armImpedance) {
+        await withTimeout(
+          retry(measureArmImpedance),
+          TIMEOUTS.IMPEDANCE,
+          "Arm Impedance 50kHz"
+        );
+        await sleep(800);
+      }
+
+      /* 5. IMPEDANCE 20 kHz */
       if (!resultsRef.current.impedance.k20) {
         await withTimeout(
           retry(() => measureImpedance("20")),
@@ -272,7 +340,7 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
       setCurrentStatus("Preparing next impedance...");
       await sleep(1500);
 
-      /* IMPEDANCE 100 kHz */
+      /* 6. IMPEDANCE 100 kHz */
       if (!resultsRef.current.impedance.k100) {
         await withTimeout(
           retry(() => measureImpedance("100")),
@@ -282,7 +350,7 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
       }
 
       /* CALCULATE */
-     // setIsCalculating(true);
+      // setIsCalculating(true);
       //setCurrentStatus("Processing body composition data...");
 
       console.log("[BIA] Calling calculateBIA with params:", {
@@ -316,7 +384,7 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
         throw new Error(bia?.error || "BIA calculation failed");
       }
 
-     setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
+      setCurrentStatus(":white_check_mark: All BIA data received! Saving results...");
       await sleep(800); // Brief moment to show success message
 
       // Generate session ID and save to Redux store
@@ -367,11 +435,17 @@ console.log("BIACalculate rendered with ports:", resultsRef.current);
     await sleep(2000); // :red_circle: cooldown before retry
 
     switch (failedStep) {
+      case "legImpedance":
+        await retry(measureLegImpedance);
+        break;
       case "weight":
         await retry(measureWeight);
         break;
       case "height":
         await retry(measureHeight);
+        break;
+      case "armImpedance":
+        await retry(measureArmImpedance);
         break;
       case "impedance20":
         await retry(() => measureImpedance("20"));

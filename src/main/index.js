@@ -1,29 +1,29 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { app, shell, BrowserWindow, ipcMain } from "electron"
+import { join } from "path"
+import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 // import * as biaa from './bia-script'
-import * as biaa from './bia-scriptv1'
-import { eventBus } from './eventbus'
-import fs from 'fs'
-import crypto from 'crypto'
-import axios from 'axios'
-import express from 'express'
+import * as biaa from "./bia-scriptv1"
+import { eventBus } from "./eventbus"
+import fs from "fs"
+import crypto from "crypto"
+import axios from "axios"
+import express from "express"
 
 let mainWindow = null
 
-ipcMain.handle('get-ports', async () => {
-  console.log('[MAIN] get-ports request received')
+ipcMain.handle("get-ports", async () => {
+  console.log("[MAIN] get-ports request received")
   const ports = await biaa.getPorts()
-  console.log('[MAIN] Ports received')
+  console.log("[MAIN] Ports received")
   return ports
 })
 
-ipcMain.handle('connect-heightPort', async (_event, portPath) => {
-  console.log('[MAIN] connect-heightPort request:', portPath)
+ipcMain.handle("connect-heightPort", async (_event, portPath) => {
+  console.log("[MAIN] connect-heightPort request:", portPath)
 
   const result = await biaa.connectHeightPort(portPath)
   if (result?.success === false) {
-    console.log('Result heightport', result)
+    console.log("Result heightport", result)
     return result
   }
 
@@ -39,26 +39,26 @@ const startImageServer = () => {
   const app = express()
 
   // ✅ Your images folder
-  const IMAGE_DIR = '/var/lib/suhi/.images'
+  const IMAGE_DIR = "/var/lib/suhi/.images"
 
   // Serve folder
-  app.use('/images', express.static(IMAGE_DIR))
+  app.use("/images", express.static(IMAGE_DIR))
 
   const PORT = 5174
 
-  app.listen(PORT, '127.0.0.1', () => {
+  app.listen(PORT, "127.0.0.1", () => {
     console.log(`✅ Image server running: http://127.0.0.1:${PORT}/images`)
   })
 }
 
 startImageServer()
 
-ipcMain.handle('connect-biaPort', async (_event, portPath) => {
-  console.log('[MAIN] connect-biaPOrt request:', portPath)
+ipcMain.handle("connect-biaPort", async (_event, portPath) => {
+  console.log("[MAIN] connect-biaPOrt request:", portPath)
 
   const result = await biaa.connectBiaPort(portPath)
   if (result?.success === false) {
-    console.log('Result weightsPort', result)
+    console.log("Result weightsPort", result)
     return result
   }
 
@@ -70,35 +70,35 @@ ipcMain.handle('connect-biaPort', async (_event, portPath) => {
   }
 })
 
-ipcMain.handle('start-weight-measurement', async () => {
+ipcMain.handle("start-weight-measurement", async () => {
   if (!biaa.biaPort || !biaa.biaPort.isOpen) {
     // Notify UI of port error
     if (mainWindow) {
-      mainWindow.webContents.send('weight:status', {
-        severity: 'CRITICAL',
-        message: 'PORT_ERROR',
-        userMessage: 'Scale not connected'
+      mainWindow.webContents.send("weight:status", {
+        severity: "CRITICAL",
+        message: "PORT_ERROR",
+        userMessage: "Scale not connected"
       })
     }
-    return { success: false, error: 'Port not connected' }
+    return { success: false, error: "Port not connected" }
   }
 
-  console.log('[MAIN] Starting weight measurement...')
+  console.log("[MAIN] Starting weight measurement...")
 
   try {
     const result = await biaa.case41_WeightMeasurement()
 
-    console.log('[MAIN] Weight Result:', result)
+    console.log("[MAIN] Weight Result:", result)
 
     // 1. If successful, STOP everything and return immediately
     if (result && result.success && result.weight) {
       // Send final success status to UI so it knows to stop showing "Measuring..."
       if (mainWindow) {
-        mainWindow.webContents.send('weight:status', {
-          severity: 'SUCCESS',
-          code: 'STABLE',
-          message: 'Weight Stable',
-          userMessage: 'Measurement Complete',
+        mainWindow.webContents.send("weight:status", {
+          severity: "SUCCESS",
+          code: "STABLE",
+          message: "Weight Stable",
+          userMessage: "Measurement Complete",
           weight: result.weight // Send the actual value
         })
       }
@@ -106,64 +106,81 @@ ipcMain.handle('start-weight-measurement', async () => {
       return result // This sends the data back to the `await window.api.startWeightMeasurement()` call
     } else {
       // Handle failure case
-      return { success: false, error: 'Measurement timed out or unstable' }
+      return { success: false, error: "Measurement timed out or unstable" }
     }
   } catch (error) {
-    console.error('Weight measurement error:', error)
+    console.error("Weight measurement error:", error)
     return { success: false, error: error.message }
   }
 })
-ipcMain.handle('start-height-measurement', async () => {
+ipcMain.handle("start-height-measurement", async () => {
   if (!biaa.heightPort) {
     return { success: false }
   }
-  console.log('calling the height measurement')
+  console.log("calling the height measurement")
   return await biaa.height_measurement()
 })
 
-ipcMain.handle('start-phaseangle-measurement', async () => {
+ipcMain.handle("start-phaseangle-measurement", async () => {
   if (!biaa.biaPort) {
     return { success: false }
   }
-  console.log('calling the phaseangle measurement')
+  console.log("calling the phaseangle measurement")
   return await biaa.case40_PhaseAngleDetailedQuery()
 })
 
-ipcMain.handle('start-impedance-measurement', async (event, freq) => {
+// New separate handlers for legs and arms at 50kHz
+ipcMain.handle("start-leg-impedance-50khz", async () => {
   if (!biaa.biaPort || !biaa.biaPort.isOpen) {
-    return { success: false, error: 'BIA port not connected' }
+    return { success: false, error: "BIA port not connected" }
+  }
+  console.log("[MAIN] Starting leg impedance measurement (50kHz)...")
+  return await biaa.case40a_LegImpedance50kHz()
+})
+
+ipcMain.handle("start-arm-impedance-50khz", async () => {
+  if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+    return { success: false, error: "BIA port not connected" }
+  }
+  console.log("[MAIN] Starting arm impedance measurement (50kHz)...")
+  return await biaa.case40b_ArmImpedance50kHz()
+})
+
+ipcMain.handle("start-impedance-measurement", async (event, freq) => {
+  if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+    return { success: false, error: "BIA port not connected" }
   }
 
-  if (freq === '20') {
+  if (freq === "20") {
     const result = await biaa.case38_20kHzImpedanceQuery()
-    console.log(result, 'Priyanshu here')
+    console.log(result, "Priyanshu here")
     if (!result) {
-      return { success: false, error: '20kHz impedance unstable' }
+      return { success: false, error: "20kHz impedance unstable" }
     }
 
     return {
       success: true,
       impedance: {
         freq: 20,
-        unit: 'Ω',
+        unit: "Ω",
         segments: result.segments,
         avg: Object.values(result.segments).reduce((a, b) => a + b, 0) / 5
       }
     }
   }
 
-  if (freq === '100') {
+  if (freq === "100") {
     const result = await biaa.case39_100kHzImpedanceQuery()
 
     if (!result) {
-      return { success: false, error: '100kHz impedance unstable' }
+      return { success: false, error: "100kHz impedance unstable" }
     }
 
     return {
       success: true,
       impedance: {
         freq: 100,
-        unit: 'Ω',
+        unit: "Ω",
         segments: result.segments,
         avg: Object.values(result.segments).reduce((a, b) => a + b, 0) / 5
       }
@@ -244,12 +261,12 @@ ipcMain.handle('start-impedance-measurement', async (event, freq) => {
 //     return { success: false, error: err.message };
 //   }
 // });
-ipcMain.handle('calculate-bia', async (event, payload) => {
+ipcMain.handle("calculate-bia", async (event, payload) => {
   try {
     const { height, weight, age, gender, impedance20, impedance100 } = payload
 
     if (!biaa.biaPort || !biaa.biaPort.isOpen) {
-      return { success: false, error: 'BIA port not connected' }
+      return { success: false, error: "BIA port not connected" }
     }
 
     // Validate impedance data
@@ -267,18 +284,18 @@ ipcMain.handle('calculate-bia', async (event, payload) => {
     if (!validateImpedance(impedance20) || !validateImpedance(impedance100)) {
       return {
         success: false,
-        error: 'Invalid impedance values'
+        error: "Invalid impedance values"
       }
     }
 
-    const genderCode = gender === 'male' ? 1 : 0
+    const genderCode = gender === "male" ? 1 : 0
 
     // ✅ STEP 1: Ensure device is ready
     try {
       await biaa.sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await new Promise((r) => setTimeout(r, 500))
     } catch (e) {
-      console.warn('Could not stop previous measurement')
+      console.warn("Could not stop previous measurement")
     }
 
     // ✅ STEP 2: Create command
@@ -315,7 +332,7 @@ ipcMain.handle('calculate-bia', async (event, payload) => {
     if (!bodyComposition.package1 || !bodyComposition.package3) {
       return {
         success: false,
-        error: 'Failed to receive all body composition packages',
+        error: "Failed to receive all body composition packages",
         receivedPackages: Object.keys(bodyComposition).length
       }
     }
@@ -345,28 +362,28 @@ ipcMain.handle('calculate-bia', async (event, payload) => {
         { impedance20, impedance100 }
       )
 
-      console.log('[MAIN] Sending BIA data to API:', apiPayload)
-      const apiResponse = await axios.post('http://127.0.0.1:8000/bia/measurements', apiPayload)
+      console.log("[MAIN] Sending BIA data to API:", apiPayload)
+      const apiResponse = await axios.post("http://127.0.0.1:8000/bia/measurements", apiPayload)
 
-      console.log('[MAIN] BIA API Response:', apiResponse.data)
+      console.log("[MAIN] BIA API Response:", apiResponse.data)
       result.apiResponse = apiResponse.data
     } catch (apiError) {
-      console.error('[MAIN] BIA API Error:', apiError.message)
+      console.error("[MAIN] BIA API Error:", apiError.message)
       if (apiError.response?.data) {
-        console.error('[MAIN] BIA API Error Data:', apiError.response.data)
+        console.error("[MAIN] BIA API Error Data:", apiError.response.data)
       }
       result.apiError = apiError.message
     }
 
     return result
   } catch (err) {
-    console.error('[BIA] Error:', err)
+    console.error("[BIA] Error:", err)
     return { success: false, error: err.message }
   }
 })
 
-ipcMain.handle('save-voice-buffer', async (event, request) => {
-  console.log('[MAIN] save-voice-buffer called', request)
+ipcMain.handle("save-voice-buffer", async (event, request) => {
+  console.log("[MAIN] save-voice-buffer called", request)
   try {
     const buffer = Buffer.from(request.arrayBuffer)
     const bufferId = crypto.randomUUID()
@@ -387,19 +404,19 @@ ipcMain.handle('save-voice-buffer', async (event, request) => {
     console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`, payload)
 
     try {
-      const response = await axios.post('http://0.0.0.0:9100/voice/analyze', payload)
+      const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload)
       console.log(`[MAIN] API Response:`, response.data)
       return { success: true, data: response.data, filePath: shmPath }
     } catch (apiError) {
       console.error(`[MAIN] API Error:`, apiError.message)
       if (apiError.response) {
         console.error(`[MAIN] API Error Data:`, apiError.response.data)
-        return { success: false, error: 'API_ERROR', details: apiError.response.data }
+        return { success: false, error: "API_ERROR", details: apiError.response.data }
       }
-      return { success: false, error: 'API_CONNECTION_FAILED', details: apiError.message }
+      return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message }
     }
   } catch (error) {
-    console.error('[MAIN] save-voice-buffer error:', error)
+    console.error("[MAIN] save-voice-buffer error:", error)
     return { success: false, error: error.message }
   }
 })
@@ -413,27 +430,27 @@ function createWindow() {
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
-      autoplayPolicy: 'no-user-gesture-required'
+      autoplayPolicy: "no-user-gesture-required"
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
+  mainWindow.on("ready-to-show", () => {
     mainWindow.show()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
-    return { action: 'deny' }
+    return { action: "deny" }
   })
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
+    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, "../renderer/index.html"))
   }
 }
 
@@ -442,46 +459,46 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId("com.electron")
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
-  app.on('browser-window-created', (_, window) => {
+  app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
   createWindow()
 
-  eventBus.on('height:error', (payload) => {
-    console.log('[MAIN] Forwarding height error to renderer:', payload)
+  eventBus.on("height:error", (payload) => {
+    console.log("[MAIN] Forwarding height error to renderer:", payload)
 
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('height:error', payload)
+      mainWindow.webContents.send("height:error", payload)
     }
   })
-  eventBus.on('height:status', (payload) => {
-    console.log('[MAIN] Forwarding height status to renderer:', payload)
+  eventBus.on("height:status", (payload) => {
+    console.log("[MAIN] Forwarding height status to renderer:", payload)
 
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('height:status', payload)
-    }
-  })
-
-  eventBus.on('weight:error', (p) => mainWindow.webContents.send('weight:error', p))
-
-  eventBus.on('weight:status', (p) => {
-    console.log('[MAIN] Forwarding weight status to renderer:', p)
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('weight:status', p)
+      mainWindow.webContents.send("height:status", payload)
     }
   })
 
-  eventBus.on('impedance:error', (p) => mainWindow.webContents.send('impedance:error', p))
+  eventBus.on("weight:error", (p) => mainWindow.webContents.send("weight:error", p))
 
-  eventBus.on('impedance:status', (p) => mainWindow.webContents.send('impedance:status', p))
+  eventBus.on("weight:status", (p) => {
+    console.log("[MAIN] Forwarding weight status to renderer:", p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("weight:status", p)
+    }
+  })
 
-  app.on('activate', function () {
+  eventBus.on("impedance:error", (p) => mainWindow.webContents.send("impedance:error", p))
+
+  eventBus.on("impedance:status", (p) => mainWindow.webContents.send("impedance:status", p))
+
+  app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -491,8 +508,8 @@ app.whenReady().then(() => {
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit()
   }
 })
@@ -827,15 +844,15 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData) 
   }
 
   const getBodyType = (typeCode) => {
-    const types = { 0: 'THIN', 1: 'STANDARD', 2: 'MUSCULAR', 3: 'OBESE' }
-    return types[typeCode] || 'STANDARD'
+    const types = { 0: "THIN", 1: "STANDARD", 2: "MUSCULAR", 3: "OBESE" }
+    return types[typeCode] || "STANDARD"
   }
 
   return {
-    session_id: 'dummy-session-id',
-    user_id: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+    session_id: "dummy-session-id",
+    user_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
 
-    measurement_status: 'BIA_SUCCESS',
+    measurement_status: "BIA_SUCCESS",
     error_type: 0,
     error_details: {},
 
