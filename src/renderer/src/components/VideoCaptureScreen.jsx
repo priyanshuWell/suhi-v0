@@ -61,9 +61,15 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 
         console.log("Running FPT with shm_path:", shmPath);
          const fptResponse = await runFPT(shmPath, kioskId);
-//         const fptResponse = await
-// (shmPath, kioskId);
         console.log("FPT response:", fptResponse);
+
+        // Check if user is not registered - redirect directly to login
+        if (fptResponse?.data?.student_status === 'NOT_REGISTERED') {
+          setShowError(true);
+          setPhase("ERROR");
+          setStatus("User not registered. Redirecting to login...");
+          throw new Error("User not registered");
+        }
 
         // Check for specific error codes (502, 503, or general failure)
         const errorStatus = fptResponse?.status || fptResponse?.statusCode;
@@ -120,8 +126,13 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
   };
 
   const handleRetry = () => {
-    // Navigate to FaceCapture screen for the second attempt
-    navigate("/facecapture");
+    // Check if error is user not registered, redirect to login instead
+    if (status.includes("not registered")) {
+      navigate("/login-suhi");
+    } else {
+      // Navigate to FaceCapture screen for the second attempt
+      navigate("/facecapture");
+    }
   };  const playAudio = () => {
     if (audioRef.current) {
       setIsAudioPlaying(true);
@@ -205,18 +216,22 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 
       {/* Error Alert Component */}
       <ErrorAlert
-        title="Face Not Recognized"
+        title={
+          status.includes("not registered")
+            ? "User Not Registered"
+            : "Face Not Recognized"
+        }
         description={
-          attemptCount < MAX_ATTEMPTS
-            ?
-
-            `No face detected OR Multiple faces detected.\nRetrying......`
+          status.includes("not registered")
+            ? "User is not registered in the system.\nRedirecting to manual login..."
+            : attemptCount < MAX_ATTEMPTS
+            ? `No face detected OR Multiple faces detected.\nRetrying......`
             : "Maximum attempts reached\nReturning to welcome screen..."
         }
         visible={showError}
         onClose={handleErrorClose}
         onRetry={handleRetry}
-        autoRetryDelay={attemptCount < MAX_ATTEMPTS ? 4000 : 3000}
+        autoRetryDelay={status.includes("not registered") ? 3000 : (attemptCount < MAX_ATTEMPTS ? 4000 : 3000)}
       />
     </div>
   );

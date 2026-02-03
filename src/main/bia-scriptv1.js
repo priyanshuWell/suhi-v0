@@ -2038,19 +2038,19 @@ export async function case38_20kHzImpedanceQuery() {
     // Step 1: Stop current test
     // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     // await new Promise((resolve) => setTimeout(resolve, 500))
-    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
-console.log("priyanshu after stop command")
+    console.log('priyanshu after stop command')
     // Step 2: Set impedance mode for 8-electrode 20 kHz
     // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x03, 0xf1])
     // await new Promise((resolve) => setTimeout(resolve, 500))
 
-    await sendBiaCommand([0x55, 0x06, 0xB0, 0x01, 0x03, 0xF1])
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x03, 0xf1])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Query command for 20 kHz
     // const query20kHzCommand = [0x55, 0x05, 0xb1, 0x31, 0xc4]
-    const query20kHzCommand = [0x55, 0x05, 0xB1, 0x01, 0xF4]
+    const query20kHzCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
     // Track results
     const results = {
       totalAttempts: 50,
@@ -2092,7 +2092,7 @@ console.log("priyanshu after stop command")
           timeout: 5000,
           verbose: true
         })
-        console.log("priyanshu response data",responseData )
+        console.log('priyanshu response data', responseData)
 
         //Handle impedance status
         const statusCode = responseData[4]
@@ -2102,14 +2102,14 @@ console.log("priyanshu after stop command")
         //   attempt
         // )
         try {
-           emitImpedanceStatus(statusCode, {
-          frequency: '20kHz',
-          attempt,
-        })
+          emitImpedanceStatus(statusCode, {
+            frequency: '20kHz',
+            attempt
+          })
         } catch (error) {
-          console.log("error in emitting impedance status", error)
+          console.log('error in emitting impedance status', error)
         }
-       
+
         console.log('------statusResult-------')
         // console.log(statusResult)
         // Track errors
@@ -2141,24 +2141,22 @@ console.log("priyanshu after stop command")
         //     continue
         //   }
         // }
-       
-          // Parse response
-          const parsedResult = parse20kHzImpedanceResponse(responseData)
 
-          console.log('-----')
-          console.log(parsedResult)
+        // Parse response
+        const parsedResult = parse20kHzImpedanceResponse(responseData)
 
-          // Check if result is meaningful
-          if (isMeaningful20kHzResult(parsedResult)) {
-            results.meaningfulResponses.push(parsedResult)
-          } else {
-            results.zeroResponses.push({
-              attempt,
-              rawResponse: responseData
-            })
-          }
-        
+        console.log('-----')
+        console.log(parsedResult)
 
+        // Check if result is meaningful
+        if (isMeaningful20kHzResult(parsedResult)) {
+          results.meaningfulResponses.push(parsedResult)
+        } else {
+          results.zeroResponses.push({
+            attempt,
+            rawResponse: responseData
+          })
+        }
 
         // Check for stable responses
         if (isStableResponse(results.meaningfulResponses)) {
@@ -2612,114 +2610,114 @@ function isMeaningful20kHzResult(result) {
 // Helper function to parse 100 kHz impedance response
 
 export async function case39_100kHzImpedanceQuery() {
-    try {
-        // Step 1: Stop current test
-        await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
-        await new Promise(resolve => setTimeout(resolve, 500));
+  try {
+    // Step 1: Stop current test
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-        // Step 2: Set impedance mode for 8-electrode 100 kHz
-        await sendBiaCommand([0x55, 0x06, 0xB0, 0x01, 0x06, 0xEE]);
-        await new Promise(resolve => setTimeout(resolve, 500));
+    // Step 2: Set impedance mode for 8-electrode 100 kHz
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
+    await new Promise((resolve) => setTimeout(resolve, 500))
 
-        // Query command for 100 kHz
-        const query100kHzCommand = [0x55, 0x05, 0xB1, 0x61, 0x94];
+    // Query command for 100 kHz
+    const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
 
-        // Track results
-        const results = {
-            totalAttempts: 50,
-            meaningfulResponses: [],
-            zeroResponses: [],
-            errorResponses: []
-        };
-
-        // Function to check if responses are stable
-        const isStableResponse = (responses) => {
-            if (responses.length < 5) return false;
-
-            // Get the last 5 responses
-            const lastFive = responses.slice(-5);
-
-            // Check if all last 5 responses are meaningful and similar
-            const allMeaningful = lastFive.every(isMeaningful100kHzResult);
-
-            if (!allMeaningful) return false;
-
-            // Compare segments across last 5 responses
-            const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot'];
-
-            return segments.every(segment => {
-                const values = lastFive.map(r => r.segments[segment]);
-                const max = Math.max(...values);
-                const min = Math.min(...values);
-                return (max - min) / max < 0.1; // Within 10% variation
-            });
-        };
-
-        // 50 attempts
-        for (let attempt = 1; attempt <= 50; attempt++) {
-            try {
-                console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`);
-
-                const responseData = await sendBiaCommand(query100kHzCommand, {
-                    timeout: 5000,
-                    verbose: true
-                });
-
-                // Parse response
-                const parsedResult = parse100kHzImpedanceResponse(responseData);
-
-                // Check if result is meaningful
-                if (isMeaningful100kHzResult(parsedResult)) {
-                    results.meaningfulResponses.push(parsedResult);
-                } else {
-                    results.zeroResponses.push({
-                        attempt,
-                        rawResponse: responseData
-                    });
-                }
-
-                // Check for stable responses
-                if (isStableResponse(results.meaningfulResponses)) {
-                    console.log('✅ Stable impedance values detected!');
-                    break;
-                }
-
-                // Delay between attempts
-                await new Promise(resolve => setTimeout(resolve, 500));
-            } catch (queryError) {
-                console.error(`Attempt ${attempt} failed:`, queryError);
-                results.errorResponses.push({
-                    attempt,
-                    error: queryError.message
-                });
-            }
-        }
-
-        // Display comprehensive results
-        console.log('\n📊 100 kHz Impedance Query Results:');
-        console.log(`Total Attempts: ${results.totalAttempts}`);
-        console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`);
-        console.log(`Zero Responses: ${results.zeroResponses.length}`);
-        console.log(`Error Responses: ${results.errorResponses.length}`);
-
-        // Detailed meaningful responses
-        if (results.meaningfulResponses.length > 0) {
-            console.log('\n✅ Final Meaningful Data:');
-            const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1];
-            console.log(JSON.stringify(finalResponse, null, 2));
-        }
-      const finalResult =
-  results.meaningfulResponses.length > 0
-    ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-    : null;
-
-impedance100kHzResults = finalResult;
-
-return finalResult;
-    } catch (error) {
-        console.error('Overall 100 kHz impedance query failed:', error);
-        throw error;
+    // Track results
+    const results = {
+      totalAttempts: 50,
+      meaningfulResponses: [],
+      zeroResponses: [],
+      errorResponses: []
     }
+
+    // Function to check if responses are stable
+    const isStableResponse = (responses) => {
+      if (responses.length < 5) return false
+
+      // Get the last 5 responses
+      const lastFive = responses.slice(-5)
+
+      // Check if all last 5 responses are meaningful and similar
+      const allMeaningful = lastFive.every(isMeaningful100kHzResult)
+
+      if (!allMeaningful) return false
+
+      // Compare segments across last 5 responses
+      const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot']
+
+      return segments.every((segment) => {
+        const values = lastFive.map((r) => r.segments[segment])
+        const max = Math.max(...values)
+        const min = Math.min(...values)
+        return (max - min) / max < 0.1 // Within 10% variation
+      })
+    }
+
+    // 50 attempts
+    for (let attempt = 1; attempt <= 50; attempt++) {
+      try {
+        console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`)
+
+        const responseData = await sendBiaCommand(query100kHzCommand, {
+          timeout: 5000,
+          verbose: true
+        })
+
+        // Parse response
+        const parsedResult = parse100kHzImpedanceResponse(responseData)
+
+        // Check if result is meaningful
+        if (isMeaningful100kHzResult(parsedResult)) {
+          results.meaningfulResponses.push(parsedResult)
+        } else {
+          results.zeroResponses.push({
+            attempt,
+            rawResponse: responseData
+          })
+        }
+
+        // Check for stable responses
+        if (isStableResponse(results.meaningfulResponses)) {
+          console.log('✅ Stable impedance values detected!')
+          break
+        }
+
+        // Delay between attempts
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (queryError) {
+        console.error(`Attempt ${attempt} failed:`, queryError)
+        results.errorResponses.push({
+          attempt,
+          error: queryError.message
+        })
+      }
+    }
+
+    // Display comprehensive results
+    console.log('\n📊 100 kHz Impedance Query Results:')
+    console.log(`Total Attempts: ${results.totalAttempts}`)
+    console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
+    console.log(`Zero Responses: ${results.zeroResponses.length}`)
+    console.log(`Error Responses: ${results.errorResponses.length}`)
+
+    // Detailed meaningful responses
+    if (results.meaningfulResponses.length > 0) {
+      console.log('\n✅ Final Meaningful Data:')
+      const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
+      console.log(JSON.stringify(finalResponse, null, 2))
+    }
+    const finalResult =
+      results.meaningfulResponses.length > 0
+        ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+        : null
+
+    impedance100kHzResults = finalResult
+
+    return finalResult
+  } catch (error) {
+    console.error('Overall 100 kHz impedance query failed:', error)
+    throw error
+  }
 }
 
 function parse100kHzImpedanceResponse(data) {
@@ -2762,7 +2760,7 @@ function isMeaningful100kHzResult(result) {
   return Object.values(result.segments).some((value) => value > 0)
 }
 
-async function case40_PhaseAngleDetailedQuery() {
+export async function case40_PhaseAngleDetailedQuery() {
   try {
     // Measurement modes for 50 kHz
     const modes = [
@@ -2817,7 +2815,7 @@ async function case40_PhaseAngleDetailedQuery() {
       // Step 1: Stop current test
       console.log('   Stopping previous measurement...')
       // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-       await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
+      await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       // Step 2: Set impedance mode at 50 kHz
@@ -2827,7 +2825,7 @@ async function case40_PhaseAngleDetailedQuery() {
       await new Promise((resolve) => setTimeout(resolve, 800))
 
       // const queryCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
- const queryCommand = [0x55, 0x05, 0xB1, 0x01, 0xF4];
+      const queryCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
       // Track results
       const results = {
         attempts: 0,
@@ -2946,7 +2944,7 @@ async function case40_PhaseAngleDetailedQuery() {
                   )
 
                   if (retryResult.shouldRetry) {
-                    console.log(`      ↻ Retrying (attempt ${retryResult.nextAttempt})...`)
+                    console.log(` Retrying (attempt ${retryResult.nextAttempt})...`)
                     continue // Continue loop to retry
                   }
                 } else {
@@ -3312,16 +3310,15 @@ export async function case41_WeightMeasurement() {
 
     // const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
     // const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
-     const setWeightModeCommand = [0x55, 0x05, 0xA0, 0x01, 0x05];
+    const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
 
-        // Weight query command
-        const weightQueryCommand = [0x55, 0x05, 0xA1, 0x00, 0x05];
-
+    // Weight query command
+    const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
 
     // Stop current test
     try {
       // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-       await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5]);
+      await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await new Promise((resolve) => setTimeout(resolve, 500))
     } catch (error) {
       console.log('⚠️ Warning: Could not stop current test')
@@ -3329,7 +3326,7 @@ export async function case41_WeightMeasurement() {
 
     // Set weight mode
     try {
-     await sendBiaCommand(setWeightModeCommand)
+      await sendBiaCommand(setWeightModeCommand)
       await new Promise((resolve) => setTimeout(resolve, 500))
     } catch (error) {
       emitWeightStatus(0x08) // TIMEOUT

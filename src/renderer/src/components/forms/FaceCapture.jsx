@@ -72,6 +72,11 @@ function FaceCapture() {
 
       const fptResponse = await runFPT(shmPath, kioskId)
       
+      // Check if user is not registered
+      // if (fptResponse?.data?.student_status === 'NOT_REGISTERED') {
+      //   throw new Error('User not registered')
+      // }
+
       const errorStatus = fptResponse?.status || fptResponse?.statusCode
       const isFaceNotRecognized = errorStatus === 502 || errorStatus === 503 || !fptResponse.success
 
@@ -140,8 +145,12 @@ function FaceCapture() {
         </div>
 
         <ErrorAlert
-            title="Verification Failed"
-            description="Face not recognized. Redirecting to manual login..."
+            title={errorDetails === 'User not registered' ? 'User Not Registered' : 'Verification Failed'}
+            description={
+              errorDetails === 'User not registered'
+                ? 'User is not registered in the system. Redirecting to manual login...'
+                : 'Face not recognized. Redirecting to manual login...'
+            }
             visible={showError}
             onClose={handleErrorClose}
             onRetry={handleErrorClose} 
