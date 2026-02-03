@@ -19,6 +19,8 @@ const BIAResult = () => {
   const storeWeight = useSelector((state) => state.common.weight)
   const storeHeight = useSelector((state) => state.common.height)
   const storeBiaResult = useSelector((state) => state.common.biaResult)
+  const storeSessionId = useSelector((state) => state.common.sessionId)
+  const storeUser = useSelector((state) => state.common.user)
 
   // Fallback to navigation state for backward compatibility
   const bia = storeBiaResult || location.state?.biaResult
@@ -138,7 +140,13 @@ const BIAResult = () => {
 
   const fetchBiometricReport = async () => {
     try {
-      const payload = { user_id: "ndekne" };
+      const userId = storeUser?.data?.user_id;
+      const sessionId = storeSessionId;
+
+      const payload = {
+        user_id: userId,
+        session_id: sessionId
+      };
 
       const res = await axios.post("/biometric-report/generate", payload);
 
@@ -365,7 +373,7 @@ const BIAResult = () => {
             </div>
 
 
-    
+
             <button
               onClick={() => navigate('/welcome')}
               style={{

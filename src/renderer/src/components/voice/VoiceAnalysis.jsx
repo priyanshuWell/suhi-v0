@@ -154,7 +154,7 @@ const VoiceCapture = () => {
 
                 // Get data from Redux store and config
                 const kioskId = getKioskId();
-                const userId = user?.data?.id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Get from user object
+                const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
 
                 setStatus("processing");
                 const request = {

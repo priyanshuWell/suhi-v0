@@ -3,13 +3,14 @@ import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setHeight, setWeight, setBiaResult, setSessionId } from "../../features/common/commonSlice";
 
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const storeUser = useSelector((state) => state.common.user);
 
 
   const [ports, setPorts] = useState([]);
@@ -381,7 +382,9 @@ export default function BIACalculate({ user, onComplete }) {
         age: 23,
         gender: "male",
         impedance20: resultsRef.current.impedance.k20.segments,
-        impedance100: resultsRef.current.impedance.k100.segments
+        impedance100: resultsRef.current.impedance.k100.segments,
+        session_id: sessionId,
+        user_id: storeUser?.data?.user_id
       });
 
       console.log("[BIA] Full BIA Result:", bia);
@@ -406,6 +409,7 @@ export default function BIACalculate({ user, onComplete }) {
       dispatch(setBiaResult(bia));
 
       console.log("[BIA] Saved to Redux store with sessionId:", sessionId);
+      console.log("[BIA] Using user_id:", storeUser?.data?.user_id);
 
       // Clear global timeout on success
       clearAllTimeouts();
