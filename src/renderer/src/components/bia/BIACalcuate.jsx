@@ -61,18 +61,26 @@ export default function BIACalculate({ user, onComplete }) {
       const step = p.frequency === 20 ? "impedance20" : "impedance100";
       registerError(step, p);
     };
+    const onLegError = (p) => registerError("legImpedance", p);
+    const onArmError = (p) => registerError("armImpedance", p);
 
     const onWeightStatus = handleStatus;
     const onHeightStatus = handleStatus;
     const onImpedanceStatus = handleStatus;
+    const onLegStatus = handleStatus;
+    const onArmStatus = handleStatus;
 
     const unsubs = [
       window.api?.onWeightError(onWeightError),
       window.api?.onHeightError(onHeightError),
       window.api?.onImpedanceError(onImpedanceError),
+      window.api?.onLegError(onLegError),
+      window.api?.onArmError(onArmError),
       window.api?.onWeightStatus(onWeightStatus),
       window.api?.onHeightStatus(onHeightStatus),
       window.api?.onImpedanceStatus(onImpedanceStatus),
+      window.api?.onLegStatus(onLegStatus),
+      window.api?.onArmStatus(onArmStatus),
     ];
 
     return () => {
@@ -108,21 +116,24 @@ export default function BIACalculate({ user, onComplete }) {
       impedance100: "Impedance measurement error"
     };
 
-    // If this is the second failure, navigate to /screen1
-    if (currentAttempt >= 2) {
-      console.error(`[BIA] ${step} failed ${currentAttempt} times. Redirecting to /screen1`);
-      navigate("/screen1");
-      return;
-    }
-
+    // Show error in ErrorAlert first
     setErrorState({
       ...payload,
       step,
       title: errorMessages[step] || payload.userMessage || payload.message,
       currentAttempt,
-      canRetry: true,
+      canRetry: false, // Don't show retry button during auto-redirect
     });
     setFailedStep(step);
+
+    // If this is the second failure, show error for 3 seconds then redirect to /screen1
+    if (currentAttempt >= 2) {
+      console.error(`[BIA] ${step} failed ${currentAttempt} times. Showing error then redirecting to /screen1`);
+      setTimeout(() => {
+        navigate("/screen1");
+      }, 3000); // Show error for 3 seconds before redirecting
+      return;
+    }
   }
 
   /* =======================

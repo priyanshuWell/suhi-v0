@@ -1583,6 +1583,36 @@ function emitImpedanceStatus(statusCode, meta = {}) {
   return info
 }
 
+// Emit leg impedance status/error
+function emitLegStatus(statusCode, meta = {}) {
+  const info = IMPEDANCE_ERROR_CODES[statusCode]
+  if (!info) return
+
+  eventBus.emit(info.action === 'ABORT' ? EVENTS.LEG_ERROR : EVENTS.LEG_STATUS, {
+    source: 'LEG',
+    frequency: 50,
+    ...info,
+    ...meta
+  })
+
+  return info
+}
+
+// Emit arm impedance status/error
+function emitArmStatus(statusCode, meta = {}) {
+  const info = IMPEDANCE_ERROR_CODES[statusCode]
+  if (!info) return
+
+  eventBus.emit(info.action === 'ABORT' ? EVENTS.ARM_ERROR : EVENTS.ARM_STATUS, {
+    source: 'ARM',
+    frequency: 50,
+    ...info,
+    ...meta
+  })
+
+  return info
+}
+
 // measure height
 export async function height_measurement() {
   return new Promise((resolve) => {

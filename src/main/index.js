@@ -498,6 +498,34 @@ app.whenReady().then(() => {
 
   eventBus.on("impedance:status", (p) => mainWindow.webContents.send("impedance:status", p))
 
+  eventBus.on('leg:error', (p) => {
+    console.log('[MAIN] Forwarding leg error to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('leg:error', p)
+    }
+  })
+
+  eventBus.on('leg:status', (p) => {
+    console.log('[MAIN] Forwarding leg status to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('leg:status', p)
+    }
+  })
+
+  eventBus.on('arm:error', (p) => {
+    console.log('[MAIN] Forwarding arm error to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('arm:error', p)
+    }
+  })
+
+  eventBus.on('arm:status', (p) => {
+    console.log('[MAIN] Forwarding arm status to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('arm:status', p)
+    }
+  })
+
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
