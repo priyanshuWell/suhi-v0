@@ -3120,7 +3120,7 @@ export async function case40b_ArmImpedance50kHz() {
 
             emitArmStatus(measurementStatus,{
               frequency:"50khzArm",
-              attempt:attempt860
+              attempt
             })
 
             // Use ImprovedImpedanceStatusHandler

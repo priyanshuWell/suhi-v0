@@ -78,15 +78,57 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+
   /* =======================
      EVENT LISTENERS - Receive errors/status from main process (bia-scriptv1.js)
   ======================= */
+  // Attempt tracking for threshold-based error detection
+  const attemptTracking = useRef({
+    leg: 0,
+    arm: 0,
+    impedance20: 0,
+    impedance100: 0,
+    height: 0
+  });
+
+  const ATTEMPT_THRESHOLDS = {
+    leg: 15,         // Show error after 15 attempts (~7.5 seconds)
+    arm: 15,         // Show error after 15 attempts
+    impedance20: 20, // Show error after 20 attempts
+    impedance100: 20,
+    height: 30       // 30 polling cycles (~6 seconds)
+  };
+
+  // Flag to prevent multiple error triggers
+  const errorTriggered = useRef({
+    leg: false,
+    arm: false,
+    impedance20: false,
+    impedance100: false,
+    height: false
+  });
+
   useEffect(() => {
     console.log("[BIA DEBUG] Setting up event listeners for main process events...");
 
     // Status handlers - update UI with current measurement status
     const handleStatus = (payload) => {
       console.log("[BIA DEBUG] Status received:", payload);
+
+      // Track attempts from status events
+      if (payload.attempt) {
+        if (payload.source === 'LEG') {
+          attemptTracking.current.leg = payload.attempt;
+        } else if (payload.source === 'ARM') {
+          attemptTracking.current.arm = payload.attempt;
+        } else if (payload.frequency === 20) {
+          attemptTracking.current.impedance20 = payload.attempt;
+        } else if (payload.frequency === 100) {
+          attemptTracking.current.impedance100 = payload.attempt;
+        }
+      }
+
+      // Update UI status message
       if (payload.severity === "INFO" || payload.severity === "WARNING") {
         if (payload.userMessage) {
           setCurrentStatus(payload.userMessage);
@@ -94,25 +136,78 @@ export default function BIACalculate({ user, onComplete }) {
       }
     };
 
-    // Error handlers - log errors from main process
+    // LEG ERROR: Check if user is on platform (barefoot contact issue)
     const handleLegError = (payload) => {
       console.error("[BIA DEBUG] LEG ERROR received from main:", payload);
+      console.error(`[BIA DEBUG] Leg attempt: ${payload.attempt}, code: ${payload.code}`);
+
+      // Track attempt
+      if (payload.attempt) {
+        attemptTracking.current.leg = payload.attempt;
+      }
+
+      // Check if we've exceeded threshold and not already triggered
+      if (payload.attempt >= ATTEMPT_THRESHOLDS.leg && !errorTriggered.current.leg) {
+        if (payload.code === 'ELECTRODE') {
+          console.error(`[BIA DEBUG] ⚠️ Leg ELECTRODE error at attempt ${payload.attempt} - threshold exceeded!`);
+          errorTriggered.current.leg = true;
+
+          // This will be caught by the phase 1 error handling
+          // The runPhase1_LegCheck will handle weight check and retry logic
+        }
+      }
     };
 
+    // ARM ERROR: Check if user is holding electrodes
     const handleArmError = (payload) => {
       console.error("[BIA DEBUG] ARM ERROR received from main:", payload);
+      console.error(`[BIA DEBUG] Arm attempt: ${payload.attempt}, code: ${payload.code}`);
+
+      // Track attempt
+      if (payload.attempt) {
+        attemptTracking.current.arm = payload.attempt;
+      }
+
+      // Check if we've exceeded threshold and not already triggered
+      if (payload.attempt >= ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
+        if (payload.code === 'ELECTRODE') {
+          console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - threshold exceeded!`);
+          errorTriggered.current.arm = true;
+
+          // This will be caught by the phase 3 error handling
+          // The runPhase3_Impedance will handle retry logic
+        }
+      }
     };
 
+    // WEIGHT ERROR
     const handleWeightError = (payload) => {
       console.error("[BIA DEBUG] WEIGHT ERROR received from main:", payload);
     };
 
+    // HEIGHT ERROR
     const handleHeightError = (payload) => {
       console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
+
+      // Track attempt for height (continuous polling)
+      if (payload.attempt) {
+        attemptTracking.current.height = payload.attempt;
+      }
     };
 
+    // IMPEDANCE ERROR (20kHz / 100kHz)
     const handleImpedanceError = (payload) => {
       console.error("[BIA DEBUG] IMPEDANCE ERROR received from main:", payload);
+      console.error(`[BIA DEBUG] Impedance attempt: ${payload.attempt}, frequency: ${payload.frequency}`);
+
+      // Track attempts
+      if (payload.attempt) {
+        if (payload.frequency === 20) {
+          attemptTracking.current.impedance20 = payload.attempt;
+        } else if (payload.frequency === 100) {
+          attemptTracking.current.impedance100 = payload.attempt;
+        }
+      }
     };
 
     // Subscribe to events
@@ -313,6 +408,11 @@ export default function BIACalculate({ user, onComplete }) {
     console.log(`[BIA DEBUG] Phase 1 attempt: ${phase1Attempts + 1}/${MAX_RETRIES}`);
     setCurrentPhase('leg');
 
+    // Reset attempt tracking and error flags for leg
+    attemptTracking.current.leg = 0;
+    errorTriggered.current.leg = false;
+    console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
+
     try {
       await withTimeout(
         measureLegImpedance(),
@@ -397,6 +497,11 @@ export default function BIACalculate({ user, onComplete }) {
   const runHeightWithRetry = async () => {
     console.log(`[BIA DEBUG] Height measurement attempt: ${heightAttempts + 1}/${MAX_RETRIES}`);
 
+    // Reset height attempt tracking
+    attemptTracking.current.height = 0;
+    errorTriggered.current.height = false;
+    console.log("[BIA DEBUG] Reset height attempt tracking and error flag");
+
     try {
       await withTimeout(
         measureHeight(),
@@ -440,6 +545,15 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS ==========");
     console.log(`[BIA DEBUG] Phase 3 attempt: ${armAttempts + 1}/${MAX_RETRIES}`);
     setCurrentPhase('arm');
+
+    // Reset attempt tracking and error flags for arm and impedance
+    attemptTracking.current.arm = 0;
+    attemptTracking.current.impedance20 = 0;
+    attemptTracking.current.impedance100 = 0;
+    errorTriggered.current.arm = false;
+    errorTriggered.current.impedance20 = false;
+    errorTriggered.current.impedance100 = false;
+    console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
 
     // Navigate to impedance screen
     navigate("/bia/im");
