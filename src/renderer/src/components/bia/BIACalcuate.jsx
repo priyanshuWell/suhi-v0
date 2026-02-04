@@ -146,14 +146,32 @@ export default function BIACalculate({ user, onComplete }) {
         attemptTracking.current.leg = payload.attempt;
       }
 
-      // Check if we've exceeded threshold and not already triggered
+      // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
       if (payload.attempt >= ATTEMPT_THRESHOLDS.leg && !errorTriggered.current.leg) {
         if (payload.code === 'ELECTRODE') {
-          console.error(`[BIA DEBUG] ⚠️ Leg ELECTRODE error at attempt ${payload.attempt} - threshold exceeded!`);
+          console.error(`[BIA DEBUG] ⚠️ Leg ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
           errorTriggered.current.leg = true;
 
-          // This will be caught by the phase 1 error handling
-          // The runPhase1_LegCheck will handle weight check and retry logic
+          // Check weight to determine appropriate error message
+          (async () => {
+            try {
+              const weightResult = await window.api.startWeightMeasurement();
+              console.log("[BIA DEBUG] Weight check for leg error:", weightResult);
+
+              if (weightResult?.weight && Number(weightResult.weight) > 1) {
+                // User IS on platform but leg impedance failed → barefoot issue
+                console.log(`[BIA DEBUG] Weight detected: ${weightResult.weight}kg - showing barefoot error`);
+                await showError(ERROR_MESSAGES.legImpedance_hasWeight, 5000);
+              } else {
+                // User NOT on platform
+                console.log("[BIA DEBUG] No weight detected - showing platform error");
+                await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
+              }
+            } catch (weightCheckError) {
+              console.error("[BIA DEBUG] Weight check failed:", weightCheckError.message);
+              await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
+            }
+          })();
         }
       }
     };
@@ -168,14 +186,17 @@ export default function BIACalculate({ user, onComplete }) {
         attemptTracking.current.arm = payload.attempt;
       }
 
-      // Check if we've exceeded threshold and not already triggered
+      // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
       if (payload.attempt >= ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
         if (payload.code === 'ELECTRODE') {
-          console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - threshold exceeded!`);
+          console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
           errorTriggered.current.arm = true;
 
-          // This will be caught by the phase 3 error handling
-          // The runPhase3_Impedance will handle retry logic
+          // Show error immediately
+          (async () => {
+            console.log("[BIA DEBUG] Showing arm electrode error");
+            await showError(ERROR_MESSAGES.armImpedance, 5000);
+          })();
         }
       }
     };
