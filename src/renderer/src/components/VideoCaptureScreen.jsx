@@ -218,7 +218,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
       <ErrorAlert
         title={
           status.includes("not registered")
-            ? "User Not Registered"
+            ? "face Not Registered"
             : "Face Not Recognized"
         }
         description={
