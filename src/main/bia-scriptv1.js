@@ -2140,36 +2140,36 @@ export async function case38_20kHzImpedanceQuery() {
         }
 
         console.log('------statusResult-------')
-        // console.log(statusResult)
-        // Track errors
-        // if (!results.errorCounts[statusCode]) {
-        //   results.errorCounts[statusCode] = 0
-        // }
-        // results.errorCounts[statusCode]++
-        // // Decision logic
-        // if (statusResult.decision.isCritical) {
-        //   console.error('CRITICAL ERROR - Stopping measurement')
-        //   break
-        // }
-        // if (statusResult.decision.shouldAbort) {
-        //   console.error('Measurement aborted')
-        //   break
-        // }
-        // if (statusResult.decision.shouldWait) {
-        //   console.log('Waiting for device...')
-        //   await new Promise((r) => setTimeout(r, statusResult.waitTime))
-        //   continue
-        // }
-        // if (statusResult.decision.shouldRetry && !statusResult.decision.maxRetriesReached) {
-        //   const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
-        //     statusCode,
-        //     attempt,
-        //     3
-        //   )
-        //   if (retryResult.shouldRetry) {
-        //     continue
-        //   }
-        // }
+        console.log(statusResult)
+       // Track errors
+        if (!results.errorCounts[statusCode]) {
+          results.errorCounts[statusCode] = 0
+        }
+        results.errorCounts[statusCode]++
+        // Decision logic
+        if (statusResult.decision.isCritical) {
+          console.error('CRITICAL ERROR - Stopping measurement')
+          break
+        }
+        if (statusResult.decision.shouldAbort) {
+          console.error('Measurement aborted')
+          break
+        }
+        if (statusResult.decision.shouldWait) {
+          console.log('Waiting for device...')
+          await new Promise((r) => setTimeout(r, statusResult.waitTime))
+          continue
+        }
+        if (statusResult.decision.shouldRetry && !statusResult.decision.maxRetriesReached) {
+          const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
+            statusCode,
+            attempt,
+            3
+          )
+          if (retryResult.shouldRetry) {
+            continue
+          }
+        }
 
         // Parse response
         const parsedResult = parse20kHzImpedanceResponse(responseData)
@@ -2269,395 +2269,37 @@ function isMeaningful20kHzResult(result) {
   return Object.values(result.segments).some((value) => value > 0)
 }
 
-// export async function case39_100kHzImpedanceQuery() {
-//   try {
-//     // Step 1: Stop current test
-//     console.log('   Stopping previous measurement...')
-//     // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-//     // await new Promise((resolve) => setTimeout(resolve, 500))
-//     await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
-//     await new Promise((resolve) => setTimeout(resolve, 500))
-
-//     // Step 2: Set impedance mode for 8-electrode 100 kHz
-//     console.log('   Setting 100 kHz impedance mode...')
-//     // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
-//     // await new Promise((resolve) => setTimeout(resolve, 500))
-//     await sendBiaCommand([0x55, 0x06, 0xB0, 0x01, 0x06, 0xEE])
-//     await new Promise((resolve) => setTimeout(resolve, 500))
-
-//     // Query command for 100 kHz
-//     // const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
-//     const query100kHzCommand = [0x55, 0x05, 0xB1, 0x61, 0xF4];
-
-//     // Track results
-//     const results = {
-//       totalAttempts: 50,
-//       meaningfulResponses: [],
-//       zeroResponses: [],
-//       errorResponses: [],
-//       statusCodes: {} // ✅ ENHANCED: Track status codes
-//     }
-
-//     // ✅ ENHANCED: Global error tracking
-//     const globalErrorCounts = {}
-
-//     // Function to check if responses are stable
-//     const isStableResponse = (responses) => {
-//       if (responses.length < 5) return false
-
-//       // Get the last 5 responses
-//       const lastFive = responses.slice(-5)
-
-//       // Check if all last 5 responses are meaningful and similar
-//       const allMeaningful = lastFive.every(isMeaningful100kHzResult)
-
-//       if (!allMeaningful) return false
-
-//       // Compare segments across last 5 responses
-//       const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot']
-
-//       return segments.every((segment) => {
-//         const values = lastFive.map((r) => r.segments[segment])
-//         const max = Math.max(...values)
-//         const min = Math.min(...values)
-//         return (max - min) / max < 0.1 // Within 10% variation
-//       })
-//     }
-
-//     console.log('\n📡 Starting 100 kHz Impedance Query\n')
-
-//     // 50 attempts
-//     for (let attempt = 1; attempt <= 50; attempt++) {
-//       try {
-//         console.log(`   Attempt ${attempt}`)
-
-//         const responseData = await sendBiaCommand(query100kHzCommand, {
-//           timeout: 5000,
-//           verbose: false
-//         })
-
-//         // Handle variable response lengths
-//         if (responseData && responseData.length >= 27) {
-//           // Check if response is valid 8-electrode response
-//           if (responseData[0] === 0xaa && responseData[2] === 0xb1) {
-//             // Extract measurement status (byte 4)
-//             const measurementStatus = responseData[4]
-
-//             // ✅ ENHANCED: Track status codes
-//             if (!results.statusCodes[measurementStatus]) {
-//               results.statusCodes[measurementStatus] = 0
-//             }
-//             results.statusCodes[measurementStatus]++
-
-//             if (!globalErrorCounts[measurementStatus]) {
-//               globalErrorCounts[measurementStatus] = 0
-//             }
-//             globalErrorCounts[measurementStatus]++
-
-//             // ✅ ENHANCED: Use ImprovedImpedanceStatusHandler
-//             const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
-//               measurementStatus,
-//               attempt
-//             )
-
-//             console.log('------statusResult-------')
-//             console.log(statusResult)
-
-//             // ============================================================
-//             // DECISION LOGIC: Handle different status codes intelligently
-//             // ============================================================
-
-//             if (statusResult.decision.shouldAccept) {
-//               // Status 0x03: SUCCESS - Device ready with real data
-//               // ✅ This is what we want - accept the measurement
-//               const parsedResult = parse100kHzImpedanceResponse(responseData)
-
-//               if (isMeaningful100kHzResult(parsedResult)) {
-//                 // Real data received - store it
-//                 results.meaningfulResponses.push(parsedResult)
-//                 console.log(`      ✅ ${statusResult.message}`)
-
-//                 // Display impedance values
-//                 console.log(`         Right Hand: ${parsedResult.segments.rightHand}Ω`)
-//                 console.log(`         Left Hand: ${parsedResult.segments.leftHand}Ω`)
-//                 console.log(`         Trunk: ${parsedResult.segments.trunk}Ω`)
-//                 console.log(`         Right Foot: ${parsedResult.segments.rightFoot}Ω`)
-//                 console.log(`         Left Foot: ${parsedResult.segments.leftFoot}Ω`)
-
-//                 // Check for stable responses
-//                 if (isStableResponse(results.meaningfulResponses)) {
-//                   console.log(`\n   ✅ Stable impedance values detected after ${attempt} attempts!`)
-//                   break // Exit loop - we have stable data
-//                 }
-//               } else {
-//                 // Status says success but data is not meaningful
-//                 console.log(`      ⚠️  Status success but measurement not meaningful`)
-//                 results.zeroResponses.push({
-//                   attempt,
-//                   rawResponse: responseData,
-//                   reason: 'Status success but measurement not meaningful',
-//                   statusCode: measurementStatus
-//                 })
-//               }
-//             } else if (statusResult.decision.shouldWait) {
-//               // Status 0x02: MEASURE - Device still measuring
-//               // ⏳ Wait for device to complete measurement
-//               console.log(
-//                 `      ⏳ ${statusResult.message} (waiting ${statusResult.waitTime || 500}ms)`
-//               )
-//               results.zeroResponses.push({
-//                 attempt,
-//                 rawResponse: responseData,
-//                 reason: 'Device still measuring (status 0x02)',
-//                 statusCode: measurementStatus
-//               })
-//               // Wait before next attempt
-//               await new Promise((resolve) => setTimeout(resolve, statusResult.waitTime || 500))
-//               continue
-//             } else if (statusResult.decision.shouldRetry) {
-//               // Status 0x04: ERROR_RANGER or 0x05: ERROR_REPEAT
-//               // ⚠️ Retryable error - can try again
-//               console.log(`      ⚠️  ${statusResult.message}`)
-
-//               results.errorResponses.push({
-//                 attempt,
-//                 error: statusResult.message,
-//                 statusCode: measurementStatus,
-//                 canRetry: statusResult.canRetry
-//               })
-
-//               // Check if we can retry
-//               if (!statusResult.decision.maxRetriesReached) {
-//                 // Use handler's smart retry logic
-//                 const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
-//                   measurementStatus,
-//                   attempt,
-//                   50 // Max attempts in this loop
-//                 )
-
-//                 if (retryResult.shouldRetry) {
-//                   console.log(`Retrying (attempt ${retryResult.nextAttempt})...`)
-//                   continue // Continue loop to retry
-//                 }
-//               } else {
-//                 console.log(`Max retries reached for this error`)
-//               }
-//             } else if (statusResult.decision.isCritical) {
-//               // Status 0x01: CHECK_ELECTRODE
-//               // ❌ CRITICAL - Electrode problem, must stop
-//               console.log(`\n CRITICAL: ${statusResult.message}`)
-
-//               results.errorResponses.push({
-//                 attempt,
-//                 error: statusResult.message,
-//                 statusCode: measurementStatus,
-//                 isCritical: true
-//               })
-
-//               // Show user-friendly error message
-//               if (statusResult.userMessage) {
-//                 console.log(`\n${statusResult.userMessage}`)
-//               }
-
-//               // Show solutions
-//               if (statusResult.solutions) {
-//                 console.log(`\nRecommended Actions:`)
-//                 statusResult.solutions.forEach((solution) => {
-//                   console.log(`   ${solution}`)
-//                 })
-//               }
-
-//               console.log(`\n CRITICAL ERROR - Stopping 100 kHz impedance measurement`)
-//               break // Exit loop - can't continue with electrode problem
-//             } else if (statusResult.decision.shouldAbort) {
-//               // Status 0x06: USER_EXIT or other abort conditions
-//               // ⏹️ Stop measurement (user cancelled or other reason)
-//               console.log(`      ⏹️  ${statusResult.message}`)
-
-//               results.zeroResponses.push({
-//                 attempt,
-//                 rawResponse: responseData,
-//                 reason: statusResult.message,
-//                 statusCode: measurementStatus
-//               })
-//               break // Exit loop
-//             } else {
-//               // Unknown/unhandled status
-//               console.log(
-//                 `      ❓ Unhandled status: 0x${measurementStatus.toString(16).toUpperCase()}`
-//               )
-//               results.zeroResponses.push({
-//                 attempt,
-//                 rawResponse: responseData,
-//                 reason: `Unknown status: 0x${measurementStatus.toString(16)}`,
-//                 statusCode: measurementStatus
-//               })
-//             }
-//           } else {
-//             // Invalid response format (header mismatch)
-//             console.warn(` Invalid response format`)
-//             results.zeroResponses.push({
-//               attempt,
-//               rawResponse: responseData,
-//               reason: 'Invalid response format'
-//             })
-//           }
-//         } else if (responseData) {
-//           console.warn(` Unexpected response length: ${responseData.length} bytes`)
-//           results.zeroResponses.push({
-//             attempt,
-//             rawResponse: responseData,
-//             reason: 'Unexpected response length'
-//           })
-//         }
-
-//         // Delay between attempts
-//         await new Promise((resolve) => setTimeout(resolve, 500))
-//       } catch (queryError) {
-//         console.error(`Attempt ${attempt} failed: ${queryError.message}`)
-//         results.errorResponses.push({
-//           attempt,
-//           error: queryError.message,
-//           exception: true
-//         })
-//       }
-//     }
-
-//     // ✅ ENHANCED: Display comprehensive results
-//     console.log('\n' + '='.repeat(70))
-//     console.log('📊 100 kHz IMPEDANCE QUERY RESULTS')
-//     console.log('='.repeat(70))
-
-//     console.log(`\nTotal Attempts: ${results.totalAttempts}`)
-//     console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
-//     console.log(`Zero/Waiting Responses: ${results.zeroResponses.length}`)
-//     console.log(`Error Responses: ${results.errorResponses.length}`)
-
-//     // ✅ ENHANCED: Show status code breakdown
-//     if (Object.keys(results.statusCodes).length > 0) {
-//       console.log(`\nStatus Code Breakdown:`)
-//       Object.entries(results.statusCodes).forEach(([code, count]) => {
-//         const codeNum = parseInt(code)
-//         const codeMap = {
-//           0x00: 'NULL',
-//           0x01: 'CHECK_ELECTRODE',
-//           0x02: 'MEASURE',
-//           0x03: 'SUCCESS',
-//           0x04: 'ERROR_RANGER',
-//           0x05: 'ERROR_REPEAT',
-//           0x06: 'USER_EXIT'
-//         }
-//         const codeName = codeMap[codeNum] || 'UNKNOWN'
-//         console.log(`   0x${codeNum.toString(16).toUpperCase()} (${codeName}): ${count}x`)
-//       })
-//     }
-
-//     // Show error details if any
-//     if (results.errorResponses.length > 0) {
-//       console.log(`\nError Details:`)
-//       results.errorResponses.slice(0, 5).forEach((err) => {
-//         const statusStr =
-//           err.statusCode !== undefined ? ` [0x${err.statusCode.toString(16).toUpperCase()}]` : ''
-//         const criticalStr = err.isCritical ? ' (CRITICAL)' : ''
-//         console.log(`   Attempt ${err.attempt}: ${err.error}${statusStr}${criticalStr}`)
-//       })
-//       if (results.errorResponses.length > 5) {
-//         console.log(`   ... and ${results.errorResponses.length - 5} more errors`)
-//       }
-//     }
-
-//     // Display meaningful responses
-//     if (results.meaningfulResponses.length > 0) {
-//       console.log('\nImpedance Measurements:')
-
-//       const allSegments = {
-//         rightHand: [],
-//         leftHand: [],
-//         trunk: [],
-//         rightFoot: [],
-//         leftFoot: []
-//       }
-
-//       results.meaningfulResponses.forEach((response, idx) => {
-//         allSegments.rightHand.push(response.segments.rightHand)
-//         allSegments.leftHand.push(response.segments.leftHand)
-//         allSegments.trunk.push(response.segments.trunk)
-//         allSegments.rightFoot.push(response.segments.rightFoot)
-//         allSegments.leftFoot.push(response.segments.leftFoot)
-//       })
-
-//       console.log(`\nSegment Statistics:`)
-
-//       Object.entries(allSegments).forEach(([segment, values]) => {
-//         if (values.length > 0) {
-//           const min = Math.min(...values)
-//           const max = Math.max(...values)
-//           const avg = values.reduce((a, b) => a + b, 0) / values.length
-//           const variation = (((max - min) / avg) * 100).toFixed(2)
-
-//           console.log(`\n   ${segment}:`)
-//           console.log(`      Min: ${min}Ω, Max: ${max}Ω, Avg: ${avg.toFixed(1)}Ω`)
-//           console.log(`      Variation: ${variation}%`)
-//         }
-//       })
-
-//       // Show final measurement
-//       console.log('\n\nFinal Measurement (100 kHz):\n')
-//       const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
-//       console.log(JSON.stringify(finalResponse, null, 2))
-//     } else {
-//       console.log('\nNo successful measurements received!')
-//     }
-
-//     // ✅ ENHANCED: Display global error statistics
-//     if (Object.keys(globalErrorCounts).length > 0) {
-//       console.log('\n' + '='.repeat(70))
-//       console.log('GLOBAL ERROR CODE STATISTICS')
-//       console.log('='.repeat(70))
-//       ImprovedImpedanceStatusHandler.displayErrorStatistics(globalErrorCounts)
-//     }
-
-//     console.log('='.repeat(70))
-
-//     const finalResult =
-//       results.meaningfulResponses.length > 0
-//         ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-//         : null
-//     // Store final result
-//     // impedance100kHzResults = results.meaningfulResponses.length > 0
-//     //     ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-//     //     : null;
-//     impedance100kHzResults = finalResult
-
-//     return finalResult
-//   } catch (error) {
-//     console.error('Overall 100 kHz impedance query failed:', error)
-//     throw error
-//   }
-// }
-
-// Helper function to parse 100 kHz impedance response
-
 export async function case39_100kHzImpedanceQuery() {
   try {
     // Step 1: Stop current test
-    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    console.log('   Stopping previous measurement...')
+    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    // await new Promise((resolve) => setTimeout(resolve, 500))
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Step 2: Set impedance mode for 8-electrode 100 kHz
-    await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
+    console.log('   Setting 100 kHz impedance mode...')
+    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
+    // await new Promise((resolve) => setTimeout(resolve, 500))
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x01, 0x06, 0xEE])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Query command for 100 kHz
-    const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+    // const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+    const query100kHzCommand = [0x55, 0x05, 0xB1, 0x61, 0xF4];
 
     // Track results
     const results = {
       totalAttempts: 50,
       meaningfulResponses: [],
       zeroResponses: [],
-      errorResponses: []
+      errorResponses: [],
+      statusCodes: {} // ✅ ENHANCED: Track status codes
     }
+
+    // ✅ ENHANCED: Global error tracking
+    const globalErrorCounts = {}
 
     // Function to check if responses are stable
     const isStableResponse = (responses) => {
@@ -2682,64 +2324,309 @@ export async function case39_100kHzImpedanceQuery() {
       })
     }
 
+    console.log('\n📡 Starting 100 kHz Impedance Query\n')
+
     // 50 attempts
     for (let attempt = 1; attempt <= 50; attempt++) {
       try {
-        console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`)
+        console.log(`   Attempt ${attempt}`)
 
         const responseData = await sendBiaCommand(query100kHzCommand, {
           timeout: 5000,
-          verbose: true
+          verbose: false
         })
 
-        // Parse response
-        const parsedResult = parse100kHzImpedanceResponse(responseData)
+        // Handle variable response lengths
+        if (responseData && responseData.length >= 27) {
+          // Check if response is valid 8-electrode response
+          if (responseData[0] === 0xaa && responseData[2] === 0xb1) {
+            // Extract measurement status (byte 4)
+            const measurementStatus = responseData[4]
 
-        // Check if result is meaningful
-        if (isMeaningful100kHzResult(parsedResult)) {
-          results.meaningfulResponses.push(parsedResult)
-        } else {
+            // ✅ ENHANCED: Track status codes
+            if (!results.statusCodes[measurementStatus]) {
+              results.statusCodes[measurementStatus] = 0
+            }
+            results.statusCodes[measurementStatus]++
+
+            if (!globalErrorCounts[measurementStatus]) {
+              globalErrorCounts[measurementStatus] = 0
+            }
+            globalErrorCounts[measurementStatus]++
+
+            // ✅ ENHANCED: Use ImprovedImpedanceStatusHandler
+            const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
+              measurementStatus,
+              attempt
+            )
+
+            console.log('------statusResult-------')
+            console.log(statusResult)
+
+            // ============================================================
+            // DECISION LOGIC: Handle different status codes intelligently
+            // ============================================================
+
+            if (statusResult.decision.shouldAccept) {
+              // Status 0x03: SUCCESS - Device ready with real data
+              // ✅ This is what we want - accept the measurement
+              const parsedResult = parse100kHzImpedanceResponse(responseData)
+
+              if (isMeaningful100kHzResult(parsedResult)) {
+                // Real data received - store it
+                results.meaningfulResponses.push(parsedResult)
+                console.log(`      ✅ ${statusResult.message}`)
+
+                // Display impedance values
+                console.log(`         Right Hand: ${parsedResult.segments.rightHand}Ω`)
+                console.log(`         Left Hand: ${parsedResult.segments.leftHand}Ω`)
+                console.log(`         Trunk: ${parsedResult.segments.trunk}Ω`)
+                console.log(`         Right Foot: ${parsedResult.segments.rightFoot}Ω`)
+                console.log(`         Left Foot: ${parsedResult.segments.leftFoot}Ω`)
+
+                // Check for stable responses
+                if (isStableResponse(results.meaningfulResponses)) {
+                  console.log(`\n   ✅ Stable impedance values detected after ${attempt} attempts!`)
+                  break // Exit loop - we have stable data
+                }
+              } else {
+                // Status says success but data is not meaningful
+                console.log(`      ⚠️  Status success but measurement not meaningful`)
+                results.zeroResponses.push({
+                  attempt,
+                  rawResponse: responseData,
+                  reason: 'Status success but measurement not meaningful',
+                  statusCode: measurementStatus
+                })
+              }
+            } else if (statusResult.decision.shouldWait) {
+              // Status 0x02: MEASURE - Device still measuring
+              // ⏳ Wait for device to complete measurement
+              console.log(
+                `      ⏳ ${statusResult.message} (waiting ${statusResult.waitTime || 500}ms)`
+              )
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: 'Device still measuring (status 0x02)',
+                statusCode: measurementStatus
+              })
+              // Wait before next attempt
+              await new Promise((resolve) => setTimeout(resolve, statusResult.waitTime || 500))
+              continue
+            } else if (statusResult.decision.shouldRetry) {
+              // Status 0x04: ERROR_RANGER or 0x05: ERROR_REPEAT
+              // ⚠️ Retryable error - can try again
+              console.log(`      ⚠️  ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                canRetry: statusResult.canRetry
+              })
+
+              // Check if we can retry
+              if (!statusResult.decision.maxRetriesReached) {
+                // Use handler's smart retry logic
+                const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
+                  measurementStatus,
+                  attempt,
+                  50 // Max attempts in this loop
+                )
+
+                if (retryResult.shouldRetry) {
+                  console.log(`Retrying (attempt ${retryResult.nextAttempt})...`)
+                  continue // Continue loop to retry
+                }
+              } else {
+                console.log(`Max retries reached for this error`)
+              }
+            } else if (statusResult.decision.isCritical) {
+              // Status 0x01: CHECK_ELECTRODE
+              // ❌ CRITICAL - Electrode problem, must stop
+              console.log(`\n CRITICAL: ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                isCritical: true
+              })
+
+              // Show user-friendly error message
+              if (statusResult.userMessage) {
+                console.log(`\n${statusResult.userMessage}`)
+              }
+
+              // Show solutions
+              if (statusResult.solutions) {
+                console.log(`\nRecommended Actions:`)
+                statusResult.solutions.forEach((solution) => {
+                  console.log(`   ${solution}`)
+                })
+              }
+
+              console.log(`\n CRITICAL ERROR - Stopping 100 kHz impedance measurement`)
+              break // Exit loop - can't continue with electrode problem
+            } else if (statusResult.decision.shouldAbort) {
+              // Status 0x06: USER_EXIT or other abort conditions
+              // ⏹️ Stop measurement (user cancelled or other reason)
+              console.log(`      ⏹️  ${statusResult.message}`)
+
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: statusResult.message,
+                statusCode: measurementStatus
+              })
+              break // Exit loop
+            } else {
+              // Unknown/unhandled status
+              console.log(
+                `      ❓ Unhandled status: 0x${measurementStatus.toString(16).toUpperCase()}`
+              )
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: `Unknown status: 0x${measurementStatus.toString(16)}`,
+                statusCode: measurementStatus
+              })
+            }
+          } else {
+            // Invalid response format (header mismatch)
+            console.warn(` Invalid response format`)
+            results.zeroResponses.push({
+              attempt,
+              rawResponse: responseData,
+              reason: 'Invalid response format'
+            })
+          }
+        } else if (responseData) {
+          console.warn(` Unexpected response length: ${responseData.length} bytes`)
           results.zeroResponses.push({
             attempt,
-            rawResponse: responseData
+            rawResponse: responseData,
+            reason: 'Unexpected response length'
           })
-        }
-
-        // Check for stable responses
-        if (isStableResponse(results.meaningfulResponses)) {
-          console.log('✅ Stable impedance values detected!')
-          break
         }
 
         // Delay between attempts
         await new Promise((resolve) => setTimeout(resolve, 500))
       } catch (queryError) {
-        console.error(`Attempt ${attempt} failed:`, queryError)
+        console.error(`Attempt ${attempt} failed: ${queryError.message}`)
         results.errorResponses.push({
           attempt,
-          error: queryError.message
+          error: queryError.message,
+          exception: true
         })
       }
     }
 
-    // Display comprehensive results
-    console.log('\n📊 100 kHz Impedance Query Results:')
-    console.log(`Total Attempts: ${results.totalAttempts}`)
+    // ✅ ENHANCED: Display comprehensive results
+    console.log('\n' + '='.repeat(70))
+    console.log('📊 100 kHz IMPEDANCE QUERY RESULTS')
+    console.log('='.repeat(70))
+
+    console.log(`\nTotal Attempts: ${results.totalAttempts}`)
     console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
-    console.log(`Zero Responses: ${results.zeroResponses.length}`)
+    console.log(`Zero/Waiting Responses: ${results.zeroResponses.length}`)
     console.log(`Error Responses: ${results.errorResponses.length}`)
 
-    // Detailed meaningful responses
+    // ✅ ENHANCED: Show status code breakdown
+    if (Object.keys(results.statusCodes).length > 0) {
+      console.log(`\nStatus Code Breakdown:`)
+      Object.entries(results.statusCodes).forEach(([code, count]) => {
+        const codeNum = parseInt(code)
+        const codeMap = {
+          0x00: 'NULL',
+          0x01: 'CHECK_ELECTRODE',
+          0x02: 'MEASURE',
+          0x03: 'SUCCESS',
+          0x04: 'ERROR_RANGER',
+          0x05: 'ERROR_REPEAT',
+          0x06: 'USER_EXIT'
+        }
+        const codeName = codeMap[codeNum] || 'UNKNOWN'
+        console.log(`   0x${codeNum.toString(16).toUpperCase()} (${codeName}): ${count}x`)
+      })
+    }
+
+    // Show error details if any
+    if (results.errorResponses.length > 0) {
+      console.log(`\nError Details:`)
+      results.errorResponses.slice(0, 5).forEach((err) => {
+        const statusStr =
+          err.statusCode !== undefined ? ` [0x${err.statusCode.toString(16).toUpperCase()}]` : ''
+        const criticalStr = err.isCritical ? ' (CRITICAL)' : ''
+        console.log(`   Attempt ${err.attempt}: ${err.error}${statusStr}${criticalStr}`)
+      })
+      if (results.errorResponses.length > 5) {
+        console.log(`   ... and ${results.errorResponses.length - 5} more errors`)
+      }
+    }
+
+    // Display meaningful responses
     if (results.meaningfulResponses.length > 0) {
-      console.log('\n✅ Final Meaningful Data:')
+      console.log('\nImpedance Measurements:')
+
+      const allSegments = {
+        rightHand: [],
+        leftHand: [],
+        trunk: [],
+        rightFoot: [],
+        leftFoot: []
+      }
+
+      results.meaningfulResponses.forEach((response, idx) => {
+        allSegments.rightHand.push(response.segments.rightHand)
+        allSegments.leftHand.push(response.segments.leftHand)
+        allSegments.trunk.push(response.segments.trunk)
+        allSegments.rightFoot.push(response.segments.rightFoot)
+        allSegments.leftFoot.push(response.segments.leftFoot)
+      })
+
+      console.log(`\nSegment Statistics:`)
+
+      Object.entries(allSegments).forEach(([segment, values]) => {
+        if (values.length > 0) {
+          const min = Math.min(...values)
+          const max = Math.max(...values)
+          const avg = values.reduce((a, b) => a + b, 0) / values.length
+          const variation = (((max - min) / avg) * 100).toFixed(2)
+
+          console.log(`\n   ${segment}:`)
+          console.log(`      Min: ${min}Ω, Max: ${max}Ω, Avg: ${avg.toFixed(1)}Ω`)
+          console.log(`      Variation: ${variation}%`)
+        }
+      })
+
+      // Show final measurement
+      console.log('\n\nFinal Measurement (100 kHz):\n')
       const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
       console.log(JSON.stringify(finalResponse, null, 2))
+    } else {
+      console.log('\nNo successful measurements received!')
     }
+
+    // ✅ ENHANCED: Display global error statistics
+    if (Object.keys(globalErrorCounts).length > 0) {
+      console.log('\n' + '='.repeat(70))
+      console.log('GLOBAL ERROR CODE STATISTICS')
+      console.log('='.repeat(70))
+      ImprovedImpedanceStatusHandler.displayErrorStatistics(globalErrorCounts)
+    }
+
+    console.log('='.repeat(70))
+
     const finalResult =
       results.meaningfulResponses.length > 0
         ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
         : null
-
+    // Store final result
+    // impedance100kHzResults = results.meaningfulResponses.length > 0
+    //     ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+    //     : null;
     impedance100kHzResults = finalResult
 
     return finalResult
@@ -2748,6 +2635,119 @@ export async function case39_100kHzImpedanceQuery() {
     throw error
   }
 }
+
+// Helper function to parse 100 kHz impedance response
+
+// export async function case39_100kHzImpedanceQuery() {
+//   try {
+//     // Step 1: Stop current test
+//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+//     await new Promise((resolve) => setTimeout(resolve, 500))
+
+//     // Step 2: Set impedance mode for 8-electrode 100 kHz
+//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
+//     await new Promise((resolve) => setTimeout(resolve, 500))
+
+//     // Query command for 100 kHz
+//     const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+
+//     // Track results
+//     const results = {
+//       totalAttempts: 50,
+//       meaningfulResponses: [],
+//       zeroResponses: [],
+//       errorResponses: []
+//     }
+
+//     // Function to check if responses are stable
+//     const isStableResponse = (responses) => {
+//       if (responses.length < 5) return false
+
+//       // Get the last 5 responses
+//       const lastFive = responses.slice(-5)
+
+//       // Check if all last 5 responses are meaningful and similar
+//       const allMeaningful = lastFive.every(isMeaningful100kHzResult)
+
+//       if (!allMeaningful) return false
+
+//       // Compare segments across last 5 responses
+//       const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot']
+
+//       return segments.every((segment) => {
+//         const values = lastFive.map((r) => r.segments[segment])
+//         const max = Math.max(...values)
+//         const min = Math.min(...values)
+//         return (max - min) / max < 0.1 // Within 10% variation
+//       })
+//     }
+
+//     // 50 attempts
+//     for (let attempt = 1; attempt <= 50; attempt++) {
+//       try {
+//         console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`)
+
+//         const responseData = await sendBiaCommand(query100kHzCommand, {
+//           timeout: 5000,
+//           verbose: true
+//         })
+
+//         // Parse response
+//         const parsedResult = parse100kHzImpedanceResponse(responseData)
+
+//         // Check if result is meaningful
+//         if (isMeaningful100kHzResult(parsedResult)) {
+//           results.meaningfulResponses.push(parsedResult)
+//         } else {
+//           results.zeroResponses.push({
+//             attempt,
+//             rawResponse: responseData
+//           })
+//         }
+
+//         // Check for stable responses
+//         if (isStableResponse(results.meaningfulResponses)) {
+//           console.log('✅ Stable impedance values detected!')
+//           break
+//         }
+
+//         // Delay between attempts
+//         await new Promise((resolve) => setTimeout(resolve, 500))
+//       } catch (queryError) {
+//         console.error(`Attempt ${attempt} failed:`, queryError)
+//         results.errorResponses.push({
+//           attempt,
+//           error: queryError.message
+//         })
+//       }
+//     }
+
+//     // Display comprehensive results
+//     console.log('\n📊 100 kHz Impedance Query Results:')
+//     console.log(`Total Attempts: ${results.totalAttempts}`)
+//     console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
+//     console.log(`Zero Responses: ${results.zeroResponses.length}`)
+//     console.log(`Error Responses: ${results.errorResponses.length}`)
+
+//     // Detailed meaningful responses
+//     if (results.meaningfulResponses.length > 0) {
+//       console.log('\n✅ Final Meaningful Data:')
+//       const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
+//       console.log(JSON.stringify(finalResponse, null, 2))
+//     }
+//     const finalResult =
+//       results.meaningfulResponses.length > 0
+//         ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+//         : null
+
+//     impedance100kHzResults = finalResult
+
+//     return finalResult
+//   } catch (error) {
+//     console.error('Overall 100 kHz impedance query failed:', error)
+//     throw error
+//   }
+// }
 
 function parse100kHzImpedanceResponse(data) {
   // Validate response
