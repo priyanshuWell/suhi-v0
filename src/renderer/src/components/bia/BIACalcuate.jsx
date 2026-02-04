@@ -33,7 +33,7 @@ export default function BIACalculate({ user, onComplete }) {
     impedance: { k20: null, k100: null }
   });
 
- // Timeout configuration (in milliseconds)
+  // Timeout configuration (in milliseconds)
   const TIMEOUTS = {
     GLOBAL: 2000000,     // 120 seconds for entire flow
     WEIGHT: 200000,      // 20 seconds for weight measurement
@@ -463,11 +463,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
 
     try {
-      await withTimeout(
-        measureLegImpedance(),
-        TIMEOUTS.IMPEDANCE,
-        "Leg Impedance 50kHz"
-      );
+      await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
       await sleep(800);
@@ -524,11 +520,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     try {
       // Measure Weight
-      await withTimeout(
-        measureWeight(),
-        TIMEOUTS.WEIGHT,
-        "Weight Measurement"
-      );
+      await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
 
@@ -552,11 +544,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset height attempt tracking and error flag");
 
     try {
-      await withTimeout(
-        measureHeight(),
-        TIMEOUTS.HEIGHT,
-        "Height Measurement"
-      );
+      await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
 
       // Both weight and height success - show whComplete
@@ -610,29 +598,17 @@ export default function BIACalculate({ user, onComplete }) {
 
     try {
       // Arm Impedance 50kHz
-      await withTimeout(
-        measureArmImpedance(),
-        TIMEOUTS.IMPEDANCE,
-        "Arm Impedance 50kHz"
-      );
+      await measureArmImpedance();
       await sleep(800);
       console.log("[BIA DEBUG] Arm impedance SUCCESS");
 
       // Impedance 20kHz
-      await withTimeout(
-        measureImpedance("20"),
-        TIMEOUTS.IMPEDANCE,
-        "Impedance 20kHz"
-      );
+      await measureImpedance("20");
       await sleep(1500);
       console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
 
       // Impedance 100kHz
-      await withTimeout(
-        measureImpedance("100"),
-        TIMEOUTS.IMPEDANCE,
-        "Impedance 100kHz"
-      );
+      await measureImpedance("100");
       console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
 
       // All impedance measurements success
@@ -769,11 +745,8 @@ export default function BIACalculate({ user, onComplete }) {
     setIsRunning(true);
     setCurrentPhase('init');
 
-    // Set global timeout
-    timeoutRefs.current.global = setTimeout(() => {
-      handleTimeout("BIA Flow (Global)");
-    }, TIMEOUTS.GLOBAL);
-    console.log(`[BIA DEBUG] Global timeout set: ${TIMEOUTS.GLOBAL}ms`);
+    // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
+    console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
 
     try {
       // Connect BIA port
