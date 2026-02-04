@@ -185,8 +185,8 @@ const BIAResult = () => {
   // ✅ Final Data Source:
   // - height/weight from API (if exists)
   // - else from redux/location
-  const finalHeight = 170 ?? height
-  const finalWeight = 70 ?? weight
+  const finalHeight = height ?? 170  
+  const finalWeight = weight ?? 60
 
 
 
@@ -246,7 +246,7 @@ const BIAResult = () => {
                   <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.weight')}</span>
                 </div>
                 <div className="text-3xl font-bold tracking-tight">
-                  {Number(finalWeight) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
+                  {Number(finalWeight).toFixed(2) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
                 </div>
               </div>
 
