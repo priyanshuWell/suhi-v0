@@ -34,12 +34,12 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   // Timeout configuration (in milliseconds)
-  const TIMEOUTS = {
-    GLOBAL: 120000,     // 120 seconds for entire flow
-    WEIGHT: 20000,      // 20 seconds for weight measurement
-    HEIGHT: 20000,      // 20 seconds for height measurement
-    IMPEDANCE: 25000,   // 25 seconds for each impedance measurement
-  };
+  // const TIMEOUTS = {
+  //   GLOBAL: 120000,     // 120 seconds for entire flow
+  //   WEIGHT: 20000,      // 20 seconds for weight measurement
+  //   HEIGHT: 20000,      // 20 seconds for height measurement
+  //   IMPEDANCE: 25000,   // 25 seconds for each impedance measurement
+  // };
 
   const MAX_RETRIES = 2;
 
@@ -128,11 +128,32 @@ export default function BIACalculate({ user, onComplete }) {
         }
       }
 
-      // Show ERROR/WARNING messages in ErrorAlert
+      // Show ERROR/WARNING messages in ErrorAlert ONLY ONCE after threshold
       if (payload.severity === "ERROR" || payload.severity === "WARNING") {
         if (payload.userMessage) {
-          console.log(`[BIA DEBUG] Showing status as error: "${payload.userMessage}"`);
-          showError(payload.userMessage, 3000); // Show for 3 seconds
+          // Check if we should show this error based on attempt threshold
+          let shouldShow = false;
+
+          if (payload.source === 'LEG' && payload.attempt === ATTEMPT_THRESHOLDS.leg && !errorTriggered.current.leg) {
+            shouldShow = true;
+            errorTriggered.current.leg = true;
+          } else if (payload.source === 'ARM' && payload.attempt === ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
+            shouldShow = true;
+            errorTriggered.current.arm = true;
+          } else if (payload.frequency === 20 && payload.attempt === ATTEMPT_THRESHOLDS.impedance20 && !errorTriggered.current.impedance20) {
+            shouldShow = true;
+            errorTriggered.current.impedance20 = true;
+          } else if (payload.frequency === 100 && payload.attempt === ATTEMPT_THRESHOLDS.impedance100 && !errorTriggered.current.impedance100) {
+            shouldShow = true;
+            errorTriggered.current.impedance100 = true;
+          }
+
+          if (shouldShow) {
+            console.log(`[BIA DEBUG] Showing status error at attempt ${payload.attempt}: "${payload.userMessage}"`);
+            showError(payload.userMessage, 3000);
+          } else {
+            console.log(`[BIA DEBUG] Skipping duplicate error at attempt ${payload.attempt}`);
+          }
         }
       }
       // Only update currentStatus for INFO messages
