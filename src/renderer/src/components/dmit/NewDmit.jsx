@@ -64,6 +64,7 @@ const NewDmitScreen = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useSelector((state) => state.common.user);
+  const sessionIdFromRedux = useSelector((state) => state.common.sessionId);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -111,10 +112,10 @@ const NewDmitScreen = () => {
     }
   }, [stepIndex]);
 
-  // :white_check_mark: required payload values (replace with your real values / redux / localstorage)
+  // :white_check_mark: required payload values
   const kioskId = "KIOSK_001";
   const userId = user?.data?.user_id;
-  const sessionId = "session001";
+  const sessionId = sessionIdFromRedux || "session_fallback"; // Use Redux sessionId
 
   /**
    * :white_check_mark: Start ONLY ONE camera: cams[1]

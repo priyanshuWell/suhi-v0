@@ -41,12 +41,12 @@ function App() {
 
   return (
     <Routes>
-   
-      {/* <Route path="/facecapture" element={<FaceCapture />} /> */}
-      {/* <Route path="/confirmation" element={<ConfirmationScreen />} /> */}
+
+      <Route path="/facecapture" element={<FaceCapture />} />
+      <Route path="/confirmation" element={<ConfirmationScreen />} />
       <Route path="/" element={<LoginSuhi />} />
-      {/* <Route path="/login-dob" element={<LoginDOB />} /> */}
-      {/* <Route path="/login-father" element={<LoginFather />} />
+      <Route path="/login-dob" element={<LoginDOB />} />
+      <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
@@ -55,7 +55,7 @@ function App() {
       <Route path='/screen1' element={<NewDmit />} />
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
-         <Route path="/fingerprint" element={<FingerPrintScreen />} /> */}
+      <Route path="/fingerprint" element={<FingerPrintScreen />} />
     </Routes>
   )
 }
