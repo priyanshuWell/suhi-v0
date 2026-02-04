@@ -128,8 +128,15 @@ export default function BIACalculate({ user, onComplete }) {
         }
       }
 
-      // Update UI status message
-      if (payload.severity === "INFO" || payload.severity === "WARNING") {
+      // Show ERROR/WARNING messages in ErrorAlert
+      if (payload.severity === "ERROR" || payload.severity === "WARNING") {
+        if (payload.userMessage) {
+          console.log(`[BIA DEBUG] Showing status as error: "${payload.userMessage}"`);
+          showError(payload.userMessage, 3000); // Show for 3 seconds
+        }
+      }
+      // Only update currentStatus for INFO messages
+      else if (payload.severity === "INFO") {
         if (payload.userMessage) {
           setCurrentStatus(payload.userMessage);
         }
