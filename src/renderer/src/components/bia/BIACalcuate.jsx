@@ -390,6 +390,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error("[BIA DEBUG] Phase 2 FAILED - Weight error:", weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
       navigate("/screen1");
+      return;
     }
   };
 
@@ -426,6 +427,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
         await showError(ERROR_MESSAGES.height, 3000);
         navigate("/screen1");
+        return;
       }
     }
   };
@@ -492,6 +494,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
         await showError(ERROR_MESSAGES.armImpedance, 3000);
         navigate("/screen1");
+        return;
       }
     }
   };

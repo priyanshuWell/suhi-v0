@@ -28,10 +28,10 @@ export const IMPEDANCE_ERROR_CODES = {
   },
   0x01: {
     code: 'ELECTRODE',
-    severity: 'WARNING',
+    severity: 'ERROR',
     message: 'Ensure your are holding electrodes properly',
     description: 'Device detected electrode contact problem',
-    action: 'ACCEPT',
+    action: 'RETRY',
     canRetry: false,
     nextStep: 'Stop measurement and check electrodes',
     userMessage: 'Please ensure you are barefoot, and holding the hand rails firmly',
@@ -1588,7 +1588,7 @@ function emitLegStatus(statusCode, meta = {}) {
   const info = IMPEDANCE_ERROR_CODES[statusCode]
   if (!info) return
 
-  eventBus.emit(info.action === 'ABORT' ? EVENTS.LEG_ERROR : EVENTS.LEG_STATUS, {
+  eventBus.emit(info.action === 'ERROR' ? EVENTS.LEG_ERROR : EVENTS.LEG_STATUS, {
     source: 'LEG',
     frequency: 50,
     ...info,
@@ -2126,10 +2126,10 @@ export async function case38_20kHzImpedanceQuery() {
         //Handle impedance status
         const statusCode = responseData[4]
         console.log('statusCode', statusCode)
-        // const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
-        //   statusCode,
-        //   attempt
-        // )
+        const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
+          statusCode,
+          attempt
+        )
         try {
           emitImpedanceStatus(statusCode, {
             frequency: '20kHz',
@@ -2273,21 +2273,17 @@ export async function case39_100kHzImpedanceQuery() {
   try {
     // Step 1: Stop current test
     console.log('   Stopping previous measurement...')
-    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-    // await new Promise((resolve) => setTimeout(resolve, 500))
-    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
+//Step 1: Stop current test
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Step 2: Set impedance mode for 8-electrode 100 kHz
-    console.log('   Setting 100 kHz impedance mode...')
-    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
-    // await new Promise((resolve) => setTimeout(resolve, 500))
-    await sendBiaCommand([0x55, 0x06, 0xB0, 0x01, 0x06, 0xEE])
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Query command for 100 kHz
-    // const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
-    const query100kHzCommand = [0x55, 0x05, 0xB1, 0x61, 0xF4];
+    const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+
 
     // Track results
     const results = {
@@ -2862,6 +2858,10 @@ export async function case40a_LegImpedance50kHz() {
             }
             results.statusCodes[measurementStatus]++
 
+            emitLegStatus(measurementStatus, {
+              attempt,
+              frequency: "50kHzLeg"
+            })
             // Use ImprovedImpedanceStatusHandler
             const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
               measurementStatus,
@@ -3117,6 +3117,11 @@ export async function case40b_ArmImpedance50kHz() {
               results.statusCodes[measurementStatus] = 0
             }
             results.statusCodes[measurementStatus]++
+
+            emitArmStatus(measurementStatus,{
+              frequency:"50khzArm",
+              attempt:attempt860
+            })
 
             // Use ImprovedImpedanceStatusHandler
             const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
