@@ -33,13 +33,13 @@ export default function BIACalculate({ user, onComplete }) {
     impedance: { k20: null, k100: null }
   });
 
-  // Timeout configuration (in milliseconds)
-  // const TIMEOUTS = {
-  //   GLOBAL: 120000,     // 120 seconds for entire flow
-  //   WEIGHT: 20000,      // 20 seconds for weight measurement
-  //   HEIGHT: 20000,      // 20 seconds for height measurement
-  //   IMPEDANCE: 25000,   // 25 seconds for each impedance measurement
-  // };
+ // Timeout configuration (in milliseconds)
+  const TIMEOUTS = {
+    GLOBAL: 2000000,     // 120 seconds for entire flow
+    WEIGHT: 200000,      // 20 seconds for weight measurement
+    HEIGHT: 200000,      // 20 seconds for height measurement
+    IMPEDANCE: 200000,   // 25 seconds for each impedance measurement
+  };
 
   const MAX_RETRIES = 2;
 
@@ -92,7 +92,7 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   const ATTEMPT_THRESHOLDS = {
-    leg: 15,         // Show error after 15 attempts (~7.5 seconds)
+    leg: 50,         // Show error after 15 attempts (~7.5 seconds)
     arm: 15,         // Show error after 15 attempts
     impedance20: 20, // Show error after 20 attempts
     impedance100: 20,
