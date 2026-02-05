@@ -46,9 +46,9 @@ function App() {
       <Route path="/confirmation" element={<ConfirmationScreen />} />
       <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
-      <Route path='/' element={<RegisterCard />} />
-      {/* <Route path='/' element={<SplashScreen />} />
-      <Route path='/welcome' element={<StartScreen />} /> */}
+      <Route path='/verified' element={<RegisterCard />} />
+      <Route path='/' element={<SplashScreen />} />
+      <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
       <Route path='/screen1' element={<NewDmit />} />

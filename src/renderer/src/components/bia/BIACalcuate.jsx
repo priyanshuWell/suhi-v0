@@ -90,7 +90,7 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   const ATTEMPT_THRESHOLDS = {
-    leg: 50,         // Show error after 15 attempts (~7.5 seconds)
+    leg: 25,         // Show error after 15 attempts (~7.5 seconds)
     arm: 15,         // Show error after 15 attempts
     impedance20: 20, // Show error after 20 attempts
     impedance100: 20,
@@ -148,7 +148,7 @@ export default function BIACalculate({ user, onComplete }) {
 
           if (shouldShow) {
             console.log(`[BIA DEBUG] Showing status error at attempt ${payload.attempt}: "${payload.userMessage}"`);
-            showError(payload.userMessage, 3000);
+            // showError(payload.userMessage, 3000);
           } else {
             console.log(`[BIA DEBUG] Skipping duplicate error at attempt ${payload.attempt}`);
           }
@@ -157,7 +157,7 @@ export default function BIACalculate({ user, onComplete }) {
       // Only update currentStatus for INFO messages
       else if (payload.severity === "INFO") {
         if (payload.userMessage) {
-          setCurrentStatus(payload.userMessage);
+          // setCurrentStatus(payload.userMessage);
         }
       }
     };
@@ -346,7 +346,7 @@ export default function BIACalculate({ user, onComplete }) {
   ======================= */
   const measureWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
-    setCurrentStatus("Measuring your weight, please stand still!");
+    // setCurrentStatus("Measuring your weight, please stand still!");
     const res = await window.api.startWeightMeasurement();
     console.log("[BIA DEBUG] Weight result:", res);
 
@@ -365,7 +365,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
-    setCurrentStatus("Measuring your height, please stand still!");
+    // setCurrentStatus("Measuring your height, please stand still!");
     await window.api.connectHeightPort(ports[0]?.path);
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
@@ -385,7 +385,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureLegImpedance = async () => {
     console.log("[BIA DEBUG] Starting leg impedance 50kHz measurement...");
-    setCurrentStatus("Please ensure you are barefoot on the platform!");
+    // setCurrentStatus("Please ensure you are barefoot on the platform!");
     const res = await window.api.startLegImpedance50kHz();
     console.log("[BIA DEBUG] Leg impedance result:", res);
 
@@ -406,7 +406,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureArmImpedance = async () => {
     console.log("[BIA DEBUG] Starting arm impedance 50kHz measurement...");
-    setCurrentStatus("Please hold the hand rails firmly!");
+    // setCurrentStatus("Please hold the hand rails firmly!");
     const res = await window.api.startArmImpedance50kHz();
     console.log("[BIA DEBUG] Arm impedance result:", res);
 
@@ -427,7 +427,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureImpedance = async (freq) => {
     console.log(`[BIA DEBUG] Starting impedance ${freq}kHz measurement...`);
-    setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
+    // setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     console.log(`[BIA DEBUG] Impedance ${freq}kHz result:`, res);
 
@@ -460,7 +460,6 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
-      return;
     }
 
     // Reset attempt tracking and error flags for leg
@@ -478,6 +477,11 @@ export default function BIACalculate({ user, onComplete }) {
       await runPhase2_WeightHeight();
 
     } catch (legError) {
+  // if (attemptCount >= MAX_RETRIES) {
+  //     console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+  //     showError(ERROR_MESSAGES.maxRetryReached, 4000);
+  //     navigate("/screen1");
+  //   }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
 
       // Check if user is on platform by trying weight measurement
@@ -489,15 +493,15 @@ export default function BIACalculate({ user, onComplete }) {
         if (weightResult?.weight && Number(weightResult.weight) > 1) {
           // User IS on platform but leg impedance failed -> barefoot issue
           console.log(`[BIA DEBUG] Weight detected: ${weightResult.weight}kg - User on platform but not barefoot`);
-          await showError(ERROR_MESSAGES.legImpedance_hasWeight, 5000);
+          await showError(ERROR_MESSAGES.legImpedance_hasWeight, 6000);
         } else {
           // User NOT on platform
           console.log("[BIA DEBUG] No weight detected - User not on platform");
-          await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
+          await showError(ERROR_MESSAGES.legImpedance_noWeight, 6000);
         }
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-        await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
+        await showError(ERROR_MESSAGES.legImpedance_noWeight, 6000);
       }
 
       // Retry with incremented attempt count
@@ -583,7 +587,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      await showError(ERROR_MESSAGES.armImpedance, 3000);
+      await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
       return;
     }

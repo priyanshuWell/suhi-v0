@@ -55,7 +55,7 @@ export const StartScreen = () => {
 
   const handleStartClick = () => {
     stopAudio();
-    navigate("/verified");
+    navigate("/capture");
   };
 
   return (
