@@ -19,10 +19,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
 
-  // Phase-based retry tracking
-  const [phase1Attempts, setPhase1Attempts] = useState(0); // Leg + Weight check
-  const [heightAttempts, setHeightAttempts] = useState(0);
-  const [armAttempts, setArmAttempts] = useState(0);
+  // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
 
   const resultsRef = useRef({
@@ -56,7 +53,8 @@ export default function BIACalculate({ user, onComplete }) {
     height: "Please stand straight & still",
     armImpedance: "Please hold the rods firmly",
     impedance20: "Please hold the rods firmly",
-    impedance100: "Please hold the rods firmly"
+    impedance100: "Please hold the rods firmly",
+    maxRetryReached: "Maximum retries reached. redirecting to dmit.",
   };
 
   const texts = {
@@ -452,10 +450,18 @@ export default function BIACalculate({ user, onComplete }) {
      PHASE 1: LEG IMPEDANCE CHECK
      - If leg fails, check weight to determine error
   ======================= */
-  const runPhase1_LegCheck = async () => {
+  const runPhase1_LegCheck = async (attemptCount = 0) => {
     console.log("[BIA DEBUG] ========== PHASE 1: LEG CHECK ==========");
-    console.log(`[BIA DEBUG] Phase 1 attempt: ${phase1Attempts + 1}/${MAX_RETRIES}`);
+    console.log(`[BIA DEBUG] Phase 1 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
     setCurrentPhase('leg');
+
+    // Check if we've exhausted retries BEFORE attempting
+    if (attemptCount >= MAX_RETRIES) {
+      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      showError(ERROR_MESSAGES.maxRetryReached, 4000);
+      navigate("/screen1");
+      return;
+    }
 
     // Reset attempt tracking and error flags for leg
     attemptTracking.current.leg = 0;
@@ -494,18 +500,10 @@ export default function BIACalculate({ user, onComplete }) {
         await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
       }
 
-      // Retry logic
-      const newAttempts = phase1Attempts + 1;
-      setPhase1Attempts(newAttempts);
-
-      if (newAttempts < MAX_RETRIES) {
-        console.log(`[BIA DEBUG] Phase 1 retry ${newAttempts + 1}/${MAX_RETRIES}...`);
-        await sleep(1000);
-        await runPhase1_LegCheck();
-      } else {
-        console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        navigate("/screen1");
-      }
+      // Retry with incremented attempt count
+      console.log(`[BIA DEBUG] Phase 1 retry ${attemptCount + 2}/${MAX_RETRIES}...`);
+      await sleep(1000);
+      await runPhase1_LegCheck(attemptCount + 1);
     }
   };
 
@@ -535,8 +533,16 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-  const runHeightWithRetry = async () => {
-    console.log(`[BIA DEBUG] Height measurement attempt: ${heightAttempts + 1}/${MAX_RETRIES}`);
+  const runHeightWithRetry = async (attemptCount = 0) => {
+    console.log(`[BIA DEBUG] Height measurement attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
+
+    // Check if we've exhausted retries BEFORE attempting
+    if (attemptCount >= MAX_RETRIES) {
+      console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      await showError(ERROR_MESSAGES.height, 3000);
+      navigate("/screen1");
+      return;
+    }
 
     // Reset height attempt tracking
     attemptTracking.current.height = 0;
@@ -558,19 +564,10 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
 
-      const newAttempts = heightAttempts + 1;
-      setHeightAttempts(newAttempts);
-
-      if (newAttempts < MAX_RETRIES) {
-        console.log(`[BIA DEBUG] Height retry ${newAttempts + 1}/${MAX_RETRIES}...`);
-        await showError(ERROR_MESSAGES.height, 3000);
-        await runHeightWithRetry();
-      } else {
-        console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        await showError(ERROR_MESSAGES.height, 3000);
-        navigate("/screen1");
-        return;
-      }
+      // Retry with incremented attempt count
+      console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
+      await showError(ERROR_MESSAGES.height, 3000);
+      await runHeightWithRetry(attemptCount + 1);
     }
   };
 
@@ -578,10 +575,18 @@ export default function BIACalculate({ user, onComplete }) {
      PHASE 3: ARM IMPEDANCE + 20kHz + 100kHz
      - If any fails, retry from arm impedance
   ======================= */
-  const runPhase3_Impedance = async () => {
+  const runPhase3_Impedance = async (attemptCount = 0) => {
     console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS ==========");
-    console.log(`[BIA DEBUG] Phase 3 attempt: ${armAttempts + 1}/${MAX_RETRIES}`);
+    console.log(`[BIA DEBUG] Phase 3 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
     setCurrentPhase('arm');
+
+    // Check if we've exhausted retries BEFORE attempting
+    if (attemptCount >= MAX_RETRIES) {
+      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      await showError(ERROR_MESSAGES.armImpedance, 3000);
+      navigate("/screen1");
+      return;
+    }
 
     // Reset attempt tracking and error flags for arm and impedance
     attemptTracking.current.arm = 0;
@@ -618,23 +623,14 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (impedanceError) {
       console.error("[BIA DEBUG] Phase 3 FAILED:", impedanceError.message);
 
-      const newAttempts = armAttempts + 1;
-      setArmAttempts(newAttempts);
+      // Reset arm and impedance results to retry from arm
+      resultsRef.current.armImpedance = null;
+      resultsRef.current.impedance = { k20: null, k100: null };
 
-      if (newAttempts < MAX_RETRIES) {
-        console.log(`[BIA DEBUG] Phase 3 retry ${newAttempts + 1}/${MAX_RETRIES} - resetting arm/impedance results...`);
-        // Reset arm and impedance results to retry from arm
-        resultsRef.current.armImpedance = null;
-        resultsRef.current.impedance = { k20: null, k100: null };
-
-        await showError(ERROR_MESSAGES.armImpedance, 3000);
-        await runPhase3_Impedance();
-      } else {
-        console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        await showError(ERROR_MESSAGES.armImpedance, 3000);
-        navigate("/screen1");
-        return;
-      }
+      // Retry with incremented attempt count
+      console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
+      await showError(ERROR_MESSAGES.armImpedance, 3000);
+      await runPhase3_Impedance(attemptCount + 1);
     }
   };
 
@@ -656,12 +652,12 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Calling calculateBIA with params:", {
       height: resultsRef.current.height.value,
       weight: resultsRef.current.weight.value,
-      age: 23,
-      gender: "male",
+      age: storeUser?.data?.age ?? 23,
+      gender: storeUser?.data?.gender ?? "male",
       impedance20: resultsRef.current.impedance.k20.segments,
       impedance100: resultsRef.current.impedance.k100.segments,
       session_id: sessionId,
-      user_id: storeUser?.data?.user_id
+      user_id: storeUser?.data?.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     });
 
     try {
@@ -673,7 +669,7 @@ export default function BIACalculate({ user, onComplete }) {
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments,
         session_id: sessionId,
-        user_id: storeUser?.data?.user_id
+        user_id: storeUser?.data?.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6"
       });
 
       console.log("[BIA DEBUG] BIA calculation result:", bia);
@@ -809,7 +805,6 @@ export default function BIACalculate({ user, onComplete }) {
     <>
       <BIAComponent
         texts={texts}
-        attemptCount={phase1Attempts || armAttempts || 0}
         isComplete={isComplete}
         onVideoEnd={handleVideoEnd}
       />

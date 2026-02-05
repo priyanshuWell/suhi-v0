@@ -362,7 +362,7 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
         { impedance20, impedance100 },
         {
           session_id: payload.session_id,
-          user_id: payload.user_id
+          user_id: payload.user_id ||"3fa85f64-5717-4562-b3fc-2c963f66afa6",
         }
       )
 
@@ -401,7 +401,7 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
     const payload = {
       buffer_id: bufferId,
       kiosk_id: request.kiosk_id,
-      user_id: request.user_id,
+      user_id: request.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6",
       session_id: request.session_id,
       shm_path: shmPath
     }
