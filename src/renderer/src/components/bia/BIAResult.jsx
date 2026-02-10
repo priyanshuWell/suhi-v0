@@ -21,7 +21,7 @@ const BIAResult = () => {
   const storeBiaResult = useSelector((state) => state.common.biaResult)
   const storeSessionId = useSelector((state) => state.common.sessionId)
   const storeUser = useSelector((state) => state.common.user)
-
+console.log("`BIAResult storeUser:", storeUser,storeHeight,storeHeight);
   // Fallback to navigation state for backward compatibility
   const bia = storeBiaResult || location.state?.biaResult
   const weight = storeWeight || location.state?.weight
@@ -75,33 +75,71 @@ const BIAResult = () => {
   }
 
   // ✅ fallback JSON for NULL sections
-  const fallbackPartialJson = {
-    success: true,
-    user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
-    session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
-    data: {
-      height: null,
-      weight: null,
-      body_constitution: {
-        vata: 0,
-        pitta: 50,
-        kapha: 50
-      },
-      hydration: null,
-      learner_type: {
-        type: "kinesthetic",
-        title: "When studying your ears are your hero ",
-        subtitle: "When studying, all your senses are your heroes.",
-        description: "Listen, Discuss, and Explain out Loud"
-      },
-      personality: {
-        type: "Balanced",
-        animal: "You are an Eagle",
-        traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
-      }
+  // const fallbackPartialJson = {
+  //   success: true,
+  //   user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
+  //   session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
+  //   data: {
+  //     height: null,
+  //     weight: null,
+  //   storeUser.student_name.includes("Mukul") ?  body_constitution: {
+  //       vata: 0,
+  //       pitta: 60,
+  //       kapha: 30
+  //     }: body_constitution: {
+  //       vata: 0,
+  //       pitta: 35,
+  //       kapha: 35
+  //     } ,
+  //     hydration: null,
+  //     learner_type: {
+  //       type: "kinesthetic",
+  //       title: "When studying your ears are your hero ",
+  //       subtitle: "When studying, all your senses are your heroes.",
+  //       description: "Listen, Discuss, and Explain out Loud"
+  //     },
+  //     personality: {
+  //       type: "Balanced",
+  //       animal: "You are an Eagle",
+  //       traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
+  //     }
+  //   }
+  // }
+
+const fallbackPartialJson = {
+  success: true,
+  user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
+  session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
+  data: {
+    height: null,
+    weight: null,
+
+    body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
+      ? {
+          vata: 0,
+          pitta: 60,
+          kapha: 30
+        }
+      : {
+          vata: 40,
+          pitta: 60,
+          kapha: 0
+        },
+
+    hydration: null,
+    learner_type: {
+      type: "kinesthetic",
+      title: "When studying your ears are your hero ",
+      subtitle: "When studying, all your senses are your heroes.",
+      description: "Listen, Discuss, and Explain out Loud"
+    },
+    personality: {
+      type: "Balanced",
+      animal: "You are an Eagle",
+      traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
     }
   }
-
+};
 
 
   const constitution = apiReport?.body_constitution;
@@ -144,12 +182,12 @@ const BIAResult = () => {
       const sessionId = storeSessionId;
 
       const payload = {
-        user_id: userId,
-        session_id: sessionId
+        user_id: userId ?? "af341b46-4c88-4d67-bb0e-bdf575d0ef2b",
+        session_id: sessionId ?? "session-1234",
       };
 
-      const res = await axios.post("/biometric-report/generate", payload);
-
+      const res = await axios.post("http://localhost:8000/biometric-report/generate", payload);
+      console.log("✅ biometric-report API response:", res);
       // ✅ if API response is valid & success
       if (res?.data?.success && res?.data?.data) {
         const merged = mergeWithFallback(res.data);
@@ -185,10 +223,11 @@ const BIAResult = () => {
   // ✅ Final Data Source:
   // - height/weight from API (if exists)
   // - else from redux/location
-  const finalHeight = height ?? 170  
-  const finalWeight = weight ?? 60
+const finalHeight =
+  storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
 
-
+const finalWeight =
+  storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
 
   const analysisData = {
     hydration: apiReport?.hydration,

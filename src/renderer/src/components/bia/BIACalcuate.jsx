@@ -221,7 +221,7 @@ export default function BIACalculate({ user, onComplete }) {
           // Show error immediately
           (async () => {
             console.log("[BIA DEBUG] Showing arm electrode error");
-            await showError(ERROR_MESSAGES.armImpedance, 5000);
+           // await showError(ERROR_MESSAGES.armImpedance, 5000);
           })();
         }
       }
@@ -360,8 +360,11 @@ export default function BIACalculate({ user, onComplete }) {
       unit: "kg"
     };
     console.log(`[BIA DEBUG] Weight stored: ${res.weight} kg`);
+    dispatch(setWeight(resultsRef.current.weight?.value));
     return res;
   };
+
+
 
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
@@ -380,6 +383,8 @@ export default function BIACalculate({ user, onComplete }) {
       unit: "cm"
     };
     console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
+
+    dispatch(setHeight(resultsRef.current.height?.value));
     return res;
   };
 
@@ -458,8 +463,9 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      showError(ERROR_MESSAGES.maxRetryReached, 4000);
+     // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
+      return;
     }
 
     // Reset attempt tracking and error flags for leg
@@ -477,11 +483,12 @@ export default function BIACalculate({ user, onComplete }) {
       await runPhase2_WeightHeight();
 
     } catch (legError) {
-  // if (attemptCount >= MAX_RETRIES) {
-  //     console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-  //     showError(ERROR_MESSAGES.maxRetryReached, 4000);
-  //     navigate("/screen1");
-  //   }
+ if (attemptCount >= MAX_RETRIES) {
+      console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
+      navigate("/screen1");
+      return;
+    }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
 
       // Check if user is on platform by trying weight measurement
@@ -587,7 +594,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      await showError(ERROR_MESSAGES.maxRetryReached, 4000);
+      //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
       return;
     }
@@ -633,7 +640,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       // Retry with incremented attempt count
       console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
-      await showError(ERROR_MESSAGES.armImpedance, 3000);
+      //await showError(ERROR_MESSAGES.armImpedance, 3000);
       await runPhase3_Impedance(attemptCount + 1);
     }
   };
@@ -673,7 +680,7 @@ export default function BIACalculate({ user, onComplete }) {
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments,
         session_id: sessionId,
-        user_id: storeUser?.data?.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        user_id: storeUser?.data?.user_id || "af341b46-4c88-4d67-bb0e-bdf575d0ef2b"
       });
 
       console.log("[BIA DEBUG] BIA calculation result:", bia);
@@ -687,8 +694,8 @@ export default function BIACalculate({ user, onComplete }) {
       }
 
       // Save results to Redux
-      dispatch(setHeight(resultsRef.current.height.value));
-      dispatch(setWeight(resultsRef.current.weight.value));
+      //dispatch(setHeight(resultsRef.current.height.value));
+      //dispatch(setWeight(resultsRef.current.weight.value));
       dispatch(setBiaResult(bia));
 
       console.log("[BIA DEBUG] Results saved to Redux store");
@@ -760,10 +767,11 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (e) {
       console.error("[BIA DEBUG] Flow error:", e.message);
-      if (!e.message.includes("timeout")) {
-        clearAllTimeouts();
+      // if (!e.message.includes("timeout")) {
+      //   clearAllTimeouts();
+      //   navigate("/screen1");
+      // }
         navigate("/screen1");
-      }
     } finally {
       setIsRunning(false);
       clearAllTimeouts();
