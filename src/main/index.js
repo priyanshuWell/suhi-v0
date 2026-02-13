@@ -35,6 +35,12 @@ ipcMain.handle("connect-heightPort", async (_event, portPath) => {
   }
 })
 
+ipcMain.handle("disconnect-heightPort", async () => {
+  console.log("[MAIN] disconnect-heightPort request")
+  const result = await biaa.disconnectHeightPort()
+  return result
+})
+
 const startImageServer = () => {
   const app = express()
 
@@ -68,6 +74,12 @@ ipcMain.handle("connect-biaPort", async (_event, portPath) => {
       portPath
     }
   }
+})
+
+ipcMain.handle("disconnect-biaPort", async () => {
+  console.log("[MAIN] disconnect-biaPort request")
+  const result = await biaa.disconnectBiaPort()
+  return result
 })
 
 ipcMain.handle("start-weight-measurement", async () => {

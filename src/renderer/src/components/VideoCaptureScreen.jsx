@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import { recordFromOpenCameras } from "../utils/recordSession";
 import { getVideoDuration, getKioskId } from "../utils/config";
 import { runFPT, sendVideoToBackend } from "../utils/api";
+import { measureWeightAndHeight } from "../utils/measurementUtils";
+import { storeFptMeasurements } from "../utils/measurementRedux";
 import { useDispatch } from "react-redux";
 import { setUser } from "../features/common/commonSlice";
 import ErrorAlert from "./ErrorAlert";
@@ -21,20 +23,49 @@ const VideoCaptureScreen = () => {
   const audioRef = React.useRef(null);
 
   const MAX_ATTEMPTS = 2;
-const instructionAudio = "/src/assets/audio/camera_scan.mp3";
+  const instructionAudio = "/src/assets/audio/camera_scan.mp3";
+
+  // Store measurements taken during recording
+  const measurementsRef = React.useRef(null);
+
   useEffect(() => {
     const run = async () => {
       try {
         setStatus("Preparing...");
         playAudio();
-      await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1000));
 
         const videoDuration = getVideoDuration();
         const kioskId = getKioskId();
 
         setStatus(`Recording for ${videoDuration / 1000} seconds...`);
 
+        // Start measurements in parallel with video recording
+        const measurementPromise = (async () => {
+          try {
+            console.log('[VIDEO CAPTURE] Starting measurements during recording...');
+            const ports = await window.api?.getPorts?.();
+
+            if (!ports || ports.length < 1) {
+              console.warn('[VIDEO CAPTURE] No ports available for measurements');
+              return null;
+            }
+
+            const measurements = await measureWeightAndHeight(ports[0]?.path);
+            console.log('[VIDEO CAPTURE] Measurements completed:', measurements);
+            return measurements;
+          } catch (error) {
+            console.error('[VIDEO CAPTURE] Measurement error during recording:', error);
+            return null;
+          }
+        })();
+
+        // Record video
         const recordings = await recordFromOpenCameras(videoDuration);
+
+        // Wait for measurements to complete (if still running)
+        const measurements = await measurementPromise;
+        measurementsRef.current = measurements;
         console.log("recordings", recordings);
 
         if (!recordings || recordings.length === 0) {
@@ -60,7 +91,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
         setStatus("Processing face verification...");
 
         console.log("Running FPT with shm_path:", shmPath);
-         const fptResponse = await runFPT(shmPath, kioskId);
+        const fptResponse = await runFPT(shmPath, kioskId);
         console.log("FPT response:", fptResponse);
 
         // Check if user is not registered - redirect directly to login
@@ -97,12 +128,26 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
           throw new Error("Face not recognized");
         }
 
-        // Success case
+        // Success case - Face recognition successful
         dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
         stopAudio();
-        await new Promise((r) => setTimeout(r, 1000));
+
+        // Store measurements that were taken during recording
+        if (measurementsRef.current) {
+          console.log('[VIDEO CAPTURE] Storing measurements from recording:', measurementsRef.current);
+          storeFptMeasurements(
+            dispatch,
+            measurementsRef.current.weight,
+            measurementsRef.current.height
+          );
+          setStatus("Measurements saved!");
+        } else {
+          console.warn('[VIDEO CAPTURE] No measurements available from recording');
+        }
+
+        await new Promise((r) => setTimeout(r, 500));
         navigate("/verified");
 
       } catch (error) {
@@ -115,7 +160,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
           setShowError(true);
         }
         stopAudio();
-    }
+      }
     };
 
     run();
@@ -133,7 +178,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
       // Navigate to FaceCapture screen for the second attempt
       navigate("/facecapture");
     }
-  };  const playAudio = () => {
+  }; const playAudio = () => {
     if (audioRef.current) {
       setIsAudioPlaying(true);
       audioRef.current.play().catch((err) => {
@@ -186,7 +231,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
         <video
           src={video2}
           autoPlay
-         // muted
+          // muted
           loop
           playsInline
           className="
@@ -225,8 +270,8 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
           status.includes("not registered")
             ? "User is not registered in the system.\nRedirecting to manual login..."
             : attemptCount < MAX_ATTEMPTS
-            ? `No face detected OR Multiple faces detected.\nRetrying......`
-            : "Maximum attempts reached\nReturning to welcome screen..."
+              ? `No face detected OR Multiple faces detected.\nRetrying......`
+              : "Maximum attempts reached\nReturning to welcome screen..."
         }
         visible={showError}
         onClose={handleErrorClose}

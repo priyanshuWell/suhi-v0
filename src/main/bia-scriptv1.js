@@ -1952,6 +1952,106 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
   }
 }
 
+/**
+ * Disconnect from Height port
+ * @returns {Promise<Object>} Result object with success status
+ */
+export async function disconnectHeightPort() {
+  try {
+    if (!heightPort) {
+      console.log('⚠️ Height port is not initialized')
+      return {
+        success: true,
+        message: 'Port not initialized'
+      }
+    }
+
+    if (!heightPort.isOpen) {
+      console.log('⚠️ Height port is already closed')
+      return {
+        success: true,
+        message: 'Port already closed'
+      }
+    }
+
+    await new Promise((resolve, reject) => {
+      heightPort.close((err) => {
+        if (err) {
+          console.error(`❌ Error closing height port: ${err.message}`)
+          reject(err)
+        } else {
+          console.log('✅ Height port disconnected successfully')
+          resolve()
+        }
+      })
+    })
+
+    // Clear the port reference
+    heightPort = null
+
+    return {
+      success: true,
+      message: 'Height port disconnected'
+    }
+  } catch (error) {
+    console.error(`❌ Failed to disconnect height port: ${error.message}`)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+/**
+ * Disconnect from BIA port
+ * @returns {Promise<Object>} Result object with success status
+ */
+export async function disconnectBiaPort() {
+  try {
+    if (!biaPort) {
+      console.log('⚠️ BIA port is not initialized')
+      return {
+        success: true,
+        message: 'Port not initialized'
+      }
+    }
+
+    if (!biaPort.isOpen) {
+      console.log('⚠️ BIA port is already closed')
+      return {
+        success: true,
+        message: 'Port already closed'
+      }
+    }
+
+    await new Promise((resolve, reject) => {
+      biaPort.close((err) => {
+        if (err) {
+          console.error(`❌ Error closing BIA port: ${err.message}`)
+          reject(err)
+        } else {
+          console.log('✅ BIA port disconnected successfully')
+          resolve()
+        }
+      })
+    })
+
+    // Clear the port reference
+    biaPort = null
+
+    return {
+      success: true,
+      message: 'BIA port disconnected'
+    }
+  } catch (error) {
+    console.error(`❌ Failed to disconnect BIA port: ${error.message}`)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
 // Send BIA command
 export async function sendBiaCommand(command, options = {}) {
   const defaultOptions = {

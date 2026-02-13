@@ -103,11 +103,42 @@ export async function sendAllVideosToBackend(recordings) {
 
 
 
+// /**
+//  * Send weight and height measurements to backend
+//  * @param {Object} data - Measurement data
+//  * @param {number} data.weight - Weight in kg
+//  * @param {number} data.height - Height in cm
+//  * @param {string} data.user_id - User ID
+//  * @param {string} data.timestamp - ISO timestamp
+//  * @returns {Promise<Object>} Response with success status
+//  */
+// export async function sendMeasurements(data) {
+//   try {
+//     const response = await fetch(`${API_BASE_URL}/measurements/store`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(data),
+//     });
 
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
 
-
-
-
+//     const result = await response.json();
+//     return {
+//       success: true,
+//       ...result
+//     };
+//   } catch (error) {
+//     console.error("Error sending measurements to backend:", error);
+//     return {
+//       success: false,
+//       error: error.message
+//     };
+//   }
+// }
 
 /**
  * Calls: GET /sync/cloud-to-local

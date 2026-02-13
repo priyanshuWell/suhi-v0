@@ -12,9 +12,21 @@ const initialState = {
   recordedVideoInfo: null,
 
   // any hardware or measurement data
-  height: null,
-  weight: null,
-  biaResult: null,
+  height: {
+    fptHeight:null,
+    preliminaryHeight:null,
+    finalHeight:null,
+  },
+  weight: {
+    fptWeight:null,
+    preliminaryWeight:null,  
+    finalWeight:null,  
+  },
+  biaResult: {
+    biaLegs:null,
+    biaArms:null,
+    biaFinal:null
+  },
   bmiResult:null,
 };
 
@@ -50,6 +62,22 @@ const commonSlice = createSlice({
       state.weight = action.payload;
     },
 
+    setFptHeight: (state, action) => {
+      state.height.fptHeight = action.payload;
+    },
+
+    setFptWeight: (state, action) => {
+      state.weight.fptWeight = action.payload;
+    },
+
+    setPreliminaryHeight: (state, action) => {
+      state.height.preliminaryHeight = action.payload;
+    },
+
+    setPreliminaryWeight: (state, action) => {
+      state.weight.preliminaryWeight = action.payload;
+    },
+
     setBiaResult: (state, action) => {
       state.biaResult = action.payload;
     },
@@ -73,6 +101,10 @@ export const {
   setRecordedVideoInfo,
   setHeight,
   setWeight,
+  setFptHeight,
+  setFptWeight,
+  setPreliminaryHeight,
+  setPreliminaryWeight,
   setBiaResult,
   resetCommonState,
   setBmiResult,

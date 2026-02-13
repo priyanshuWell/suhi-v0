@@ -4,7 +4,9 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { setHeight, setWeight, setBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { setBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { measureWeight, measureHeight } from "../../utils/measurementUtils";
+import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
@@ -221,7 +223,7 @@ export default function BIACalculate({ user, onComplete }) {
           // Show error immediately
           (async () => {
             console.log("[BIA DEBUG] Showing arm electrode error");
-           // await showError(ERROR_MESSAGES.armImpedance, 5000);
+            // await showError(ERROR_MESSAGES.armImpedance, 5000);
           })();
         }
       }
@@ -344,48 +346,54 @@ export default function BIACalculate({ user, onComplete }) {
   /* =======================
      MEASUREMENT FUNCTIONS
   ======================= */
-  const measureWeight = async () => {
+  const measureWeightWrapper = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
-    // setCurrentStatus("Measuring your weight, please stand still!");
-    const res = await window.api.startWeightMeasurement();
-    console.log("[BIA DEBUG] Weight result:", res);
 
-    if (!res?.weight) {
-      console.error("[BIA DEBUG] Weight measurement failed - no weight data");
-      throw new Error("Weight failed");
+    try {
+      const result = await measureWeight();
+
+      resultsRef.current.weight = {
+        value: result.weight,
+        unit: result.unit
+      };
+      console.log(`[BIA DEBUG] Weight stored: ${result.weight} ${result.unit}`);
+
+      // Store in Redux as preliminary measurement
+      storePreliminaryMeasurements(dispatch, result.weight, null);
+
+      return { weight: result.weight };
+    } catch (error) {
+      console.error("[BIA DEBUG] Weight measurement failed:", error);
+      throw error;
     }
-
-    resultsRef.current.weight = {
-      value: Number(res.weight),
-      unit: "kg"
-    };
-    console.log(`[BIA DEBUG] Weight stored: ${res.weight} kg`);
-    dispatch(setWeight(resultsRef.current.weight?.value));
-    return res;
   };
 
 
 
-  const measureHeight = async () => {
+  const measureHeightWrapper = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
-    // setCurrentStatus("Measuring your height, please stand still!");
-    await window.api.connectHeightPort(ports[0]?.path);
-    const res = await window.api.startHeightMeasurement();
-    console.log("[BIA DEBUG] Height result:", res);
 
-    if (!res?.height) {
-      console.error("[BIA DEBUG] Height measurement failed - no height data");
-      throw new Error("Height failed");
+    if (!ports[0]?.path) {
+      throw new Error("Height port not available");
     }
 
-    resultsRef.current.height = {
-      value: Number(res.height),
-      unit: "cm"
-    };
-    console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
+    try {
+      const result = await measureHeight(ports[0]?.path);
 
-    dispatch(setHeight(resultsRef.current.height?.value));
-    return res;
+      resultsRef.current.height = {
+        value: result.height,
+        unit: result.unit
+      };
+      console.log(`[BIA DEBUG] Height stored: ${result.height} ${result.unit}`);
+
+      // Store in Redux as preliminary measurement
+      storePreliminaryMeasurements(dispatch, null, result.height);
+
+      return { height: result.height };
+    } catch (error) {
+      console.error("[BIA DEBUG] Height measurement failed:", error);
+      throw error;
+    }
   };
 
   const measureLegImpedance = async () => {
@@ -463,7 +471,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-     // showError(ERROR_MESSAGES.maxRetryReached, 4000);
+      // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
       return;
     }
@@ -483,12 +491,12 @@ export default function BIACalculate({ user, onComplete }) {
       await runPhase2_WeightHeight();
 
     } catch (legError) {
- if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      navigate("/screen1");
-      return;
-    }
+      if (attemptCount >= MAX_RETRIES) {
+        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+        //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
+        navigate("/screen1");
+        return;
+      }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
 
       // Check if user is on platform by trying weight measurement
@@ -529,7 +537,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     try {
       // Measure Weight
-      await measureWeight();
+      await measureWeightWrapper();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
 
@@ -561,7 +569,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset height attempt tracking and error flag");
 
     try {
-      await measureHeight();
+      await measureHeightWrapper();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
 
       // Both weight and height success - show whComplete
@@ -771,7 +779,7 @@ export default function BIACalculate({ user, onComplete }) {
       //   clearAllTimeouts();
       //   navigate("/screen1");
       // }
-        navigate("/screen1");
+      navigate("/screen1");
     } finally {
       setIsRunning(false);
       clearAllTimeouts();
