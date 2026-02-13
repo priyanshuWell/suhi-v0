@@ -46,7 +46,7 @@ export default function RegisterCard() {
     setIsAudioPlaying(false);
   };
 
-  console.log(user);
+  console.log("users",user);
   const navigate = useNavigate()
   const { t } = useTranslation()
   const handleYesClick = () => {
@@ -120,7 +120,7 @@ export default function RegisterCard() {
             <p className="text-[28px] flex flex-col items-center text-center tracking-wider gap-y-3 text-white text-nowrap">
               <span>{t('profile.name')} - {user?.data?.student_name} </span>
               {user?.data?.class && <span> {t('profile.class')}- 8th A</span>}
-              {user?.data?.age && <span>{t('profile.age')} - 13 years</span>}
+              {user?.data?.age && <span>{t('profile.age')} - {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years</span>}
               {user?.data?.contact_number && <span>{t('profile.number')} - 0987654321</span>}
             </p>
           </div>

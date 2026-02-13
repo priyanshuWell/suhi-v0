@@ -10,6 +10,7 @@ let heightResponseTimeout = null
 export const IS_ELECTRON = true
 let heightCompleted = false
 let weightCompleted = false
+
 // ================================================================
 // GLOBAL ERROR HANDLER - BMH05108 PROTOCOL
 // ================================================================
@@ -26,15 +27,14 @@ export const IMPEDANCE_ERROR_CODES = {
     userMessage: "Oops, couldn't get body composition analysis. Hold on, we will try once again"
   },
   0x01: {
-    code: 'CHECK_ELECTRODE',
-    severity: 'CRITICAL',
-    message: 'BIA_CHECK_ELECTRODE - Checking electrode contact',
+    code: 'ELECTRODE',
+    severity: 'ERROR',
+    message: 'Ensure your are holding electrodes properly',
     description: 'Device detected electrode contact problem',
-    action: 'ABORT',
+    action: 'RETRY',
     canRetry: false,
     nextStep: 'Stop measurement and check electrodes',
-    userMessage:
-      'Please ensure you are barefoot, and holding the hand rails firmly! We will try once again\n   • Check all electrode connections\n   • Ensure electrodes are firmly attached\n   • Clean electrode pads\n   • Verify no loose wires',
+    userMessage: 'Please ensure you are barefoot, and holding the hand rails firmly',
     causes: [
       'Electrode not properly connected',
       'Loose electrode contact',
@@ -1583,6 +1583,36 @@ function emitImpedanceStatus(statusCode, meta = {}) {
   return info
 }
 
+// Emit leg impedance status/error
+function emitLegStatus(statusCode, meta = {}) {
+  const info = IMPEDANCE_ERROR_CODES[statusCode]
+  if (!info) return
+
+  eventBus.emit(info.action === 'ERROR' ? EVENTS.LEG_ERROR : EVENTS.LEG_STATUS, {
+    source: 'LEG',
+    frequency: 50,
+    ...info,
+    ...meta
+  })
+
+  return info
+}
+
+// Emit arm impedance status/error
+function emitArmStatus(statusCode, meta = {}) {
+  const info = IMPEDANCE_ERROR_CODES[statusCode]
+  if (!info) return
+
+  eventBus.emit(info.action === 'ABORT' ? EVENTS.ARM_ERROR : EVENTS.ARM_STATUS, {
+    source: 'ARM',
+    frequency: 50,
+    ...info,
+    ...meta
+  })
+
+  return info
+}
+
 // measure height
 export async function height_measurement() {
   return new Promise((resolve) => {
@@ -2032,18 +2062,24 @@ function getResponseTypeName(responseTypeCode) {
 }
 
 export async function case38_20kHzImpedanceQuery() {
+  console.log('\n=== CASE 38: 20 kHz Impedance Measurement ===\n')
   try {
     // Step 1: Stop current test
+    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    // await new Promise((resolve) => setTimeout(resolve, 500))
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
-
+    console.log('priyanshu after stop command')
     // Step 2: Set impedance mode for 8-electrode 20 kHz
+    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x03, 0xf1])
+    // await new Promise((resolve) => setTimeout(resolve, 500))
+
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x03, 0xf1])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Query command for 20 kHz
-    const query20kHzCommand = [0x55, 0x05, 0xb1, 0x31, 0xc4]
-
+    // const query20kHzCommand = [0x55, 0x05, 0xb1, 0x31, 0xc4]
+    const query20kHzCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
     // Track results
     const results = {
       totalAttempts: 50,
@@ -2085,6 +2121,7 @@ export async function case38_20kHzImpedanceQuery() {
           timeout: 5000,
           verbose: true
         })
+        console.log('priyanshu response data', responseData)
 
         //Handle impedance status
         const statusCode = responseData[4]
@@ -2093,14 +2130,18 @@ export async function case38_20kHzImpedanceQuery() {
           statusCode,
           attempt
         )
-        emitImpedanceStatus(statusCode, {
-          frequency: '20kHz',
-          attempt,
-          decision: statusResult.decision
-        })
+        try {
+          emitImpedanceStatus(statusCode, {
+            frequency: '20kHz',
+            attempt
+          })
+        } catch (error) {
+          console.log('error in emitting impedance status', error)
+        }
+
         console.log('------statusResult-------')
         console.log(statusResult)
-        // Track errors
+       // Track errors
         if (!results.errorCounts[statusCode]) {
           results.errorCounts[statusCode] = 0
         }
@@ -2129,22 +2170,21 @@ export async function case38_20kHzImpedanceQuery() {
             continue
           }
         }
-        if (statusResult.decision.shouldAccept) {
-          // Parse response
-          const parsedResult = parse20kHzImpedanceResponse(responseData)
 
-          console.log('-----')
-          console.log(parsedResult)
+        // Parse response
+        const parsedResult = parse20kHzImpedanceResponse(responseData)
 
-          // Check if result is meaningful
-          if (isMeaningful20kHzResult(parsedResult)) {
-            results.meaningfulResponses.push(parsedResult)
-          } else {
-            results.zeroResponses.push({
-              attempt,
-              rawResponse: responseData
-            })
-          }
+        console.log('-----')
+        console.log(parsedResult)
+
+        // Check if result is meaningful
+        if (isMeaningful20kHzResult(parsedResult)) {
+          results.meaningfulResponses.push(parsedResult)
+        } else {
+          results.zeroResponses.push({
+            attempt,
+            rawResponse: responseData
+          })
         }
 
         // Check for stable responses
@@ -2205,7 +2245,7 @@ function parse20kHzImpedanceResponse(data) {
   }
   console.log(data.length)
   // 8-electrode parsing
-  if (data.length >= 27) {
+  if (data.length >= 26) {
     return {
       frequency: getFrequencyName((data[3] >> 4) & 0x0f),
       responseType: getResponseTypeName(data[3] & 0x0f),
@@ -2233,16 +2273,17 @@ export async function case39_100kHzImpedanceQuery() {
   try {
     // Step 1: Stop current test
     console.log('   Stopping previous measurement...')
+//Step 1: Stop current test
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Step 2: Set impedance mode for 8-electrode 100 kHz
-    console.log('   Setting 100 kHz impedance mode...')
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
     // Query command for 100 kHz
     const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+
 
     // Track results
     const results = {
@@ -2592,6 +2633,118 @@ export async function case39_100kHzImpedanceQuery() {
 }
 
 // Helper function to parse 100 kHz impedance response
+
+// export async function case39_100kHzImpedanceQuery() {
+//   try {
+//     // Step 1: Stop current test
+//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+//     await new Promise((resolve) => setTimeout(resolve, 500))
+
+//     // Step 2: Set impedance mode for 8-electrode 100 kHz
+//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
+//     await new Promise((resolve) => setTimeout(resolve, 500))
+
+//     // Query command for 100 kHz
+//     const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
+
+//     // Track results
+//     const results = {
+//       totalAttempts: 50,
+//       meaningfulResponses: [],
+//       zeroResponses: [],
+//       errorResponses: []
+//     }
+
+//     // Function to check if responses are stable
+//     const isStableResponse = (responses) => {
+//       if (responses.length < 5) return false
+
+//       // Get the last 5 responses
+//       const lastFive = responses.slice(-5)
+
+//       // Check if all last 5 responses are meaningful and similar
+//       const allMeaningful = lastFive.every(isMeaningful100kHzResult)
+
+//       if (!allMeaningful) return false
+
+//       // Compare segments across last 5 responses
+//       const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot']
+
+//       return segments.every((segment) => {
+//         const values = lastFive.map((r) => r.segments[segment])
+//         const max = Math.max(...values)
+//         const min = Math.min(...values)
+//         return (max - min) / max < 0.1 // Within 10% variation
+//       })
+//     }
+
+//     // 50 attempts
+//     for (let attempt = 1; attempt <= 50; attempt++) {
+//       try {
+//         console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`)
+
+//         const responseData = await sendBiaCommand(query100kHzCommand, {
+//           timeout: 5000,
+//           verbose: true
+//         })
+
+//         // Parse response
+//         const parsedResult = parse100kHzImpedanceResponse(responseData)
+
+//         // Check if result is meaningful
+//         if (isMeaningful100kHzResult(parsedResult)) {
+//           results.meaningfulResponses.push(parsedResult)
+//         } else {
+//           results.zeroResponses.push({
+//             attempt,
+//             rawResponse: responseData
+//           })
+//         }
+
+//         // Check for stable responses
+//         if (isStableResponse(results.meaningfulResponses)) {
+//           console.log('✅ Stable impedance values detected!')
+//           break
+//         }
+
+//         // Delay between attempts
+//         await new Promise((resolve) => setTimeout(resolve, 500))
+//       } catch (queryError) {
+//         console.error(`Attempt ${attempt} failed:`, queryError)
+//         results.errorResponses.push({
+//           attempt,
+//           error: queryError.message
+//         })
+//       }
+//     }
+
+//     // Display comprehensive results
+//     console.log('\n📊 100 kHz Impedance Query Results:')
+//     console.log(`Total Attempts: ${results.totalAttempts}`)
+//     console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
+//     console.log(`Zero Responses: ${results.zeroResponses.length}`)
+//     console.log(`Error Responses: ${results.errorResponses.length}`)
+
+//     // Detailed meaningful responses
+//     if (results.meaningfulResponses.length > 0) {
+//       console.log('\n✅ Final Meaningful Data:')
+//       const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
+//       console.log(JSON.stringify(finalResponse, null, 2))
+//     }
+//     const finalResult =
+//       results.meaningfulResponses.length > 0
+//         ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
+//         : null
+
+//     impedance100kHzResults = finalResult
+
+//     return finalResult
+//   } catch (error) {
+//     console.error('Overall 100 kHz impedance query failed:', error)
+//     throw error
+//   }
+// }
+
 function parse100kHzImpedanceResponse(data) {
   // Validate response
   if (data[0] !== 0xaa || data[2] !== 0xb1) {
@@ -2632,7 +2785,531 @@ function isMeaningful100kHzResult(result) {
   return Object.values(result.segments).some((value) => value > 0)
 }
 
-async function case40_PhaseAngleDetailedQuery() {
+// ============================================================================
+// CASE 40A: LEG IMPEDANCE AT 50 kHz (4-Electrode)
+// ============================================================================
+export async function case40a_LegImpedance50kHz() {
+  try {
+    console.log('\n📡 Measuring Leg Impedance: 50 kHz (4-Electrode)')
+
+    // Stability check function
+    const isStableResponse = (responses) => {
+      if (responses.length < 5) return false
+
+      const lastFive = responses.slice(-5)
+      const phaseAngles = lastFive.map((r) => r.phaseAngle.value)
+      const impedanceValues = lastFive.map((r) => r.impedance.value)
+
+      const phaseAngleVariation = Math.max(...phaseAngles) - Math.min(...phaseAngles)
+      const impedanceVariation = Math.max(...impedanceValues) - Math.min(...impedanceValues)
+
+      const isStablePhaseAngle = phaseAngleVariation < 1.0
+      const isStableImpedance = impedanceVariation < 10.0
+
+      return isStablePhaseAngle && isStableImpedance
+    }
+
+    // Step 1: Stop current test
+    console.log('   Stopping previous measurement...')
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Step 2: Set impedance mode for 4-electrode legs at 50 kHz
+    console.log('   Setting 4-Electrode Legs mode at 50 kHz...')
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x02, 0x05, 0xEE])
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Query command
+    const queryCommand = [0x55, 0x05, 0xB1, 0x01, 0xF4]
+
+    // Track results
+    const results = {
+      attempts: 0,
+      meaningfulResponses: [],
+      zeroResponses: [],
+      errorResponses: [],
+      statusCodes: {}
+    }
+
+    console.log('   Starting measurement attempts...\n')
+
+    // Collect up to 50 attempts until stable
+    for (let attempt = 1; attempt <= 25; attempt++) {
+      results.attempts = attempt
+
+      try {
+        console.log(`   Attempt ${attempt}`)
+
+        const responseData = await sendBiaCommand(queryCommand, {
+          timeout: 5000,
+          verbose: false
+        })
+
+        // Handle variable response lengths (at least 13 bytes)
+        if (responseData && responseData.length >= 13) {
+          // Check if response is valid 4-electrode response
+          if (responseData[0] === 0xaa && responseData[2] === 0xb1) {
+            // Extract measurement status (byte 4)
+            const measurementStatus = responseData[4]
+
+            // Track status codes
+            if (!results.statusCodes[measurementStatus]) {
+              results.statusCodes[measurementStatus] = 0
+            }
+            results.statusCodes[measurementStatus]++
+
+            emitLegStatus(measurementStatus, {
+              attempt,
+              frequency: "50kHzLeg"
+            })
+            // Use ImprovedImpedanceStatusHandler
+            const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
+              measurementStatus,
+              attempt
+            )
+
+            if (statusResult.decision.shouldAccept) {
+              // Status 0x03: SUCCESS
+              const parsedResult = parse4Electrode50kHzImpedance(responseData)
+
+              if (parsedResult && parsedResult.impedance.value > 0) {
+                results.meaningfulResponses.push(parsedResult)
+                console.log(`${statusResult.message}`)
+                console.log(
+                  `         Phase Angle: ${parsedResult.phaseAngle.value.toFixed(1)}°, Impedance: ${parsedResult.impedance.value}Ω`
+                )
+
+                // Check for stable responses
+                if (isStableResponse(results.meaningfulResponses)) {
+                  console.log(`\n✅ Stable measurements detected after ${attempt} attempts!`)
+                  break
+                }
+              } else {
+                console.log('⚠️ Status success but impedance is 0')
+                results.zeroResponses.push({
+                  attempt,
+                  rawResponse: responseData,
+                  reason: 'Status success but impedance is 0',
+                  statusCode: measurementStatus
+                })
+              }
+            } else if (statusResult.decision.shouldWait) {
+              // Status 0x02: MEASURE
+              console.log(
+                `      ⏳ ${statusResult.message} (waiting ${statusResult.waitTime || 500}ms)`
+              )
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: 'Device still measuring (status 0x02)',
+                statusCode: measurementStatus
+              })
+              await new Promise((resolve) => setTimeout(resolve, statusResult.waitTime || 500))
+              continue
+            } else if (statusResult.decision.shouldRetry) {
+              // Status 0x04: ERROR_RANGER or 0x05: ERROR_REPEAT
+              console.log(`⚠️ ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                canRetry: statusResult.canRetry,
+                maxRetries: statusResult.maxRetries
+              })
+
+              if (!statusResult.decision.maxRetriesReached) {
+                const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
+                  measurementStatus,
+                  attempt,
+                  50
+                )
+
+                if (retryResult.shouldRetry) {
+                  console.log(`🔄 Retrying (attempt ${retryResult.nextAttempt})...`)
+                  continue
+                }
+              } else {
+                console.log(`❌ Max retries reached (${statusResult.maxRetries})`)
+              }
+            } else if (statusResult.decision.isCritical) {
+              // Status 0x01: CHECK_ELECTRODE
+              console.log(`\n❌ CRITICAL: ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                isCritical: true
+              })
+
+              if (statusResult.userMessage) {
+                console.log(`\n⚠️ ${statusResult.userMessage}`)
+              }
+
+              if (statusResult.solutions) {
+                console.log('\nRecommended Actions:')
+                statusResult.solutions.forEach((solution) => {
+                  console.log(`   • ${solution}`)
+                })
+              }
+
+              console.log('\n⛔ CRITICAL ERROR - Stopping leg measurement')
+              break
+            } else if (statusResult.decision.shouldAbort) {
+              // Status 0x06: USER_EXIT
+              console.log(`      ⏹️  ${statusResult.message}`)
+
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: statusResult.message,
+                statusCode: measurementStatus
+              })
+              break
+            } else {
+              // Unknown/unhandled status
+              console.log(`❓ Unhandled status: 0x${measurementStatus.toString(16).toUpperCase()}`)
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: `Unknown status: 0x${measurementStatus.toString(16)}`,
+                statusCode: measurementStatus
+              })
+            }
+          } else {
+            console.warn('⚠️ Invalid response format')
+            results.zeroResponses.push({
+              attempt,
+              rawResponse: responseData,
+              reason: 'Invalid response format'
+            })
+          }
+        } else if (responseData) {
+          console.warn(`⚠️ Unexpected response length: ${responseData.length} bytes`)
+          results.zeroResponses.push({
+            attempt,
+            rawResponse: responseData,
+            reason: 'Unexpected response length'
+          })
+        }
+
+        // Delay between attempts
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (queryError) {
+        console.error(`      ❌ Attempt ${attempt} failed: ${queryError.message}`)
+        results.errorResponses.push({
+          attempt,
+          error: queryError.message,
+          exception: true
+        })
+      }
+    }
+
+    // Display results
+    console.log('\n' + '='.repeat(70))
+    console.log('📊 LEG IMPEDANCE MEASUREMENT RESULTS (50 kHz)')
+    console.log('='.repeat(70))
+    console.log(`Total Attempts: ${results.attempts}`)
+    console.log(`Successful Readings: ${results.meaningfulResponses.length}`)
+    console.log(`Measuring/Waiting: ${results.zeroResponses.length}`)
+    console.log(`Errors: ${results.errorResponses.length}`)
+
+    if (results.meaningfulResponses.length > 0) {
+      const finalReading = results.meaningfulResponses[results.meaningfulResponses.length - 1]
+      console.log('\n✅ Final Leg Reading:')
+      console.log(`   Phase Angle: ${finalReading.phaseAngle.value.toFixed(1)}°`)
+      console.log(`   Impedance: ${finalReading.impedance.value}Ω`)
+
+      return {
+        success: true,
+        measurement: finalReading,
+        attempts: results.attempts,
+        allReadings: results.meaningfulResponses
+      }
+    } else {
+      console.log('\n❌ No successful leg readings received!')
+      return {
+        success: false,
+        error: 'No successful readings',
+        attempts: results.attempts,
+        errorDetails: results.errorResponses
+      }
+    }
+  } catch (error) {
+    console.error('❌ Leg impedance query failed:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+// ============================================================================
+// CASE 40B: ARM IMPEDANCE AT 50 kHz (4-Electrode)
+// ============================================================================
+export async function case40b_ArmImpedance50kHz() {
+  try {
+    console.log('\n📡 Measuring Arm Impedance: 50 kHz (4-Electrode)')
+
+    // Stability check function
+    const isStableResponse = (responses) => {
+      if (responses.length < 5) return false
+
+      const lastFive = responses.slice(-5)
+      const phaseAngles = lastFive.map((r) => r.phaseAngle.value)
+      const impedanceValues = lastFive.map((r) => r.impedance.value)
+
+      const phaseAngleVariation = Math.max(...phaseAngles) - Math.min(...phaseAngles)
+      const impedanceVariation = Math.max(...impedanceValues) - Math.min(...impedanceValues)
+
+      const isStablePhaseAngle = phaseAngleVariation < 1.0
+      const isStableImpedance = impedanceVariation < 10.0
+
+      return isStablePhaseAngle && isStableImpedance
+    }
+
+    // Step 1: Stop current test
+    console.log('   Stopping previous measurement...')
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x00, 0x00, 0xF5])
+    await new Promise((resolve) => setTimeout(resolve, 500))
+
+    // Step 2: Set impedance mode for 4-electrode arms at 50 kHz
+    console.log('   Setting 4-Electrode Arms mode at 50 kHz...')
+    await sendBiaCommand([0x55, 0x06, 0xB0, 0x03, 0x05, 0xED])
+    await new Promise((resolve) => setTimeout(resolve, 800))
+
+    // Query command
+    const queryCommand = [0x55, 0x05, 0xB1, 0x01, 0xF4]
+
+    // Track results
+    const results = {
+      attempts: 0,
+      meaningfulResponses: [],
+      zeroResponses: [],
+      errorResponses: [],
+      statusCodes: {}
+    }
+
+    console.log('   Starting measurement attempts...\n')
+
+    // Collect up to 50 attempts until stable
+    for (let attempt = 1; attempt <= 25; attempt++) {
+      results.attempts = attempt
+
+      try {
+        console.log(`   Attempt ${attempt}`)
+
+        const responseData = await sendBiaCommand(queryCommand, {
+          timeout: 5000,
+          verbose: false
+        })
+
+        // Handle variable response lengths (at least 13 bytes)
+        if (responseData && responseData.length >= 13) {
+          // Check if response is valid 4-electrode response
+          if (responseData[0] === 0xaa && responseData[2] === 0xb1) {
+            // Extract measurement status (byte 4)
+            const measurementStatus = responseData[4]
+
+            // Track status codes
+            if (!results.statusCodes[measurementStatus]) {
+              results.statusCodes[measurementStatus] = 0
+            }
+            results.statusCodes[measurementStatus]++
+
+            emitArmStatus(measurementStatus,{
+              frequency:"50khzArm",
+              attempt
+            })
+
+            // Use ImprovedImpedanceStatusHandler
+            const statusResult = ImprovedImpedanceStatusHandler.handleImpedanceStatus(
+              measurementStatus,
+              attempt
+            )
+
+            if (statusResult.decision.shouldAccept) {
+              // Status 0x03: SUCCESS
+              const parsedResult = parse4Electrode50kHzImpedance(responseData)
+
+              if (parsedResult && parsedResult.impedance.value > 0) {
+                results.meaningfulResponses.push(parsedResult)
+                console.log(`${statusResult.message}`)
+                console.log(
+                  `         Phase Angle: ${parsedResult.phaseAngle.value.toFixed(1)}°, Impedance: ${parsedResult.impedance.value}Ω`
+                )
+
+                // Check for stable responses
+                if (isStableResponse(results.meaningfulResponses)) {
+                  console.log(`\n✅ Stable measurements detected after ${attempt} attempts!`)
+                  break
+                }
+              } else {
+                console.log('⚠️ Status success but impedance is 0')
+                results.zeroResponses.push({
+                  attempt,
+                  rawResponse: responseData,
+                  reason: 'Status success but impedance is 0',
+                  statusCode: measurementStatus
+                })
+              }
+            } else if (statusResult.decision.shouldWait) {
+              // Status 0x02: MEASURE
+              console.log(
+                `      ⏳ ${statusResult.message} (waiting ${statusResult.waitTime || 500}ms)`
+              )
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: 'Device still measuring (status 0x02)',
+                statusCode: measurementStatus
+              })
+              await new Promise((resolve) => setTimeout(resolve, statusResult.waitTime || 500))
+              continue
+            } else if (statusResult.decision.shouldRetry) {
+              // Status 0x04: ERROR_RANGER or 0x05: ERROR_REPEAT
+              console.log(`⚠️ ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                canRetry: statusResult.canRetry,
+                maxRetries: statusResult.maxRetries
+              })
+
+              if (!statusResult.decision.maxRetriesReached) {
+                const retryResult = await ImprovedImpedanceStatusHandler.handleRetry(
+                  measurementStatus,
+                  attempt,
+                  50
+                )
+
+                if (retryResult.shouldRetry) {
+                  console.log(`🔄 Retrying (attempt ${retryResult.nextAttempt})...`)
+                  continue
+                }
+              } else {
+                console.log(`❌ Max retries reached (${statusResult.maxRetries})`)
+              }
+            } else if (statusResult.decision.isCritical) {
+              // Status 0x01: CHECK_ELECTRODE
+              console.log(`\n❌ CRITICAL: ${statusResult.message}`)
+
+              results.errorResponses.push({
+                attempt,
+                error: statusResult.message,
+                statusCode: measurementStatus,
+                isCritical: true
+              })
+
+              if (statusResult.userMessage) {
+                console.log(`\n⚠️ ${statusResult.userMessage}`)
+              }
+
+              if (statusResult.solutions) {
+                console.log('\nRecommended Actions:')
+                statusResult.solutions.forEach((solution) => {
+                  console.log(`   • ${solution}`)
+                })
+              }
+
+              console.log('\n⛔ CRITICAL ERROR - Stopping arm measurement')
+              break
+            } else if (statusResult.decision.shouldAbort) {
+              // Status 0x06: USER_EXIT
+              console.log(`      ⏹️  ${statusResult.message}`)
+
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: statusResult.message,
+                statusCode: measurementStatus
+              })
+              break
+            } else {
+              // Unknown/unhandled status
+              console.log(`❓ Unhandled status: 0x${measurementStatus.toString(16).toUpperCase()}`)
+              results.zeroResponses.push({
+                attempt,
+                rawResponse: responseData,
+                reason: `Unknown status: 0x${measurementStatus.toString(16)}`,
+                statusCode: measurementStatus
+              })
+            }
+          } else {
+            console.warn('⚠️ Invalid response format')
+            results.zeroResponses.push({
+              attempt,
+              rawResponse: responseData,
+              reason: 'Invalid response format'
+            })
+          }
+        } else if (responseData) {
+          console.warn(`⚠️ Unexpected response length: ${responseData.length} bytes`)
+          results.zeroResponses.push({
+            attempt,
+            rawResponse: responseData,
+            reason: 'Unexpected response length'
+          })
+        }
+
+        // Delay between attempts
+        await new Promise((resolve) => setTimeout(resolve, 500))
+      } catch (queryError) {
+        console.error(`      ❌ Attempt ${attempt} failed: ${queryError.message}`)
+        results.errorResponses.push({
+          attempt,
+          error: queryError.message,
+          exception: true
+        })
+      }
+    }
+
+    // Display results
+    console.log('\n' + '='.repeat(70))
+    console.log('📊 ARM IMPEDANCE MEASUREMENT RESULTS (50 kHz)')
+    console.log('='.repeat(70))
+    console.log(`Total Attempts: ${results.attempts}`)
+    console.log(`Successful Readings: ${results.meaningfulResponses.length}`)
+    console.log(`Measuring/Waiting: ${results.zeroResponses.length}`)
+    console.log(`Errors: ${results.errorResponses.length}`)
+
+    if (results.meaningfulResponses.length > 0) {
+      const finalReading = results.meaningfulResponses[results.meaningfulResponses.length - 1]
+      console.log('\n✅ Final Arm Reading:')
+      console.log(`   Phase Angle: ${finalReading.phaseAngle.value.toFixed(1)}°`)
+      console.log(`   Impedance: ${finalReading.impedance.value}Ω`)
+
+      return {
+        success: true,
+        measurement: finalReading,
+        attempts: results.attempts,
+        allReadings: results.meaningfulResponses
+      }
+    } else {
+      console.log('\n❌ No successful arm readings received!')
+      return {
+        success: false,
+        error: 'No successful readings',
+        attempts: results.attempts,
+        errorDetails: results.errorResponses
+      }
+    }
+  } catch (error) {
+    console.error('❌ Arm impedance query failed:', error)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
+// ============================================================================
+// CASE 40: COMBINED PHASE ANGLE QUERY (ORIGINAL - for backward compatibility)
+// ============================================================================
+export async function case40_PhaseAngleDetailedQuery() {
   try {
     // Measurement modes for 50 kHz
     const modes = [
@@ -2686,6 +3363,7 @@ async function case40_PhaseAngleDetailedQuery() {
 
       // Step 1: Stop current test
       console.log('   Stopping previous measurement...')
+      // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -2695,8 +3373,8 @@ async function case40_PhaseAngleDetailedQuery() {
 
       await new Promise((resolve) => setTimeout(resolve, 800))
 
+      // const queryCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
       const queryCommand = [0x55, 0x05, 0xb1, 0x01, 0xf4]
-
       // Track results
       const results = {
         attempts: 0,
@@ -2815,7 +3493,7 @@ async function case40_PhaseAngleDetailedQuery() {
                   )
 
                   if (retryResult.shouldRetry) {
-                    console.log(`      ↻ Retrying (attempt ${retryResult.nextAttempt})...`)
+                    console.log(` Retrying (attempt ${retryResult.nextAttempt})...`)
                     continue // Continue loop to retry
                   }
                 } else {
@@ -3113,7 +3791,7 @@ export async function case41_WeightMeasurement() {
     // ====================================================================
     // RESULTS STORAGE
     // ====================================================================
-    emitWeightStatus(0x00) // INFO / START
+    // emitWeightStatus(0x00) // INFO / START
     const weightResults = {
       attempts: 0,
       measurements: [],
@@ -3179,11 +3857,16 @@ export async function case41_WeightMeasurement() {
     // SETUP COMMANDS
     // ====================================================================
 
+    // const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
+    // const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
     const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
+
+    // Weight query command
     const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
 
     // Stop current test
     try {
+      // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
       await new Promise((resolve) => setTimeout(resolve, 500))
     } catch (error) {

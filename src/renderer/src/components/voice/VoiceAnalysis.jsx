@@ -14,7 +14,7 @@ const VoiceCapture = () => {
     const user = useSelector((state) => state.common.user);
     const sessionId = useSelector((state) => state.common.sessionId);
 
-    const [timeLeft, setTimeLeft] = useState(50);
+    const [timeLeft, setTimeLeft] = useState(30);
     const [isActive, setIsActive] = useState(false);
     const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
     const [isAudioPlaying, setIsAudioPlaying] = useState(false);
@@ -154,7 +154,7 @@ const VoiceCapture = () => {
 
                 // Get data from Redux store and config
                 const kioskId = getKioskId();
-                const userId = user?.data?.id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Get from user object
+                const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
 
                 setStatus("processing");
                 const request = {
@@ -169,20 +169,23 @@ const VoiceCapture = () => {
                 try {
                     const result = await window.api.saveVoiceBuffer(request);
                     console.log("result", result);
-                    if (result.success) {
-                        setStatus("success");
-                        console.log("Voice analysis success:", result);
-                        stopAudio();
-                        // Navigate to BIA result page
-                        await new Promise((r) => setTimeout(r, 500));
-                        navigate("/bia/result");
-                    } else {
-                        setStatus("error");
-                        console.error("Voice analysis failed:", result.error);
-                    }
+                   if (result.success) {
+    setStatus("success");
+    stopAudio();
+    await new Promise((r) => setTimeout(r, 500));
+    navigate("/bia/result");
+} else {
+    setStatus("error");
+    console.error("Voice analysis failed:", result.error);
+
+    // 👇 MOVE TO RESULT PAGE ON ERROR
+    await new Promise((r) => setTimeout(r, 500));
+    navigate("/bia/result");
+}
                 } catch (err) {
                     setStatus("error");
                     console.error("IPC error:", err);
+                     navigate("/bia/result");
                 }
 
                 // Stop all tracks
@@ -202,7 +205,7 @@ const VoiceCapture = () => {
 
     const handleStart = () => {
         if (status === "recording" || status === "processing") return;
-        setTimeLeft(50);
+        setTimeLeft(30);
         startRecording();
     };
 
@@ -286,7 +289,7 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 50)}
+                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft /30)}
                                 transform="rotate(-90 202 202)"
                                 style={{ transition: 'stroke-dashoffset 1s linear' }}
                             />
