@@ -42,7 +42,7 @@ const VideoCaptureScreen = () => {
 
         // Start measurements in background (non-blocking)
         // Use 20-second timeout to prevent infinite waiting if user not on sensors
-        const MEASUREMENT_TIMEOUT = 10000; // 0 seconds
+        const MEASUREMENT_TIMEOUT = 6000; // 0 seconds
 
         const measurementPromise = (async () => {
           try {

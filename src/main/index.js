@@ -403,7 +403,7 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
   try {
     const buffer = Buffer.from(request.arrayBuffer)
     const bufferId = crypto.randomUUID()
-    const fileName = `${bufferId}.webm`
+    const fileName = `${bufferId}.wav`
     const shmPath = `/dev/shm/${fileName}`
 
     // Write file to /dev/shm
