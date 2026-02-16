@@ -437,6 +437,82 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
   }
 })
 
+ipcMain.handle('save-recording', async (event, request) => {
+  console.log('[MAIN] save-recording called', {
+    filename: request.filename,
+    size: request.arrayBuffer.byteLength,
+    session_id: request.session_id,
+    user_id: request.user_id
+  })
+
+  try {
+    const buffer = Buffer.from(request.arrayBuffer)
+    
+    // Get user's home directory
+    const os = require('os')
+    const homeDir = os.homedir()
+    
+    // Create directory structure: ~/Documents/suhi-recordings/YYYY-MM-DD/
+    const date = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    const recordingsDir = `${homeDir}/Documents/suhi-recordings/${date}`
+    
+    // Ensure directory exists
+    if (!fs.existsSync(recordingsDir)) {
+      fs.mkdirSync(recordingsDir, { recursive: true })
+      console.log(`[MAIN] Created directory: ${recordingsDir}`)
+    }
+
+    const filePath = `${recordingsDir}/${request.filename}`
+    
+    // Write video file
+    await fs.promises.writeFile(filePath, buffer)
+    console.log(`[MAIN] Recording saved to: ${filePath}`)
+    console.log(`[MAIN] File size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB`)
+
+    // Save phase states metadata to JSON file
+    if (request.phase_states) {
+      const metadataPath = filePath.replace('.webm', '_metadata.json')
+      const metadata = {
+        session_id: request.session_id,
+        user_id: request.user_id,
+        filename: request.filename,
+        file_size: buffer.length,
+        recorded_at: new Date().toISOString(),
+        phase_states: request.phase_states
+      }
+      await fs.promises.writeFile(metadataPath, JSON.stringify(metadata, null, 2))
+      console.log(`[MAIN] Metadata saved to: ${metadataPath}`)
+    }
+
+    // Optional: Send metadata to backend API
+    // try {
+    //   await axios.post('http://127.0.0.1:8000/bia/recordings', {
+    //     session_id: request.session_id,
+    //     user_id: request.user_id,
+    //     filename: request.filename,
+    //     file_path: filePath,
+    //     file_size: buffer.length,
+    //     recorded_at: new Date().toISOString(),
+    //     phase_states: request.phase_states || null
+    //   })
+    //   console.log('[MAIN] Recording metadata sent to API')
+    // } catch (apiError) {
+    //   console.warn('[MAIN] Failed to send metadata to API:', apiError.message)
+    //   // Don't fail if API is down - file is already saved locally
+    // }
+
+    return { 
+      success: true, 
+      filePath: filePath,
+      size: buffer.length 
+    }
+
+  } catch (error) {
+    console.error('[MAIN] save-recording error:', error)
+    return { success: false, error: error.message }
+  }
+})
+
 //case41_WeightMeasurement
 function createWindow() {
   // Create the browser window.

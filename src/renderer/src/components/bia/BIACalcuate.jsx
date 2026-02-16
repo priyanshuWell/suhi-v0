@@ -47,6 +47,27 @@ export default function BIACalculate({ user, onComplete }) {
     step: null,
   });
 
+  // Recording configuration
+  const ENABLE_RECORDING = true; // Set to false to disable recording
+
+  // Recording state
+  const recordingRef = useRef({
+    recorder: null,
+    stream: null,
+    chunks: [],
+    sessionId: null,
+    phaseStates: {
+      leg: { status: 'pending', attempts: 0, error: null },
+      weight: { status: 'pending', attempts: 0, error: null },
+      height: { status: 'pending', attempts: 0, error: null },
+      arm: { status: 'pending', attempts: 0, error: null },
+      impedance20: { status: 'pending', attempts: 0, error: null },
+      impedance100: { status: 'pending', attempts: 0, error: null },
+      calculation: { status: 'pending', error: null }
+    }
+  });
+
+
   // Error messages map
   const ERROR_MESSAGES = {
     legImpedance_noWeight: "Please step on the platform barefoot",
@@ -344,6 +365,147 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   /* =======================
+     RECORDING FUNCTIONS
+  ======================= */
+  const startRecording = async () => {
+    // Check feature flag
+    if (!ENABLE_RECORDING) {
+      console.log('[RECORDING] Recording disabled by feature flag');
+      return false;
+    }
+
+    try {
+      console.log('[RECORDING] Requesting camera access...');
+
+      // Request camera and microphone access silently
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
+        audio: true
+      });
+
+      console.log('[RECORDING] Camera access granted');
+
+      // Check if MediaRecorder is supported
+      if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+        console.warn('[RECORDING] VP9 codec not supported, trying VP8');
+      }
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+        ? 'video/webm;codecs=vp9'
+        : 'video/webm;codecs=vp8';
+
+      // Create MediaRecorder
+      const recorder = new MediaRecorder(stream, {
+        mimeType: mimeType,
+        videoBitsPerSecond: 2500000 // 2.5 Mbps
+      });
+
+      // Store chunks as they're available
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordingRef.current.chunks.push(event.data);
+          console.log(`[RECORDING] Chunk received: ${event.data.size} bytes`);
+        }
+      };
+
+      // Handle recording stop
+      recorder.onstop = async () => {
+        console.log('[RECORDING] Recording stopped, saving file...');
+        await saveRecording();
+      };
+
+      // Handle errors
+      recorder.onerror = (event) => {
+        console.error('[RECORDING] MediaRecorder error:', event.error);
+      };
+
+      // Start recording (capture in 1-second chunks)
+      recorder.start(1000);
+
+      recordingRef.current.recorder = recorder;
+      recordingRef.current.stream = stream;
+
+      console.log('[RECORDING] Recording started successfully');
+      return true;
+
+    } catch (error) {
+      console.error('[RECORDING] Failed to start recording:', error);
+      // Don't block BIA flow if recording fails
+      return false;
+    }
+  };
+
+  const stopRecording = () => {
+    if (recordingRef.current.recorder &&
+      recordingRef.current.recorder.state !== 'inactive') {
+      console.log('[RECORDING] Stopping recording...');
+      recordingRef.current.recorder.stop();
+
+      // Stop all tracks to release camera
+      if (recordingRef.current.stream) {
+        recordingRef.current.stream.getTracks().forEach(track => {
+          track.stop();
+          console.log(`[RECORDING] Stopped track: ${track.kind}`);
+        });
+      }
+    } else {
+      console.log('[RECORDING] No active recording to stop');
+    }
+  };
+
+  const saveRecording = async () => {
+    const chunks = recordingRef.current.chunks;
+
+    if (chunks.length === 0) {
+      console.warn('[RECORDING] No chunks to save');
+      return;
+    }
+
+    try {
+      // Create blob from chunks
+      const blob = new Blob(chunks, { type: 'video/webm' });
+      console.log(`[RECORDING] Created blob: ${blob.size} bytes (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
+
+      // Convert blob to ArrayBuffer
+      const arrayBuffer = await blob.arrayBuffer();
+
+      // Use existing session_id or generate new one
+      const sessionId = recordingRef.current.sessionId || crypto.randomUUID();
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `bia_${sessionId}_${timestamp}.webm`;
+
+      console.log('[RECORDING] Sending recording to main process...');
+      console.log('[RECORDING] Phase states:', recordingRef.current.phaseStates);
+
+      // Send to main process to save
+      const result = await window.api.saveRecording({
+        arrayBuffer: arrayBuffer,
+        filename: filename,
+        session_id: sessionId,
+        user_id: storeUser?.data?.user_id || 'unknown',
+        phase_states: recordingRef.current.phaseStates // Include phase tracking
+      });
+
+      if (result.success) {
+        console.log('[RECORDING] Recording saved successfully:', result.filePath);
+      } else {
+        console.error('[RECORDING] Failed to save recording:', result.error);
+      }
+
+    } catch (error) {
+      console.error('[RECORDING] Error saving recording:', error);
+    } finally {
+      // Clear chunks
+      recordingRef.current.chunks = [];
+    }
+  };
+
+
+  /* =======================
      MEASUREMENT FUNCTIONS
   ======================= */
   const measureWeightWrapper = async () => {
@@ -471,6 +633,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
       return;
@@ -482,9 +645,11 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
 
     try {
+      updatePhaseState('leg', 'in_progress');
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
+      updatePhaseState('leg', 'success');
       await sleep(800);
 
       // Success - proceed to Phase 2
@@ -668,6 +833,9 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Generated sessionId:", sessionId);
     dispatch(setSessionId(sessionId));
 
+    // Store session ID in recording ref for filename
+    recordingRef.current.sessionId = sessionId;
+
     console.log("[BIA DEBUG] Calling calculateBIA with params:", {
       height: resultsRef.current.height.value,
       weight: resultsRef.current.weight.value,
@@ -709,6 +877,10 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] Results saved to Redux store");
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
       await sleep(3000);
+
+      // ✅ STOP RECORDING ON SUCCESS
+      stopRecording();
+
       // Clear timeouts
       clearAllTimeouts();
       setIsComplete(true);
@@ -716,6 +888,10 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
+
+      // ✅ STOP RECORDING ON ERROR
+      stopRecording();
+
       clearAllTimeouts();
       navigate("/screen1");
     }
@@ -763,6 +939,14 @@ export default function BIACalculate({ user, onComplete }) {
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
     console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
 
+    // ✅ START RECORDING HERE
+    const recordingStarted = await startRecording();
+    if (recordingStarted) {
+      console.log('[BIA DEBUG] Recording started successfully');
+    } else {
+      console.warn('[BIA DEBUG] Recording failed to start, continuing without recording');
+    }
+
     try {
       // Connect BIA port
       console.log("[BIA DEBUG] Connecting BIA port:", ports[2]?.path);
@@ -775,10 +959,10 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (e) {
       console.error("[BIA DEBUG] Flow error:", e.message);
-      // if (!e.message.includes("timeout")) {
-      //   clearAllTimeouts();
-      //   navigate("/screen1");
-      // }
+
+      // ✅ STOP RECORDING ON ERROR
+      stopRecording();
+
       navigate("/screen1");
     } finally {
       setIsRunning(false);
