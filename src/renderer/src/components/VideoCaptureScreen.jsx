@@ -41,6 +41,9 @@ const VideoCaptureScreen = () => {
         setStatus(`Recording for ${videoDuration / 1000} seconds...`);
 
         // Start measurements in background (non-blocking)
+        // Use 20-second timeout to prevent infinite waiting if user not on sensors
+        const MEASUREMENT_TIMEOUT = 10000; // 0 seconds
+
         const measurementPromise = (async () => {
           try {
             console.log('[VIDEO CAPTURE] Starting measurements in background...');
@@ -52,7 +55,7 @@ const VideoCaptureScreen = () => {
               return null;
             }
 
-            const measurements = await measureWeightAndHeight(ports);
+            const measurements = await measureWeightAndHeight(ports, MEASUREMENT_TIMEOUT);
             console.log('[VIDEO CAPTURE] Measurements completed:', measurements);
             return measurements;
           } catch (error) {

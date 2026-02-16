@@ -9,13 +9,33 @@
 // Track connected ports to prevent conflicts
 let connectedPorts = new Set();
 
+// Default timeout for measurements (30 seconds)
+const DEFAULT_MEASUREMENT_TIMEOUT = 30000;
+
+/**
+ * Wraps a promise with a timeout
+ * @param {Promise} promise - Promise to wrap
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @param {string} errorMessage - Error message to throw on timeout
+ * @returns {Promise} Promise that rejects on timeout
+ */
+function withTimeout(promise, timeoutMs, errorMessage) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    )
+  ]);
+}
+
 /**
  * Measure weight using BIA device's built-in sensor
  * @param {string} portPath - Path to BIA port
+ * @param {number} timeoutMs - Optional timeout in milliseconds (default: 30s)
  * @returns {Promise<Object>} { weight: number, unit: 'kg' }
  */
-export async function measureWeight(portPath) {
-  console.log('[MEASUREMENT] Starting weight measurement...');
+export async function measureWeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
+  console.log(`[MEASUREMENT] Starting weight measurement with ${timeoutMs}ms timeout...`);
   
   if (!portPath) {
     throw new Error('Weight port path is required');
@@ -25,7 +45,13 @@ export async function measureWeight(portPath) {
     // Connect to BIA port
     await connectBiaPort(portPath);
     
-    const res = await window.api.startWeightMeasurement();
+    // Wrap measurement with timeout
+    const res = await withTimeout(
+      window.api.startWeightMeasurement(),
+      timeoutMs,
+      'Weight measurement timeout - user may not be standing on scale'
+    );
+    
     console.log('[MEASUREMENT] Weight result:', res);
 
     if (!res?.weight) {
@@ -55,10 +81,11 @@ export async function measureWeight(portPath) {
  * Measure height using height sensor
  * Automatically handles port connection and disconnection
  * @param {string} portPath - Path to height sensor port (e.g., ports[0]?.path)
+ * @param {number} timeoutMs - Optional timeout in milliseconds (default: 30s)
  * @returns {Promise<Object>} { height: number, unit: 'cm' }
  */
-export async function measureHeight(portPath) {
-  console.log('[MEASUREMENT] Starting height measurement...');
+export async function measureHeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
+  console.log(`[MEASUREMENT] Starting height measurement with ${timeoutMs}ms timeout...`);
   
   if (!portPath) {
     throw new Error('Height port path is required');
@@ -68,8 +95,13 @@ export async function measureHeight(portPath) {
     // Connect to height port
     await connectHeightPort(portPath);
     
-    // Measure height
-    const res = await window.api.startHeightMeasurement();
+    // Wrap measurement with timeout
+    const res = await withTimeout(
+      window.api.startHeightMeasurement(),
+      timeoutMs,
+      'Height measurement timeout - user may not be standing on sensor'
+    );
+    
     console.log('[MEASUREMENT] Height result:', res);
 
     if (!res?.height) {
@@ -206,18 +238,19 @@ export function isPortConnected(portPath) {
 /**
  * Measure both weight and height in parallel
  * @param {Array} ports - Array of available ports
+ * @param {number} timeoutMs - Optional timeout in milliseconds for each measurement (default: 30s)
  * @returns {Promise<Object>} { weight: number|null, height: number|null, errors: Object }
  */
-export async function measureWeightAndHeight(ports) {
+export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
   const heightPortPath = ports[0]?.path;
   const weightPortPath = ports[2]?.path;
   
-  console.log('[MEASUREMENT] Starting parallel weight and height measurement...');
+  console.log(`[MEASUREMENT] Starting parallel weight and height measurement with ${timeoutMs}ms timeout...`);
   
   // Run measurements in parallel using Promise.allSettled
   const [weightResult, heightResult] = await Promise.allSettled([
-    weightPortPath ? measureWeight(weightPortPath) : Promise.reject(new Error('No weight port available')),
-    heightPortPath ? measureHeight(heightPortPath) : Promise.reject(new Error('No height port available'))
+    weightPortPath ? measureWeight(weightPortPath, timeoutMs) : Promise.reject(new Error('No weight port available')),
+    heightPortPath ? measureHeight(heightPortPath, timeoutMs) : Promise.reject(new Error('No height port available'))
   ]);
   
   const result = {
