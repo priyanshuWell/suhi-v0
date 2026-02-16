@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { electronAPI } from "@electron-toolkit/preload"
 import { IpcEventChannel } from "./ipcEventChannel"
+import fs from 'fs';
+import path from "path";
 // Event handler
 const heightErrorChannel = new IpcEventChannel("height:error")
 const heightStatusChannel = new IpcEventChannel("height:status")
@@ -36,7 +38,19 @@ const api = {
   onLegError: (callback) => legErrorChannel.subscribe(callback),
   onLegStatus: (callback) => legStatusChannel.subscribe(callback),
   onArmError: (callback) => armErrorChannel.subscribe(callback),
-  onArmStatus: (callback) => armStatusChannel.subscribe(callback)
+  onArmStatus: (callback) => armStatusChannel.subscribe(callback),
+  disconnectHeightPort: ()=>ipcRenderer.invoke('disconnect-heightPort'),
+    disconnectBiaPort: ()=>ipcRenderer.invoke('disconnect-biaPort'),
+  blobToBuffer: async (blob) =>{
+    const arrayBuffer = await blob.arrayBuffer();
+    const base = Buffer.from(arrayBuffer).toString('base64');
+    // const filepath = path.join(process.cwd(), 'video_base64.txt');
+    // fs.writeFileSync(filepath,base,'utf8');
+    // return {
+    //   scuess:true
+    // }
+    return base;
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -45,13 +45,13 @@ const VideoCaptureScreen = () => {
           try {
             console.log('[VIDEO CAPTURE] Starting measurements during recording...');
             const ports = await window.api?.getPorts?.();
-
+            console.log(ports)
             if (!ports || ports.length < 1) {
               console.warn('[VIDEO CAPTURE] No ports available for measurements');
               return null;
             }
 
-            const measurements = await measureWeightAndHeight(ports[0]?.path);
+            const measurements = await measureWeightAndHeight(ports);
             console.log('[VIDEO CAPTURE] Measurements completed:', measurements);
             return measurements;
           } catch (error) {

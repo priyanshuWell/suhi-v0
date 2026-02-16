@@ -17,6 +17,8 @@ export async function measureWeight() {
   console.log('[MEASUREMENT] Starting weight measurement...');
   
   try {
+     //await connectBiaPort(weightPortPath);
+    
     const res = await window.api.startWeightMeasurement();
     console.log('[MEASUREMENT] Weight result:', res);
 
@@ -27,7 +29,7 @@ export async function measureWeight() {
 
     const weightValue = Number(res.weight);
     console.log(`[MEASUREMENT] Weight measured: ${weightValue} kg`);
-
+      // await disconnectBiaPort(weightPortPath)
     return {
       weight: weightValue,
       unit: 'kg'
@@ -103,6 +105,21 @@ export async function connectHeightPort(portPath) {
   console.log('[MEASUREMENT] Height port connected successfully');
 }
 
+export async function connectBiaPort(portPath) {
+  if (!portPath) {
+    throw new Error('Port path is required');
+  }
+
+  if (connectedPorts.has(portPath)) {
+    console.log('[MEASUREMENT] Port already connected:', portPath);
+    return;
+  }
+
+  console.log('[MEASUREMENT] Connecting to height port:', portPath);
+  await window.api.connectBiaPort(portPath);
+  connectedPorts.add(portPath);
+  console.log('[MEASUREMENT] Height port connected successfully');
+}
 /**
  * Disconnect from height sensor port
  * @param {string} portPath - Path to height sensor port
@@ -136,6 +153,35 @@ export async function disconnectHeightPort(portPath) {
     connectedPorts.delete(portPath);
   }
 }
+export async function disconnectBiaPort(portPath) {
+  if (!portPath) {
+    console.log('[MEASUREMENT] No port path provided for disconnect');
+    return;
+  }
+
+  if (!connectedPorts.has(portPath)) {
+    console.log('[MEASUREMENT] Port not connected, skipping disconnect:', portPath);
+    return;
+  }
+
+  console.log('[MEASUREMENT] Disconnecting bia port:', portPath);
+  
+  try {
+    // Call disconnect API
+    if (window.api.disconnectBiaPort) {
+      const result = await window.api.disconnectBiaPort();
+      if (result?.success) {
+        console.log('[MEASUREMENT] weight port disconnected successfully');
+      }
+    }
+    
+    connectedPorts.delete(portPath);
+  } catch (error) {
+    console.error('[MEASUREMENT] Error disconnecting port:', error);
+    // Remove from tracking even if disconnect fails
+    connectedPorts.delete(portPath);
+  }
+}
 
 /**
  * Check if a port is currently connected
@@ -151,13 +197,19 @@ export function isPortConnected(portPath) {
  * @param {string} heightPortPath - Path to height sensor port
  * @returns {Promise<Object>} { weight: number, height: number }
  */
-export async function measureWeightAndHeight(heightPortPath) {
+export async function measureWeightAndHeight(ports) {
+  const heightPortPath = ports[0].path;
+  const weigthPortPath =  ports[2].path;
+  // await window.api.connectBiaPort(heightPortPath)
+  await connectBiaPort(weigthPortPath)
   console.log('[MEASUREMENT] Starting weight and height measurement...');
   
   try {
     // Measure weight first
     const weightResult = await measureWeight();
-    
+    console.log("weight port is going to disconnect")
+    await disconnectBiaPort(weigthPortPath)
+    console.log("weight disconnect")
     // Small delay between measurements
     await new Promise(resolve => setTimeout(resolve, 500));
     
