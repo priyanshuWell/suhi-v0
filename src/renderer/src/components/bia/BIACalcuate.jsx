@@ -48,7 +48,7 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   // Recording configuration
-  const ENABLE_RECORDING = true; // Set to false to disable recording
+  const ENABLE_RECORDING = false; // Set to false to disable recording
 
   // Recording state
   const recordingRef = useRef({

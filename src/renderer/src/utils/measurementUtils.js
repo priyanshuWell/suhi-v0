@@ -11,13 +11,19 @@ let connectedPorts = new Set();
 
 /**
  * Measure weight using BIA device's built-in sensor
+ * @param {string} portPath - Path to BIA port
  * @returns {Promise<Object>} { weight: number, unit: 'kg' }
  */
-export async function measureWeight() {
+export async function measureWeight(portPath) {
   console.log('[MEASUREMENT] Starting weight measurement...');
   
+  if (!portPath) {
+    throw new Error('Weight port path is required');
+  }
+
   try {
-     //await connectBiaPort(weightPortPath);
+    // Connect to BIA port
+    await connectBiaPort(portPath);
     
     const res = await window.api.startWeightMeasurement();
     console.log('[MEASUREMENT] Weight result:', res);
@@ -29,13 +35,18 @@ export async function measureWeight() {
 
     const weightValue = Number(res.weight);
     console.log(`[MEASUREMENT] Weight measured: ${weightValue} kg`);
-      // await disconnectBiaPort(weightPortPath)
+    
+    // Disconnect port after successful measurement
+    await disconnectBiaPort(portPath);
+    
     return {
       weight: weightValue,
       unit: 'kg'
     };
   } catch (error) {
     console.error('[MEASUREMENT] Weight measurement error:', error);
+    // Ensure port is disconnected even on error
+    await disconnectBiaPort(portPath);
     throw error;
   }
 }
@@ -193,37 +204,48 @@ export function isPortConnected(portPath) {
 }
 
 /**
- * Measure both weight and height
- * @param {string} heightPortPath - Path to height sensor port
- * @returns {Promise<Object>} { weight: number, height: number }
+ * Measure both weight and height in parallel
+ * @param {Array} ports - Array of available ports
+ * @returns {Promise<Object>} { weight: number|null, height: number|null, errors: Object }
  */
 export async function measureWeightAndHeight(ports) {
-  const heightPortPath = ports[0].path;
-  const weigthPortPath =  ports[2].path;
-  // await window.api.connectBiaPort(heightPortPath)
-  await connectBiaPort(weigthPortPath)
-  console.log('[MEASUREMENT] Starting weight and height measurement...');
+  const heightPortPath = ports[0]?.path;
+  const weightPortPath = ports[2]?.path;
   
-  try {
-    // Measure weight first
-    const weightResult = await measureWeight();
-    console.log("weight port is going to disconnect")
-    await disconnectBiaPort(weigthPortPath)
-    console.log("weight disconnect")
-    // Small delay between measurements
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    // Measure height
-    const heightResult = await measureHeight(heightPortPath);
-    
-    return {
-      weight: weightResult.weight,
-      height: heightResult.height
-    };
-  } catch (error) {
-    console.error('[MEASUREMENT] Combined measurement error:', error);
-    throw error;
+  console.log('[MEASUREMENT] Starting parallel weight and height measurement...');
+  
+  // Run measurements in parallel using Promise.allSettled
+  const [weightResult, heightResult] = await Promise.allSettled([
+    weightPortPath ? measureWeight(weightPortPath) : Promise.reject(new Error('No weight port available')),
+    heightPortPath ? measureHeight(heightPortPath) : Promise.reject(new Error('No height port available'))
+  ]);
+  
+  const result = {
+    weight: null,
+    height: null,
+    errors: {}
+  };
+  
+  // Process weight result
+  if (weightResult.status === 'fulfilled') {
+    result.weight = weightResult.value.weight;
+    console.log('[MEASUREMENT] Weight measurement succeeded:', result.weight);
+  } else {
+    result.errors.weight = weightResult.reason?.message || 'Weight measurement failed';
+    console.error('[MEASUREMENT] Weight measurement failed:', result.errors.weight);
   }
+  
+  // Process height result
+  if (heightResult.status === 'fulfilled') {
+    result.height = heightResult.value.height;
+    console.log('[MEASUREMENT] Height measurement succeeded:', result.height);
+  } else {
+    result.errors.height = heightResult.reason?.message || 'Height measurement failed';
+    console.error('[MEASUREMENT] Height measurement failed:', result.errors.height);
+  }
+  
+  console.log('[MEASUREMENT] Parallel measurement completed:', result);
+  return result;
 }
 
 /**

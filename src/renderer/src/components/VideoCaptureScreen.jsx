@@ -40,12 +40,13 @@ const VideoCaptureScreen = () => {
 
         setStatus(`Recording for ${videoDuration / 1000} seconds...`);
 
-        // Start measurements in parallel with video recording
+        // Start measurements in background (non-blocking)
         const measurementPromise = (async () => {
           try {
-            console.log('[VIDEO CAPTURE] Starting measurements during recording...');
+            console.log('[VIDEO CAPTURE] Starting measurements in background...');
             const ports = await window.api?.getPorts?.();
-            console.log(ports)
+            console.log('[VIDEO CAPTURE] Available ports:', ports);
+
             if (!ports || ports.length < 1) {
               console.warn('[VIDEO CAPTURE] No ports available for measurements');
               return null;
@@ -55,17 +56,13 @@ const VideoCaptureScreen = () => {
             console.log('[VIDEO CAPTURE] Measurements completed:', measurements);
             return measurements;
           } catch (error) {
-            console.error('[VIDEO CAPTURE] Measurement error during recording:', error);
+            console.error('[VIDEO CAPTURE] Measurement error:', error);
             return null;
           }
         })();
 
         // Record video
         const recordings = await recordFromOpenCameras(videoDuration);
-
-        // Wait for measurements to complete (if still running)
-        const measurements = await measurementPromise;
-        measurementsRef.current = measurements;
         console.log("recordings", recordings);
 
         if (!recordings || recordings.length === 0) {
@@ -134,18 +131,32 @@ const VideoCaptureScreen = () => {
         setIsVerify(true);
         stopAudio();
 
-        // Store measurements that were taken during recording
-        if (measurementsRef.current) {
-          console.log('[VIDEO CAPTURE] Storing measurements from recording:', measurementsRef.current);
-          storeFptMeasurements(
-            dispatch,
-            measurementsRef.current.weight,
-            measurementsRef.current.height
-          );
-          setStatus("Measurements saved!");
-        } else {
-          console.warn('[VIDEO CAPTURE] No measurements available from recording');
-        }
+        // Wait for measurements to complete in background (non-blocking for FPT)
+        // This happens after FPT succeeds, so measurements don't block the flow
+        measurementPromise.then((measurements) => {
+          if (measurements) {
+            console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
+
+            // Store measurements even if some failed
+            if (measurements.weight || measurements.height) {
+              storeFptMeasurements(
+                dispatch,
+                measurements.weight,
+                measurements.height
+              );
+              console.log('[VIDEO CAPTURE] Measurements saved!');
+            }
+
+            // Log any errors
+            if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+              console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
+            }
+          } else {
+            console.warn('[VIDEO CAPTURE] No measurements available');
+          }
+        }).catch((error) => {
+          console.error('[VIDEO CAPTURE] Error storing measurements:', error);
+        });
 
         await new Promise((r) => setTimeout(r, 500));
         navigate("/verified");
