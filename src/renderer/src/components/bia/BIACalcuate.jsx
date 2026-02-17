@@ -27,7 +27,9 @@ export default function BIACalculate({ user, onComplete }) {
   const resultsRef = useRef({
     legImpedance: null,
     weight: null,
+    preWeight: null,
     height: null,
+    preHeight: null,
     armImpedance: null,
     impedance: { k20: null, k100: null }
   });
@@ -518,6 +520,27 @@ export default function BIACalculate({ user, onComplete }) {
   //     throw error;
   //   }
   // };
+  const measurePreliminaryWeight = async () => {
+    console.log("[BIA DEBUG] Starting weight measurement...");
+    // setCurrentStatus("Measuring your weight, please stand still!");
+    const res = await window.api.startWeightMeasurement();
+    console.log("[BIA DEBUG] Weight result:", res);
+
+    // if (!res?.weight) {
+    //   console.error("[BIA DEBUG] Weight measurement failed - no weight data");
+    //   throw new Error("Weight failed");
+    // }
+    storePreliminaryMeasurements(dispatch, res.weight, null);
+
+    resultsRef.current.preWeight = {
+      value: Number(res.weight),
+      unit: "kg"
+    };
+    // console.log(`[BIA DEBUG] Weight stored: ${res.weight} kg`);
+    // dispatch(setWeight(resultsRef.current.preWeight?.value));
+    return res;
+  };
+
   const measureWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!");
@@ -528,7 +551,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error("[BIA DEBUG] Weight measurement failed - no weight data");
       throw new Error("Weight failed");
     }
-    storePreliminaryMeasurements(dispatch, res.weight, null);
+    // storePreliminaryMeasurements(dispatch, res.weight, null);
 
     resultsRef.current.weight = {
       value: Number(res.weight),
@@ -542,32 +565,51 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 
-  const measureHeightWrapper = async () => {
+  // const measureHeightWrapper = async () => {
+  //   console.log("[BIA DEBUG] Starting height measurement...");
+
+  //   if (!ports[0]?.path) {
+  //     throw new Error("Height port not available");
+  //   }
+
+  //   try {
+  //     const result = await measureHeight();
+
+  //     resultsRef.current.height = {
+  //       value: result.height,
+  //       unit: result.unit
+  //     };
+  //     console.log(`[BIA DEBUG] Height stored: ${result.height} ${result.unit}`);
+
+  //     // Store in Redux as preliminary measurement
+  //     storePreliminaryMeasurements(dispatch, null, result.height);
+
+  //     return { height: result.height };
+  //   } catch (error) {
+  //     console.error("[BIA DEBUG] Height measurement failed:", error);
+  //     throw error;
+  //   }
+  // };
+  const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
+    // setCurrentStatus("Measuring your weight, please stand still!");
+    const res = await window.api.startHeightMeasurement();
+    console.log("[BIA DEBUG] Height result:", res);
 
-    if (!ports[0]?.path) {
-      throw new Error("Height port not available");
+    if (!res?.height) {
+      console.error("[BIA DEBUG] Height measurement failed - no height data");
+      throw new Error("Height failed");
     }
+    // storePreliminaryMeasurements(dispatch, res.weight, null);
 
-    try {
-      const result = await measureHeight(ports[0]?.path);
-
-      resultsRef.current.height = {
-        value: result.height,
-        unit: result.unit
-      };
-      console.log(`[BIA DEBUG] Height stored: ${result.height} ${result.unit}`);
-
-      // Store in Redux as preliminary measurement
-      storePreliminaryMeasurements(dispatch, null, result.height);
-
-      return { height: result.height };
-    } catch (error) {
-      console.error("[BIA DEBUG] Height measurement failed:", error);
-      throw error;
-    }
+    resultsRef.current.height = {
+      value: Number(res.height),
+      unit: "cm"
+    };
+    console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
+    dispatch(setHeight(resultsRef.current.height?.value));
+    return res;
   };
-
   const measureLegImpedance = async () => {
     console.log("[BIA DEBUG] Starting leg impedance 50kHz measurement...");
     // setCurrentStatus("Please ensure you are barefoot on the platform!");
@@ -643,7 +685,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      updatePhaseState('leg', 'failed', 'Max retries exhausted');
+      // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       navigate("/screen1");
       return;
@@ -655,11 +697,11 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
 
     try {
-      updatePhaseState('leg', 'in_progress');
+      //updatePhaseState('leg', 'in_progress');
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
-      updatePhaseState('leg', 'success');
+      //updatePhaseState('leg', 'success');
       await sleep(800);
 
       // Success - proceed to Phase 2
@@ -677,7 +719,7 @@ export default function BIACalculate({ user, onComplete }) {
       // Check if user is on platform by trying weight measurement
       console.log("[BIA DEBUG] Checking if user is on platform via weight...");
       try {
-        const weightResult = await window.api.startWeightMeasurement();
+        const weightResult = await measurePreliminaryWeight()
         console.log("[BIA DEBUG] Weight check result:", weightResult);
 
         if (weightResult?.weight && Number(weightResult.weight) > 1) {
@@ -744,7 +786,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset height attempt tracking and error flag");
 
     try {
-      await measureHeightWrapper();
+      await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
