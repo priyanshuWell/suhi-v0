@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
-import { measureWeight, measureHeight } from "../../utils/measurementUtils";
+import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 
 export default function BIACalculate({ user, onComplete }) {
@@ -90,8 +90,6 @@ export default function BIACalculate({ user, onComplete }) {
       description: "Body Composition Analysis Complete!",
     }
   };
-
-
   /* =======================
      EVENT LISTENERS - Receive errors/status from main process (bia-scriptv1.js)
   ======================= */
@@ -120,7 +118,6 @@ export default function BIACalculate({ user, onComplete }) {
     impedance100: false,
     height: false
   });
-
   useEffect(() => {
     console.log("[BIA DEBUG] Setting up event listeners for main process events...");
 
@@ -500,27 +497,48 @@ export default function BIACalculate({ user, onComplete }) {
   /* =======================
      MEASUREMENT FUNCTIONS
   ======================= */
-  const measureWeightWrapper = async () => {
+  // const measureWeightWrapper = async () => {
+  //   console.log("[BIA DEBUG] Starting weight measurement...");
+
+  //   try {
+  //     const result = await measureWeight();
+
+  //     resultsRef.current.weight = {
+  //       value: result.weight,
+  //       unit: result.unit
+  //     };
+  //     console.log(`[BIA DEBUG] Weight stored: ${result.weight} ${result.unit}`);
+
+  //     // Store in Redux as preliminary measurement
+  //     storePreliminaryMeasurements(dispatch, result.weight, null);
+
+  //     return { weight: result.weight };
+  //   } catch (error) {
+  //     console.error("[BIA DEBUG] Weight measurement failed:", error);
+  //     throw error;
+  //   }
+  // };
+  const measureWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
+    // setCurrentStatus("Measuring your weight, please stand still!");
+    const res = await window.api.startWeightMeasurement();
+    console.log("[BIA DEBUG] Weight result:", res);
 
-    try {
-      const result = await measureWeight();
-
-      resultsRef.current.weight = {
-        value: result.weight,
-        unit: result.unit
-      };
-      console.log(`[BIA DEBUG] Weight stored: ${result.weight} ${result.unit}`);
-
-      // Store in Redux as preliminary measurement
-      storePreliminaryMeasurements(dispatch, result.weight, null);
-
-      return { weight: result.weight };
-    } catch (error) {
-      console.error("[BIA DEBUG] Weight measurement failed:", error);
-      throw error;
+    if (!res?.weight) {
+      console.error("[BIA DEBUG] Weight measurement failed - no weight data");
+      throw new Error("Weight failed");
     }
+    storePreliminaryMeasurements(dispatch, res.weight, null);
+
+    resultsRef.current.weight = {
+      value: Number(res.weight),
+      unit: "kg"
+    };
+    console.log(`[BIA DEBUG] Weight stored: ${res.weight} kg`);
+    dispatch(setWeight(resultsRef.current.weight?.value));
+    return res;
   };
+
 
 
 
@@ -694,7 +712,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     try {
       // Measure Weight
-      await measureWeightWrapper();
+      await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
 
@@ -728,7 +746,6 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       await measureHeightWrapper();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
-
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
 
