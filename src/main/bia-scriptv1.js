@@ -965,6 +965,158 @@ function createCommand(commandByte, dataBytes = []) {
 
   return buffer
 }
+// ============================================================================
+// 4-ELECTRODE BODY COMPOSITION (LEGS / FOOT)
+// ============================================================================
+
+// 1. Generate the Tx Command for Legs (0xD1)
+ export function createLegsBodyCompositionCommand(gender, height, age, weight, impedance) {
+  const buffer = Buffer.alloc(12);
+
+  buffer[0] = 0x55;
+  buffer[1] = 0x0c;
+  buffer[2] = 0xd1; // D1 = Legs/Foot
+  buffer[3] = gender & 0xff; // 0x01 = Male, 0x00 = Female
+  buffer[4] = 0x00;
+  buffer[5] = height & 0xff;
+  buffer[6] = age & 0xff;
+
+  // Weight (Resolution: 0.1 kg)
+  buffer.writeUInt16LE(Math.round(weight * 10), 7);
+
+  // Impedance (Resolution: 1 Ω)
+  buffer.writeUInt16LE(Math.round(impedance), 9);
+
+  // Checksum
+  const checksumData = buffer.slice(0, 11);
+  buffer[11] = calculateChecksum(checksumData);
+
+  return buffer;
+}
+
+// 2. Parse into Proper Named JSON
+ export function parseLegsBodyComposition(data) {
+  // Validate header and command (0xD1 = Legs)
+  if (data[0] !== 0xaa || data[2] !== 0xd1) {
+    return null;
+  }
+  
+  if (data.length < 86) {
+    console.warn('⚠️ Incomplete Legs body composition payload received.');
+    return null;
+  }
+
+  const read16 = (offset) => data[offset] | (data[offset + 1] << 8);
+
+  return {
+    measurementMode: 'Legs',
+    bodyComposition: {
+      waterPercentage: read16(43) / 10,
+      proteinPercentage: read16(57) / 10,
+      muscleMassKg: read16(63) / 10,
+      skeletalMuscleMassKg: read16(52) / 10,
+      boneMassKg: data[38] / 10,
+      fatMassKg: read16(5) / 10,
+      fatFreeMassKg: read16(27) / 10,
+      subcutaneousFatMassKg: read16(29) / 10,
+      subcutaneousFatPercentage: read16(31) / 10,
+      musclePercentage: read16(61) / 10,
+      fatPercentage: read16(7) / 10,
+      visceralFatLevel: data[49]
+    },
+    evaluation: {
+      bodyScore: data[36],
+      bodyAge: data[26],
+      idealWeightKg: read16(41) / 10,
+      bmi: read16(16) / 10,
+      bmrKcal: read16(22)
+    },
+    exerciseConsumptionKcal: {
+      walk: read16(69),
+      golf: read16(71),
+      croquet: read16(73),
+      tennis: read16(75),
+      squash: read16(77),
+      mountainClimbing: read16(79),
+      swimming: read16(81),
+      badminton: read16(83)
+    }
+  };
+}
+
+// 3. Parse into Raw Packages Format
+ function parseLegsBodyCompositionRawPackages(data) {
+  if (data[0] !== 0xaa || data[2] !== 0xd1) {
+    return null;
+  }
+
+  const hexArray = Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase());
+
+  return {
+    measurementMode: 'Legs',
+    totalPackages: 1, // 4-electrode sends everything in 1 frame
+    packages: {
+      package1: {
+        byteLength: data.length,
+        rawDecimalData: Array.from(data),
+        rawHexData: hexArray.join(' ')
+      }
+    }
+  };
+}
+
+
+// Create 8-electrode body composition command (0xD0)
+function create8ElectrodeBodyCompositionCommand(
+  gender,
+  height,
+  age,
+  weight,
+  rh20,
+  lh20,
+  tr20,
+  rf20,
+  lf20,
+  rh100,
+  lh100,
+  tr100,
+  rf100,
+  lf100,
+) {
+  const buffer = Buffer.alloc(39);
+
+  buffer[0] = 0x55;
+  buffer[1] = 0x27;
+  buffer[2] = 0xd0;
+  buffer[3] = gender & 0xff;
+  buffer[4] = 0x00;
+  buffer[5] = height & 0xff;
+  buffer[6] = age & 0xff;
+
+  const weightInt = Math.round(weight * 10);
+  buffer.writeUInt16LE(weightInt, 7);
+
+  buffer.writeUInt16LE(Math.round(rh20 * 10), 9);
+  buffer.writeUInt16LE(Math.round(lh20 * 10), 11);
+  buffer.writeUInt16LE(Math.round(tr20 * 10), 13);
+  buffer.writeUInt16LE(Math.round(rf20 * 10), 15);
+  buffer.writeUInt16LE(Math.round(lf20 * 10), 17);
+
+  buffer.writeUInt16LE(Math.round(rh100 * 10), 19);
+  buffer.writeUInt16LE(Math.round(lh100 * 10), 21);
+  buffer.writeUInt16LE(Math.round(tr100 * 10), 23);
+  buffer.writeUInt16LE(Math.round(rf100 * 10), 25);
+  buffer.writeUInt16LE(Math.round(lf100 * 10), 27);
+
+  for (let i = 29; i < 38; i++) {
+    buffer[i] = 0x00;
+  }
+
+  const checksumData = buffer.slice(0, 38);
+  buffer[38] = calculateChecksum(checksumData);
+
+  return buffer;
+}
 
 // Create 8-electrode body composition command (0xD0)
 export function create8ElectrodeBodyCompositionCommand(
@@ -1308,6 +1460,33 @@ export function collectBodyCompositionOnce(timeout = 8000) {
     biaPort.on('data', onData)
   })
 }
+
+export function collectLegsBodyCompositionOnce(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      biaPort.off("data", onData)
+      reject(new Error("Legs BIA timeout"))
+    }, timeout)
+
+    const onData = (data) => {
+      if (data[0] === 0xaa && data[2] === 0xd1) {
+        clearTimeout(timer)
+        biaPort.off("data", onData)
+
+        const parsed = parseLegsBodyComposition(data)
+        const raw = parseLegsBodyCompositionRawPackages(data)
+
+        resolve({
+          parsed,
+          raw
+        })
+      }
+    }
+
+    biaPort.on("data", onData)
+  })
+}
+
 export function processBodyCompositionResponse(data) {
   const parsedData = parseBodyCompositionResponse(data)
 
@@ -1496,7 +1675,27 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
         }
       }
       console.log(`${'='.repeat(60)}\n`)
+        // Body Composition response parsing (Legs)
+      if (data[0] === 0xaa && data[2] === 0xd1) {
+        try {
+          console.log("=".repeat(50));
+          console.log("Legs Body Composition response parsing");
+          const parsedComp = parseLegsBodyComposition(data);
+          const rawPackages = parseLegsBodyCompositionRawPackages(data);
+          console.log("=".repeat(50));
+          if (parsedComp && rawPackages) {
+            console.log(`\n✅ Legs Body Composition Data (Parsed):`);
+            console.log(JSON.stringify(parsedComp, null, 2));
 
+            console.log(`\n📦 Legs Body Composition Data (Raw Packages):`);
+            console.log(JSON.stringify(rawPackages, null, 2));
+            
+            // eventBus.emit(EVENTS.LEGS_COMP_COMPLETE, { parsed: parsedComp, raw: rawPackages }); 
+          }
+        } catch (error) {
+          console.error('Error parsing Legs body composition:', error);
+        }
+      }
       // heightWaitingForResponse = false;
       if (!IS_ELECTRON) showMenu()
     })
@@ -2008,6 +2207,9 @@ export async function disconnectHeightPort() {
  */
 export async function disconnectBiaPort() {
   try {
+    console.log('[BIA DISCONNECT] Starting disconnect process...')
+    console.log('[BIA DISCONNECT] biaPort exists:', !!biaPort)
+    
     if (!biaPort) {
       console.log('⚠️ BIA port is not initialized')
       return {
@@ -2016,28 +2218,35 @@ export async function disconnectBiaPort() {
       }
     }
 
+    console.log('[BIA DISCONNECT] biaPort.isOpen:', biaPort.isOpen)
+    
     if (!biaPort.isOpen) {
       console.log('⚠️ BIA port is already closed')
+      biaPort = null
       return {
         success: true,
         message: 'Port already closed'
       }
     }
 
+    console.log('[BIA DISCONNECT] Attempting to close BIA port...')
+    
     await new Promise((resolve, reject) => {
       biaPort.close((err) => {
         if (err) {
           console.error(`❌ Error closing BIA port: ${err.message}`)
           reject(err)
         } else {
-          console.log('✅ BIA port disconnected successfully')
+          console.log('✅ BIA port closed successfully')
           resolve()
         }
       })
     })
 
     // Clear the port reference
+    console.log('[BIA DISCONNECT] Clearing biaPort reference...')
     biaPort = null
+    console.log('[BIA DISCONNECT] Disconnect complete!')
 
     return {
       success: true,
@@ -2045,6 +2254,11 @@ export async function disconnectBiaPort() {
     }
   } catch (error) {
     console.error(`❌ Failed to disconnect BIA port: ${error.message}`)
+    console.error('[BIA DISCONNECT] Error stack:', error.stack)
+    
+    // Force clear the port reference even on error
+    biaPort = null
+    
     return {
       success: false,
       error: error.message

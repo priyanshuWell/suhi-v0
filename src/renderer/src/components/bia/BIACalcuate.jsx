@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { setBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { setBiaResult, setLegBiaResult, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
 import { measureWeight, measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 
@@ -32,20 +32,12 @@ export default function BIACalculate({ user, onComplete }) {
     impedance: { k20: null, k100: null }
   });
 
-  // Timeout configuration (in milliseconds)
-  const TIMEOUTS = {
-    GLOBAL: 2000000,     // 120 seconds for entire flow
-    WEIGHT: 200000,      // 20 seconds for weight measurement
-    HEIGHT: 200000,      // 20 seconds for height measurement
-    IMPEDANCE: 200000,   // 25 seconds for each impedance measurement
-  };
-
   const MAX_RETRIES = 2;
 
-  const timeoutRefs = useRef({
-    global: null,
-    step: null,
-  });
+  // const timeoutRefs = useRef({
+  //   global: null,
+  //   step: null,
+  // });
 
   // Recording configuration
   const ENABLE_RECORDING = false; // Set to false to disable recording
@@ -297,7 +289,7 @@ export default function BIACalculate({ user, onComplete }) {
     return () => {
       console.log("[BIA DEBUG] Cleaning up event listeners...");
       unsubs.forEach(unsub => unsub?.());
-      clearAllTimeouts();
+      // clearAllTimeouts();
     };
   }, []);
 
@@ -306,21 +298,21 @@ export default function BIACalculate({ user, onComplete }) {
   ======================= */
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  const clearAllTimeouts = () => {
-    console.log("[BIA DEBUG] Clearing all timeouts");
-    if (timeoutRefs.current.global) {
-      clearTimeout(timeoutRefs.current.global);
-      timeoutRefs.current.global = null;
-    }
-    if (timeoutRefs.current.step) {
-      clearTimeout(timeoutRefs.current.step);
-      timeoutRefs.current.step = null;
-    }
-  };
+  // const clearAllTimeouts = () => {
+  //   console.log("[BIA DEBUG] Clearing all timeouts");
+  //   if (timeoutRefs.current.global) {
+  //     clearTimeout(timeoutRefs.current.global);
+  //     timeoutRefs.current.global = null;
+  //   }
+  //   if (timeoutRefs.current.step) {
+  //     clearTimeout(timeoutRefs.current.step);
+  //     timeoutRefs.current.step = null;
+  //   }
+  // };
 
   const handleTimeout = (stepName) => {
     console.error(`[BIA DEBUG] ${stepName} TIMEOUT - redirecting to /screen1`);
-    clearAllTimeouts();
+    // clearAllTimeouts();
     setIsRunning(false);
     navigate("/screen1");
   };
@@ -739,6 +731,10 @@ export default function BIACalculate({ user, onComplete }) {
 
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
+
+      // Calculate Leg BIA immediately after weight/height
+      await calculateAndStoreLegBIA();
+
       navigate("/bia/whcomplete");
       await sleep(3000); // Wait for whComplete video
 
@@ -791,6 +787,9 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(800);
       console.log("[BIA DEBUG] Arm impedance SUCCESS");
 
+      // TODO: Calculate Arm BIA here once API is available
+      // await calculateAndStoreArmBIA();
+
       // Impedance 20kHz
       await measureImpedance("20");
       await sleep(1500);
@@ -815,6 +814,37 @@ export default function BIACalculate({ user, onComplete }) {
       console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
       //await showError(ERROR_MESSAGES.armImpedance, 3000);
       await runPhase3_Impedance(attemptCount + 1);
+    }
+  };
+
+  /* =======================
+     INTERMEDIATE CALCULATIONS
+  ======================= */
+  const calculateAndStoreLegBIA = async () => {
+    console.log("[BIA DEBUG] ========== CALCULATING LEG BIA ==========");
+
+    try {
+      const legBia = await window.api.calculateLegBIA({
+        height: resultsRef.current.height.value,
+        weight: resultsRef.current.weight.value,
+        age: storeUser?.data?.age ?? 23,
+        gender: storeUser?.data?.gender ?? "male",
+        impedanceVal: resultsRef.current.legImpedance?.impedance
+      });
+
+      console.log("[BIA DEBUG] Leg BIA calculation result:", legBia);
+
+      if (legBia?.success) {
+        // Store in Redux
+        dispatch(setLegBiaResult(legBia));
+        console.log("[BIA DEBUG] Leg BIA saved to Redux");
+      } else {
+        console.error("[BIA DEBUG] Leg BIA calculation failed:", legBia?.error);
+        // Non-blocking - continue flow
+      }
+    } catch (error) {
+      console.error("[BIA DEBUG] Leg BIA calculation error:", error);
+      // Non-blocking - continue flow
     }
   };
 
@@ -848,6 +878,7 @@ export default function BIACalculate({ user, onComplete }) {
     });
 
     try {
+      // ========== 8-ELECTRODE BIA CALCULATION ==========
       const bia = await window.api.calculateBIA({
         height: resultsRef.current.height.value,
         weight: resultsRef.current.weight.value,
@@ -869,6 +900,9 @@ export default function BIACalculate({ user, onComplete }) {
         throw new Error(bia?.error || "BIA calculation failed");
       }
 
+      // ========== LEG BIA CALCULATION (Moved to Phase 2) ==========
+      // console.log("[BIA DEBUG] Leg BIA already calculated in Phase 2");
+
       // Save results to Redux
       //dispatch(setHeight(resultsRef.current.height.value));
       //dispatch(setWeight(resultsRef.current.weight.value));
@@ -882,7 +916,7 @@ export default function BIACalculate({ user, onComplete }) {
       stopRecording();
 
       // Clear timeouts
-      clearAllTimeouts();
+      //clearAllTimeouts();
       setIsComplete(true);
       navigate("/screen1");
 
@@ -892,7 +926,7 @@ export default function BIACalculate({ user, onComplete }) {
       // ✅ STOP RECORDING ON ERROR
       stopRecording();
 
-      clearAllTimeouts();
+      //clearAllTimeouts();
       navigate("/screen1");
     }
   };
@@ -966,7 +1000,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/screen1");
     } finally {
       setIsRunning(false);
-      clearAllTimeouts();
+      //clearAllTimeouts();
       console.log("[BIA DEBUG] Flow ended, isRunning set to false");
     }
   };
@@ -983,7 +1017,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     return () => {
       console.log("[BIA DEBUG] Component unmounting, cleaning up...");
-      clearAllTimeouts();
+      //clearAllTimeouts();
     };
   }, []);
 

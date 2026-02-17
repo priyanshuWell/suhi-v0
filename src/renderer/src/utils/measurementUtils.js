@@ -30,20 +30,26 @@ function withTimeout(promise, timeoutMs, errorMessage) {
 
 /**
  * Measure weight using BIA device's built-in sensor
- * @param {string} portPath - Path to BIA port
- * @param {number} timeoutMs - Optional timeout in milliseconds (default: 30s)
+ * @param {string} portPath - Optional path to BIA port (if not provided, assumes port is already connected)
+ * @param {number} timeoutMs - Optional timeout in milliseconds (default: 6s)
  * @returns {Promise<Object>} { weight: number, unit: 'kg' }
  */
-export async function measureWeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
+export async function measureWeight(portPath = null, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
   console.log(`[MEASUREMENT] Starting weight measurement with ${timeoutMs}ms timeout...`);
   
-  if (!portPath) {
-    throw new Error('Weight port path is required');
+  const shouldManageConnection = !!portPath;
+  
+  if (shouldManageConnection) {
+    console.log('[MEASUREMENT] Port path provided - will manage connection');
+  } else {
+    console.log('[MEASUREMENT] No port path - assuming port already connected');
   }
 
   try {
-    // Connect to BIA port
-    await connectBiaPort(portPath);
+    // Connect to BIA port only if portPath is provided
+    if (shouldManageConnection) {
+      await connectBiaPort(portPath);
+    }
     
     // Wrap measurement with timeout
     const res = await withTimeout(
@@ -62,8 +68,10 @@ export async function measureWeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TI
     const weightValue = Number(res.weight);
     console.log(`[MEASUREMENT] Weight measured: ${weightValue} kg`);
     
-    // Disconnect port after successful measurement
-    await disconnectBiaPort(portPath);
+    // Disconnect port after successful measurement only if we connected it
+    if (shouldManageConnection) {
+      await disconnectBiaPort(portPath);
+    }
     
     return {
       weight: weightValue,
@@ -71,8 +79,10 @@ export async function measureWeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TI
     };
   } catch (error) {
     console.error('[MEASUREMENT] Weight measurement error:', error);
-    // Ensure port is disconnected even on error
-    await disconnectBiaPort(portPath);
+    // Ensure port is disconnected even on error, but only if we connected it
+    if (shouldManageConnection) {
+      await disconnectBiaPort(portPath);
+    }
     throw error;
   }
 }
@@ -154,14 +164,14 @@ export async function connectBiaPort(portPath) {
   }
 
   if (connectedPorts.has(portPath)) {
-    console.log('[MEASUREMENT] Port already connected:', portPath);
+    console.log('[MEASUREMENT] BIA port already connected:', portPath);
     return;
   }
 
-  console.log('[MEASUREMENT] Connecting to height port:', portPath);
+  console.log('[MEASUREMENT] Connecting to BIA port:', portPath);
   await window.api.connectBiaPort(portPath);
   connectedPorts.add(portPath);
-  console.log('[MEASUREMENT] Height port connected successfully');
+  console.log('[MEASUREMENT] BIA port connected successfully');
 }
 /**
  * Disconnect from height sensor port
@@ -198,29 +208,38 @@ export async function disconnectHeightPort(portPath) {
 }
 export async function disconnectBiaPort(portPath) {
   if (!portPath) {
-    console.log('[MEASUREMENT] No port path provided for disconnect');
+    console.log('[MEASUREMENT] No BIA port path provided for disconnect');
     return;
   }
 
   if (!connectedPorts.has(portPath)) {
-    console.log('[MEASUREMENT] Port not connected, skipping disconnect:', portPath);
+    console.log('[MEASUREMENT] BIA port not in connected set, skipping disconnect:', portPath);
     return;
   }
 
-  console.log('[MEASUREMENT] Disconnecting bia port:', portPath);
+  console.log('[MEASUREMENT] Disconnecting BIA port:', portPath);
   
   try {
     // Call disconnect API
     if (window.api.disconnectBiaPort) {
+      console.log('[MEASUREMENT] Calling backend disconnectBiaPort...');
       const result = await window.api.disconnectBiaPort();
+      console.log('[MEASUREMENT] Backend disconnect result:', result);
+      
       if (result?.success) {
-        console.log('[MEASUREMENT] weight port disconnected successfully');
+        console.log('[MEASUREMENT] ✅ BIA port disconnected successfully');
+        connectedPorts.delete(portPath);
+      } else {
+        console.warn('[MEASUREMENT] ⚠️ BIA port disconnect returned non-success:', result);
+        // Still remove from tracking to prevent stuck state
+        connectedPorts.delete(portPath);
       }
+    } else {
+      console.error('[MEASUREMENT] ❌ window.api.disconnectBiaPort is not available');
+      connectedPorts.delete(portPath);
     }
-    
-    connectedPorts.delete(portPath);
   } catch (error) {
-    console.error('[MEASUREMENT] Error disconnecting port:', error);
+    console.error('[MEASUREMENT] ❌ Error disconnecting BIA port:', error);
     // Remove from tracking even if disconnect fails
     connectedPorts.delete(portPath);
   }
@@ -236,7 +255,8 @@ export function isPortConnected(portPath) {
 }
 
 /**
- * Measure both weight and height in parallel
+ * Measure both weight and height sequentially (weight first, then height)
+ * This runs in parallel with FPT processing but weight and height run in sequence
  * @param {Array} ports - Array of available ports
  * @param {number} timeoutMs - Optional timeout in milliseconds for each measurement (default: 30s)
  * @returns {Promise<Object>} { weight: number|null, height: number|null, errors: Object }
@@ -292,10 +312,11 @@ export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREM
     height: null,
     errors: {}
   };
-
-  // ---- 1️⃣ Measure Weight First ----
+  
+  // Measure weight first
   if (weightPortPath) {
     try {
+      console.log('[MEASUREMENT] Step 1: Measuring weight...');
       const weightData = await measureWeight(weightPortPath, timeoutMs);
       result.weight = weightData.weight;
       console.log('[MEASUREMENT] Weight measurement succeeded:', result.weight);
@@ -305,11 +326,13 @@ export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREM
     }
   } else {
     result.errors.weight = 'No weight port available';
+    console.error('[MEASUREMENT] No weight port available');
   }
-
-  // ---- 2️⃣ Then Measure Height ----
+  
+  // Then measure height (only after weight completes)
   if (heightPortPath) {
     try {
+      console.log('[MEASUREMENT] Step 2: Measuring height...');
       const heightData = await measureHeight(heightPortPath, timeoutMs);
       result.height = heightData.height;
       console.log('[MEASUREMENT] Height measurement succeeded:', result.height);
@@ -319,8 +342,9 @@ export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREM
     }
   } else {
     result.errors.height = 'No height port available';
+    console.error('[MEASUREMENT] No height port available');
   }
-
+  
   console.log('[MEASUREMENT] Sequential measurement completed:', result);
   return result;
 }

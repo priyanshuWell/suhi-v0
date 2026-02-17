@@ -27,6 +27,7 @@ const api = {
   startLegImpedance50kHz: () => ipcRenderer.invoke("start-leg-impedance-50khz"),
   startArmImpedance50kHz: () => ipcRenderer.invoke("start-arm-impedance-50khz"),
   calculateBIA: (payload) => ipcRenderer.invoke("calculate-bia", payload),
+  calculateLegBIA: (payload) => ipcRenderer.invoke("calculate-leg-bia", payload),
   saveVoiceBuffer: (request) => ipcRenderer.invoke("save-voice-buffer", request),
   saveRecording: (data) => ipcRenderer.invoke("save-recording", data),
   onHeightError: (callback) => heightErrorChannel.subscribe(callback),

@@ -79,9 +79,18 @@ const commonSlice = createSlice({
     },
 
     setBiaResult: (state, action) => {
-      state.biaResult = action.payload;
+      state.biaResult.biaFinal = action.payload;
     },
-     setBmiResult: (state, action) => {
+
+    setLegBiaResult: (state, action) => {
+      state.biaResult.biaLegs = action.payload;
+    },
+
+    setArmBiaResult: (state, action) => {
+      state.biaResult.biaArms = action.payload;
+    },
+
+    setBmiResult: (state, action) => {
       state.bmiResult = action.payload;
     },
 
@@ -106,6 +115,8 @@ export const {
   setPreliminaryHeight,
   setPreliminaryWeight,
   setBiaResult,
+  setLegBiaResult,
+  setArmBiaResult,
   resetCommonState,
   setBmiResult,
   setSessionId

@@ -200,79 +200,28 @@ ipcMain.handle("start-impedance-measurement", async (event, freq) => {
   }
 })
 
-// ipcMain.handle("calculate-bia", async (event, payload) => {
-//   try {
-//     const {
-//       height,
-//       weight,
-//       age,
-//       gender,
-//       impedance20,
-//       impedance100
-//     } = payload;
+ipcMain.handle("calculate-leg-bia", async (event, payload) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      return { success: false, error: "BIA port not connected" }
+    }
+    const { height, weight, age, gender, impedanceVal } = payload
+    const command = biaa.createLegsBodyCompositionCommand(gender, height, age, weight, impedanceVal);
 
-//     if (!biaa.biaPort || !biaa.biaPort.isOpen) {
-//       return { success: false, error: "BIA port not connected" };
-//     }
+    console.log(`\n📡 Requesting Legs Body Composition (Impedance: ${impedanceVal}Ω)...`);
+    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
 
-//     if (!impedance20 || !impedance100) {
-//       return {
-//         success: false,
-//         error: "Both 20kHz and 100kHz impedance are required"
-//       };
-//     }
+    const result = await biaa.collectLegsBodyCompositionOnce(8000);
+    return {
+      success: true,
+      data: result
+    }
 
-//     const genderCode = gender === "male" ? 1 : 0;
-
-//     const cmd = biaa.create8ElectrodeBodyCompositionCommand(
-//       genderCode,
-//       Math.round(height),
-//       Math.round(age),
-//       weight,
-
-//       // 20 kHz
-//       impedance20.rightHand,
-//       impedance20.leftHand,
-//       impedance20.trunk,
-//       impedance20.rightFoot,
-//       impedance20.leftFoot,
-
-//       // 100 kHz
-//       impedance100.rightHand,
-//       impedance100.leftHand,
-//       impedance100.trunk,
-//       impedance100.rightFoot,
-//       impedance100.leftFoot
-//     );
-
-//     // Send command (do NOT wait here)
-//     await biaa.sendBiaCommand(cmd, { waitForResponse: false });
-
-//     // Wait for all 5 packages
-//     const bodyCompisition = await biaa.collectBodyCompositionOnce(12000);
-//     // 🔥 Extract UI-friendly summary
-//     const p1 = bodyCompisition.package1;
-//     const p3 = bodyCompisition.package3;
-
-//     return {
-//       success: true,
-//       raw: bodyCompisition,
-//       summary: {
-//         bodyFatPercent: p3.bodyFatPercentage,
-//         muscleMass: p1.muscleMass,
-//         bmi: p3.bodyMassIndex,
-//         visceralFat: p3.visceralFatLevel,
-//         basalMetabolism: p3.basalMetabolism,
-//         bodyScore: p3.bodyScore,
-//         physicalAge: p3.physicalAge
-//       }
-//     };
-
-//   } catch (err) {
-//     console.error("[BIA] Error:", err);
-//     return { success: false, error: err.message };
-//   }
-// });
+  } catch (error) {
+    console.error("Error calculating leg BIA:", error)
+    return { success: false, error: error.message }
+  }
+})
 ipcMain.handle("calculate-bia", async (event, payload) => {
   try {
     const { height, weight, age, gender, impedance20, impedance100 } = payload
@@ -413,7 +362,7 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
     const payload = {
       buffer_id: bufferId,
       kiosk_id: request.kiosk_id,
-      user_id: request.user_id || "af341b46-4c88-4d67-bb0e-bdf575d0ef2b",
+      user_id: request.user_id,
       session_id: request.session_id,
       shm_path: shmPath
     }
