@@ -1066,57 +1066,7 @@ function createCommand(commandByte, dataBytes = []) {
 }
 
 
-// Create 8-electrode body composition command (0xD0)
-function create8ElectrodeBodyCompositionCommand(
-  gender,
-  height,
-  age,
-  weight,
-  rh20,
-  lh20,
-  tr20,
-  rf20,
-  lf20,
-  rh100,
-  lh100,
-  tr100,
-  rf100,
-  lf100,
-) {
-  const buffer = Buffer.alloc(39);
 
-  buffer[0] = 0x55;
-  buffer[1] = 0x27;
-  buffer[2] = 0xd0;
-  buffer[3] = gender & 0xff;
-  buffer[4] = 0x00;
-  buffer[5] = height & 0xff;
-  buffer[6] = age & 0xff;
-
-  const weightInt = Math.round(weight * 10);
-  buffer.writeUInt16LE(weightInt, 7);
-
-  buffer.writeUInt16LE(Math.round(rh20 * 10), 9);
-  buffer.writeUInt16LE(Math.round(lh20 * 10), 11);
-  buffer.writeUInt16LE(Math.round(tr20 * 10), 13);
-  buffer.writeUInt16LE(Math.round(rf20 * 10), 15);
-  buffer.writeUInt16LE(Math.round(lf20 * 10), 17);
-
-  buffer.writeUInt16LE(Math.round(rh100 * 10), 19);
-  buffer.writeUInt16LE(Math.round(lh100 * 10), 21);
-  buffer.writeUInt16LE(Math.round(tr100 * 10), 23);
-  buffer.writeUInt16LE(Math.round(rf100 * 10), 25);
-  buffer.writeUInt16LE(Math.round(lf100 * 10), 27);
-
-  for (let i = 29; i < 38; i++) {
-    buffer[i] = 0x00;
-  }
-
-  const checksumData = buffer.slice(0, 38);
-  buffer[38] = calculateChecksum(checksumData);
-
-  return buffer;
-}
 
 // Create 8-electrode body composition command (0xD0)
 export function create8ElectrodeBodyCompositionCommand(
