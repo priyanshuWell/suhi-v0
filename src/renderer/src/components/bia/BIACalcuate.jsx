@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { setBiaResult, setLegBiaResult, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { setBiaResult, setLegBiaResult,setHeight,setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 
@@ -573,7 +573,7 @@ export default function BIACalculate({ user, onComplete }) {
   //   }
 
   //   try {
-  //     const result = await measureHeight();
+  //     const result = await measureHeight(ports[0]?.path);
 
   //     resultsRef.current.height = {
   //       value: result.height,
@@ -592,7 +592,9 @@ export default function BIACalculate({ user, onComplete }) {
   // };
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
-    // setCurrentStatus("Measuring your weight, please stand still!");
+    // setCurrentStatus("Measuring your weight, please stand still!")
+ console.log('[MEASUREMENT] Connecting to height port:');
+  await window.api.connectHeightPort(ports[0]?.path);
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 

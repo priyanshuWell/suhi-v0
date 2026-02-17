@@ -94,7 +94,7 @@ export async function measureWeight(portPath = null, timeoutMs = DEFAULT_MEASURE
  * @param {number} timeoutMs - Optional timeout in milliseconds (default: 30s)
  * @returns {Promise<Object>} { height: number, unit: 'cm' }
  */
-export async function measureHeight(portPath=null, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
+export async function measureHeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
   console.log(`[MEASUREMENT] Starting height measurement with ${timeoutMs}ms timeout...`);
   
   if (!portPath) {

@@ -1418,20 +1418,17 @@ export function collectLegsBodyCompositionOnce(timeout = 8000) {
       reject(new Error("Legs BIA timeout"))
     }, timeout)
 
-    const onData = (data) => {
-      if (data[0] === 0xaa && data[2] === 0xd1) {
-        clearTimeout(timer)
-        biaPort.off("data", onData)
+  const onData = (data) => {
+  if (data[0] === 0xaa && data[2] === 0xd1) {
+    clearTimeout(timer)
+    biaPort.off("data", onData)
 
-        const parsed = parseLegsBodyComposition(data)
-        const raw = parseLegsBodyCompositionRawPackages(data)
+    const parsed = parseLegsBodyComposition(data)
+    // const raw = parseLegsBodyCompositionRawPackages(data)
 
-        resolve({
-          parsed,
-          raw
-        })
-      }
-    }
+    resolve({ parsed })
+  }
+}
 
     biaPort.on("data", onData)
   })
@@ -1631,14 +1628,14 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
           console.log("=".repeat(50));
           console.log("Legs Body Composition response parsing");
           const parsedComp = parseLegsBodyComposition(data);
-          const rawPackages = parseLegsBodyCompositionRawPackages(data);
+          // const rawPackages = parseLegsBodyCompositionRawPackages(data);
           console.log("=".repeat(50));
-          if (parsedComp && rawPackages) {
+          if (parsedComp) {
             console.log(`\n✅ Legs Body Composition Data (Parsed):`);
             console.log(JSON.stringify(parsedComp, null, 2));
 
             console.log(`\n📦 Legs Body Composition Data (Raw Packages):`);
-            console.log(JSON.stringify(rawPackages, null, 2));
+            //console.log(JSON.stringify(rawPackages, null, 2));
             
             // eventBus.emit(EVENTS.LEGS_COMP_COMPLETE, { parsed: parsedComp, raw: rawPackages }); 
           }
