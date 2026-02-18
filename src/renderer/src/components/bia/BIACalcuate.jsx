@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { setBiaResult, setLegBiaResult,setHeight,setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 
@@ -20,6 +20,8 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
+  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
+  const barefootCTAResolver = useRef(null);
 
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
@@ -36,10 +38,10 @@ export default function BIACalculate({ user, onComplete }) {
 
   const MAX_RETRIES = 2;
 
-  // const timeoutRefs = useRef({
-  //   global: null,
-  //   step: null,
-  // });
+  const timeoutRefs = useRef({
+    global: null,
+    step: null,
+  });
 
   // Recording configuration
   const ENABLE_RECORDING = false; // Set to false to disable recording
@@ -355,6 +357,27 @@ export default function BIACalculate({ user, onComplete }) {
     });
   };
 
+  /**
+   * Shows the barefoot CTA modal and pauses the flow.
+   * Returns a Promise that resolves with "retry" or "skip" when the user clicks.
+   */
+  const showBarefootCTA = () => {
+    console.log("[BIA DEBUG] Showing barefoot CTA modal - flow paused");
+    setBarefootCTAVisible(true);
+    return new Promise((resolve) => {
+      barefootCTAResolver.current = resolve;
+    });
+  };
+
+  const handleBarefootChoice = (choice) => {
+    console.log(`[BIA DEBUG] Barefoot CTA choice: "${choice}"`);
+    setBarefootCTAVisible(false);
+    if (barefootCTAResolver.current) {
+      barefootCTAResolver.current(choice);
+      barefootCTAResolver.current = null;
+    }
+  };
+
   /* =======================
      RECORDING FUNCTIONS
   ======================= */
@@ -593,8 +616,8 @@ export default function BIACalculate({ user, onComplete }) {
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
- console.log('[MEASUREMENT] Connecting to height port:');
-  await window.api.connectHeightPort(ports[0]?.path);
+    console.log('[MEASUREMENT] Connecting to height port:');
+    await window.api.connectHeightPort(ports[0]?.path);
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 
@@ -712,7 +735,6 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
         navigate("/screen1");
         return;
       }
@@ -721,26 +743,25 @@ export default function BIACalculate({ user, onComplete }) {
       // Check if user is on platform by trying weight measurement
       console.log("[BIA DEBUG] Checking if user is on platform via weight...");
       try {
-        const weightResult = await measurePreliminaryWeight()
+        const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
-
-        if (weightResult?.weight && Number(weightResult.weight) > 1) {
-          // User IS on platform but leg impedance failed -> barefoot issue
-          console.log(`[BIA DEBUG] Weight detected: ${weightResult.weight}kg - User on platform but not barefoot`);
-          await showError(ERROR_MESSAGES.legImpedance_hasWeight, 6000);
-        } else {
-          // User NOT on platform
-          console.log("[BIA DEBUG] No weight detected - User not on platform");
-          await showError(ERROR_MESSAGES.legImpedance_noWeight, 6000);
-        }
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-        await showError(ERROR_MESSAGES.legImpedance_noWeight, 6000);
       }
 
-      // Retry with incremented attempt count
-      console.log(`[BIA DEBUG] Phase 1 retry ${attemptCount + 2}/${MAX_RETRIES}...`);
-      await sleep(1000);
+      // Show blocking CTA modal and wait for user choice
+      const choice = await showBarefootCTA();
+
+      if (choice === "skip") {
+        // User chose to continue with shoes - skip leg phase, go to Phase 2
+        console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
+        await runPhase2_WeightHeight();
+        return;
+      }
+
+      // User chose to remove shoes - retry leg from scratch
+      console.log(`[BIA DEBUG] User chose 'Remove the Shoe' - retrying Phase 1 (attempt ${attemptCount + 1})...`);
+      await sleep(500);
       await runPhase1_LegCheck(attemptCount + 1);
     }
   };
@@ -1115,6 +1136,68 @@ export default function BIACalculate({ user, onComplete }) {
         onClose={() => setErrorState(null)}
         onRetry={undefined}
       />
+
+      {/* Barefoot CTA Modal - blocks flow until user makes a choice */}
+      {barefootCTAVisible && (
+        <BarefootCTAModal
+          onRemoveShoe={() => handleBarefootChoice("retry")}
+          onContinueWithShoes={() => handleBarefootChoice("skip")}
+        />
+      )}
     </>
+  );
+}
+
+/* =======================
+   BAREFOOT CTA MODAL
+   Shown when leg impedance fails - pauses flow until user chooses
+======================= */
+function BarefootCTAModal({ onRemoveShoe, onContinueWithShoes }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="relative w-[90%] max-w-[700px] rounded-2xl border border-[#FFC568]/40 bg-[#1a1208] px-10 py-10 shadow-2xl flex flex-col items-center gap-8">
+
+        {/* Icon */}
+        <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#FFC568]/10 border border-[#FFC568]/30">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+              stroke="#FFC568" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+
+        {/* Title */}
+        <div className="text-center">
+          <h2 className="text-3xl font-bold text-[#FFC568]">Please be on the bare foot</h2>
+          <p className="mt-3 text-lg text-[#FFC568]/70">
+            We detected an issue with the leg measurement. How would you like to proceed?
+          </p>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+          {/* Remove Shoe - primary action */}
+          <button
+            onClick={onRemoveShoe}
+            className="flex-1 max-w-[280px] py-4 px-6 rounded-xl text-xl font-semibold
+              bg-[#FFC568] text-[#1a1208]
+              hover:bg-[#ffd48a] active:scale-95
+              transition-all duration-200 shadow-lg shadow-[#FFC568]/20"
+          >
+            Remove the Shoe
+          </button>
+
+          {/* Continue with Shoes - secondary action */}
+          <button
+            onClick={onContinueWithShoes}
+            className="flex-1 max-w-[280px] py-4 px-6 rounded-xl text-xl font-semibold
+              border border-[#FFC568]/50 text-[#FFC568]
+              hover:bg-[#FFC568]/10 active:scale-95
+              transition-all duration-200"
+          >
+            Continue with Shoes
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
