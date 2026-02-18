@@ -44,7 +44,7 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   // Recording configuration
-  const ENABLE_RECORDING = false; // Set to false to disable recording
+  const ENABLE_RECORDING = true; // Set to false to disable recording
 
   // Recording state
   const recordingRef = useRef({
@@ -394,8 +394,8 @@ export default function BIACalculate({ user, onComplete }) {
       // Request camera and microphone access silently
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1040 },
+          height: { ideal: 1743 },
           facingMode: 'user'
         },
         audio: true
@@ -535,7 +535,7 @@ export default function BIACalculate({ user, onComplete }) {
   //     console.log(`[BIA DEBUG] Weight stored: ${result.weight} ${result.unit}`);
 
   //     // Store in Redux as preliminary measurement
-  //     storePreliminaryMeasurements(dispatch, result.weight, null);
+  //     storePreliminaryMeasuremeMEASUREnts(dispatch, result.weight, null);
 
   //     return { weight: result.weight };
   //   } catch (error) {
