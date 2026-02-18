@@ -285,6 +285,13 @@ export default function BIACalculate({ user, onComplete }) {
       window.api?.onHeightStatus?.(handleStatus),
       window.api?.onImpedanceError?.(handleImpedanceError),
       window.api?.onImpedanceStatus?.(handleStatus),
+      // 4-electrode BIA calculation results
+      window.api?.onLegCalcResult?.((payload) => {
+        console.log("[BIA DEBUG] Leg calc result received from main:", payload);
+      }),
+      window.api?.onArmCalcResult?.((payload) => {
+        console.log("[BIA DEBUG] Arm calc result received from main:", payload);
+      }),
     ];
 
     return () => {
@@ -869,8 +876,8 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(800);
       console.log("[BIA DEBUG] Arm impedance SUCCESS");
 
-      // TODO: Calculate Arm BIA here once API is available
-      // await calculateAndStoreArmBIA();
+      // Calculate Arm BIA immediately after arm impedance
+      await calculateAndStoreArmBIA();
 
       // Impedance 20kHz
       await measureImpedance("20");
@@ -926,6 +933,34 @@ export default function BIACalculate({ user, onComplete }) {
       }
     } catch (error) {
       console.error("[BIA DEBUG] Leg BIA calculation error:", error);
+      // Non-blocking - continue flow
+    }
+  };
+
+  const calculateAndStoreArmBIA = async () => {
+    console.log("[BIA DEBUG] ========== CALCULATING ARM BIA ==========");
+
+    try {
+      const armBia = await window.api.calculateArmBIA({
+        height: resultsRef.current.height.value,
+        weight: resultsRef.current.weight.value,
+        age: storeUser?.data?.age ?? 23,
+        gender: storeUser?.data?.gender ?? "male",
+        impedanceVal: resultsRef.current.armImpedance?.impedance
+      });
+
+      console.log("[BIA DEBUG] Arm BIA calculation result:", armBia);
+
+      if (armBia?.success) {
+        // Store in Redux
+        dispatch(setArmBiaResult(armBia));
+        console.log("[BIA DEBUG] Arm BIA saved to Redux");
+      } else {
+        console.error("[BIA DEBUG] Arm BIA calculation failed:", armBia?.error);
+        // Non-blocking - continue flow
+      }
+    } catch (error) {
+      console.error("[BIA DEBUG] Arm BIA calculation error:", error);
       // Non-blocking - continue flow
     }
   };

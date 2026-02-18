@@ -995,34 +995,42 @@ function createCommand(commandByte, dataBytes = []) {
 }
 
 // 2. Parse into Proper Named JSON
- export function parseLegsBodyComposition(data) {
+export function parseLegsBodyComposition(data) {
   // Validate header and command (0xD1 = Legs)
-  if (data[0] !== 0xaa || data[2] !== 0xd1) {
-    return null;
-  }
-  
-  if (data.length < 86) {
-    console.warn('⚠️ Incomplete Legs body composition payload received.');
-    return null;
-  }
+  if (data[0] !== 0xaa || data[2] !== 0xd1) return null;
+  if (data.length < 86) return null;
 
   const read16 = (offset) => data[offset] | (data[offset + 1] << 8);
 
   return {
     measurementMode: 'Legs',
     bodyComposition: {
-      waterPercentage: read16(43) / 10,
-      proteinPercentage: read16(57) / 10,
-      muscleMassKg: read16(63) / 10,
-      skeletalMuscleMassKg: read16(52) / 10,
-      boneMassKg: data[38] / 10,
+      weightKg: read16(41) / 10,              // Ideal weight used as base
       fatMassKg: read16(5) / 10,
+      fatPercentage: read16(7) / 10,
       fatFreeMassKg: read16(27) / 10,
       subcutaneousFatMassKg: read16(29) / 10,
       subcutaneousFatPercentage: read16(31) / 10,
+      visceralFatLevel: data[49],
+      boneMassKg: data[38] / 10,
+      waterPercentage: read16(43) / 10,
+      skeletalMuscleMassKg: read16(52) / 10,
+      proteinPercentage: read16(57) / 10,
       musclePercentage: read16(61) / 10,
-      fatPercentage: read16(7) / 10,
-      visceralFatLevel: data[49]
+      muscleMassKg: read16(63) / 10,
+    },
+    // NEW: Extracted Ranges for UI display (Min ~ Max)
+    standards: {
+      fatPercentage: [data[9]/10, read16(10)/10, read16(12)/10, read16(14)/10], // Low, Normal, High, Very High
+      bmi: [read16(18)/10, read16(20)/10],    // Min, Max
+      subcutaneousFat: [read16(33)/10, read16(35)/10],
+      boneMass: [data[39]/10, data[40]/10],
+      waterPercentage: [read16(45)/10, read16(47)/10], // e.g., 55.0, 65.0
+      visceralFat: [data[50], data[51]],
+      skeletalMuscle: [read16(54)/10, read16(56)/10],
+      protein: [read16(59)/10, read16(60)/10],
+      muscleMass: [read16(65)/10, read16(67)/10],
+      bmr: read16(24) // Standard BMR
     },
     evaluation: {
       bodyScore: data[36],
@@ -1065,7 +1073,134 @@ function createCommand(commandByte, dataBytes = []) {
   };
 }
 
+// ============================================================================
+// 4-ELECTRODE BODY COMPOSITION (ARMS)
+// ============================================================================
 
+// 1. Generate the Tx Command for Arms (0xD2)
+export function createArmsBodyCompositionCommand(gender, height, age, weight, impedance) {
+  const buffer = Buffer.alloc(12);
+
+  buffer[0] = 0x55;
+  buffer[1] = 0x0c;
+  buffer[2] = 0xd2; // D2 = Arms Command
+  buffer[3] = gender & 0xff; // 0x01 = Male, 0x00 = Female
+  buffer[4] = 0x00;
+  buffer[5] = height & 0xff;
+  buffer[6] = age & 0xff;
+
+  // Weight (Resolution: 0.1 kg)
+  buffer.writeUInt16LE(Math.round(weight * 10), 7);
+
+  // Impedance (Resolution: 1 Ω)
+  // Your log shows 0x034D = 845Ω
+  buffer.writeUInt16LE(Math.round(impedance), 9);
+
+  // Checksum
+  const checksumData = buffer.slice(0, 11);
+  buffer[11] = calculateChecksum(checksumData);
+
+  return buffer;
+}
+
+// 2. Parse into Proper Named JSON (Matches "Arms (1).jpg" UI values)
+export function parseArmsBodyComposition(data) {
+  // Validate header and command (0xD2 = Arms)
+  if (data[0] !== 0xaa || data[2] !== 0xd2) return null;
+  if (data.length < 86) return null;
+
+  const read16 = (offset) => data[offset] | (data[offset + 1] << 8);
+
+  return {
+    measurementMode: 'Arms',
+    bodyComposition: {
+      weightKg: read16(41) / 10,              // Ideal weight used as base?
+      fatMassKg: read16(5) / 10,
+      fatPercentage: read16(7) / 10,
+      fatFreeMassKg: read16(27) / 10,
+      subcutaneousFatMassKg: read16(29) / 10,
+      subcutaneousFatPercentage: read16(31) / 10,
+      visceralFatLevel: data[49],
+      boneMassKg: data[38] / 10,
+      waterPercentage: read16(43) / 10,
+      skeletalMuscleMassKg: read16(52) / 10,
+      proteinPercentage: read16(57) / 10,
+      musclePercentage: read16(61) / 10,
+      muscleMassKg: read16(63) / 10,
+    },
+    // NEW: Extracted Ranges for UI display (Min ~ Max)
+    standards: {
+      fatPercentage: [data[9]/10, read16(10)/10, read16(12)/10, read16(14)/10], // Low, Normal, High, Very High
+      bmi: [read16(18)/10, read16(20)/10],    // Min, Max
+      subcutaneousFat: [read16(33)/10, read16(35)/10],
+      boneMass: [data[39]/10, data[40]/10],
+      waterPercentage: [read16(45)/10, read16(47)/10], // e.g., 55.0, 65.0
+      visceralFat: [data[50], data[51]],
+      skeletalMuscle: [read16(54)/10, read16(56)/10],
+      protein: [read16(59)/10, read16(60)/10], // Note: Check if 1 or 2 bytes. Usually 2.
+      muscleMass: [read16(65)/10, read16(67)/10],
+      bmr: read16(24) // Standard BMR
+    },
+    evaluation: {
+      bodyScore: data[36],
+      bodyAge: data[26],
+      idealWeightKg: read16(41) / 10,
+      bmi: read16(16) / 10,
+      bmrKcal: read16(22)
+    },
+    exerciseConsumptionKcal: {
+      walk: read16(69),
+      golf: read16(71),
+      croquet: read16(73),
+      tennis: read16(75),
+      squash: read16(77),
+      mountainClimbing: read16(79),
+      swimming: read16(81),
+      badminton: read16(83)
+    }
+  };
+}
+
+async function executeArmsBodyComposition(userProfile, impedanceVal) {
+  try {
+    const { gender = 1, height = 172, age = 24, weight = 62.1 } = userProfile;
+    
+    // Command uses D2 (Arms)
+    // IMPORTANT: impedanceVal for arms (e.g. 845) goes here
+    const command = createArmsBodyCompositionCommand(gender, height, age, weight, impedanceVal);
+
+    console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
+    
+    // Send command and let the global listener parse the Rx response
+    await sendBiaCommand(command, { timeout: 5000, verbose: true });
+    
+    return true;
+  } catch (error) {
+    console.error(`❌ Failed to request Arms body composition:`, error);
+    throw error;
+  }
+}
+
+// 3. Parse into Raw Packages Format (For Frontend Compatibility)
+export function parseArmsBodyCompositionRawPackages(data) {
+  if (data[0] !== 0xaa || data[2] !== 0xd2) {
+    return null;
+  }
+
+  const hexArray = Array.from(data).map(b => b.toString(16).padStart(2, '0').toUpperCase());
+
+  return {
+    measurementMode: 'Arms',
+    totalPackages: 1, // 4-electrode sends everything in 1 frame
+    packages: {
+      package1: {
+        byteLength: data.length,
+        rawDecimalData: Array.from(data),
+        rawHexData: hexArray.join(' ')
+      }
+    }
+  };
+}
 
 
 // Create 8-electrode body composition command (0xD0)
@@ -1434,6 +1569,27 @@ export function collectLegsBodyCompositionOnce(timeout = 8000) {
   })
 }
 
+export function collectArmsBodyCompositionOnce(timeout = 8000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      biaPort.off("data", onData)
+      reject(new Error("Arms BIA timeout"))
+    }, timeout)
+
+    const onData = (data) => {
+      if (data[0] === 0xaa && data[2] === 0xd2) {
+        clearTimeout(timer)
+        biaPort.off("data", onData)
+
+        const parsed = parseArmsBodyComposition(data)
+        resolve({ parsed })
+      }
+    }
+
+    biaPort.on("data", onData)
+  })
+}
+
 export function processBodyCompositionResponse(data) {
   const parsedData = parseBodyCompositionResponse(data)
 
@@ -1613,36 +1769,35 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
         parseImpedanceResponse(data)
       }
 
-      // Body Composition response parsing
-      if (data[0] === 0xaa && data[2] === 0xd0) {
-        try {
-          processBodyCompositionResponse(data)
-        } catch (error) {
-          console.error('Error parsing body composition response:', error)
-        }
-      }
-      console.log(`${'='.repeat(60)}\n`)
-        // Body Composition response parsing (Legs)
-      if (data[0] === 0xaa && data[2] === 0xd1) {
-        try {
-          console.log("=".repeat(50));
-          console.log("Legs Body Composition response parsing");
-          const parsedComp = parseLegsBodyComposition(data);
-          // const rawPackages = parseLegsBodyCompositionRawPackages(data);
-          console.log("=".repeat(50));
-          if (parsedComp) {
-            console.log(`\n✅ Legs Body Composition Data (Parsed):`);
-            console.log(JSON.stringify(parsedComp, null, 2));
-
-            console.log(`\n📦 Legs Body Composition Data (Raw Packages):`);
-            //console.log(JSON.stringify(rawPackages, null, 2));
-            
-            // eventBus.emit(EVENTS.LEGS_COMP_COMPLETE, { parsed: parsedComp, raw: rawPackages }); 
+      // Body Composition response parsing 8 electrode
+        if (data[0] === 0xaa && data[2] === 0xd0) {
+          try {
+            processBodyCompositionResponse(data);
+          } catch (error) {
+            console.error('Error parsing 8-electrode body composition:', error);
           }
-        } catch (error) {
-          console.error('Error parsing Legs body composition:', error);
         }
-      }
+        // 4-Electrode Parsing (Legs D1 & Arms D2)
+        if (data[0] === 0xaa && (data[2] === 0xd1 || data[2] === 0xd2)) {
+          try {
+            const modeName = data[2] === 0xd1 ? 'Legs' : 'Arms';
+            const parseFunc = data[2] === 0xd1 ? parseLegsBodyComposition : parseArmsBodyComposition;
+            // const rawFunc = data[2] === 0xd1 ? parseLegsBodyCompositionRawPackages : parseArmsBodyCompositionRawPackages;
+  
+            const parsedComp = parseFunc(data);
+            // const rawPackages = rawFunc(data);q
+  
+            if (parsedComp) {
+              console.log(`\n✅ ${modeName} Body Composition Data (Parsed):`);
+              console.log(JSON.stringify(parsedComp, null, 2));              
+              // Send to Frontend:
+              const eventName = data[2] === 0xd1 ? EVENTS.LEGS_COMP_COMPLETE : EVENTS.ARMS_COMP_COMPLETE;
+              eventBus.emit(eventName, { parsed: parsedComp }); 
+            }
+          } catch (error) {
+            console.error('Error parsing 4-electrode body composition:', error);
+          }
+        }
       // heightWaitingForResponse = false;
       if (!IS_ELECTRON) showMenu()
     })

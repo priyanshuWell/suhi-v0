@@ -16,5 +16,9 @@ export const EVENTS = {
   LEG_ERROR: "leg:error",
 
   ARM_STATUS: "arm:status",
-  ARM_ERROR: "arm:error"
+  ARM_ERROR: "arm:error",
+
+  // 4-electrode body composition results
+  LEGS_COMP_COMPLETE: "leg:calc:result",
+  ARMS_COMP_COMPLETE: "arm:calc:result"
 };

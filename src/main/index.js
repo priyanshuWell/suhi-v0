@@ -206,19 +206,58 @@ ipcMain.handle("calculate-leg-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" }
     }
     const { height, weight, age, gender, impedanceVal } = payload
-    const command = biaa.createLegsBodyCompositionCommand(gender, height, age, weight, impedanceVal);
+    const genderCode = gender === "male" ? 1 : 0
+    const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
     console.log(`\n📡 Requesting Legs Body Composition (Impedance: ${impedanceVal}Ω)...`);
+
+    // Wait for the result that the global connectBiaPort data listener will emit
+    const resultPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Legs BIA timeout")), 8000);
+      eventBus.once("leg:calc:result", (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      });
+    });
+
     await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
 
-    const result = await biaa.collectLegsBodyCompositionOnce(8000);
-    return {
-      success: true,
-      data: result
-    }
+    const result = await resultPromise;
+    return { success: true, data: result }
 
   } catch (error) {
     console.error("Error calculating leg BIA:", error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle("calculate-arm-bia", async (event, payload) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      return { success: false, error: "BIA port not connected" }
+    }
+    const { height, weight, age, gender, impedanceVal } = payload
+    const genderCode = gender === "male" ? 1 : 0
+    const command = biaa.createArmsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
+
+    console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
+
+    // Wait for the result that the global connectBiaPort data listener will emit
+    const resultPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Arms BIA timeout")), 8000);
+      eventBus.once("arm:calc:result", (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      });
+    });
+
+    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
+
+    const result = await resultPromise;
+    return { success: true, data: result }
+
+  } catch (error) {
+    console.error("Error calculating arm BIA:", error)
     return { success: false, error: error.message }
   }
 })
@@ -564,6 +603,21 @@ app.whenReady().then(() => {
     console.log('[MAIN] Forwarding arm status to renderer:', p)
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('arm:status', p)
+    }
+  })
+
+  // Forward 4-electrode body composition calculation results to UI
+  eventBus.on('leg:calc:result', (p) => {
+    console.log('[MAIN] Forwarding leg calc result to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('leg:calc:result', p)
+    }
+  })
+
+  eventBus.on('arm:calc:result', (p) => {
+    console.log('[MAIN] Forwarding arm calc result to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('arm:calc:result', p)
     }
   })
 
