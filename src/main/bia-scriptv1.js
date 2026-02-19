@@ -2309,62 +2309,35 @@ export async function disconnectHeightPort() {
  */
 export async function disconnectBiaPort() {
   try {
-    console.log('[BIA DISCONNECT] Starting disconnect process...')
-    console.log('[BIA DISCONNECT] biaPort exists:', !!biaPort)
-    
     if (!biaPort) {
-      console.log('⚠️ BIA port is not initialized')
-      return {
-        success: true,
-        message: 'Port not initialized'
-      }
+      return { success: true }
     }
 
-    console.log('[BIA DISCONNECT] biaPort.isOpen:', biaPort.isOpen)
-    
-    if (!biaPort.isOpen) {
-      console.log('⚠️ BIA port is already closed')
-      biaPort = null
-      return {
-        success: true,
-        message: 'Port already closed'
-      }
-    }
+    // Remove ALL listeners
+    biaPort.removeAllListeners('data')
+    biaPort.removeAllListeners()
 
-    console.log('[BIA DISCONNECT] Attempting to close BIA port...')
-    
-    await new Promise((resolve, reject) => {
-      biaPort.close((err) => {
-        if (err) {
-          console.error(`❌ Error closing BIA port: ${err.message}`)
-          reject(err)
-        } else {
-          console.log('✅ BIA port closed successfully')
+    // If open, close properly
+    if (biaPort.isOpen) {
+      await new Promise((resolve, reject) => {
+        biaPort.close((err) => {
+          if (err) {
+            console.error('Error closing BIA port:', err)
+            return reject(err)
+          }
           resolve()
-        }
+        })
       })
-    })
-
-    // Clear the port reference
-    console.log('[BIA DISCONNECT] Clearing biaPort reference...')
-    biaPort = null
-    console.log('[BIA DISCONNECT] Disconnect complete!')
-
-    return {
-      success: true,
-      message: 'BIA port disconnected'
     }
+
+    biaPort = null
+
+    console.log('✅ BIA Port fully disconnected')
+    return { success: true }
+
   } catch (error) {
-    console.error(`❌ Failed to disconnect BIA port: ${error.message}`)
-    console.error('[BIA DISCONNECT] Error stack:', error.stack)
-    
-    // Force clear the port reference even on error
-    biaPort = null
-    
-    return {
-      success: false,
-      error: error.message
-    }
+    console.error('❌ BIA disconnect failed:', error)
+    return { success: false, error: error.message }
   }
 }
 
