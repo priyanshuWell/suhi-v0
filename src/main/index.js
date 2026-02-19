@@ -340,9 +340,18 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
     const p1 = bodyComposition.package1
     const p3 = bodyComposition.package3
 
-    const result = {
+
+    // Send to API
+    try {
+      const apiPayload = convertBIADataToAPIPayload(
+        bodyComposition,
+        { height, weight, age, gender },
+        { impedance20, impedance100 }
+      )
+        const result = {
       success: true,
       raw: JSON.stringify(bodyComposition),
+      finalBia: apiPayload,
       summary: {
         bodyFatPercent: p3.bodyFatPercentage || 0,
         muscleMass: p1.muscleMass || 0,
@@ -354,29 +363,14 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       }
     }
 
-    // Send to API
-    try {
-      const apiPayload = convertBIADataToAPIPayload(
-        bodyComposition,
-        { height, weight, age, gender },
-        { impedance20, impedance100 },
-        {
-          session_id: payload.session_id,
-          user_id: payload.user_id ,
-        }
-      )
+    return result;
+      // console.log("[MAIN] Sending BIA data to API:", apiPayload)
+      // const apiResponse = await axios.post("http://127.0.0.1:8000/bia/measurements", apiPayload)
 
-      console.log("[MAIN] Sending BIA data to API:", apiPayload)
-      const apiResponse = await axios.post("http://127.0.0.1:8000/bia/measurements", apiPayload)
-
-      console.log("[MAIN] BIA API Response:", apiResponse.data)
-      result.apiResponse = apiResponse.data
+      // console.log("[MAIN] BIA API Response:", apiResponse.data)
+      // result.apiResponse = apiResponse.data
     } catch (apiError) {
       console.error("[MAIN] BIA API Error:", apiError.message)
-      if (apiError.response?.data) {
-        console.error("[MAIN] BIA API Error Data:", apiError.response.data)
-      }
-      result.apiError = apiError.message
     }
 
     return result
@@ -706,13 +700,6 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, 
   }
 
   return {
-    session_id: identifiers?.session_id || "dummy-session-id",
-    user_id: identifiers?.user_id ,
-
-    measurement_status: "BIA_SUCCESS",
-    error_type: 0,
-    error_details: {},
-
     height_cm: userInputs?.height || 170,
     weight_kg: userInputs?.weight || STD.bodyWeight,
     age_years: userInputs?.age || 29,

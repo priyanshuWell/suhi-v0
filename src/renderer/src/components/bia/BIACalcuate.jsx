@@ -7,8 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
-import { BIAMeasurementStage } from "../../utils/api";
-import { mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
+import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
+import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
@@ -70,7 +70,7 @@ export default function BIACalculate({ user, onComplete }) {
     PRE_HEIGHT: "PRE_HEIGHT",
     WEIGHT: "WEIGHT",
     PRE_WEIGHT: "PRE_WEIGHT",
-    COMPLETE: "COMPLETE",
+    BIA_COMPLETE: "BIA_COMPLETE",
   }
 
   const STATUS = {
@@ -634,34 +634,6 @@ export default function BIACalculate({ user, onComplete }) {
     return res;
   };
 
-
-
-
-  // const measureHeightWrapper = async () => {
-  //   console.log("[BIA DEBUG] Starting height measurement...");
-
-  //   if (!ports[0]?.path) {
-  //     throw new Error("Height port not available");
-  //   }
-
-  //   try {
-  //     const result = await measureHeight(ports[0]?.path);
-
-  //     resultsRef.current.height = {
-  //       value: result.height,
-  //       unit: result.unit
-  //     };
-  //     console.log(`[BIA DEBUG] Height stored: ${result.height} ${result.unit}`);
-
-  //     // Store in Redux as preliminary measurement
-  //     storePreliminaryMeasurements(dispatch, null, result.height);
-
-  //     return { height: result.height };
-  //   } catch (error) {
-  //     console.error("[BIA DEBUG] Height measurement failed:", error);
-  //     throw error;
-  //   }
-  // };
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
@@ -931,11 +903,14 @@ export default function BIACalculate({ user, onComplete }) {
 
       // Impedance 20kHz
       await measureImpedance("20");
+      await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 });
       await sleep(1500);
       console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
 
+
       // Impedance 100kHz
       await measureImpedance("100");
+      await trackStage(STAGES.IMPEDANCE_100KHZ, STATUS.SUCCESS, { impedance100: resultsRef.current.impedance.k100 });
       console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
 
       // All impedance measurements success
@@ -979,7 +954,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
         const legBiaPayload = mapLegsPayloadToBIAMeasurement({
           payload: legBia?.data?.parsed,
-          sessionId:storeUser?.sessionId,
+          sessionId: storeUser?.sessionId,
           userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
@@ -1017,6 +992,18 @@ export default function BIACalculate({ user, onComplete }) {
         // Store in Redux
         dispatch(setArmBiaResult(armBia));
         console.log("[BIA DEBUG] Arm BIA saved to Redux");
+        const armBiaPayload = mapArmsPayloadToBIAMeasurement({
+          payload: armBia?.data?.parsed,
+          sessionId: storeUser?.sessionId,
+          userId: storeUser?.data?.user_id,
+          gender: storeUser?.data?.gender,
+          heightCm: resultsRef.current.height.value,
+          ageYears: storeUser?.data?.age,
+          weightKg: resultsRef.current.weight.value
+        });
+        console.log("[BIA DEBUG] Arm BIA payload:", armBiaPayload);
+        //  await window.api.sendLegBiaResult(legBiaPayload);
+        await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { armBiaPayload });
       } else {
         console.error("[BIA DEBUG] Arm BIA calculation failed:", armBia?.error);
         // Non-blocking - continue flow
@@ -1044,7 +1031,7 @@ export default function BIACalculate({ user, onComplete }) {
       gender: storeUser?.data?.gender ?? "male",
       impedance20: resultsRef.current.impedance.k20.segments,
       impedance100: resultsRef.current.impedance.k100.segments,
-      session_id: sessionId,
+      session_id: storeUser?.sessionId,
       user_id: storeUser?.data?.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     });
 
@@ -1056,14 +1043,11 @@ export default function BIACalculate({ user, onComplete }) {
         age: storeUser?.data?.age ?? 23,
         gender: storeUser?.data?.gender ?? "male",
         impedance20: resultsRef.current.impedance.k20.segments,
-        impedance100: resultsRef.current.impedance.k100.segments,
-        session_id: sessionId,
-        user_id: storeUser?.data?.user_id || "af341b46-4c88-4d67-bb0e-bdf575d0ef2b"
+        impedance100: resultsRef.current.impedance.k100.segments
       });
 
       console.log("[BIA DEBUG] BIA calculation result:", bia);
       console.log("[BIA DEBUG] BIA success:", bia?.success);
-      console.log("[BIA DEBUG] BIA packages:", bia?.bodyComposition);
       console.log("[BIA DEBUG] BIA summary:", bia?.summary);
 
       if (!bia?.success) {
@@ -1081,10 +1065,12 @@ export default function BIACalculate({ user, onComplete }) {
 
       console.log("[BIA DEBUG] Results saved to Redux store");
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
+      await trackStage(STAGES.COMPLETE, STATUS.SUCCESS, bia.finalBia);
       await sleep(3000);
 
       // ✅ STOP RECORDING ON SUCCESS
       stopRecording();
+      await BIAComplete(storeUser?.sessionId);
 
       // Clear timeouts
       //clearAllTimeouts();

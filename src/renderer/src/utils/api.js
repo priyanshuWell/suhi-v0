@@ -111,6 +111,7 @@ export const BIAMeasurementStage = async (stage) => {
 
     const data = await response.json();
 
+    console.log("BIA measurement stage response:", data);
     return {
       success: true,
       ...data
@@ -139,6 +140,7 @@ export const BIAComplete = async (result)=>{
     }
 
     const data = await response.json();
+    console.log("BIA complete response:", data);
     return {
       success: true,
       ...data
