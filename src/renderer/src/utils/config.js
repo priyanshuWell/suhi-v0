@@ -54,10 +54,6 @@
 
 
 
-
-
-
-
 /**
  * Configuration file for video capture settings
  */
@@ -128,4 +124,8 @@ export function getKioskId() {
   
   // Return default from config
   return VIDEO_CONFIG.KIOSK_ID;
+}
+
+export function getSessionId(){
+  return crypto.randomUUID();
 }

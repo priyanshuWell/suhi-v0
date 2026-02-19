@@ -101,7 +101,60 @@ export async function sendAllVideosToBackend(recordings) {
 }
 
 
+export const BIAMeasurementStage = async (stage)=>{
+  try {
+    const response = await fetch(`${API_BASE_URL}/bia/measurement/stage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ stage }),
+    });
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending BIA measurement stage to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const BIAComplete = async (result)=>{
+  try {
+    const response = await fetch(`${API_BASE_URL}/bia/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending BIA complete to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 // /**
 //  * Send weight and height measurements to backend

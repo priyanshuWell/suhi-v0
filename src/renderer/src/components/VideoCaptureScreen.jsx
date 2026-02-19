@@ -2,11 +2,11 @@ import React, { useEffect, useState } from "react";
 import video2 from "../assets/avatar2.mp4";
 import { useNavigate } from "react-router";
 import { recordFromOpenCameras } from "../utils/recordSession";
-import { getVideoDuration, getKioskId } from "../utils/config";
+import { getVideoDuration, getKioskId, getSessionId } from "../utils/config";
 import { runFPT, sendVideoToBackend } from "../utils/api";
 import { measureWeightAndHeight } from "../utils/measurementUtils";
 import { storeFptMeasurements } from "../utils/measurementRedux";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../features/common/commonSlice";
 import ErrorAlert from "./ErrorAlert";
 
@@ -37,6 +37,7 @@ const VideoCaptureScreen = () => {
 
         const videoDuration = getVideoDuration();
         const kioskId = getKioskId();
+        const sessionId = getSessionId();
 
         setStatus(`Recording for ${videoDuration / 1000} seconds...`);
 
@@ -129,7 +130,11 @@ const VideoCaptureScreen = () => {
         }
 
         // Success case - Face recognition successful
-        dispatch(setUser(fptResponse));
+        dispatch(setUser({
+          ...fptResponse,
+          kioskId,
+          sessionId,
+        }));
         setStatus("Verification successful!");
         setIsVerify(true);
         stopAudio();

@@ -7,6 +7,8 @@ import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
+import { BIAMeasurementStage } from "../../utils/api";
+import { mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
@@ -26,6 +28,28 @@ export default function BIACalculate({ user, onComplete }) {
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
 
+  const trackStage = async (stage, status, data = {}, error = null) => {
+    const payload = {
+      session_id: recordingRef.current.sessionId || "pending",
+      user_id: storeUser?.data?.user_id || "unknown",
+      measurement_stage: stage,
+      status: status,
+      retry_reason: error,
+      attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
+      measurement_timestamp: new Date().toISOString(),
+      data: {
+        ...data,
+
+      }
+    };
+
+    try {
+      // Replace with your actual fetch/axios call to /bia/measurement/stage
+      await BIAMeasurementStage(payload);
+    } catch (err) {
+      console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
+    }
+  };
   const resultsRef = useRef({
     legImpedance: null,
     weight: null,
@@ -35,7 +59,25 @@ export default function BIACalculate({ user, onComplete }) {
     armImpedance: null,
     impedance: { k20: null, k100: null }
   });
+  const STAGES = {
+    LEG_50KHZ: "LEG_50KHZ",
+    LEG_BIA_50KHZ: "LEG_BIA_50KHZ",
+    ARM_50KHZ: "ARM_50KHZ",
+    ARM_BIA_50KHZ: "ARM_BIA_50KHZ",
+    IMPEDANCE_20KHZ: "IMPEDANCE_20KHZ",
+    IMPEDANCE_100KHZ: "IMPEDANCE_100KHZ",
+    HEIGHT: "HEIGHT",
+    PRE_HEIGHT: "PRE_HEIGHT",
+    WEIGHT: "WEIGHT",
+    PRE_WEIGHT: "PRE_WEIGHT",
+    COMPLETE: "COMPLETE",
+  }
 
+  const STATUS = {
+    PARTIAL: "PARTIAL",
+    SUCCESS: "SUCCESS",
+    ERROR: "ERROR",
+  }
   const MAX_RETRIES = 2;
 
   const timeoutRefs = useRef({
@@ -733,6 +775,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
+      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance });
       //updatePhaseState('leg', 'success');
       await sleep(800);
 
@@ -742,6 +785,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected");
         navigate("/screen1");
         return;
       }
@@ -752,8 +796,10 @@ export default function BIACalculate({ user, onComplete }) {
       try {
         const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
+        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.weight });
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
+        await trackStage(STAGES.PRE_WEIGHT, STATUS.ERROR, {}, "Weight measurement failed");
       }
 
       // Show blocking CTA modal and wait for user choice
@@ -787,6 +833,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
+      await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.weight });
 
       // Measure Height with retry logic
       await runHeightWithRetry();
@@ -794,6 +841,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (weightError) {
       console.error("[BIA DEBUG] Phase 2 FAILED - Weight error:", weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
+      await trackStage(STAGES.WEIGHT, STATUS.ERROR, {}, "main weight measurement failed");
       navigate("/screen1");
       return;
     }
@@ -806,6 +854,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       await showError(ERROR_MESSAGES.height, 3000);
+      await trackStage(STAGES.HEIGHT, STATUS.ERROR, {}, "main height measurement failed");
       navigate("/screen1");
       return;
     }
@@ -818,6 +867,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
+      await trackStage(STAGES.HEIGHT, STATUS.SUCCESS, { height_cm: resultsRef.current.height });
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
 
@@ -927,6 +977,18 @@ export default function BIACalculate({ user, onComplete }) {
         // Store in Redux
         dispatch(setLegBiaResult(legBia));
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
+        const legBiaPayload = mapLegsPayloadToBIAMeasurement({
+          payload: legBia,
+          sessionId: storeUser?.data?.sessionId,
+          userId: storeUser?.data?.userId,
+          gender: storeUser?.data?.gender,
+          heightCm: resultsRef.current.height.value,
+          ageYears: storeUser?.data?.age,
+          weightKg: resultsRef.current.weight.value
+        });
+        console.log("[BIA DEBUG] Leg BIA payload:", legBiaPayload);
+        //  await window.api.sendLegBiaResult(legBiaPayload);
+        await trackStage(STAGES.LEG_BIA, STATUS.SUCCESS, { legBiaPayload });
       } else {
         console.error("[BIA DEBUG] Leg BIA calculation failed:", legBia?.error);
         // Non-blocking - continue flow
@@ -1204,7 +1266,7 @@ function BarefootCTAModal({ onRemoveShoe, onContinueWithShoes }) {
         <div className="text-center">
           <h2 className="text-3xl font-bold text-[#FFC568]">Please be on the bare foot</h2>
           <p className="mt-3 text-lg text-[#FFC568]/70">
-            We detected an issue with the leg measurement. How would you like to proceed?
+            How would you like to proceed?
           </p>
         </div>
 
