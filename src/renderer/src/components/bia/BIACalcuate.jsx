@@ -775,7 +775,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
-      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance });
+      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance });
       //updatePhaseState('leg', 'success');
       await sleep(800);
 
@@ -833,7 +833,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
-      await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.weight });
+      await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current?.weight?.value });
 
       // Measure Height with retry logic
       await runHeightWithRetry();
@@ -867,7 +867,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
-      await trackStage(STAGES.HEIGHT, STATUS.SUCCESS, { height_cm: resultsRef.current.height });
+      await trackStage(STAGES.HEIGHT, STATUS.SUCCESS, { height_cm: resultsRef?.current?.height?.value });
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
 
@@ -978,9 +978,9 @@ export default function BIACalculate({ user, onComplete }) {
         dispatch(setLegBiaResult(legBia));
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
         const legBiaPayload = mapLegsPayloadToBIAMeasurement({
-          payload: legBia,
-          sessionId: storeUser?.data?.sessionId,
-          userId: storeUser?.data?.userId,
+          payload: legBia?.data?.parsed,
+          sessionId: storeUser?.sessionId,
+          userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
           ageYears: storeUser?.data?.age,
@@ -1037,14 +1037,6 @@ export default function BIACalculate({ user, onComplete }) {
     // Navigate to imComplete FIRST
     console.log("[BIA DEBUG] Navigating to /bia/imcomplete");
     navigate("/bia/imcomplete");
-    // Generate session ID BEFORE calculateBIA call (FIX for the bug)
-    const sessionId = crypto.randomUUID();
-    console.log("[BIA DEBUG] Generated sessionId:", sessionId);
-    dispatch(setSessionId(sessionId));
-
-    // Store session ID in recording ref for filename
-    recordingRef.current.sessionId = sessionId;
-
     console.log("[BIA DEBUG] Calling calculateBIA with params:", {
       height: resultsRef.current.height.value,
       weight: resultsRef.current.weight.value,
