@@ -167,6 +167,7 @@ const NewDmitScreen = () => {
       setPhase("ERROR");
       setStatus(t('dmit.status.failed_camera'));
       setIsCameraReady(false);
+      navigate('/voice')
     }
   };
 

@@ -95,20 +95,14 @@ export async function runFPT(shmPath, kioskId) {
  * @param {Array} recordings - Array of video recordings
  * @returns {Promise<Array>} Array of responses with shm_paths
  */
-export async function sendAllVideosToBackend(recordings) {
-  const promises = recordings.map(recording => sendVideoToBackend(recording));
-  return Promise.all(promises);
-}
-
-
-export const BIAMeasurementStage = async (stage)=>{
+export const BIAMeasurementStage = async (stage) => {
   try {
     const response = await fetch(`${API_BASE_URL}/bia/measurement/stage`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ stage }),
+      body: JSON.stringify(stage), // ✅ FIXED
     });
 
     if (!response.ok) {
@@ -116,6 +110,7 @@ export const BIAMeasurementStage = async (stage)=>{
     }
 
     const data = await response.json();
+
     return {
       success: true,
       ...data
@@ -127,7 +122,8 @@ export const BIAMeasurementStage = async (stage)=>{
       error: error.message
     };
   }
-}
+};
+
 
 export const BIAComplete = async (result)=>{
   try {

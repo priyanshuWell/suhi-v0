@@ -30,7 +30,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const trackStage = async (stage, status, data = {}, error = null) => {
     const payload = {
-      session_id: recordingRef.current.sessionId || "pending",
+      session_id: storeUser?.sessionId,
       user_id: storeUser?.data?.user_id || "unknown",
       measurement_stage: stage,
       status: status,
@@ -86,7 +86,7 @@ export default function BIACalculate({ user, onComplete }) {
   });
 
   // Recording configuration
-  const ENABLE_RECORDING = true; // Set to false to disable recording
+  const ENABLE_RECORDING = false; // Set to false to disable recording
 
   // Recording state
   const recordingRef = useRef({
@@ -537,7 +537,7 @@ export default function BIACalculate({ user, onComplete }) {
       const arrayBuffer = await blob.arrayBuffer();
 
       // Use existing session_id or generate new one
-      const sessionId = recordingRef.current.sessionId || crypto.randomUUID();
+      const sessionId = storeUser?.sessionId
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `bia_${sessionId}_${timestamp}.webm`;
 
@@ -548,7 +548,7 @@ export default function BIACalculate({ user, onComplete }) {
       const result = await window.api.saveRecording({
         arrayBuffer: arrayBuffer,
         filename: filename,
-        session_id: sessionId,
+        session_id: storeUser?.sessionId,
         user_id: storeUser?.data?.user_id || 'unknown',
         phase_states: recordingRef.current.phaseStates // Include phase tracking
       });
@@ -796,7 +796,7 @@ export default function BIACalculate({ user, onComplete }) {
       try {
         const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
-        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.weight });
+        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight });
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
         await trackStage(STAGES.PRE_WEIGHT, STATUS.ERROR, {}, "Weight measurement failed");
@@ -979,7 +979,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
         const legBiaPayload = mapLegsPayloadToBIAMeasurement({
           payload: legBia?.data?.parsed,
-          sessionId: storeUser?.sessionId,
+          sessionId:storeUser?.sessionId,
           userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
@@ -988,7 +988,7 @@ export default function BIACalculate({ user, onComplete }) {
         });
         console.log("[BIA DEBUG] Leg BIA payload:", legBiaPayload);
         //  await window.api.sendLegBiaResult(legBiaPayload);
-        await trackStage(STAGES.LEG_BIA, STATUS.SUCCESS, { legBiaPayload });
+        await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.SUCCESS, { legBiaPayload });
       } else {
         console.error("[BIA DEBUG] Leg BIA calculation failed:", legBia?.error);
         // Non-blocking - continue flow
