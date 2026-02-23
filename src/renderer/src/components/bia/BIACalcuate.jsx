@@ -1068,15 +1068,14 @@ export default function BIACalculate({ user, onComplete }) {
 
       console.log("[BIA DEBUG] Results saved to Redux store");
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
-      await trackStage(STAGES.COMPLETE, STATUS.SUCCESS, bia.finalBia);
+      await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS,{finalBia: bia?.finalBia});
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
-      await sleep(3000);
 
 
       // ✅ STOP RECORDING ON SUCCESS
       stopRecording();
       await BIAComplete(storeUser?.data?.buffer_id);
-
+      await sleep(3000); // Wait for complete video
       // Clear timeouts
       //clearAllTimeouts();
       setIsComplete(true);
