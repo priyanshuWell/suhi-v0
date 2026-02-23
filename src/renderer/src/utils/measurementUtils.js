@@ -79,11 +79,12 @@ export async function measureWeight(portPath = null, timeoutMs = DEFAULT_MEASURE
     };
   } catch (error) {
     console.error('[MEASUREMENT] Weight measurement error:', error);
-    // Ensure port is disconnected even on error, but only if we connected it
-    if (shouldManageConnection) {
-      await disconnectBiaPort(portPath);
-    }
-    throw error;
+    await disconnectBiaPort(portPath);
+  return {
+    weight: null,
+    unit: 'kg',
+    error: error?.message || 'Weight failed'
+  };
   }
 }
 
@@ -132,8 +133,15 @@ export async function measureHeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TI
   } catch (error) {
     console.error('[MEASUREMENT] Height measurement error:', error);
     // Ensure port is disconnected even on error
-    await disconnectHeightPort(portPath);
-    throw error;
+     console.error('[MEASUREMENT] Height measurement error:', error);
+
+  await disconnectHeightPort(portPath);
+
+  return {
+    height: null,
+    unit: 'cm',
+    error: error?.message || 'Height failed'
+  };
   }
 }
 
@@ -254,101 +262,42 @@ export function isPortConnected(portPath) {
   return connectedPorts.has(portPath);
 }
 
-/**
- * Measure both weight and height sequentially (weight first, then height)
- * This runs in parallel with FPT processing but weight and height run in sequence
- * @param {Array} ports - Array of available ports
- * @param {number} timeoutMs - Optional timeout in milliseconds for each measurement (default: 30s)
- * @returns {Promise<Object>} { weight: number|null, height: number|null, errors: Object }
- */
-// export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
-//   const heightPortPath = ports[0]?.path;
-//   const weightPortPath = ports[2]?.path;
-  
-//   console.log(`[MEASUREMENT] Starting parallel weight and height measurement with ${timeoutMs}ms timeout...`);
-  
-//   // Run measurements in parallel using Promise.allSettled
-//   // const [weightResult, heightResult] = await Promise.allSettled([
-//   //   weightPortPath ? measureWeight(weightPortPath, timeoutMs) : Promise.reject(new Error('No weight port available')),
-//   //   heightPortPath ? measureHeight(heightPortPath, timeoutMs) : Promise.reject(new Error('No height port available'))
-//   // ]);
-//   const weightResult = await measureWeight(weightPortPath);
 
-//   const result = {
-//     weight: null,
-//     height: null,
-//     errors: {}
-//   };
-  
-//   // Process weight result
-//   if (weightResult.status === 'fulfilled') {
-//     result.weight = weightResult.value.weight;
-//     console.log('[MEASUREMENT] Weight measurement succeeded:', result.weight);
-//   } else {
-//     result.errors.weight = weightResult.reason?.message || 'Weight measurement failed';
-//     console.error('[MEASUREMENT] Weight measurement failed:', result.errors.weight);
-//   }
-  
-//   // Process height result
-//   if (heightResult.status === 'fulfilled') {
-//     result.height = heightResult.value.height;
-//     console.log('[MEASUREMENT] Height measurement succeeded:', result.height);
-//   } else {
-//     result.errors.height = heightResult.reason?.message || 'Height measurement failed';
-//     console.error('[MEASUREMENT] Height measurement failed:', result.errors.height);
-//   }
-  
-//   console.log('[MEASUREMENT] Parallel measurement completed:', result);
-//   return result;
-// }
 export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
   const heightPortPath = ports[0]?.path;
   const weightPortPath = ports[2]?.path;
 
-  console.log(`[MEASUREMENT] Starting sequential weight then height measurement with ${timeoutMs}ms timeout...`);
-
   const result = {
     weight: null,
     height: null,
-    errors: {}
+    errors: {},
+    status: "completed"
   };
-  
-  // Measure weight first
+
+  // Weight
   if (weightPortPath) {
-    try {
-      console.log('[MEASUREMENT] Step 1: Measuring weight...');
-      const weightData = await measureWeight(weightPortPath, timeoutMs);
-      result.weight = weightData.weight;
-      console.log('[MEASUREMENT] Weight measurement succeeded:', result.weight);
-    } catch (error) {
-      result.errors.weight = error?.message || 'Weight measurement failed';
-      console.error('[MEASUREMENT] Weight measurement failed:', result.errors.weight);
+    const weightData = await measureWeight(weightPortPath, timeoutMs);
+    result.weight = weightData.weight;
+    if (weightData.error) {
+      result.errors.weight = weightData.error;
     }
   } else {
-    result.errors.weight = 'No weight port available';
-    console.error('[MEASUREMENT] No weight port available');
+    result.errors.weight = "No weight port available";
   }
-  
-  // Then measure height (only after weight completes)
+
+  // Height
   if (heightPortPath) {
-    try {
-      console.log('[MEASUREMENT] Step 2: Measuring height...');
-      const heightData = await measureHeight(heightPortPath, timeoutMs);
-      result.height = heightData.height;
-      console.log('[MEASUREMENT] Height measurement succeeded:', result.height);
-    } catch (error) {
-      result.errors.height = error?.message || 'Height measurement failed';
-      console.error('[MEASUREMENT] Height measurement failed:', result.errors.height);
+    const heightData = await measureHeight(heightPortPath, timeoutMs);
+    result.height = heightData.height;
+    if (heightData.error) {
+      result.errors.height = heightData.error;
     }
   } else {
-    result.errors.height = 'No height port available';
-    console.error('[MEASUREMENT] No height port available');
+    result.errors.height = "No height port available";
   }
-  
-  console.log('[MEASUREMENT] Sequential measurement completed:', result);
+
   return result;
 }
-
 /**
  * Send measurements to backend
  * @param {Object} data - Measurement data

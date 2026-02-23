@@ -21,12 +21,10 @@ const VideoCaptureScreen = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const dispatch = useDispatch();
   const audioRef = React.useRef(null);
+  const measurementStartedRef = React.useRef(false);
 
   const MAX_ATTEMPTS = 2;
   const instructionAudio = "/src/assets/audio/camera_scan.mp3";
-
-  // Store measurements taken during recording
-  const measurementsRef = React.useRef(null);
 
   useEffect(() => {
     const run = async () => {
@@ -45,25 +43,23 @@ const VideoCaptureScreen = () => {
         // Use 20-second timeout to prevent infinite waiting if user not on sensors
         const MEASUREMENT_TIMEOUT = 6000; // 0 seconds
 
-        const measurementPromise = (async () => {
-          try {
-            console.log('[VIDEO CAPTURE] Starting measurements in background...');
-            const ports = await window.api?.getPorts?.();
-            console.log('[VIDEO CAPTURE] Available ports:', ports);
+        let measurementPromise = null;
 
-            if (!ports || ports.length < 1) {
-              console.warn('[VIDEO CAPTURE] No ports available for measurements');
+        if (!measurementStartedRef.current) {
+          measurementStartedRef.current = true;
+
+          measurementPromise = (async () => {
+            try {
+              const ports = await window.api?.getPorts?.();
+              if (!ports || ports.length < 1) return null;
+
+              return await measureWeightAndHeight(ports, MEASUREMENT_TIMEOUT);
+            } catch (err) {
+              console.error("Measurement error:", err);
               return null;
             }
-
-            const measurements = await measureWeightAndHeight(ports, MEASUREMENT_TIMEOUT);
-            console.log('[VIDEO CAPTURE] Measurements completed:', measurements);
-            return measurements;
-          } catch (error) {
-            console.error('[VIDEO CAPTURE] Measurement error:', error);
-            return null;
-          }
-        })();
+          })();
+        }
 
         // Record video
         const recordings = await recordFromOpenCameras(videoDuration);
