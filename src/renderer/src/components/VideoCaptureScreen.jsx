@@ -24,7 +24,7 @@ const VideoCaptureScreen = () => {
   const dispatch = useDispatch();
   const audioRef = React.useRef(null);
   const measurementStartedRef = React.useRef(false);
-  const storeUser = useSelector((state) => state.common.user);
+ let measurementPromise = null;  const storeUser = useSelector((state) => state.common.user);
 
   const STAGES = {
     FPT_HEIGHT: "FPT_HEIGHT",
@@ -56,8 +56,6 @@ const VideoCaptureScreen = () => {
         // Start measurements in background (non-blocking)
         // Use 20-second timeout to prevent infinite waiting if user not on sensors
         const MEASUREMENT_TIMEOUT = 6000; // 0 seconds
-
-        let measurementPromise = null;
 
         if (!measurementStartedRef.current) {
           measurementStartedRef.current = true;
