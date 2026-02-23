@@ -24,11 +24,11 @@ const VideoCaptureScreen = () => {
   const dispatch = useDispatch();
   const audioRef = React.useRef(null);
   const measurementStartedRef = React.useRef(false);
- let measurementPromise = null;  const storeUser = useSelector((state) => state.common.user);
+  const measurementPromiseRef = React.useRef(null);
+  const trackingDoneRef = React.useRef(false);
 
   const STAGES = {
-    FPT_HEIGHT: "FPT_HEIGHT",
-    FPT_WEIGHT: "FPT_WEIGHT",
+    FPT_WH: "FPT_WH",
   };
 
   const STATUS = {
@@ -60,7 +60,7 @@ const VideoCaptureScreen = () => {
         if (!measurementStartedRef.current) {
           measurementStartedRef.current = true;
 
-          measurementPromise = (async () => {
+          measurementPromiseRef.current = (async () => {
             try {
               const ports = await window.api?.getPorts?.();
               if (!ports || ports.length < 1) return null;
@@ -149,44 +149,42 @@ const VideoCaptureScreen = () => {
 
         // Wait for measurements to complete in background (non-blocking for FPT)
         // This happens after FPT succeeds, so measurements don't block the flow
-        measurementPromise.then((measurements) => {
-          if (measurements) {
-            console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
+        if (measurementPromiseRef.current) {
+          measurementPromiseRef.current.then((measurements) => {
+            if (measurements && !trackingDoneRef.current) {
+              trackingDoneRef.current = true;
+              console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
 
-            // Store measurements even if some failed
-            if (measurements.weight || measurements.height) {
-              storeFptMeasurements(
-                dispatch,
-                measurements.weight,
-                measurements.height
-              );
-              console.log('[VIDEO CAPTURE] Measurements saved!');
+              // Store measurements even if some failed
+              if (measurements.weight || measurements.height) {
+                storeFptMeasurements(
+                  dispatch,
+                  measurements.weight,
+                  measurements.height
+                );
+                console.log('[VIDEO CAPTURE] Measurements saved!');
 
-              // Track to backend
-              if (measurements.weight) {
-                trackStage(STAGES.FPT_WEIGHT, STATUS.SUCCESS, { weight_kg: measurements.weight }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+                // Track to backend
+                trackStage(STAGES.FPT_WH, STATUS.SUCCESS, {
+                  weight_kg: measurements.weight,
+                  height_cm: measurements.height
+                }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
               }
-              if (measurements.height) {
-                trackStage(STAGES.FPT_HEIGHT, STATUS.SUCCESS, { height_cm: measurements.height }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+
+              // Log any errors
+              if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+                console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
+                // Track to backend (even if partial/error)
+                trackStage(STAGES.FPT_WH, STATUS.ERROR, {
+                  weight_kg: measurements.weight,
+                  height_cm: measurements.height
+                }, measurements.errors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
               }
             }
-
-            // Log any errors
-            if (measurements.errors && Object.keys(measurements.errors).length > 0) {
-              console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
-              if (measurements.errors.weight) {
-                trackStage(STAGES.FPT_WEIGHT, STATUS.ERROR, {}, measurements.errors.weight, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
-              }
-              if (measurements.errors.height) {
-                trackStage(STAGES.FPT_HEIGHT, STATUS.ERROR, {}, measurements.errors.height, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
-              }
-            }
-          } else {
-            console.warn('[VIDEO CAPTURE] No measurements available');
-          }
-        }).catch((error) => {
-          console.error('[VIDEO CAPTURE] Error storing measurements:', error);
-        });
+          }).catch((error) => {
+            console.error('[VIDEO CAPTURE] Error storing measurements:', error);
+          });
+        }
 
         await new Promise((r) => setTimeout(r, 500));
         navigate("/verified");
