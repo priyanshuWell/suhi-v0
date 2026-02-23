@@ -30,7 +30,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const trackStage = async (stage, status, data = {}, error = null) => {
     const payload = {
-      session_id: storeUser?.sessionId,
+      session_id: storeUser?.data.buffer_id,
       user_id: storeUser?.data?.user_id || "unknown",
       measurement_stage: stage,
       status: status,
@@ -116,6 +116,7 @@ export default function BIACalculate({ user, onComplete }) {
     impedance20: "Please hold the rods firmly",
     impedance100: "Please hold the rods firmly",
     maxRetryReached: "Maximum retries reached. redirecting to dmit.",
+    HEIGHT_PORT_NOT_CONNECTED:"Height port is not connected"
   };
 
   const texts = {
@@ -291,8 +292,10 @@ export default function BIACalculate({ user, onComplete }) {
     };
 
     // HEIGHT ERROR
-    const handleHeightError = (payload) => {
+    const handleHeightError = async (payload) => {
       console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
+      await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
+      navigate('/screen1');
 
       // Track attempt for height (continuous polling)
       if (payload.attempt) {
@@ -537,7 +540,7 @@ export default function BIACalculate({ user, onComplete }) {
       const arrayBuffer = await blob.arrayBuffer();
 
       // Use existing session_id or generate new one
-      const sessionId = storeUser?.sessionId
+      const sessionId = storeUser?.data?.buffer_id
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `bia_${sessionId}_${timestamp}.webm`;
 
@@ -548,7 +551,7 @@ export default function BIACalculate({ user, onComplete }) {
       const result = await window.api.saveRecording({
         arrayBuffer: arrayBuffer,
         filename: filename,
-        session_id: storeUser?.sessionId,
+        session_id: storeUser?.data?.buffer_id,
         user_id: storeUser?.data?.user_id || 'unknown',
         phase_states: recordingRef.current.phaseStates // Include phase tracking
       });
@@ -954,7 +957,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
         const legBiaPayload = mapLegsPayloadToBIAMeasurement({
           payload: legBia?.data?.parsed,
-          sessionId: storeUser?.sessionId,
+          sessionId:storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
@@ -994,7 +997,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] Arm BIA saved to Redux");
         const armBiaPayload = mapArmsPayloadToBIAMeasurement({
           payload: armBia?.data?.parsed,
-          sessionId: storeUser?.sessionId,
+          sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
@@ -1031,7 +1034,7 @@ export default function BIACalculate({ user, onComplete }) {
       gender: storeUser?.data?.gender ?? "male",
       impedance20: resultsRef.current.impedance.k20.segments,
       impedance100: resultsRef.current.impedance.k100.segments,
-      session_id: storeUser?.sessionId,
+      session_id: storeUser?.data?.buffer_id,
       user_id: storeUser?.data?.user_id || "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     });
 
@@ -1070,7 +1073,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       // ✅ STOP RECORDING ON SUCCESS
       stopRecording();
-      await BIAComplete(storeUser?.sessionId);
+      await BIAComplete(storeUser?.data?.buffer_id);
 
       // Clear timeouts
       //clearAllTimeouts();
