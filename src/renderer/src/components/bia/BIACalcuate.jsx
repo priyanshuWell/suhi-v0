@@ -9,7 +9,7 @@ import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
-
+import { trackStage } from "../../utils/config";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -28,28 +28,7 @@ export default function BIACalculate({ user, onComplete }) {
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
 
-  const trackStage = async (stage, status, data = {}, error = null) => {
-    const payload = {
-      session_id: storeUser?.sessionId,
-      user_id: storeUser?.data?.user_id || "unknown",
-      measurement_stage: stage,
-      status: status,
-      retry_reason: error,
-      attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
-      measurement_timestamp: new Date().toISOString(),
-      data: {
-        ...data,
 
-      }
-    };
-
-    try {
-      // Replace with your actual fetch/axios call to /bia/measurement/stage
-      await BIAMeasurementStage(payload);
-    } catch (err) {
-      console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
-    }
-  };
   const resultsRef = useRef({
     legImpedance: null,
     weight: null,
@@ -1066,7 +1045,9 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] Results saved to Redux store");
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
       await trackStage(STAGES.COMPLETE, STATUS.SUCCESS, bia.finalBia);
+      console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
       await sleep(3000);
+
 
       // ✅ STOP RECORDING ON SUCCESS
       stopRecording();

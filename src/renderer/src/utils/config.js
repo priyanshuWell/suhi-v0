@@ -2,6 +2,8 @@
 //  * Configuration file for video capture settings
 //  */
 
+import { BIAMeasurementStage } from "./api";
+
 // export const VIDEO_CONFIG = {
 //   // Video buffer duration in milliseconds
 //   // Can be adjusted based on requirements (5000ms = 5 seconds, 7000ms = 7 seconds, etc.)
@@ -129,3 +131,26 @@ export function getKioskId() {
 export function getSessionId(){
   return crypto.randomUUID();
 }
+
+  export const trackStage = async (stage, status, data = {}, error = null) => {
+    const payload = {
+      session_id: storeUser?.sessionId,
+      user_id: storeUser?.data?.user_id || "unknown",
+      measurement_stage: stage,
+      status: status,
+      retry_reason: error,
+      attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
+      measurement_timestamp: new Date().toISOString(),
+      data: {
+        ...data,
+
+      }
+    };
+
+    try {
+      // Replace with your actual fetch/axios call to /bia/measurement/stage
+      await BIAMeasurementStage(payload);
+    } catch (err) {
+      console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
+    }
+  };

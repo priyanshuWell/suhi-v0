@@ -51,12 +51,7 @@ formData.append('file', videoBlob, `${videoData.role}_${videoData.deviceId}.webm
   }
 }
 
-/**
- * Run FPT (Face Processing Task) with the stored video
- * @param {string} shmPath - Path to the shared memory video file
- * @param {string} kioskId - Kiosk identifier
- * @returns {Promise<Object>} Response with success status and result
- */
+
 export async function runFPT(shmPath, kioskId) {
   try {
     const payload = {
