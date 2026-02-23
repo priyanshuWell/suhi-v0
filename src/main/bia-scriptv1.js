@@ -2502,7 +2502,7 @@ export async function case38_20kHzImpedanceQuery() {
     }
 
     // 50 attempts
-    for (let attempt = 1; attempt <= 50; attempt++) {
+    for (let attempt = 1; attempt <= 25; attempt++) {
       try {
         console.log(`\n📡 Attempt ${attempt}: Querying 20 kHz Impedance`)
 
@@ -2712,7 +2712,7 @@ export async function case39_100kHzImpedanceQuery() {
     console.log('\n📡 Starting 100 kHz Impedance Query\n')
 
     // 50 attempts
-    for (let attempt = 1; attempt <= 50; attempt++) {
+    for (let attempt = 1; attempt <= 25; attempt++) {
       try {
         console.log(`   Attempt ${attempt}`)
 

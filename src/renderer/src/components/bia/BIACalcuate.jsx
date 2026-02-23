@@ -28,28 +28,28 @@ export default function BIACalculate({ user, onComplete }) {
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
 
-  const trackStage = async (stage, status, data = {}, error = null) => {
-    const payload = {
-      session_id: storeUser?.data.buffer_id,
-      user_id: storeUser?.data?.user_id || "unknown",
-      measurement_stage: stage,
-      status: status,
-      retry_reason: error,
-      attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
-      measurement_timestamp: new Date().toISOString(),
-      data: {
-        ...data,
+  // const trackStage = async (stage, status, data = {}, error = null) => {
+  //   const payload = {
+  //     session_id: storeUser?.data.buffer_id,
+  //     user_id: storeUser?.data?.user_id || "unknown",
+  //     measurement_stage: stage,
+  //     status: status,
+  //     retry_reason: error,
+  //     attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
+  //     measurement_timestamp: new Date().toISOString(),
+  //     data: {
+  //       ...data,
 
-      }
-    };
+  //     }
+  //   };
 
-    try {
-      // Replace with your actual fetch/axios call to /bia/measurement/stage
-      await BIAMeasurementStage(payload);
-    } catch (err) {
-      console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
-    }
-  };
+  //   try {
+  //     // Replace with your actual fetch/axios call to /bia/measurement/stage
+  //     await BIAMeasurementStage(payload);
+  //   } catch (err) {
+  //     console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
+  //   }
+  // };
   const resultsRef = useRef({
     legImpedance: null,
     weight: null,
@@ -116,7 +116,7 @@ export default function BIACalculate({ user, onComplete }) {
     impedance20: "Please hold the rods firmly",
     impedance100: "Please hold the rods firmly",
     maxRetryReached: "Maximum retries reached. redirecting to dmit.",
-    HEIGHT_PORT_NOT_CONNECTED:"Height port is not connected"
+    HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected"
   };
 
   const texts = {
@@ -570,31 +570,6 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-
-  /* =======================
-     MEASUREMENT FUNCTIONS
-  ======================= */
-  // const measureWeightWrapper = async () => {
-  //   console.log("[BIA DEBUG] Starting weight measurement...");
-
-  //   try {
-  //     const result = await measureWeight();
-
-  //     resultsRef.current.weight = {
-  //       value: result.weight,
-  //       unit: result.unit
-  //     };
-  //     console.log(`[BIA DEBUG] Weight stored: ${result.weight} ${result.unit}`);
-
-  //     // Store in Redux as preliminary measurement
-  //     storePreliminaryMeasuremeMEASUREnts(dispatch, result.weight, null);
-
-  //     return { weight: result.weight };
-  //   } catch (error) {
-  //     console.error("[BIA DEBUG] Weight measurement failed:", error);
-  //     throw error;
-  //   }
-  // };
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!");
@@ -750,7 +725,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
-      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance });
+      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       //updatePhaseState('leg', 'success');
       await sleep(800);
 
@@ -760,7 +735,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected");
+        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
         navigate("/screen1");
         return;
       }
@@ -771,10 +746,10 @@ export default function BIACalculate({ user, onComplete }) {
       try {
         const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
-        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight });
+        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-        await trackStage(STAGES.PRE_WEIGHT, STATUS.ERROR, {}, "Weight measurement failed");
+        await trackStage(STAGES.PRE_WEIGHT, STATUS.ERROR, {}, "Weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       }
 
       // Show blocking CTA modal and wait for user choice
@@ -808,7 +783,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
-      await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current?.weight?.value });
+      await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current?.weight?.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       // Measure Height with retry logic
       await runHeightWithRetry();
@@ -816,7 +791,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (weightError) {
       console.error("[BIA DEBUG] Phase 2 FAILED - Weight error:", weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
-      await trackStage(STAGES.WEIGHT, STATUS.ERROR, {}, "main weight measurement failed");
+      await trackStage(STAGES.WEIGHT, STATUS.ERROR, {}, "main weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       navigate("/screen1");
       return;
     }
@@ -829,7 +804,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       await showError(ERROR_MESSAGES.height, 3000);
-      await trackStage(STAGES.HEIGHT, STATUS.ERROR, {}, "main height measurement failed");
+      await trackStage(STAGES.HEIGHT, STATUS.ERROR, {}, "main height measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       navigate("/screen1");
       return;
     }
@@ -842,7 +817,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
-      await trackStage(STAGES.HEIGHT, STATUS.SUCCESS, { height_cm: resultsRef?.current?.height?.value });
+      await trackStage(STAGES.HEIGHT, STATUS.SUCCESS, { height_cm: resultsRef?.current?.height?.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       // Both weight and height success - show whComplete
       console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
 
@@ -906,14 +881,14 @@ export default function BIACalculate({ user, onComplete }) {
 
       // Impedance 20kHz
       await measureImpedance("20");
-      await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 });
+      await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       await sleep(1500);
       console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
 
 
       // Impedance 100kHz
       await measureImpedance("100");
-      await trackStage(STAGES.IMPEDANCE_100KHZ, STATUS.SUCCESS, { impedance100: resultsRef.current.impedance.k100 });
+      await trackStage(STAGES.IMPEDANCE_100KHZ, STATUS.SUCCESS, { impedance100: resultsRef.current.impedance.k100 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
 
       // All impedance measurements success
@@ -957,7 +932,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] Leg BIA saved to Redux");
         const legBiaPayload = mapLegsPayloadToBIAMeasurement({
           payload: legBia?.data?.parsed,
-          sessionId:storeUser?.data?.buffer_id,
+          sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
           gender: storeUser?.data?.gender,
           heightCm: resultsRef.current.height.value,
@@ -966,7 +941,7 @@ export default function BIACalculate({ user, onComplete }) {
         });
         console.log("[BIA DEBUG] Leg BIA payload:", legBiaPayload);
         //  await window.api.sendLegBiaResult(legBiaPayload);
-        await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.SUCCESS, { legBiaPayload });
+        await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.SUCCESS, { legBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       } else {
         console.error("[BIA DEBUG] Leg BIA calculation failed:", legBia?.error);
         // Non-blocking - continue flow
@@ -1006,7 +981,7 @@ export default function BIACalculate({ user, onComplete }) {
         });
         console.log("[BIA DEBUG] Arm BIA payload:", armBiaPayload);
         //  await window.api.sendLegBiaResult(legBiaPayload);
-        await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { armBiaPayload });
+        await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { armBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       } else {
         console.error("[BIA DEBUG] Arm BIA calculation failed:", armBia?.error);
         // Non-blocking - continue flow
@@ -1068,7 +1043,8 @@ export default function BIACalculate({ user, onComplete }) {
 
       console.log("[BIA DEBUG] Results saved to Redux store");
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
-      await trackStage(STAGES.COMPLETE, STATUS.SUCCESS, bia.finalBia);
+      navigate("/bia/imcomplete");
+      await trackStage(STAGES.COMPLETE, STATUS.SUCCESS, bia.finalBia, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
       await sleep(3000);
 
@@ -1088,7 +1064,13 @@ export default function BIACalculate({ user, onComplete }) {
       // ✅ STOP RECORDING ON ERROR
       stopRecording();
 
-      //clearAllTimeouts();
+      // Even if the final BIA calculation fails, we still show /bia/imcomplete
+      // because we are not collecting everything — do NOT navigate away.
+      console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
+      navigate("/bia/imcomplete");
+      await sleep(3000);
+      await BIAComplete(storeUser?.data?.buffer_id);
+      setIsComplete(true);
       navigate("/screen1");
     }
   };

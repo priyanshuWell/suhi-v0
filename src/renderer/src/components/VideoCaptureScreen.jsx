@@ -8,6 +8,8 @@ import { measureWeightAndHeight } from "../utils/measurementUtils";
 import { storeFptMeasurements } from "../utils/measurementRedux";
 import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../features/common/commonSlice";
+import { BIAMeasurementStage } from "../utils/api";
+import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
 
 const VideoCaptureScreen = () => {
@@ -22,6 +24,18 @@ const VideoCaptureScreen = () => {
   const dispatch = useDispatch();
   const audioRef = React.useRef(null);
   const measurementStartedRef = React.useRef(false);
+  const storeUser = useSelector((state) => state.common.user);
+
+  const STAGES = {
+    FPT_HEIGHT: "FPT_HEIGHT",
+    FPT_WEIGHT: "FPT_WEIGHT",
+  };
+
+  const STATUS = {
+    SUCCESS: "SUCCESS",
+    ERROR: "ERROR",
+  };
+
 
   const MAX_ATTEMPTS = 2;
   const instructionAudio = "/src/assets/audio/camera_scan.mp3";
@@ -149,11 +163,25 @@ const VideoCaptureScreen = () => {
                 measurements.height
               );
               console.log('[VIDEO CAPTURE] Measurements saved!');
+
+              // Track to backend
+              if (measurements.weight) {
+                trackStage(STAGES.FPT_WEIGHT, STATUS.SUCCESS, { weight_kg: measurements.weight }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              }
+              if (measurements.height) {
+                trackStage(STAGES.FPT_HEIGHT, STATUS.SUCCESS, { height_cm: measurements.height }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              }
             }
 
             // Log any errors
             if (measurements.errors && Object.keys(measurements.errors).length > 0) {
               console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
+              if (measurements.errors.weight) {
+                trackStage(STAGES.FPT_WEIGHT, STATUS.ERROR, {}, measurements.errors.weight, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              }
+              if (measurements.errors.height) {
+                trackStage(STAGES.FPT_HEIGHT, STATUS.ERROR, {}, measurements.errors.height, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              }
             }
           } else {
             console.warn('[VIDEO CAPTURE] No measurements available');
