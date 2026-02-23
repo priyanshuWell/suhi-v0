@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
-
+const VOICE_API_BASE_URL = "http://0.0.0.0:9100"
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -120,15 +120,47 @@ export const BIAMeasurementStage = async (stage) => {
   }
 };
 
-
-export const BIAComplete = async (result)=>{
+export const voiceSaveApi = async (payload) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/bia/complete`, {
+    const response = await fetch(`${VOICE_API_BASE_URL}/voice/analyze`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+      throw new Error(`Voice API tatus: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Voice save response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending voice save to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const BIAComplete = async (result) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/bia/session/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(result),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -136,18 +168,19 @@ export const BIAComplete = async (result)=>{
 
     const data = await response.json();
     console.log("BIA complete response:", data);
+
     return {
       success: true,
-      ...data
+      ...data,
     };
   } catch (error) {
     console.error("Error sending BIA complete to backend:", error);
     return {
       success: false,
-      error: error.message
+      error: error.message,
     };
   }
-}
+};
 
 // /**
 //  * Send weight and height measurements to backend

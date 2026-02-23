@@ -179,11 +179,11 @@ const fallbackPartialJson = {
   const fetchBiometricReport = async () => {
     try {
       const userId = storeUser?.data?.user_id;
-      const sessionId = storeSessionId;
+      const sessionId =storeUser?.data?.buffer_id;
 
       const payload = {
-        user_id: userId ?? "af341b46-4c88-4d67-bb0e-bdf575d0ef2b",
-        session_id: sessionId ?? "session-1234",
+        user_id: userId ,
+        session_id: sessionId ,
       };
 
       const res = await axios.post("http://localhost:8000/biometric-report/generate", payload);

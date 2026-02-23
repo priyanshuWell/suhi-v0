@@ -64,9 +64,6 @@ export default function BIACalculate({ user, onComplete }) {
     LEG_BIA_50KHZ: "LEG_BIA_50KHZ",
     ARM_50KHZ: "ARM_50KHZ",
     ARM_BIA_50KHZ: "ARM_BIA_50KHZ",
-    LEG_BIA_50KHZ: "LEG_BIA_50KHZ",
-    ARM_50KHZ: "ARM_50KHZ",
-    ARM_BIA_50KHZ: "ARM_BIA_50KHZ",
     WH_FINAL: "WH_FINAL",
     IMPDEDANCE_20_100KHZ: "IMPDEDANCE_20_100KHZ",
     HEIGHT: "HEIGHT",
@@ -884,6 +881,7 @@ export default function BIACalculate({ user, onComplete }) {
       await measureArmImpedance();
       await sleep(800);
       console.log("[BIA DEBUG] Arm impedance SUCCESS");
+      await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.armImpedance.impedance }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       // Calculate Arm BIA immediately after arm impedance
       await calculateAndStoreArmBIA();
@@ -1071,7 +1069,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       // ✅ STOP RECORDING ON SUCCESS
       stopRecording();
-      await BIAComplete(storeUser?.data?.buffer_id);
+      await BIAComplete({session_id:storeUser?.data?.buffer_id});
       await sleep(3000); // Wait for complete video
       // Clear timeouts
       //clearAllTimeouts();
@@ -1089,7 +1087,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
       await sleep(3000);
-      await BIAComplete(storeUser?.data?.buffer_id);
+      await BIAComplete({session_id:storeUser?.data?.buffer_id});
       setIsComplete(true);
       navigate("/screen1");
     }

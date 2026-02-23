@@ -81,7 +81,7 @@ export function getSessionId(){
       measurement_stage: stage,
       status: status,
       retry_reason: error,
-      attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
+      attempt_number:  1,
       measurement_timestamp: new Date().toISOString(),
       data: {
         ...data,

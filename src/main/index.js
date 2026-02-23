@@ -392,27 +392,27 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
     await fs.promises.writeFile(shmPath, buffer)
     console.log(`[MAIN] Voice file saved to: ${shmPath}`)
 
-    const payload = {
-      buffer_id: bufferId,
-      kiosk_id: request.kiosk_id,
-      user_id: request.user_id,
-      session_id: request.session_id,
-      shm_path: shmPath
-    }
-    console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`, payload)
-
-    try {
-      const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload)
-      console.log(`[MAIN] API Response:`, response.data)
-      return { success: true, data: response.data, filePath: shmPath }
-    } catch (apiError) {
-      console.error(`[MAIN] API Error:`, apiError.message)
-      if (apiError.response) {
-        console.error(`[MAIN] API Error Data:`, apiError.response.data)
-        return { success: false, error: "API_ERROR", details: apiError.response.data }
-      }
-      return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message }
-    }
+    // const payload = {
+    //   buffer_id: bufferId,
+    //   kiosk_id: request.kiosk_id,
+    //   user_id: request.user_id,
+    //   session_id: request.session_id,
+    //   shm_path: shmPath
+    // }
+    console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`)
+      return { success: true, filePath: shmPath }
+    // try {
+    //   const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload)
+    //   console.log(`[MAIN] API Response:`, response.data)
+    //   return { success: true, data: response.data, filePath: shmPath }
+    // } catch (apiError) {
+    //   console.error(`[MAIN] API Error:`, apiError.message)
+    //   if (apiError.response) {
+    //     console.error(`[MAIN] API Error Data:`, apiError.response.data)
+    //     return { success: false, error: "API_ERROR", details: apiError.response.data }
+    //   }
+    //   return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message }
+    // }
   } catch (error) {
     console.error("[MAIN] save-voice-buffer error:", error)
     return { success: false, error: error.message }

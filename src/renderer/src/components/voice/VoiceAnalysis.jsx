@@ -5,6 +5,8 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
+import VoiceBars from "./VoiceBars";
+import { voiceSaveApi } from "../../utils/api";
 
 const VoiceCapture = () => {
     const { t } = useTranslation();
@@ -155,7 +157,7 @@ const VoiceCapture = () => {
                 // Get data from Redux store and config
                 const kioskId = getKioskId();
                 const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
-
+                const sessionId = user?.data?.buffer_id;
                 setStatus("processing");
                 const request = {
                     kiosk_id: kioskId,
@@ -170,11 +172,18 @@ const VoiceCapture = () => {
                     const result = await window.api.saveVoiceBuffer(request);
                     console.log("result", result);
                    if (result.success) {
-    setStatus("success");
-    stopAudio();
-    await new Promise((r) => setTimeout(r, 500));
-    navigate("/bia/result");
-} else {
+                      const apiResult = await voiceSaveApi(request);
+                      console.log("apiResult", apiResult);
+                      if (apiResult.success) {
+                        setStatus("success");
+                        stopAudio();
+                        await new Promise((r) => setTimeout(r, 500));
+                        navigate("/bia/result");
+                      } else {
+                        setStatus("error");
+                         navigate("/bia/result");
+                      }
+                    } else {
     setStatus("error");
     console.error("Voice analysis failed:", result.error);
 
@@ -312,62 +321,63 @@ const VoiceCapture = () => {
 
                     {/* Voice Visualization - Show when recording */}
                     {status === 'recording' && (
-                        <div className="flex items-center justify-center gap-2">
-                            <svg
-                                width="400"
-                                height="200"
-                                viewBox="0 0 255 200"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                preserveAspectRatio="xMidYMid meet"
-                            >
-                                {(() => {
-                                    const BAR_WIDTH = 12.1111;
-                                    const BAR_RADIUS = 6.05556;
-                                    const CENTER_Y = 100;
+                        // <div className="flex items-center justify-center gap-2">
+                        //     <svg
+                        //         width="400"
+                        //         height="200"
+                        //         viewBox="0 0 255 200"
+                        //         fill="none"
+                        //         xmlns="http://www.w3.org/2000/svg"
+                        //         preserveAspectRatio="xMidYMid meet"
+                        //     >
+                        //         {(() => {
+                        //             const BAR_WIDTH = 12.1111;
+                        //             const BAR_RADIUS = 6.05556;
+                        //             const CENTER_Y = 100;
 
-                                    const IDLE_HEIGHT = 20; // 👈 baseline height
-                                    const MAX_EXTRA_HEIGHT = 140; // growth above idle
+                        //             const IDLE_HEIGHT = 20; // 👈 baseline height
+                        //             const MAX_EXTRA_HEIGHT = 140; // growth above idle
 
-                                    const barPositions = [
-                                        { x: 0, scale: 0.3 },
-                                        { x: 30.2773, scale: 0.9 },
-                                        { x: 60.5547, scale: 0.25 },
-                                        { x: 90.832, scale: 1.1 },
-                                        { x: 121.109, scale: 0.6 },
-                                        { x: 151.391, scale: 0.4 },
-                                        { x: 181.668, scale: 0.7 },
-                                        { x: 211.945, scale: 0.25 },
-                                        { x: 242.223, scale: 0.9 }
-                                    ];
+                        //             const barPositions = [
+                        //                 { x: 0, scale: 0.3 },
+                        //                 { x: 30.2773, scale: 0.9 },
+                        //                 { x: 60.5547, scale: 0.25 },
+                        //                 { x: 90.832, scale: 1.1 },
+                        //                 { x: 121.109, scale: 0.6 },
+                        //                 { x: 151.391, scale: 0.4 },
+                        //                 { x: 181.668, scale: 0.7 },
+                        //                 { x: 211.945, scale: 0.25 },
+                        //                 { x: 242.223, scale: 0.9 }
+                        //             ];
 
-                                    return voiceBars.map((intensity, index) => {
-                                        const bar = barPositions[index];
+                        //             return voiceBars.map((intensity, index) => {
+                        //                 const bar = barPositions[index];
 
-                                        const height =
-                                            IDLE_HEIGHT +
-                                            MAX_EXTRA_HEIGHT * bar.scale * intensity;
+                        //                 const height =
+                        //                     IDLE_HEIGHT +
+                        //                     MAX_EXTRA_HEIGHT * bar.scale * intensity;
 
-                                        const y = CENTER_Y - height / 2;
+                        //                 const y = CENTER_Y - height / 2;
 
-                                        return (
-                                            <rect
-                                                key={index}
-                                                x={bar.x}
-                                                y={y}
-                                                width={BAR_WIDTH}
-                                                height={height}
-                                                rx={BAR_RADIUS}
-                                                fill="white"
-                                                style={{
-                                                    transition: 'height 0.1s ease-out, y 0.1s ease-out'
-                                                }}
-                                            />
-                                        );
-                                    });
-                                })()}
-                            </svg>
-                        </div>
+                        //                 return (
+                        //                     <rect
+                        //                         key={index}
+                        //                         x={bar.x}
+                        //                         y={y}
+                        //                         width={BAR_WIDTH}
+                        //                         height={height}
+                        //                         rx={BAR_RADIUS}
+                        //                         fill="white"
+                        //                         style={{
+                        //                             transition: 'height 0.1s ease-out, y 0.1s ease-out'
+                        //                         }}
+                        //                     />
+                        //                 );
+                        //             });
+                        //         })()}
+                        //     </svg>
+                        // </div>
+                        <VoiceBars/>
                     )}
 
 
