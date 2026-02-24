@@ -1,5 +1,5 @@
 import './assets/main.css'
-import { BrowserRouter } from 'react-router'
+import { BrowserRouter, HashRouter } from 'react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
@@ -10,11 +10,11 @@ import { store } from '../../store/store'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
         <Provider store={store}>
-    <BrowserRouter>
+    <HashRouter>
       <BackgroundCameraProvider>
         <App />
       </BackgroundCameraProvider>
-    </BrowserRouter>
+    </HashRouter>
     </Provider>
   </StrictMode>
 )
