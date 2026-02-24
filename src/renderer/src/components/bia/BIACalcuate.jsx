@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useBackgroundCamera } from "../../services/BackgroundCameraProvider";
 import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
   // Base state
   const [ports, setPorts] = useState([]);
@@ -85,25 +87,7 @@ export default function BIACalculate({ user, onComplete }) {
     step: null,
   });
 
-  // Recording configuration
-  const ENABLE_RECORDING = false; // Set to false to disable recording
-
-  // Recording state
-  const recordingRef = useRef({
-    recorder: null,
-    stream: null,
-    chunks: [],
-    sessionId: null,
-    phaseStates: {
-      leg: { status: 'pending', attempts: 0, error: null },
-      weight: { status: 'pending', attempts: 0, error: null },
-      height: { status: 'pending', attempts: 0, error: null },
-      arm: { status: 'pending', attempts: 0, error: null },
-      impedance20: { status: 'pending', attempts: 0, error: null },
-      impedance100: { status: 'pending', attempts: 0, error: null },
-      calculation: { status: 'pending', error: null }
-    }
-  });
+  // No local recording state needed anymore
 
 
   // Error messages map
@@ -409,6 +393,14 @@ export default function BIACalculate({ user, onComplete }) {
     });
   };
 
+  const updatePhaseState = (phase, status, error = null) => {
+    updateMetadata(`phase_${phase}`, {
+      status,
+      timestamp: new Date().toISOString(),
+      error
+    });
+  };
+
   /**
    * Shows the barefoot CTA modal and pauses the flow.
    * Returns a Promise that resolves with "retry" or "skip" when the user clicks.
@@ -430,145 +422,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-  /* =======================
-     RECORDING FUNCTIONS
-  ======================= */
-  const startRecording = async () => {
-    // Check feature flag
-    if (!ENABLE_RECORDING) {
-      console.log('[RECORDING] Recording disabled by feature flag');
-      return false;
-    }
-
-    try {
-      console.log('[RECORDING] Requesting camera access...');
-
-      // Request camera and microphone access silently
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1040 },
-          height: { ideal: 1743 },
-          facingMode: 'user'
-        },
-        audio: true
-      });
-
-      console.log('[RECORDING] Camera access granted');
-
-      // Check if MediaRecorder is supported
-      if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
-        console.warn('[RECORDING] VP9 codec not supported, trying VP8');
-      }
-
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : 'video/webm;codecs=vp8';
-
-      // Create MediaRecorder
-      const recorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
-        videoBitsPerSecond: 2500000 // 2.5 Mbps
-      });
-
-      // Store chunks as they're available
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          recordingRef.current.chunks.push(event.data);
-          console.log(`[RECORDING] Chunk received: ${event.data.size} bytes`);
-        }
-      };
-
-      // Handle recording stop
-      recorder.onstop = async () => {
-        console.log('[RECORDING] Recording stopped, saving file...');
-        await saveRecording();
-      };
-
-      // Handle errors
-      recorder.onerror = (event) => {
-        console.error('[RECORDING] MediaRecorder error:', event.error);
-      };
-
-      // Start recording (capture in 1-second chunks)
-      recorder.start(1000);
-
-      recordingRef.current.recorder = recorder;
-      recordingRef.current.stream = stream;
-
-      console.log('[RECORDING] Recording started successfully');
-      return true;
-
-    } catch (error) {
-      console.error('[RECORDING] Failed to start recording:', error);
-      // Don't block BIA flow if recording fails
-      return false;
-    }
-  };
-
-  const stopRecording = () => {
-    if (recordingRef.current.recorder &&
-      recordingRef.current.recorder.state !== 'inactive') {
-      console.log('[RECORDING] Stopping recording...');
-      recordingRef.current.recorder.stop();
-
-      // Stop all tracks to release camera
-      if (recordingRef.current.stream) {
-        recordingRef.current.stream.getTracks().forEach(track => {
-          track.stop();
-          console.log(`[RECORDING] Stopped track: ${track.kind}`);
-        });
-      }
-    } else {
-      console.log('[RECORDING] No active recording to stop');
-    }
-  };
-
-  const saveRecording = async () => {
-    const chunks = recordingRef.current.chunks;
-
-    if (chunks.length === 0) {
-      console.warn('[RECORDING] No chunks to save');
-      return;
-    }
-
-    try {
-      // Create blob from chunks
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      console.log(`[RECORDING] Created blob: ${blob.size} bytes (${(blob.size / 1024 / 1024).toFixed(2)} MB)`);
-
-      // Convert blob to ArrayBuffer
-      const arrayBuffer = await blob.arrayBuffer();
-
-      // Use existing session_id or generate new one
-      const sessionId = storeUser?.data?.buffer_id
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `bia_${sessionId}_${timestamp}.webm`;
-
-      console.log('[RECORDING] Sending recording to main process...');
-      console.log('[RECORDING] Phase states:', recordingRef.current.phaseStates);
-
-      // Send to main process to save
-      const result = await window.api.saveRecording({
-        arrayBuffer: arrayBuffer,
-        filename: filename,
-        session_id: storeUser?.data?.buffer_id,
-        user_id: storeUser?.data?.user_id || 'unknown',
-        phase_states: recordingRef.current.phaseStates // Include phase tracking
-      });
-
-      if (result.success) {
-        console.log('[RECORDING] Recording saved successfully:', result.filePath);
-      } else {
-        console.error('[RECORDING] Failed to save recording:', result.error);
-      }
-
-    } catch (error) {
-      console.error('[RECORDING] Error saving recording:', error);
-    } finally {
-      // Clear chunks
-      recordingRef.current.chunks = [];
-    }
-  };
+  // Use BackgroundCameraProvider for recording
 
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
@@ -657,12 +511,14 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureArmImpedance = async () => {
     console.log("[BIA DEBUG] Starting arm impedance 50kHz measurement...");
+    updatePhaseState('arm', 'in_progress');
     // setCurrentStatus("Please hold the hand rails firmly!");
     const res = await window.api.startArmImpedance50kHz();
     console.log("[BIA DEBUG] Arm impedance result:", res);
 
     if (!res?.success) {
       console.error("[BIA DEBUG] Arm impedance failed");
+      updatePhaseState('arm', 'failed', 'Arm impedance failed');
       throw new Error("Arm impedance failed");
     }
 
@@ -673,17 +529,20 @@ export default function BIACalculate({ user, onComplete }) {
       attempts: res.attempts
     };
     console.log(`[BIA DEBUG] Arm impedance stored: ${res.measurement.impedance.value} ${res.measurement.impedance.unit}`);
+    updatePhaseState('arm', 'success');
     return res;
   };
 
   const measureImpedance = async (freq) => {
     console.log(`[BIA DEBUG] Starting impedance ${freq}kHz measurement...`);
+    updatePhaseState(`impedance${freq}`, 'in_progress');
     // setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     console.log(`[BIA DEBUG] Impedance ${freq}kHz result:`, res);
 
     if (!res?.success) {
       console.error(`[BIA DEBUG] Impedance ${freq}kHz failed`);
+      updatePhaseState(`impedance${freq}`, 'failed', `Impedance ${freq}kHz failed`);
       throw new Error(`Impedance ${freq}kHz failed`);
     }
 
@@ -694,6 +553,7 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
     console.log(`[BIA DEBUG] Impedance ${freq}kHz stored: avg=${res.impedance.avg.toFixed(1)}Ω`);
+    updatePhaseState(`impedance${freq}`, 'success');
     return res;
   };
 
@@ -721,12 +581,12 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
 
     try {
-      //updatePhaseState('leg', 'in_progress');
+      updatePhaseState('leg', 'in_progress');
       await measureLegImpedance();
 
       console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
       await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      //updatePhaseState('leg', 'success');
+      updatePhaseState('leg', 'success');
       await sleep(800);
 
       // Success - proceed to Phase 2
@@ -736,6 +596,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
         await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        updatePhaseState('leg', 'failed', 'Max retries exhausted');
         navigate("/screen1");
         return;
       }
@@ -758,6 +619,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (choice === "skip") {
         // User chose to continue with shoes - skip leg phase, go to Phase 2
         console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
+        updatePhaseState('leg', 'skipped');
         await runPhase2_WeightHeight();
         return;
       }
@@ -777,12 +639,15 @@ export default function BIACalculate({ user, onComplete }) {
   const runPhase2_WeightHeight = async () => {
     console.log("[BIA DEBUG] ========== PHASE 2: WEIGHT & HEIGHT ==========");
     setCurrentPhase('wh');
+    updatePhaseState('weight', 'in_progress');
+    updatePhaseState('height', 'in_progress');
 
     try {
       // Measure Weight
       await measureWeight();
       await sleep(1200); // Required settle time
       console.log("[BIA DEBUG] Weight measurement SUCCESS");
+      updatePhaseState('weight', 'success');
       // await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current?.weight?.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       // Measure Height with retry logic
@@ -790,6 +655,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (weightError) {
       console.error("[BIA DEBUG] Phase 2 FAILED - Weight error:", weightError.message);
+      updatePhaseState('weight', 'failed', weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
       await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       navigate("/screen1");
@@ -817,6 +683,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       await measureHeight();
       console.log("[BIA DEBUG] Height measurement SUCCESS");
+      updatePhaseState('height', 'success');
 
       // Track combined Weight and Height
       await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
@@ -838,6 +705,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
+      updatePhaseState('height', 'failed', heightError.message);
 
       // Retry with incremented attempt count
       console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
@@ -1017,6 +885,7 @@ export default function BIACalculate({ user, onComplete }) {
   const runCalculateAndComplete = async () => {
     console.log("[BIA DEBUG] ========== CALCULATE & COMPLETE ==========");
     setCurrentPhase('complete');
+    updatePhaseState('calculation', 'in_progress');
 
     // Navigate to imComplete FIRST
     console.log("[BIA DEBUG] Navigating to /bia/imcomplete");
@@ -1061,15 +930,15 @@ export default function BIACalculate({ user, onComplete }) {
       dispatch(setBiaResult(bia));
 
       console.log("[BIA DEBUG] Results saved to Redux store");
+      updatePhaseState('calculation', 'success');
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
       navigate("/bia/imcomplete");
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { finalBia: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
 
-      // ✅ STOP RECORDING ON SUCCESS
-      stopRecording();
-      await BIAComplete({session_id:storeUser?.data?.buffer_id});
+      // Recording is handled by BackgroundCameraProvider automatically
+      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       await sleep(3000); // Wait for complete video
       // Clear timeouts
       //clearAllTimeouts();
@@ -1078,16 +947,14 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
-
-      // ✅ STOP RECORDING ON ERROR
-      stopRecording();
+      updatePhaseState('calculation', 'failed', calcError.message);
 
       // Even if the final BIA calculation fails, we still show /bia/imcomplete
       // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
       await sleep(3000);
-      await BIAComplete({session_id:storeUser?.data?.buffer_id});
+      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       setIsComplete(true);
       navigate("/screen1");
     }
@@ -1131,17 +998,12 @@ export default function BIACalculate({ user, onComplete }) {
 
     setIsRunning(true);
     setCurrentPhase('init');
+    clearMetadata(); // Reset metadata at start of flow
 
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
     console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
 
-    // ✅ START RECORDING HERE
-    const recordingStarted = await startRecording();
-    if (recordingStarted) {
-      console.log('[BIA DEBUG] Recording started successfully');
-    } else {
-      console.warn('[BIA DEBUG] Recording failed to start, continuing without recording');
-    }
+    // Recording is handled by BackgroundCameraProvider automatically
 
     try {
       // Connect BIA port
@@ -1155,9 +1017,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (e) {
       console.error("[BIA DEBUG] Flow error:", e.message);
-
-      // ✅ STOP RECORDING ON ERROR
-      stopRecording();
+      updatePhaseState('flow', 'failed', e.message);
 
       navigate("/screen1");
     } finally {

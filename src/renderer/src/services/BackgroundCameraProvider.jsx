@@ -4,7 +4,9 @@ import { useLocation } from "react-router";
 
 const BackgroundCamContext = createContext(null);
 
-const RECORD_ROUTES = new Set(["/voice", "/screen1", "/progress", "/welcome"]);
+const UPLOAD_ROUTES = new Set(["/voice", "/screen1", "/progress", "/welcome"]);
+const LOCAL_SAVE_ROUTES = new Set(["/bia/calculate", "/bia/measure", "/bia/whcomplete", "/bia/imcomplete", "/bia/result"]);
+const RECORD_ROUTES = new Set([...UPLOAD_ROUTES, ...LOCAL_SAVE_ROUTES]);
 const CHUNK_SECONDS = 30;
 
 export function BackgroundCameraProvider({ children }) {
@@ -19,6 +21,7 @@ export function BackgroundCameraProvider({ children }) {
   const uploadingRef = useRef(false);
 
   const routeRef = useRef(location.pathname);
+  const metadataRef = useRef({});
   const [cameraReady, setCameraReady] = useState(false);
 
   // ✅ 1) Preload camera immediately on app start
@@ -118,6 +121,7 @@ export function BackgroundCameraProvider({ children }) {
         timestamp: Date.now(),
         buffer,
         mimeType: blob.type,
+        metadata: { ...metadataRef.current }
       });
 
       // ✅ start next chunk immediately
@@ -181,38 +185,88 @@ export function BackgroundCameraProvider({ children }) {
     while (uploadQueueRef.current.length > 0) {
       const item = uploadQueueRef.current.shift();
       try {
-        await uploadVideoChunk(item);
+        if (LOCAL_SAVE_ROUTES.has(item.route)) {
+          await saveVideoLocally(item);
+        } else {
+          await uploadVideoChunk(item);
+        }
       } catch (err) {
-        console.error("❌ Upload failed:", err);
-        // optionally: retry logic (push back)
+        console.error("❌ Processing failed:", err);
       }
     }
 
     uploadingRef.current = false;
   }
 
-  // ✅ Your API call (send route name + buffer)
+  // ✅ Original placeholder upload call
   async function uploadVideoChunk({ route, timestamp, buffer, mimeType }) {
     console.log("⬆️ Uploading chunk:", route, new Date(timestamp).toISOString());
 
     // create formdata
     const blob = new Blob([buffer], { type: mimeType || "video/webm" });
-    const file = new File([blob], `${route}-${timestamp}.webm`, { type: blob.type });
+    const file = new File([blob], `${route.replace(/\//g, "_")}-${timestamp}.webm`, { type: blob.type });
 
     const form = new FormData();
     form.append("route", route);
     form.append("timestamp", String(timestamp));
     form.append("video", file);
 
-    // Replace with your API endpoint
-    const res = await fetch("YOUR_API_ENDPOINT", {
-      method: "POST",
-      body: form,
-    });
+    // Replace with your API endpoint if needed, or keep as placeholder
+    try {
+      const res = await fetch("YOUR_API_ENDPOINT", {
+        method: "POST",
+        body: form,
+      });
 
-    if (!res.ok) {
-      throw new Error(`Upload error: ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`Upload error: ${res.status}`);
+      }
+    } catch (err) {
+      console.warn("⚠️ Upload placeholder failed (expected if endpoint missing):", err.message);
     }
+  }
+
+  // ✅ Local Save call (used for BIA)
+  async function saveVideoLocally({ route, timestamp, buffer, mimeType, metadata }) {
+    console.log("💾 Saving chunk:", route, new Date(timestamp).toISOString());
+
+    if (!window.api?.saveRecording) {
+      console.warn("⚠️ window.api.saveRecording not found, skipping save");
+      return;
+    }
+
+    const filename = `background_${route.replace(/\//g, "_")}_${timestamp}.webm`;
+
+    try {
+      const result = await window.api.saveRecording({
+        arrayBuffer: buffer,
+        filename: filename,
+        route,
+        timestamp,
+        metadata
+      });
+
+      if (result.success) {
+        console.log("✅ Chunk saved successfully:", result.filePath);
+      } else {
+        console.error("❌ Failed to save chunk:", result.error);
+      }
+    } catch (err) {
+      console.error("❌ Error calling saveRecording:", err);
+    }
+  }
+
+  function updateMetadata(key, value) {
+    if (typeof key === "object") {
+      metadataRef.current = { ...metadataRef.current, ...key };
+    } else {
+      metadataRef.current[key] = value;
+    }
+    console.log("📝 Metadata updated:", metadataRef.current);
+  }
+
+  function clearMetadata() {
+    metadataRef.current = {};
   }
 
   function getSupportedMimeType() {
@@ -225,7 +279,7 @@ export function BackgroundCameraProvider({ children }) {
   }
 
   return (
-    <BackgroundCamContext.Provider value={{ cameraReady }}>
+    <BackgroundCamContext.Provider value={{ cameraReady, updateMetadata, clearMetadata }}>
       {/* Hidden video keeps stream alive */}
       <video
         ref={videoRef}
