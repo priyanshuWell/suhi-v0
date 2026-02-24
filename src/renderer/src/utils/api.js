@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
-const VOICE_API_BASE_URL = "http://0.0.0.0:9100"
+const VOICE_API_BASE_URL = "http://127.0.0.1:9100"
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -51,6 +51,77 @@ formData.append('file', videoBlob, `${videoData.role}_${videoData.deviceId}.webm
   }
 }
 
+export async function sendVoiceToBackend(voiceData) {
+  console.log(voiceData);
+  try {
+    // Convert Uint8Array to Blob
+    const audioBlob = new Blob([voiceData.buffer], { type: 'audio/wav' });
+
+    console.log("Uploading file:", `${voiceData.role}_${voiceData.deviceId}.wav`);
+    console.log("Uploading mimeType:", audioBlob.type);
+
+    const formData = new FormData();
+    formData.append(
+      'file',
+      audioBlob,
+      `${voiceData.role}_${voiceData.deviceId}.wav`
+    );
+
+    const response = await fetch(`${API_BASE_URL}/audio/store`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      success: true,
+      shm_path: data.shm_path,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error sending voice to backend:", error);
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function runVoice(payload) {
+ try {
+
+    const response = await fetch(`${API_BASE_URL}/voice/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+}
+}
 
 export async function runFPT(shmPath, kioskId) {
   try {
