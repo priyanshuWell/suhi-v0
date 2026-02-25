@@ -3223,7 +3223,7 @@ export async function case40a_LegImpedance50kHz() {
     console.log('   Starting measurement attempts...\n')
 
     // Collect up to 50 attempts until stable
-    for (let attempt = 1; attempt <= 25; attempt++) {
+    for (let attempt = 1; attempt <= 15; attempt++) {
       results.attempts = attempt
 
       try {
@@ -3483,7 +3483,7 @@ export async function case40b_ArmImpedance50kHz() {
     console.log('   Starting measurement attempts...\n')
 
     // Collect up to 50 attempts until stable
-    for (let attempt = 1; attempt <= 25; attempt++) {
+    for (let attempt = 1; attempt <= 15; attempt++) {
       results.attempts = attempt
 
       try {

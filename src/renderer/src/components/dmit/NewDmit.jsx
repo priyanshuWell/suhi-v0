@@ -266,9 +266,19 @@ const NewDmitScreen = () => {
         setStatus(t('dmit.status.registered'));
       })
       .catch((err) => {
-        console.error("/register/hand error:", err);
-        setPhase("ERROR");
-        setStatus(t('dmit.status.error'));
+       console.error("/hand/run error:", err);
+
+  setPhase("ERROR");
+  setIsVerify(false);
+
+  // Safely extract error array
+  const errorArray = err?.response?.data?.errors?.error;
+
+  if (Array.isArray(errorArray) && errorArray.length > 0) {
+    setStatus(errorArray.join(", ")); // show all errors
+  } else {
+    setStatus("Hand registration failed");
+  }
       });
 
     // :white_check_mark: always continue after 5 sec

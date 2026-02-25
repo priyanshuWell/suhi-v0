@@ -12,7 +12,7 @@ import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
 import { m } from "framer-motion";
-const USE_DUMMY_FPT = true;
+const USE_DUMMY_FPT = false;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);

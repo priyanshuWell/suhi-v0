@@ -111,6 +111,40 @@ const VoiceCapture = () => {
             }
         };
     }, []);
+ const runVoice = (shmPath) => {
+    setPhase("INFO");
+    setIsVerify(false);
+    setStatus(t('dmit.status.registering'));
+
+    const payload = {
+      shm_path: shmPath,
+      kiosk_id: kioskId,
+      user_id: userId,
+      session_id: sessionId,
+    };
+
+    // :white_check_mark: fire request (do not await)
+    axios
+      .post(`${API_BASE_URL}/hand/run`, payload, {
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(() => {
+        // if response arrives within 5 sec, show green
+        setIsVerify(true);
+        setPhase("INFO");
+        setStatus(t('dmit.status.registered'));
+      })
+      .catch((err) => {
+        console.error("/register/hand error:", err);
+        setPhase("ERROR");
+        setStatus(data?.errors?.error[0]);
+      });
+
+    // :white_check_mark: always continue after 5 sec
+    return new Promise((resolve) => {
+      setTimeout(() => resolve(true), 5000);
+    });
+  };
 
     const startRecording = async () => {
         try {

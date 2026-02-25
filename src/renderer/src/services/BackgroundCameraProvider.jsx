@@ -5,7 +5,7 @@ import { useLocation } from "react-router";
 const BackgroundCamContext = createContext(null);
 
 const UPLOAD_ROUTES = new Set(["/voice", "/screen1", "/progress", "/welcome"]);
-const LOCAL_SAVE_ROUTES = new Set(["/bia/wh", "/bia/whcomplete"]);
+const LOCAL_SAVE_ROUTES = new Set(["/bia/wh", "/bia/imcomplete"]);
 const RECORD_ROUTES = new Set([...UPLOAD_ROUTES, ...LOCAL_SAVE_ROUTES]);
 const CHUNK_SECONDS = 30;
 
