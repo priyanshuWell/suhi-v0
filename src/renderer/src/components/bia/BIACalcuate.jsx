@@ -264,7 +264,7 @@ export default function BIACalculate({ user, onComplete }) {
           // Show error immediately
           (async () => {
             console.log("[BIA DEBUG] Showing arm electrode error");
-          //  await showError(ERROR_MESSAGES.armImpedance, 5000);
+            //  await showError(ERROR_MESSAGES.armImpedance, 5000);
           })();
         }
       }
@@ -595,7 +595,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
+        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, attemptCount);
         updatePhaseState('leg', 'failed', 'Max retries exhausted');
         navigate("/screen1");
         return;
@@ -835,6 +835,7 @@ export default function BIACalculate({ user, onComplete }) {
       }
     } catch (error) {
       console.error("[BIA DEBUG] Leg BIA calculation error:", error);
+      await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.ERROR, {}, "Leg BIA calculation error", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       // Non-blocking - continue flow
     }
   };
@@ -875,6 +876,7 @@ export default function BIACalculate({ user, onComplete }) {
       }
     } catch (error) {
       console.error("[BIA DEBUG] Arm BIA calculation error:", error);
+      await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.ERROR, {}, "Arm BIA calculation error", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       // Non-blocking - continue flow
     }
   };
@@ -948,6 +950,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
       updatePhaseState('calculation', 'failed', calcError.message);
+      await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, "FINAL BIA CALCULATION FAILED", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       // Even if the final BIA calculation fails, we still show /bia/imcomplete
       // because we are not collecting everything — do NOT navigate away.
@@ -1018,6 +1021,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (e) {
       console.error("[BIA DEBUG] Flow error:", e.message);
       updatePhaseState('flow', 'failed', e.message);
+      await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       navigate("/screen1");
     } finally {
