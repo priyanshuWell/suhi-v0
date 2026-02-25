@@ -607,14 +607,20 @@ export default function BIACalculate({ user, onComplete }) {
       try {
         const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
-        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
+        if (!weightResult?.success) {
+          await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.ERROR, {}, "leg and pre weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, attemptCount);
+        }
+        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, attemptCount);
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.ERROR, {}, "leg and pre weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
+        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.ERROR, {}, "leg and pre weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, attemptCount);
       }
 
       // Show blocking CTA modal and wait for user choice
-      const choice = await showBarefootCTA();
+      let choice = "retry";
+      if (attemptCount === 0) {
+        choice = await showBarefootCTA();
+      }
 
       if (choice === "skip") {
         // User chose to continue with shoes - skip leg phase, go to Phase 2
