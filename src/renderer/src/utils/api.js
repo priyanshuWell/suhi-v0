@@ -57,14 +57,14 @@ export async function sendVoiceToBackend(voiceData) {
     // Convert Uint8Array to Blob
     const audioBlob = new Blob([voiceData.buffer], { type: 'audio/wav' });
 
-    console.log("Uploading file:", `${voiceData.role}_${voiceData.deviceId}.wav`);
+    console.log("Uploading file:", `${voiceData.role}_${voiceData.timestamp}.wav`);
     console.log("Uploading mimeType:", audioBlob.type);
 
     const formData = new FormData();
     formData.append(
       'file',
       audioBlob,
-      `${voiceData.role}_${voiceData.deviceId}.wav`
+      `${voiceData.role}_${voiceData.timestamp}.wav`
     );
 
     const response = await fetch(`${API_BASE_URL}/audio/store`, {

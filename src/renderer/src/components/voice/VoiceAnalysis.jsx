@@ -6,7 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
 import VoiceBars from "./VoiceBars";
-import { voiceSaveApi } from "../../utils/api";
+import { sendVoiceToBackend, runVoice } from "../../utils/api";
 
 const VoiceCapture = () => {
     const { t } = useTranslation();
@@ -111,41 +111,6 @@ const VoiceCapture = () => {
             }
         };
     }, []);
- const runVoice = (shmPath) => {
-    setPhase("INFO");
-    setIsVerify(false);
-    setStatus(t('dmit.status.registering'));
-
-    const payload = {
-      shm_path: shmPath,
-      kiosk_id: kioskId,
-      user_id: userId,
-      session_id: sessionId,
-    };
-
-    // :white_check_mark: fire request (do not await)
-    axios
-      .post(`${API_BASE_URL}/hand/run`, payload, {
-        headers: { "Content-Type": "application/json" },
-      })
-      .then(() => {
-        // if response arrives within 5 sec, show green
-        setIsVerify(true);
-        setPhase("INFO");
-        setStatus(t('dmit.status.registered'));
-      })
-      .catch((err) => {
-        console.error("/register/hand error:", err);
-        setPhase("ERROR");
-        setStatus(data?.errors?.error[0]);
-      });
-
-    // :white_check_mark: always continue after 5 sec
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(true), 5000);
-    });
-  };
-
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -203,32 +168,45 @@ const VoiceCapture = () => {
                 console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
 
                 try {
-                    const result = await window.api.saveVoiceBuffer(request);
-                    console.log("result", result);
-                   if (result.success) {
-                      const apiResult = await voiceSaveApi(request);
-                      console.log("apiResult", apiResult);
-                      if (apiResult.success) {
-                        setStatus("success");
-                        stopAudio();
-                        await new Promise((r) => setTimeout(r, 500));
-                        navigate("/bia/result");
-                      } else {
-                        setStatus("error");
-                         navigate("/bia/result");
-                      }
-                    } else {
-    setStatus("error");
-    console.error("Voice analysis failed:", result.error);
+                    const voiceData = {
+                        role: "VOICE",
+                        timestamp: Date.now(),
+                        buffer: new Uint8Array(arrayBuffer)
+                    };
 
-    // 👇 MOVE TO RESULT PAGE ON ERROR
-    await new Promise((r) => setTimeout(r, 500));
-    navigate("/bia/result");
-}
+                    const storeResult = await sendVoiceToBackend(voiceData);
+                    console.log("Store result voice:", storeResult);
+
+                    if (storeResult.success) {
+                        const runPayload = {
+                            shm_path: storeResult.shm_path,
+                            kiosk_id: kioskId,
+                            user_id: userId,
+                            session_id: sessionId
+                        };
+
+                        const runResult = await runVoice(runPayload);
+                        console.log("Run result:", runResult);
+
+                        if (runResult.success) {
+                            setStatus("success");
+                            stopAudio();
+                            await new Promise((r) => setTimeout(r, 500));
+                            navigate("/bia/result");
+                        } else {
+                            setStatus("error");
+                            console.error("Voice run failed:", runResult.error);
+                            navigate("/bia/result");
+                        }
+                    } else {
+                        setStatus("error");
+                        console.error("Voice storage failed:", storeResult.error);
+                        navigate("/bia/result");
+                    }
                 } catch (err) {
                     setStatus("error");
-                    console.error("IPC error:", err);
-                     navigate("/bia/result");
+                    console.error("API error:", err);
+                    navigate("/bia/result");
                 }
 
                 // Stop all tracks
@@ -332,7 +310,7 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft /30)}
+                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 30)}
                                 transform="rotate(-90 202 202)"
                                 style={{ transition: 'stroke-dashoffset 1s linear' }}
                             />
@@ -411,7 +389,7 @@ const VoiceCapture = () => {
                         //         })()}
                         //     </svg>
                         // </div>
-                        <VoiceBars/>
+                        <VoiceBars />
                     )}
 
 
