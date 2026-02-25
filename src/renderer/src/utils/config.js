@@ -74,14 +74,14 @@ export function getSessionId(){
   return crypto.randomUUID();
 }
 
-  export const trackStage = async (stage, status, data = {}, error = null,sessionId,userId) => {
+  export const trackStage = async (stage, status, data = {}, error = null,sessionId,userId,attemptNumber=1) => {
     const payload = {
       session_id: sessionId,
       user_id: userId,
       measurement_stage: stage,
       status: status,
       retry_reason: error,
-      attempt_number:  1,
+      attempt_number: attemptNumber,
       measurement_timestamp: new Date().toISOString(),
       data: {
         ...data,

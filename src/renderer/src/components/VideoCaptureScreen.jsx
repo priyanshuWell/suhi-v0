@@ -11,7 +11,7 @@ import { setUser } from "../features/common/commonSlice";
 import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
-
+const USE_DUMMY_FPT = true;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);
@@ -28,7 +28,7 @@ const VideoCaptureScreen = () => {
   const trackingDoneRef = React.useRef(false);
 
   const STAGES = {
-    FPT_WH: "FPT_WH",
+    FACE_SCAN: "FACE_SCAN",
   };
 
   const STATUS = {
@@ -36,7 +36,16 @@ const VideoCaptureScreen = () => {
     ERROR: "ERROR",
   };
 
-
+  const dummyFptSuccessResponse = {
+    success: true,
+    status: 200,
+    data: {
+      student_status: "REGISTERED",
+      buffer_id: getSessionId(),
+      user_id: "1e375fdb-6cab-40fa-bc72-83ac9db84cf6",
+      name: "Priyanshu",
+    },
+  };
   const MAX_ATTEMPTS = 2;
   const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 
@@ -100,7 +109,14 @@ const VideoCaptureScreen = () => {
         setStatus("Processing face verification...");
 
         console.log("Running FPT with shm_path:", shmPath);
-        const fptResponse = await runFPT(shmPath, kioskId);
+        let fptResponse;
+
+        if (USE_DUMMY_FPT) {
+          console.log("Using dummy FPT response...");
+          fptResponse = dummyFptSuccessResponse; // change to test other scenarios
+        } else {
+          fptResponse = await runFPT(shmPath, kioskId);
+        }
         console.log("FPT response:", fptResponse);
 
         // Check if user is not registered - redirect directly to login
@@ -131,7 +147,7 @@ const VideoCaptureScreen = () => {
           if (newAttemptCount < MAX_ATTEMPTS) {
             setStatus("Face not recognized. Retrying...");
           } else {
-            setStatus("Face not recognized. Redirecting...");
+            setStatus("Look at the Camera.");
           }
 
           throw new Error("Face not recognized");
@@ -165,7 +181,7 @@ const VideoCaptureScreen = () => {
                 console.log('[VIDEO CAPTURE] Measurements saved!');
 
                 // Track to backend
-                trackStage(STAGES.FPT_WH, STATUS.SUCCESS, {
+                trackStage(STAGES.FACE_SCAN, STATUS.SUCCESS, {
                   weight_kg: measurements.weight,
                   height_cm: measurements.height
                 }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
@@ -175,10 +191,7 @@ const VideoCaptureScreen = () => {
               if (measurements.errors && Object.keys(measurements.errors).length > 0) {
                 console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
                 // Track to backend (even if partial/error)
-                trackStage(STAGES.FPT_WH, STATUS.ERROR, {
-                  weight_kg: measurements.weight,
-                  height_cm: measurements.height
-                }, measurements.errors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+                trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, measurements.errors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
               }
             }
           }).catch((error) => {

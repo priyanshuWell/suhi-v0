@@ -264,7 +264,7 @@ export default function BIACalculate({ user, onComplete }) {
           // Show error immediately
           (async () => {
             console.log("[BIA DEBUG] Showing arm electrode error");
-            // await showError(ERROR_MESSAGES.armImpedance, 5000);
+          //  await showError(ERROR_MESSAGES.armImpedance, 5000);
           })();
         }
       }
@@ -595,7 +595,7 @@ export default function BIACalculate({ user, onComplete }) {
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
         console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
         updatePhaseState('leg', 'failed', 'Max retries exhausted');
         navigate("/screen1");
         return;
