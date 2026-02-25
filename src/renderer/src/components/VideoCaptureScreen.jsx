@@ -11,6 +11,7 @@ import { setUser } from "../features/common/commonSlice";
 import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
+import { m } from "framer-motion";
 const USE_DUMMY_FPT = true;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
@@ -188,11 +189,38 @@ const VideoCaptureScreen = () => {
               }
 
               // Log any errors
-              if (measurements.errors && Object.keys(measurements.errors).length > 0) {
-                console.warn('[VIDEO CAPTURE] Measurement errors:', measurements.errors);
-                // Track to backend (even if partial/error)
-                trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, measurements.errors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
-              }
+            // Log any errors
+// Log any errors
+if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+  let errorMessage = "";
+
+  const hasWeightError = !!measurements.errors.weight;
+  const hasHeightError = !!measurements.errors.height;
+
+  if (hasWeightError && hasHeightError) {
+    errorMessage = "Failed to get weight and height measurement";
+  } else if (hasWeightError) {
+    errorMessage = "Failed to get weight measurement";
+  } else if (hasHeightError) {
+    errorMessage = "Failed to get height measurement";
+  } else {
+    errorMessage = "User is not standing on the platform";
+  }
+
+  console.warn('[VIDEO CAPTURE] Measurement error:', errorMessage);
+
+  // Send SINGLE STRING to backend
+  trackStage(
+    STAGES.FACE_SCAN,
+    STATUS.ERROR,
+    {},
+    errorMessage,
+    fptResponse?.data?.buffer_id,
+    fptResponse?.data?.user_id
+  );
+}         // Track to backend (even if partial/error)
+                trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              
             }
           }).catch((error) => {
             console.error('[VIDEO CAPTURE] Error storing measurements:', error);
