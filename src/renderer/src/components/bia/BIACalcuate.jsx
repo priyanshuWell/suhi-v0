@@ -71,7 +71,7 @@ export default function BIACalculate({ user, onComplete }) {
     HEIGHT: "HEIGHT",
     PRE_HEIGHT: "PRE_HEIGHT",
     WEIGHT: "WEIGHT",
-    PRE_WEIGHT: "PRE_WEIGHT",
+    PRE_WEIGHT_LEG: "PRE_WEIGHT_LEG",
     BIA_COMPLETE: "BIA_COMPLETE",
   }
 
@@ -607,10 +607,10 @@ export default function BIACalculate({ user, onComplete }) {
       try {
         const weightResult = await measurePreliminaryWeight();
         console.log("[BIA DEBUG] Weight check result:", weightResult);
-        await trackStage(STAGES.PRE_WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
       } catch (weightCheckError) {
         console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-        await trackStage(STAGES.PRE_WEIGHT, STATUS.ERROR, {}, "Weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.ERROR, {}, "leg and pre weight measurement failed", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id,attemptCount);
       }
 
       // Show blocking CTA modal and wait for user choice
