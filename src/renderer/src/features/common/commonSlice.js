@@ -18,7 +18,7 @@ const initialState = {
     finalHeight:null,
   },
   weight: {
-    fptWeight:null,
+    fptWeight:"",
     preliminaryWeight:null,  
     finalWeight:null,  
   },
@@ -54,28 +54,64 @@ const commonSlice = createSlice({
       state.recordedVideoInfo = action.payload;
     },
 
+    // update finalHeight while preserving the height object structure
     setHeight: (state, action) => {
-      state.height = action.payload;
+      // ensure height is an object
+      if (typeof state.height !== "object" || state.height === null) {
+        state.height = { finalHeight: action.payload };
+      } else {
+        state.height.finalHeight = action.payload;
+      }
     },
 
+    // update finalWeight while preserving the weight object structure
     setWeight: (state, action) => {
-      state.weight = action.payload;
+      if (typeof state.weight !== "object" || state.weight === null) {
+        state.weight = { finalWeight: action.payload };
+      } else {
+        state.weight.finalWeight = action.payload;
+      }
     },
 
     setFptHeight: (state, action) => {
-      state.height.fptHeight = action.payload;
+      if (typeof state.height !== "object" || state.height === null) {
+        // migrate numeric height -> finalHeight
+        const prev =
+          typeof state.height === "number" ? { finalHeight: state.height } : {};
+        state.height = { ...prev, fptHeight: action.payload };
+      } else {
+        state.height.fptHeight = action.payload;
+      }
     },
 
     setFptWeight: (state, action) => {
-      state.weight.fptWeight = action.payload;
+      if (typeof state.weight !== "object" || state.weight === null) {
+        const prev =
+          typeof state.weight === "number" ? { finalWeight: state.weight } : {};
+        state.weight = { ...prev, fptWeight: action.payload };
+      } else {
+        state.weight.fptWeight = action.payload;
+      }
     },
 
     setPreliminaryHeight: (state, action) => {
-      state.height.preliminaryHeight = action.payload;
+      if (typeof state.height !== "object" || state.height === null) {
+        const prev =
+          typeof state.height === "number" ? { finalHeight: state.height } : {};
+        state.height = { ...prev, preliminaryHeight: action.payload };
+      } else {
+        state.height.preliminaryHeight = action.payload;
+      }
     },
 
     setPreliminaryWeight: (state, action) => {
-      state.weight.preliminaryWeight = action.payload;
+      if (typeof state.weight !== "object" || state.weight === null) {
+        const prev =
+          typeof state.weight === "number" ? { finalWeight: state.weight } : {};
+        state.weight = { ...prev, preliminaryWeight: action.payload };
+      } else {
+        state.weight.preliminaryWeight = action.payload;
+      }
     },
 
     setBiaResult: (state, action) => {

@@ -223,11 +223,17 @@ const fallbackPartialJson = {
   // ✅ Final Data Source:
   // - height/weight from API (if exists)
   // - else from redux/location
-const finalHeight =
-  storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
+// const finalHeight =
+//   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
 
-const finalWeight =
-  storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
+// const finalWeight =
+//   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
+
+// after reshaping the redux store we now keep weights/heights in nested objects
+const finalHeight = (storeHeight && storeHeight.finalHeight) || 170;
+
+const finalWeight = (storeWeight && storeWeight.finalWeight) || 70;
+
 
   const analysisData = {
     hydration: apiReport?.hydration,
