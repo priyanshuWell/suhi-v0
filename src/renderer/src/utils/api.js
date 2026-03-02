@@ -67,7 +67,7 @@ export async function sendVoiceToBackend(voiceData) {
       `${voiceData.role}_${voiceData.timestamp}.wav`
     );
 
-    const response = await fetch(`${API_BASE_URL}/audio/store`, {
+    const response = await fetch(`${API_BASE_URL}/voice/store`, {
       method: 'POST',
       body: formData,
     });

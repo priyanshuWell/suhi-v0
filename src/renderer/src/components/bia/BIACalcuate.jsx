@@ -575,7 +575,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      // await BIAComplete({session_id:storeUser?.data?.buffer_id});
+       await BIAComplete({session_id:storeUser?.data?.buffer_id});
       navigate("/screen1");
       return;
     }
@@ -709,7 +709,7 @@ export default function BIACalculate({ user, onComplete }) {
       await calculateAndStoreLegBIA();
 
       navigate("/bia/whcomplete");
-      await sleep(3000); // Wait for whComplete video
+      await sleep(6000); // Wait for whComplete video
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
@@ -738,7 +738,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      // await BIAComplete({session_id:storeUser?.data?.buffer_id});
+      await BIAComplete({session_id:storeUser?.data?.buffer_id});
       navigate("/screen1");
       return;
     }
@@ -761,7 +761,7 @@ export default function BIACalculate({ user, onComplete }) {
       const res = await measureArmImpedance(attemptCount);
       await sleep(800);
       console.log("[BIA DEBUG] Arm impedance SUCCESS");
-      await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_50khz_ohm: resultsRef.current.armImpedance.impedance }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount+1));
+      await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_data:{impedance_50khz_ohm: resultsRef.current.armImpedance.impedance} }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount+1));
 
       // Calculate Arm BIA immediately after arm impedance
       await calculateAndStoreArmBIA();
@@ -779,8 +779,10 @@ export default function BIACalculate({ user, onComplete }) {
       // Track combined Impedances
       if(resultsRef.current.impedance.k20 && resultsRef.current.impedance.k100) {
         await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
-          impedance20: resultsRef.current.impedance.k20,
-          impedance100: resultsRef.current.impedance.k100
+         impedance_data: {
+          impedance_20khz_ohm: resultsRef.current.impedance.k20.avg,
+          impedance_100khz_ohm: resultsRef.current.impedance.k100.avg
+         }
         }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount+1));
       }
       console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
@@ -835,7 +837,7 @@ export default function BIACalculate({ user, onComplete }) {
           payload: legBia?.data?.parsed,
           sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
-          gender: storeUser?.data?.gender,
+          gender: storeUser?.data?.gender.toLowerCase() === "male" ? 1 : 0,
           heightCm: resultsRef.current.height.value,
           ageYears: storeUser?.data?.age,
           weightKg: resultsRef.current.weight.value
@@ -876,7 +878,7 @@ export default function BIACalculate({ user, onComplete }) {
           payload: armBia?.data?.parsed,
           sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
-          gender: storeUser?.data?.gender,
+          gender: storeUser?.data?.gender.toLowerCase() === "male" ? 1 : 0,
           heightCm: resultsRef.current.height.value,
           ageYears: storeUser?.data?.age,
           weightKg: resultsRef.current.weight.value
@@ -923,7 +925,7 @@ export default function BIACalculate({ user, onComplete }) {
         height: resultsRef.current.height.value,
         weight: resultsRef.current.weight.value,
         age: storeUser?.data?.age ?? 23,
-        gender: storeUser?.data?.gender ?? "male",
+        gender: storeUser?.data?.gender.toLowerCase() ?? "male",
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments
       });

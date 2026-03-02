@@ -206,8 +206,10 @@ ipcMain.handle("calculate-leg-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" }
     }
     const { height, weight, age, gender, impedanceVal } = payload
-    const genderCode = gender === "male" ? 1 : 0
-    const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
+    // const genderCode = gender === "male" ? 1 : 0
+
+ const genderCode = 0;    
+ const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
     console.log(`\n📡 Requesting Legs Body Composition (Impedance: ${impedanceVal}Ω)...`);
 
@@ -237,7 +239,8 @@ ipcMain.handle("calculate-arm-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" }
     }
     const { height, weight, age, gender, impedanceVal } = payload
-    const genderCode = gender === "male" ? 1 : 0
+    // const genderCode = gender === "male" ? 1 : 0
+     const genderCode = 0;
     const command = biaa.createArmsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
     console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
@@ -288,8 +291,8 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       }
     }
 
-    const genderCode = gender === "male" ? 1 : 0
-
+    const genderCode = gender.toLowerCase() === "male" ? 1 : 0
+    // const genderCode = 0; 
     // ✅ STEP 1: Ensure device is ready
     try {
       await biaa.sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])

@@ -27,12 +27,25 @@ const VoiceCapture = () => {
     const analyserRef = React.useRef(null);
     const dataArrayRef = React.useRef(null);
     const animationFrameRef = React.useRef(null);
+    const [processingAngle, setProcessingAngle] = useState(0);
     const instructionAudio = "/src/assets/audio/voice.mp3";
 
     useEffect(() => {
         // Play audio when component mounts
         playAudio();
     }, []);
+
+    useEffect(() => {
+    let interval;
+
+    if (status === "processing") {
+        interval = setInterval(() => {
+            setProcessingAngle(prev => (prev + 6) % 360); // smooth rotation
+        }, 16); // ~60fps
+    }
+
+    return () => clearInterval(interval);
+}, [status]);
 
     useEffect(() => {
         let interval = null;
@@ -310,9 +323,21 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft / 30)}
-                                transform="rotate(-90 202 202)"
-                                style={{ transition: 'stroke-dashoffset 1s linear' }}
+                                strokeDashoffset={
+                                    status === "processing"
+                                        ? (2 * Math.PI * 186) * 0.75  // fixed arc size while spinning
+                                        : (2 * Math.PI * 186) * (1 - timeLeft / 30)
+                                }
+                                transform={
+                                    status === "processing"
+                                        ? `rotate(${processingAngle - 90} 202 202)`
+                                        : "rotate(-90 202 202)"
+                                }
+                                style={{
+                                    transition: status === "processing"
+                                        ? "none"
+                                        : "stroke-dashoffset 1s linear"
+                                }}
                             />
 
                             {/* Rotating Knob */}
