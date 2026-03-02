@@ -71,6 +71,7 @@ const NewDmitScreen = () => {
   const mediaRecorderRef = useRef(null);
   const runLockRef = useRef(false);
   const audioRef = useRef(null);
+  const isMountedRef = useRef(true); // guard against play() after unmount
   const [stepIndex, setStepIndex] = useState(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
@@ -155,7 +156,7 @@ const NewDmitScreen = () => {
 
       streamRef.current = rotatedStream;
 
-      if (videoRef.current) {
+      if (videoRef.current && isMountedRef.current) {
         videoRef.current.srcObject = rotatedStream;
         await videoRef.current.play();
       }
@@ -266,19 +267,19 @@ const NewDmitScreen = () => {
         setStatus(t('dmit.status.registered'));
       })
       .catch((err) => {
-       console.error("/hand/run error:", err);
+        console.error("/hand/run error:", err);
 
-  setPhase("ERROR");
-  setIsVerify(false);
+        setPhase("ERROR");
+        setIsVerify(false);
 
-  // Safely extract error array
-  const errorArray = err?.response?.data?.errors?.error;
+        // Safely extract error array
+        const errorArray = err?.response?.data?.errors?.error;
 
-  if (Array.isArray(errorArray) && errorArray.length > 0) {
-    setStatus(errorArray.join(", ")); // show all errors
-  } else {
-    setStatus("Hand registration failed");
-  }
+        if (Array.isArray(errorArray) && errorArray.length > 0) {
+          setStatus(errorArray.join(", ")); // show all errors
+        } else {
+          setStatus("Hand registration failed");
+        }
       });
 
     // :white_check_mark: always continue after 5 sec
@@ -340,9 +341,11 @@ const NewDmitScreen = () => {
    * :white_check_mark: open camera once on mount
    */
   useEffect(() => {
+    isMountedRef.current = true;
     startSingleCamera();
 
     return () => {
+      isMountedRef.current = false;
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
@@ -399,8 +402,7 @@ const NewDmitScreen = () => {
           >
             <video
               ref={videoRef}
-              autoPlay
-              //  muted
+              muted
               playsInline
               className="w-full h-full object-cover"
             />

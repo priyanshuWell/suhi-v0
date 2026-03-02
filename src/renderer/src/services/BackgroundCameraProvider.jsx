@@ -52,9 +52,9 @@ export function BackgroundCameraProvider({ children }) {
       streamRef.current = stream;
 
       // Attach stream to hidden video element to keep it alive
+      // (autoPlay on the <video> handles play — no manual .play() needed)
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => { });
       }
 
       setCameraReady(true);
