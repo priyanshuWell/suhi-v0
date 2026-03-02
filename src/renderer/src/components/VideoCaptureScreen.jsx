@@ -119,6 +119,7 @@ const VideoCaptureScreen = () => {
           fptResponse = await runFPT(shmPath, kioskId);
         }
         console.log("FPT response:", fptResponse);
+        // dispatch(setUser(fptResponse));
 
         // Check if user is not registered - redirect directly to login
         if (fptResponse?.data?.student_status === 'NOT_REGISTERED') {
@@ -155,11 +156,7 @@ const VideoCaptureScreen = () => {
         }
 
         // Success case - Face recognition successful
-        dispatch(setUser({
-          ...fptResponse,
-          kioskId,
-          sessionId,
-        }));
+        dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
         stopAudio();
@@ -189,38 +186,38 @@ const VideoCaptureScreen = () => {
               }
 
               // Log any errors
-            // Log any errors
-// Log any errors
-if (measurements.errors && Object.keys(measurements.errors).length > 0) {
-  let errorMessage = "";
+              // Log any errors
+              // Log any errors
+              if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+                let errorMessage = "";
 
-  const hasWeightError = !!measurements.errors.weight;
-  const hasHeightError = !!measurements.errors.height;
+                const hasWeightError = !!measurements.errors.weight;
+                const hasHeightError = !!measurements.errors.height;
 
-  if (hasWeightError && hasHeightError) {
-    errorMessage = "Failed to get weight and height measurement";
-  } else if (hasWeightError) {
-    errorMessage = "Failed to get weight measurement";
-  } else if (hasHeightError) {
-    errorMessage = "Failed to get height measurement";
-  } else {
-    errorMessage = "User is not standing on the platform";
-  }
+                if (hasWeightError && hasHeightError) {
+                  errorMessage = "Failed to get weight and height measurement";
+                } else if (hasWeightError) {
+                  errorMessage = "Failed to get weight measurement";
+                } else if (hasHeightError) {
+                  errorMessage = "Failed to get height measurement";
+                } else {
+                  errorMessage = "User is not standing on the platform";
+                }
 
-  console.warn('[VIDEO CAPTURE] Measurement error:', errorMessage);
+                console.warn('[VIDEO CAPTURE] Measurement error:', errorMessage);
 
-  // Send SINGLE STRING to backend
-  trackStage(
-    STAGES.FACE_SCAN,
-    STATUS.ERROR,
-    {},
-    errorMessage,
-    fptResponse?.data?.buffer_id,
-    fptResponse?.data?.user_id
-  );
-}         // Track to backend (even if partial/error)
-                trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
-              
+                // Send SINGLE STRING to backend
+                trackStage(
+                  STAGES.FACE_SCAN,
+                  STATUS.ERROR,
+                  {},
+                  errorMessage,
+                  fptResponse?.data?.buffer_id,
+                  fptResponse?.data?.user_id
+                );
+              }         // Track to backend (even if partial/error)
+              trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+
             }
           }).catch((error) => {
             console.error('[VIDEO CAPTURE] Error storing measurements:', error);
