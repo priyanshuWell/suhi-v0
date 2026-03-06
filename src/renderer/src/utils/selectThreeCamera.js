@@ -1,7 +1,7 @@
 export async function selectThreeCameras() {
   const devices = await navigator.mediaDevices.enumerateDevices();
   const cams = devices.filter(d => d.kind === "videoinput");
-  console.log(cams);
+  console.log("camera",cams);
   // const hdrs = cams.filter(c => c.label.includes("HDR"));
   // const rgb  = cams.find(c => c.label.includes("RGB"));
 
@@ -15,8 +15,8 @@ export async function selectThreeCameras() {
   //   { role: "RIGHT_HDR",  cam: hdrs[1] }
   // ];
    return [
-    { role: "LEFT",   cam: cams[2] },
-    { role: "CENTER", cam: cams[1] },
-    { role: "RIGHT",  cam: cams[0] }
+    { role: "CENTER",   cam: cams[5] },
+    // { role: "LEFT", cam: cams[5] },
+    // { role: "RIGHT",  cam: cams[0] }
   ];
 }

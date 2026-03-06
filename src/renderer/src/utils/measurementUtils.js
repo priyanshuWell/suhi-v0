@@ -4,12 +4,22 @@
  * Provides reusable functions for weight and height measurements
  * with port connection management to prevent conflicts between
  * VideoCaptureScreen and BIACalculate components.
+ * 
+ * ℹ️ PORT CONFIGURATION:
+ *    All port and timeout settings are now configurable via .env file
+ *    See portConfig.js for configuration details
+ *    Environment variables:
+ *    - VITE_HEIGHT_PORT_INDEX (default: 2)
+ *    - VITE_BIA_PORT_INDEX (default: 0)
+ *    - VITE_WEIGHT_MEASUREMENT_TIMEOUT (default: 6000ms)
+ *    - VITE_HEIGHT_MEASUREMENT_TIMEOUT (default: 30000ms)
  */
+
+import { MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPortPath } from './portConfig.js';
 
 // Track connected ports to prevent conflicts
 let connectedPorts = new Set();
 
-// Default timeout for measurements (30 seconds)
 const DEFAULT_MEASUREMENT_TIMEOUT = 6000;
 
 /**
@@ -92,7 +102,7 @@ export async function measureWeight(portPath = null, timeoutMs = DEFAULT_MEASURE
  * Measure height using height sensor
  * Automatically handles port connection and disconnection
  * @param {string} portPath - Path to height sensor port (e.g., ports[0]?.path)
- * @param {number} timeoutMs - Optional timeout in milliseconds (default: 30s)
+ * @param {number} timeoutMs - Optional timeout in milliseconds (default: configured via .env VITE_HEIGHT_MEASUREMENT_TIMEOUT)
  * @returns {Promise<Object>} { height: number, unit: 'cm' }
  */
 export async function measureHeight(portPath, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
@@ -264,8 +274,9 @@ export function isPortConnected(portPath) {
 
 
 export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
-  const heightPortPath = ports[0]?.path;
-  const weightPortPath = ports[2]?.path;
+  // Use configured port indices to select correct ports from the discovered list
+  const heightPortPath = getHeightPortPath(ports);
+  const weightPortPath = getBiaPortPath(ports);
 
   const result = {
     weight: null,

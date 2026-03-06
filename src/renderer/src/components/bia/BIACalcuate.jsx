@@ -11,6 +11,7 @@ import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
+import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -470,7 +471,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
     console.log('[MEASUREMENT] Connecting to height port:');
-    await window.api.connectHeightPort(ports[0]?.path);
+    await window.api.connectHeightPort(ports[1]?.path);
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 
@@ -988,20 +989,12 @@ export default function BIACalculate({ user, onComplete }) {
       return;
     }
 
-    // Check if required ports are available
-    if (ports.length < 3) {
-      console.error("[BIA DEBUG] PORTS NOT CONNECTED - Required: 3, Available:", ports.length);
-      console.error("[BIA DEBUG] Expected ports: [0]=Height, [1]=Weight, [2]=BIA");
-      await showError("Ports are not connected. Please check device connections.", 3000);
-      navigate("/screen1");
-      return;
-    }
-
-    // Validate specific ports exist
-    if (!ports[0]?.path || !ports[2]?.path) {
-      console.error("[BIA DEBUG] MISSING REQUIRED PORTS");
-      console.error("[BIA DEBUG] Height port (0):", ports[0]?.path || "MISSING");
-      console.error("[BIA DEBUG] BIA port (2):", ports[2]?.path || "MISSING");
+    // Validate ports using centralized port configuration
+    const portValidation = validatePorts(ports);
+    if (!portValidation.valid) {
+      console.error("[BIA DEBUG] PORT VALIDATION FAILED");
+      portValidation.errors.forEach(err => console.error("[BIA DEBUG]", err));
+      logPortConfiguration();
       await showError("Ports are not connected. Please check device connections.", 3000);
       navigate("/screen1");
       return;
@@ -1010,9 +1003,10 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] ==========================================");
     console.log("[BIA DEBUG] STARTING BIA MEASUREMENT FLOW");
     console.log("[BIA DEBUG] ==========================================");
+    logPortConfiguration();
     console.log("[BIA DEBUG] Available ports:", ports.map(p => p.path));
-    console.log("[BIA DEBUG] Height port:", ports[0]?.path);
-    console.log("[BIA DEBUG] BIA port:", ports[2]?.path);
+    console.log("[BIA DEBUG] Height port:", portValidation.ports.height?.path);
+    console.log("[BIA DEBUG] BIA port:", portValidation.ports.bia?.path);
     console.log("[BIA DEBUG] User:", storeUser?.data);
 
     setIsRunning(true);
@@ -1026,8 +1020,8 @@ export default function BIACalculate({ user, onComplete }) {
 
     try {
       // Connect BIA port
-      console.log("[BIA DEBUG] Connecting BIA port:", ports[2]?.path);
-      await window.api.connectBiaPort(ports[2]?.path);
+      console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
+      await window.api.connectBiaPort(ports[0]?.path);
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 

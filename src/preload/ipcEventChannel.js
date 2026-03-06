@@ -39,7 +39,7 @@ export class IpcEventChannel {
 
     // Remove ipc listener when no subscribers left
     if (this.listeners.size === 0 && this._isSubscribed) {
-      ipcRenderer.removeListener(this.channelName, this._boundHandler);
+      ipcRenderer?.removeListener(this.channelName, this._boundHandler);
       this._isSubscribed = false;
     }
   }

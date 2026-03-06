@@ -24,6 +24,7 @@ function FaceCapture() {
         let sessions;
         try {
             sessions = getCameraSession()
+            
         } catch (e) {
             console.log("Cameras not initialized, opening now...", e);
             sessions = await openCamerasInBackground();

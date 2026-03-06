@@ -129,7 +129,7 @@ const NewDmitScreen = () => {
 
       if (!videoInputs?.length) throw new Error("No cameras found");
 
-      const cam = videoInputs[1]; // :white_check_mark: USE ONLY cams[1]
+      const cam = videoInputs[5]; // :white_check_mark: USE ONLY cams[1]
       if (!cam) throw new Error("cams[1] not found");
 
       // stop old stream if any
