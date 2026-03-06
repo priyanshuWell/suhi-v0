@@ -216,7 +216,7 @@ const VideoCaptureScreen = () => {
                   fptResponse?.data?.user_id
                 );
               }         // Track to backend (even if partial/error)
-              trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+          //    trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
 
             }
           }).catch((error) => {
