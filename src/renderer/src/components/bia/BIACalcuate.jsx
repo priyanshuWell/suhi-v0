@@ -25,6 +25,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
+  const [isShoesContinued, setIsShoesContinued] = useState(false);
   const barefootCTAResolver = useRef(null);
 
   // Phase tracking (removed attempt counters - now using parameters)
@@ -630,6 +631,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (choice === "skip") {
         // User chose to continue with shoes - skip leg phase, go to Phase 2
         console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
+        setIsShoesContinued(true);
         updatePhaseState('leg', 'skipped');
         await runPhase2_WeightHeight();
         return;
@@ -708,11 +710,13 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Leg BIA immediately after weight/height
       await calculateAndStoreLegBIA();
 
+
       navigate("/bia/whcomplete");
-      await sleep(6000); // Wait for whComplete video
+      //   await sleep(6000); // Wait for whComplete video
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
+      await sleep(6000); // Wait for whComplete video
 
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
@@ -766,6 +770,15 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Arm BIA immediately after arm impedance
       await calculateAndStoreArmBIA();
 
+      if (isShoesContinued) {
+        console.log("[BIA DEBUG] Shoes continued - skipping Phase 3, showing imcomplete screen");
+        navigate("/bia/imcomplete");
+        await sleep(3000);
+        await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+        setIsComplete(true);
+        navigate("/screen1");
+        return;
+      }
       // Impedance 20kHz
       await measureImpedance("20", attemptCount);
       // await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
