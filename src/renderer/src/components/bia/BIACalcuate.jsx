@@ -26,7 +26,6 @@ export default function BIACalculate({ user, onComplete }) {
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
-  const [isShoesContinued, setIsShoesContinued] = useState(false);
   const barefootCTAResolver = useRef(null);
 
   // Phase tracking (removed attempt counters - now using parameters)
@@ -61,6 +60,7 @@ export default function BIACalculate({ user, onComplete }) {
     height: null,
     preHeight: null,
     armImpedance: null,
+    isShoesContinued: false,
     impedance: { k20: null, k100: null }
   });
   const STAGES = {
@@ -632,7 +632,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (choice === "skip") {
         // User chose to continue with shoes - skip leg phase, go to Phase 2
         console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
-        setIsShoesContinued(true);
+        resultsRef.current.isShoesContinued = true;
         // updatePhaseState('leg', 'skipped');
         await runPhase2_WeightHeight();
         return;
@@ -771,8 +771,8 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Arm BIA immediately after arm impedance
       await calculateAndStoreArmBIA(attemptCount);
 
-      if (isShoesContinued) {
-        console.log("[BIA DEBUG] Shoes continued - skipping Phase 3, showing imcomplete screen");
+      if (resultsRef.current.isShoesContinued) {
+        console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
         await sleep(3000);
         await BIAComplete({ session_id: storeUser?.data?.buffer_id });
@@ -1024,6 +1024,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     setIsRunning(true);
     setCurrentPhase('init');
+    resultsRef.current.isShoesContinued = false;
     // clearMetadata(); // Reset metadata at start of flow
 
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
