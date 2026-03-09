@@ -713,11 +713,11 @@ export default function BIACalculate({ user, onComplete }) {
 
 
       navigate("/bia/whcomplete");
-      //   await sleep(6000); // Wait for whComplete video
+      await sleep(3000) // Wait for whComplete video
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
-      await sleep(6000); // Wait for whComplete video
+      await sleep(7000); // Wait for whComplete video
 
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
