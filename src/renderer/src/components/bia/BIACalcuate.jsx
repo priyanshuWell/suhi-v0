@@ -472,7 +472,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
     console.log('[MEASUREMENT] Connecting to height port:');
-    await window.api.connectHeightPort(ports[1]?.path);
+    await window.api.connectHeightPort(ports[0]?.path);
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 
@@ -1035,7 +1035,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Connect BIA port
       console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
-      await window.api.connectBiaPort(ports[0]?.path);
+      await window.api.connectBiaPort(ports[1]?.path);
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 

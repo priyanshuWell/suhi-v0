@@ -8,7 +8,7 @@ import { BackgroundCameraProvider } from './services/BackgroundCameraProvider'
 import { Provider } from 'react-redux'
 import { store } from '../../store/store'
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
+  // <StrictMode>
         <Provider store={store}>
     <HashRouter>
       <BackgroundCameraProvider>
@@ -16,5 +16,5 @@ createRoot(document.getElementById('root')).render(
       </BackgroundCameraProvider>
     </HashRouter>
     </Provider>
-  </StrictMode>
+  //  </StrictMode> 
 )

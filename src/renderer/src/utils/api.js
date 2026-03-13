@@ -1,5 +1,5 @@
 import axios from "axios";
-
+const FPT_API_BASE_URL = "http://127.0.0.1:9000";
 const API_BASE_URL = "http://127.0.0.1:8000";
 const VOICE_API_BASE_URL = "http://127.0.0.1:9100"
 /**
@@ -122,6 +122,47 @@ export async function runVoice(payload) {
     };
 }
 }
+
+
+export async function realtimeCapture(kiosk_id=null) {
+  try {
+    const payload = {
+      kiosk_id: "aabbcc44",
+      camera_index: 6,
+      max_seconds: 5,
+      quality_threshold: 40
+    };
+
+    const response = await fetch(`${API_BASE_URL}/realtime/capture`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || "Realtime capture failed");
+    }
+
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Realtime capture error:", error);
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+
 
 export async function runFPT(shmPath, kioskId) {
   try {

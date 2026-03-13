@@ -4,7 +4,7 @@ import { useLocation } from "react-router";
 
 const BackgroundCamContext = createContext(null);
 
-const RECORD_ROUTES = new Set(["/voice", "/screen1", "/progress", "/welcome"]);
+const RECORD_ROUTES = new Set(["/voice", "/screen1"]);
 const CHUNK_SECONDS = 30;
 
 export function BackgroundCameraProvider({ children }) {
