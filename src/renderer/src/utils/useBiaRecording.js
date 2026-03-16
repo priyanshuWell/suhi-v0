@@ -96,6 +96,9 @@ export function useBIARecording({ sessionId, userId }) {
 
         // Collect the final in-flight chunk, then send
         recorder.onstop = async () => {
+          // ✅ Release camera IMMEDIATELY — chunks are already in memory, upload is unaffected
+          _cleanup();
+
           try {
             const blob = new Blob(chunksRef.current, { type: "video/webm" });
             const ts   = Date.now();
@@ -146,8 +149,6 @@ export function useBIARecording({ sessionId, userId }) {
           } catch (err) {
             console.error(`[BIA REC] ❌ Upload/save FAILED — role: "${role}"`, err.message);
             resolve(null);
-          } finally {
-            _cleanup();
           }
         };
 
