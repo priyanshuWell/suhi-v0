@@ -66,6 +66,7 @@ const NewDmitScreen = () => {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const rawStreamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const runLockRef = useRef(false);
   const audioRef = useRef(null);
