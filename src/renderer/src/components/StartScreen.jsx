@@ -9,11 +9,10 @@ import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
 import StartButton from './ui/BlueGradientButton'
 
-
 const Flag = true;
 export const StartScreen = () => {
   const { t } = useTranslation()
-  const [isCameraReady, setIsCameraReady] = React.useState(false)
+  // const [isCameraReady, setIsCameraReady] = React.useState(false)
   const [error, setError] = useState(false)
   const navigate = useNavigate()
   const [isActive, setIsActive] = useState(false);
@@ -21,12 +20,12 @@ export const StartScreen = () => {
   const audioRef = React.useRef(null);
   const instructionAudio = "/src/assets/audio/welcome_screen.mp3";
   useEffect(() => {
-    const openCameras = async () => {
-      return await openCamerasInBackground()
-    }
+    // const openCameras = async () => {
+    //   return await openCamerasInBackground()
+    // }
     try {
-      openCameras()
-      setIsCameraReady(true)
+      // openCameras()
+      // setIsCameraReady(true)
       playAudio()
     } catch (error) {
       console.log(error)

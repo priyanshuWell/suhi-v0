@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import video2 from "../assets/avatar2.mp4";
-import { useNavigate } from "react-router";
+import { data, useNavigate } from "react-router";
 import { recordFromOpenCameras } from "../utils/recordSession";
 import { getVideoDuration, getKioskId, getSessionId } from "../utils/config";
-import { runFPT, sendVideoToBackend } from "../utils/api";
+import { realtimeCapture, runFPT, sendVideoToBackend } from "../utils/api";
 import { measureWeightAndHeight } from "../utils/measurementUtils";
 import { storeFptMeasurements } from "../utils/measurementRedux";
 import { useDispatch, useSelector } from "react-redux";
@@ -27,7 +27,7 @@ const VideoCaptureScreen = () => {
   const measurementStartedRef = React.useRef(false);
   const measurementPromiseRef = React.useRef(null);
   const trackingDoneRef = React.useRef(false);
-
+const hasStartedRef = React.useRef(false);
   const STAGES = {
     FACE_SCAN: "FACE_SCAN",
   };
@@ -51,6 +51,8 @@ const VideoCaptureScreen = () => {
   const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 
   useEffect(() => {
+  //   if (hasStartedRef.current) return;
+  // hasStartedRef.current = true;
     const run = async () => {
       try {
         setStatus("Preparing...");
@@ -84,40 +86,41 @@ const VideoCaptureScreen = () => {
         }
 
         // Record video
-        const recordings = await recordFromOpenCameras(videoDuration);
-        console.log("recordings", recordings);
+        // const recordings = await recordFromOpenCameras(videoDuration);
+        // console.log("recordings", recordings);
 
-        if (!recordings || recordings.length === 0) {
-          throw new Error("No recordings captured");
-        }
+        // if (!recordings || recordings.length === 0) {
+        //   throw new Error("No recordings captured");
+        // }
 
-        setStatus("Uploading video...");
+        // setStatus("Uploading video...");
 
-        const videoToSend =
-          recordings.find((r) => r.role === "CENTER") || recordings[0];
+        // const videoToSend =
+        //   recordings.find((r) => r.role === "CENTER") || recordings[0];
 
-        console.log(`Sending ${videoToSend.role} video to backend...`);
+        // console.log(`Sending ${videoToSend.role} video to backend...`);
 
-        const storeResponse = await sendVideoToBackend(videoToSend);
-        console.log("Store response:", storeResponse);
+        // const storeResponse = await sendVideoToBackend(videoToSend);
+        // console.log("Store response:", storeResponse);
 
-        const shmPath = storeResponse?.data?.shm_path;
+        // const shmPath = storeResponse?.data?.shm_path;
 
-        if (!storeResponse?.success || !shmPath) {
-          throw new Error("Failed to store video or shm_path not received");
-        }
+        // if (!storeResponse?.success || !shmPath) {
+        //   throw new Error("Failed to store video or shm_path not received");
+        // }
 
         setStatus("Processing face verification...");
 
-        console.log("Running FPT with shm_path:", shmPath);
-        let fptResponse;
+      console.log("Running realtime capture + face verification");
 
-        if (USE_DUMMY_FPT) {
-          console.log("Using dummy FPT response...");
-          fptResponse = dummyFptSuccessResponse; // change to test other scenarios
-        } else {
-          fptResponse = await runFPT(shmPath, kioskId);
-        }
+let fptResponse;
+
+if (USE_DUMMY_FPT) {
+  console.log("Using dummy FPT response...");
+  fptResponse = dummyFptSuccessResponse;
+} else {
+  fptResponse = await realtimeCapture();
+}
         console.log("FPT response:", fptResponse);
         // dispatch(setUser(fptResponse));
 
@@ -155,7 +158,7 @@ const VideoCaptureScreen = () => {
           throw new Error("Face not recognized");
         }
 
-        // Success case - Face recognition successful
+       // Success case - Face recognition successful 
         dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
