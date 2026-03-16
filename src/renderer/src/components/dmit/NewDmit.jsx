@@ -434,7 +434,7 @@ export default NewDmitScreen;
 /**
  * :white_check_mark: Rotates stream 90° left and outputs corrected stream
  */
-async function rotateStream90(stream) {
+export async function rotateStream90(stream) {
   const video = document.createElement("video");
   video.srcObject = stream;
   video.muted = true;

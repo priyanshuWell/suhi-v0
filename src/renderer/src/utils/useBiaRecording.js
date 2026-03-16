@@ -1,6 +1,7 @@
 import { useRef, useCallback } from "react";
 import { sendVideoToBackend } from "./api";
 import { getRgbCameraConstraints } from "./getRgbCamera";
+import { rotateStream90 } from "../components/dmit/NewDmit";
 
 /**
  * useBIARecording
@@ -39,11 +40,12 @@ export function useBIARecording({ sessionId, userId }) {
         width: 640, height: 480, frameRate: 30,
       });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const rawstream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: false,
       });
 
+      const stream = await rotateStream90(rawstream)
       streamRef.current  = stream;
       chunksRef.current  = [];
 
