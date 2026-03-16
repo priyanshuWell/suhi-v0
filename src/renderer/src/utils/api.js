@@ -197,6 +197,42 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
+export async function bufferCollection(shmPath, kioskId,user_id) {
+  try {
+    const payload = {
+      shm_path: shmPath,
+      kiosk_id: kioskId,
+      user_id,
+      buffer_type: "BIA"
+    };
+
+    const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+
 /**
  * Send all three videos to backend (for future use if needed)
  * @param {Array} recordings - Array of video recordings
