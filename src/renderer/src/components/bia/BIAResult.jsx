@@ -11,6 +11,8 @@ import BodyConstitution from './BodyConstitution'
 import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
 import GradientButton from '../ui/BlackGradientButton'
+import { releaseAllResources } from '../../utils/cleanup'
+
 const BIAResult = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -21,7 +23,7 @@ const BIAResult = () => {
   const storeBiaResult = useSelector((state) => state.common.biaResult)
   const storeSessionId = useSelector((state) => state.common.sessionId)
   const storeUser = useSelector((state) => state.common.user)
-console.log("`BIAResult storeUser:", storeUser,storeHeight,storeHeight);
+  console.log("`BIAResult storeUser:", storeUser, storeHeight, storeHeight);
   // Fallback to navigation state for backward compatibility
   const bia = storeBiaResult || location.state?.biaResult
   const weight = storeWeight || location.state?.weight
@@ -106,40 +108,40 @@ console.log("`BIAResult storeUser:", storeUser,storeHeight,storeHeight);
   //   }
   // }
 
-const fallbackPartialJson = {
-  success: true,
-  user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
-  session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
-  data: {
-    height: null,
-    weight: null,
+  const fallbackPartialJson = {
+    success: true,
+    user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
+    session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
+    data: {
+      height: null,
+      weight: null,
 
-    body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
-      ? {
+      body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
+        ? {
           vata: 0,
           pitta: 60,
           kapha: 30
         }
-      : {
+        : {
           vata: 40,
           pitta: 60,
           kapha: 0
         },
 
-    hydration: null,
-    learner_type: {
-      type: "kinesthetic",
-      title: "When studying your ears are your hero ",
-      subtitle: "When studying, all your senses are your heroes.",
-      description: "Listen, Discuss, and Explain out Loud"
-    },
-    personality: {
-      type: "Balanced",
-      animal: "You are an Eagle",
-      traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
+      hydration: null,
+      learner_type: {
+        type: "kinesthetic",
+        title: "When studying your ears are your hero ",
+        subtitle: "When studying, all your senses are your heroes.",
+        description: "Listen, Discuss, and Explain out Loud"
+      },
+      personality: {
+        type: "Balanced",
+        animal: "You are an Eagle",
+        traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
+      }
     }
-  }
-};
+  };
 
 
   const constitution = apiReport?.body_constitution;
@@ -179,11 +181,11 @@ const fallbackPartialJson = {
   const fetchBiometricReport = async () => {
     try {
       const userId = storeUser?.data?.user_id;
-      const sessionId =storeUser?.data?.buffer_id;
+      const sessionId = storeUser?.data?.buffer_id;
 
       const payload = {
-        user_id: userId ,
-        session_id: sessionId ,
+        user_id: userId,
+        session_id: sessionId,
       };
 
       const res = await axios.post("http://localhost:8000/biometric-report/generate", payload);
@@ -223,16 +225,16 @@ const fallbackPartialJson = {
   // ✅ Final Data Source:
   // - height/weight from API (if exists)
   // - else from redux/location
-// const finalHeight =
-//   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
+  // const finalHeight =
+  //   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
 
-// const finalWeight =
-//   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
+  // const finalWeight =
+  //   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
 
-// after reshaping the redux store we now keep weights/heights in nested objects
-const finalHeight = (storeHeight && storeHeight.finalHeight) || apiReport?.height || 170;
+  // after reshaping the redux store we now keep weights/heights in nested objects
+  const finalHeight = (storeHeight && storeHeight.finalHeight) || apiReport?.height || 170;
 
-const finalWeight = (storeWeight && storeWeight.finalWeight) || apiReport?.weight || 70;
+  const finalWeight = (storeWeight && storeWeight.finalWeight) || apiReport?.weight || 70;
 
 
   const analysisData = {
@@ -417,10 +419,11 @@ const finalWeight = (storeWeight && storeWeight.finalWeight) || apiReport?.weigh
               </div>
             </div>
 
-
-
             <button
-              onClick={() => navigate('/welcome')}
+              onClick={() => {
+                releaseAllResources()
+                navigate('/welcome')
+              }}
               style={{
                 backgroundBlendMode: "plus-darker",
                 boxShadow: "0px 3.57697px 28.6158px #9AD9FF",

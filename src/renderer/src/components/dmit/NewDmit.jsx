@@ -129,8 +129,12 @@ const NewDmitScreen = () => {
       const deviceId = await getRgbCamera();
       if (!deviceId) throw new Error("No cameras found");
 
-      // stop old stream if any
+      // ✅ stop old streams if any
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       if (streamRef.current) {
+        if (typeof streamRef.current.stop === "function") streamRef.current.stop();
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
 
@@ -326,7 +330,12 @@ const NewDmitScreen = () => {
     startSingleCamera();
 
     return () => {
+      // ✅ Release both raw and rotated streams
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       if (streamRef.current) {
+        if (typeof streamRef.current.stop === "function") streamRef.current.stop();
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       stopAudio();

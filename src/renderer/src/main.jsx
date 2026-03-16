@@ -7,14 +7,19 @@ import './config/i18n/i18n';
 import { BackgroundCameraProvider } from './services/BackgroundCameraProvider'
 import { Provider } from 'react-redux'
 import { store } from '../../store/store'
+import { initCameraTracker } from './utils/cameraTracker'
+
+// Initialize global camera tracking
+initCameraTracker();
+
 createRoot(document.getElementById('root')).render(
   // <StrictMode>
-        <Provider store={store}>
+  <Provider store={store}>
     <HashRouter>
       {/* <BackgroundCameraProvider> */}
-        <App />
+      <App />
       {/* </BackgroundCameraProvider> */}
     </HashRouter>
-    </Provider>
+  </Provider>
   //  </StrictMode> 
 )

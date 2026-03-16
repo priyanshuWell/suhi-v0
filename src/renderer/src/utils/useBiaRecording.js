@@ -212,5 +212,13 @@ export function useBIARecording({ sessionId, userId }) {
     _cleanup();
   }, []);
 
+  // ✅ Auto-cleanup on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      console.log("[BIA REC] 🧹 Component unmounting — ensuring camera release");
+      forceCleanup();
+    };
+  }, [forceCleanup]);
+
   return { startRecording, stopAndSend, saveBuffer, forceCleanup };
 }
