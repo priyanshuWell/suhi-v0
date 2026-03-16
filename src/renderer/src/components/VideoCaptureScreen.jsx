@@ -11,7 +11,7 @@ import { setUser } from "../features/common/commonSlice";
 import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
-const USE_DUMMY_FPT = false;
+const USE_DUMMY_FPT = true;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);
@@ -40,8 +40,8 @@ const VideoCaptureScreen = () => {
   const dummyFptSuccessResponse = {
     success: true,
     student_status: "REGISTERED",
-    buffer_id: getSessionId(),
-    user_id: "1e375fdb-6cab-40fa-bc72-83ac9db84cf6",
+    buffer_id: "dummy_buffer_id_123",
+    user_id: "e6688f32-f9de-48fb-bfc9-e8815109d518",
     name: "Priyanshu",
   };
   const MAX_ATTEMPTS = 2;
