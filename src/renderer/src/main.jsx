@@ -11,9 +11,9 @@ createRoot(document.getElementById('root')).render(
   // <StrictMode>
         <Provider store={store}>
     <HashRouter>
-      <BackgroundCameraProvider>
+      {/* <BackgroundCameraProvider> */}
         <App />
-      </BackgroundCameraProvider>
+      {/* </BackgroundCameraProvider> */}
     </HashRouter>
     </Provider>
   //  </StrictMode> 

@@ -11,7 +11,7 @@ import { setUser } from "../features/common/commonSlice";
 import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
-const USE_DUMMY_FPT = true;
+const USE_DUMMY_FPT = false;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);
@@ -64,7 +64,7 @@ const VideoCaptureScreen = () => {
 
         // Start measurements in background (non-blocking)
         // Use 20-second timeout to prevent infinite waiting if user not on sensors
-        const MEASUREMENT_TIMEOUT = 6000; // 0 seconds
+        const MEASUREMENT_TIMEOUT = 8000; // 0 seconds
 
         if (!measurementStartedRef.current) {
           measurementStartedRef.current = true;
@@ -122,10 +122,10 @@ const VideoCaptureScreen = () => {
         // dispatch(setUser(fptResponse));
 
         // Check for API-level failure or face not recognized
-        const isFailed = !fptResponse.success || fptResponse.student_status !== 'REGISTERED';
+        const isFailed = !fptResponse.success || fptResponse.data?.student_status !== 'REGISTERED';
 
         // Check if user is not registered - redirect directly to login
-        if (fptResponse.success && fptResponse.student_status === 'NOT_REGISTERED') {
+        if (fptResponse.success && fptResponse.data?.student_status === 'NOT_REGISTERED') {
           setShowError(true);
           setPhase("ERROR");
           setStatus("User not registered. Redirecting to login...");
@@ -172,7 +172,7 @@ const VideoCaptureScreen = () => {
                 trackStage(STAGES.FACE_SCAN, STATUS.SUCCESS, {
                   weight_kg: measurements.weight,
                   height_cm: measurements.height
-                }, null, fptResponse?.buffer_id, fptResponse?.user_id);
+                }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
               }
 
               // Log any errors
@@ -200,8 +200,8 @@ const VideoCaptureScreen = () => {
                   STATUS.ERROR,
                   {},
                   errorMessage,
-                  fptResponse?.buffer_id,
-                  fptResponse?.user_id
+                  fptResponse?.data?.buffer_id,
+                  fptResponse?.data?.user_id
                 );
               }
 

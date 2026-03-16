@@ -2,6 +2,7 @@ import { useRef, useCallback } from "react";
 import { bufferCollection, sendVideoToBackend } from "./api";
 import { getRgbCameraConstraints } from "./getRgbCamera";
 import { rotateStream90 } from "../components/dmit/NewDmit";
+import { getKioskId } from "./config";
 
 /**
  * useBIARecording
@@ -132,8 +133,8 @@ export function useBIARecording({ sessionId, userId }) {
             });
 
             console.log(`[BIA REC] ✅ Backend upload DONE — role: "${role}"`, result);
-
-            const bufferResult = await bufferCollection(localResult.filePath, sessionId, userId);
+            const kioskId = getKioskId()
+            const bufferResult = await bufferCollection(result?.data?.shm_path,kioskId, userId);
             console.log(`[BIA REC] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
             // Wait for local save to finish (so cleanup doesn't race it)
             await localSavePromise;

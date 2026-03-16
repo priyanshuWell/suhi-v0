@@ -230,9 +230,9 @@ const fallbackPartialJson = {
 //   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
 
 // after reshaping the redux store we now keep weights/heights in nested objects
-const finalHeight = (storeHeight && storeHeight.finalHeight) || 170;
+const finalHeight = (storeHeight && storeHeight.finalHeight) || apiReport?.height || 170;
 
-const finalWeight = (storeWeight && storeWeight.finalWeight) || 70;
+const finalWeight = (storeWeight && storeWeight.finalWeight) || apiReport?.weight || 70;
 
 
   const analysisData = {
