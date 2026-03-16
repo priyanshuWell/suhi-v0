@@ -18,6 +18,7 @@ import { getKioskId } from "./config";
  * Usage:
  *   const { startRecording, stopAndSend, saveBuffer } = useBIARecording({ sessionId, userId });
  */
+const CHUNK_SIZE = 5000;
 export function useBIARecording({ sessionId, userId }) {
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
@@ -64,7 +65,7 @@ export function useBIARecording({ sessionId, userId }) {
       };
 
       // Collect a chunk every 5 s so the buffer is always fresh
-      recorder.start(5000);
+      recorder.start(CHUNK_SIZE);
       mediaRecorderRef.current = recorder;
       isRecordingRef.current   = true;
 
@@ -189,5 +190,16 @@ export function useBIARecording({ sessionId, userId }) {
     [_flushAndSend]
   );
 
-  return { startRecording, stopAndSend, saveBuffer };
+  const forceCleanup = useCallback(() => {
+    console.log("[BIA REC] 🧹 forceCleanup() called — stopping any active stream/recorder");
+    if (mediaRecorderRef.current && isRecordingRef.current) {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (_) { /* ignore if already stopped */ }
+      isRecordingRef.current = false;
+    }
+    _cleanup();
+  }, []);
+
+  return { startRecording, stopAndSend, saveBuffer, forceCleanup };
 }

@@ -28,7 +28,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
-  const { startRecording, stopAndSend, saveBuffer } = useBIARecording({
+  const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
   });
@@ -408,7 +408,6 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-  // Use BackgroundCameraProvider for recording
 
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
@@ -768,6 +767,8 @@ export default function BIACalculate({ user, onComplete }) {
         navigate("/bia/imcomplete");
         await sleep(3000);
         await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+        console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
+        await stopAndSend(); // ✅ Stop recording before navigating away
         setIsComplete(true);
         navigate("/screen1");
         return;
@@ -1062,6 +1063,8 @@ export default function BIACalculate({ user, onComplete }) {
 
     return () => {
       console.log("[BIA DEBUG] Component unmounting, cleaning up...");
+      // ✅ Always release the camera when BIACalculate leaves the screen
+      forceCleanup();
       //clearAllTimeouts();
     };
   }, []);
