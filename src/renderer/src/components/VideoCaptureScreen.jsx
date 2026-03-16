@@ -11,7 +11,6 @@ import { setUser } from "../features/common/commonSlice";
 import { BIAMeasurementStage } from "../utils/api";
 import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
-import { m } from "framer-motion";
 const USE_DUMMY_FPT = false;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
@@ -20,6 +19,7 @@ const VideoCaptureScreen = () => {
   const [status, setStatus] = useState('Initializing...');
   const [showError, setShowError] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
+  const attemptCountRef = React.useRef(0);
   const [shouldRetry, setShouldRetry] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const dispatch = useDispatch();
@@ -27,7 +27,7 @@ const VideoCaptureScreen = () => {
   const measurementStartedRef = React.useRef(false);
   const measurementPromiseRef = React.useRef(null);
   const trackingDoneRef = React.useRef(false);
-const hasStartedRef = React.useRef(false);
+  const hasStartedRef = React.useRef(false);
   const STAGES = {
     FACE_SCAN: "FACE_SCAN",
   };
@@ -39,20 +39,17 @@ const hasStartedRef = React.useRef(false);
 
   const dummyFptSuccessResponse = {
     success: true,
-    status: 200,
-    data: {
-      student_status: "REGISTERED",
-      buffer_id: getSessionId(),
-      user_id: "1e375fdb-6cab-40fa-bc72-83ac9db84cf6",
-      name: "Priyanshu",
-    },
+    student_status: "REGISTERED",
+    buffer_id: getSessionId(),
+    user_id: "1e375fdb-6cab-40fa-bc72-83ac9db84cf6",
+    name: "Priyanshu",
   };
   const MAX_ATTEMPTS = 2;
   const instructionAudio = "/src/assets/audio/camera_scan.mp3";
 
   useEffect(() => {
-  //   if (hasStartedRef.current) return;
-  // hasStartedRef.current = true;
+    //   if (hasStartedRef.current) return;
+    // hasStartedRef.current = true;
     const run = async () => {
       try {
         setStatus("Preparing...");
@@ -111,54 +108,44 @@ const hasStartedRef = React.useRef(false);
 
         setStatus("Processing face verification...");
 
-      console.log("Running realtime capture + face verification");
+        console.log("Running realtime capture + face verification");
 
-let fptResponse;
+        let fptResponse;
 
-if (USE_DUMMY_FPT) {
-  console.log("Using dummy FPT response...");
-  fptResponse = dummyFptSuccessResponse;
-} else {
-  fptResponse = await realtimeCapture();
-}
+        if (USE_DUMMY_FPT) {
+          console.log("Using dummy FPT response...");
+          fptResponse = dummyFptSuccessResponse;
+        } else {
+          fptResponse = await realtimeCapture();
+        }
         console.log("FPT response:", fptResponse);
         // dispatch(setUser(fptResponse));
 
+        // Check for API-level failure or face not recognized
+        const isFailed = !fptResponse.success || fptResponse.student_status !== 'REGISTERED';
+
         // Check if user is not registered - redirect directly to login
-        if (fptResponse?.data?.student_status === 'NOT_REGISTERED') {
+        if (fptResponse.success && fptResponse.student_status === 'NOT_REGISTERED') {
           setShowError(true);
           setPhase("ERROR");
           setStatus("User not registered. Redirecting to login...");
           throw new Error("User not registered");
         }
 
-        // Check for specific error codes (502, 503, or general failure)
-        const errorStatus = fptResponse?.status || fptResponse?.statusCode;
-        const isFaceNotRecognized =
-          errorStatus === 502 ||
-          errorStatus === 503 ||
-          !fptResponse.success;
-
-        if (isFaceNotRecognized) {
-          // Increment attempt count
-          const newAttemptCount = attemptCount + 1;
-          setAttemptCount(newAttemptCount);
-
-          // Show error alert
+        if (isFailed) {
+          attemptCountRef.current += 1;
+          setAttemptCount(attemptCountRef.current);
           setShowError(true);
           setPhase("ERROR");
-
-          // If we haven't exceeded max attempts, prepare for retry
-          if (newAttemptCount < MAX_ATTEMPTS) {
+          if (attemptCountRef.current < MAX_ATTEMPTS) {
             setStatus("Face not recognized. Retrying...");
           } else {
-            setStatus("Look at the Camera.");
+            setStatus("Face not recognized. Maximum attempts reached.");
           }
-
-          throw new Error("Face not recognized");
+          throw new Error(fptResponse.error || "Face not recognized");
         }
 
-       // Success case - Face recognition successful 
+        // Success case - Face recognition successful 
         dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
@@ -185,11 +172,9 @@ if (USE_DUMMY_FPT) {
                 trackStage(STAGES.FACE_SCAN, STATUS.SUCCESS, {
                   weight_kg: measurements.weight,
                   height_cm: measurements.height
-                }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+                }, null, fptResponse?.buffer_id, fptResponse?.user_id);
               }
 
-              // Log any errors
-              // Log any errors
               // Log any errors
               if (measurements.errors && Object.keys(measurements.errors).length > 0) {
                 let errorMessage = "";
@@ -215,11 +200,10 @@ if (USE_DUMMY_FPT) {
                   STATUS.ERROR,
                   {},
                   errorMessage,
-                  fptResponse?.data?.buffer_id,
-                  fptResponse?.data?.user_id
+                  fptResponse?.buffer_id,
+                  fptResponse?.user_id
                 );
-              }         // Track to backend (even if partial/error)
-          //    trackStage(STAGES.FACE_SCAN, STATUS.ERROR, {}, formattedErrors, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
+              }
 
             }
           }).catch((error) => {
@@ -251,12 +235,13 @@ if (USE_DUMMY_FPT) {
   };
 
   const handleRetry = () => {
-    // Check if error is user not registered, redirect to login instead
-    if (status.includes("not registered")) {
+    setShowError(false);
+    // Redirect to login if user is not registered or max attempts reached
+    if (status.includes("not registered") || attemptCountRef.current >= MAX_ATTEMPTS) {
       navigate("/login-suhi");
     } else {
-      // Navigate to FaceCapture screen for the second attempt
-      navigate("/facecapture");
+      // Retry in-place by toggling shouldRetry
+      setShouldRetry((prev) => !prev);
     }
   }; const playAudio = () => {
     if (audioRef.current) {
