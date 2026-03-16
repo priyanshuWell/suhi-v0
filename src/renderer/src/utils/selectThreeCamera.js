@@ -1,22 +1,17 @@
+import { getRgbCamera } from "./getRgbCamera";
+
 export async function selectThreeCameras() {
   const devices = await navigator.mediaDevices.enumerateDevices();
-  const cams = devices.filter(d => d.kind === "videoinput");
-  console.log("camera",cams);
-  // const hdrs = cams.filter(c => c.label.includes("HDR"));
-  // const rgb  = cams.find(c => c.label.includes("RGB"));
+  const cams = devices.filter((d) => d.kind === "videoinput");
+  console.log("[CAMERA] All video devices:", cams.map((c) => c.label));
 
-  // if (!rgb || hdrs.length < 4) {
-  //   throw new Error("CAMERA_MISSING");
-  // }
+  // Prefer RGB camera as CENTER; fall back to first available
+  const rgbDeviceId = await getRgbCamera();
+  const centerCam = cams.find((c) => c.deviceId === rgbDeviceId) ?? cams[0];
 
-  // return [
-  //   { role: "LEFT_HDR",   cam: hdrs[3] },
-  //   { role: "CENTER_RGB", cam: rgb },
-  //   { role: "RIGHT_HDR",  cam: hdrs[1] }
-  // ];
-   return [
-    { role: "CENTER",   cam: cams[5] },
-    // { role: "LEFT", cam: cams[5] },
-    // { role: "RIGHT",  cam: cams[0] }
+  console.log("[CAMERA] selectThreeCameras → CENTER:", centerCam?.label);
+
+  return [
+    { role: "CENTER", cam: centerCam },
   ];
 }

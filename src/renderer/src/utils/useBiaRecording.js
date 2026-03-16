@@ -1,5 +1,6 @@
 import { useRef, useCallback } from "react";
-import { sendVideoToBackend } from "./api"; // ✅ Fixed: relative path within utils/
+import { sendVideoToBackend } from "./api";
+import { getRgbCameraConstraints } from "./getRgbCamera";
 
 /**
  * useBIARecording
@@ -21,37 +22,8 @@ export function useBIARecording({ sessionId, userId }) {
   const streamRef        = useRef(null);
   const isRecordingRef   = useRef(false);
 
-  // ─── Camera selection: prefer RGB-labelled camera ─────────────────────────
-  const _resolveCamera = async () => {
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter((d) => d.kind === "videoinput");
 
-      if (!videoDevices.length) {
-        console.warn("[BIA REC] 📷 No video devices found");
-        return null;
-      }
 
-      // Prefer camera with "RGB" in the label
-      const rgbCamera = videoDevices.find((d) =>
-        d.label.toLowerCase().includes("rgb")
-      );
-
-      if (rgbCamera) {
-        console.log(`[BIA REC] 📷 RGB camera selected: "${rgbCamera.label}" (${rgbCamera.deviceId})`);
-        return rgbCamera.deviceId;
-      }
-
-      // Fallback: first available
-      console.warn(
-        `[BIA REC] ⚠️ No RGB camera found. Falling back to: "${videoDevices[0].label}"`
-      );
-      return videoDevices[0].deviceId;
-    } catch (err) {
-      console.warn("[BIA REC] ⚠️ Could not enumerate devices:", err.message);
-      return null;
-    }
-  };
 
   // ─── Start ────────────────────────────────────────────────────────────────
   const startRecording = useCallback(async () => {
@@ -63,11 +35,9 @@ export function useBIARecording({ sessionId, userId }) {
     console.log("[BIA REC] 🎬 startRecording() called — session:", sessionId, "user:", userId);
 
     try {
-      const deviceId = await _resolveCamera();
-
-      const videoConstraints = deviceId
-        ? { deviceId: { exact: deviceId }, width: 640, height: 480, frameRate: 30 }
-        : { width: 640, height: 480, frameRate: 30 };
+      const videoConstraints = await getRgbCameraConstraints({
+        width: 640, height: 480, frameRate: 30,
+      });
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,

@@ -190,6 +190,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import { getRgbCamera } from "../../utils/getRgbCamera";
 
 import bg1 from "../../assets/lightbg.png";
 import bg2 from "../../assets/dmt-bg.svg";
@@ -245,11 +246,20 @@ const DMITScreen = () => {
       try {
         const all = await navigator.mediaDevices.enumerateDevices();
         const videoInputs = all.filter((d) => d.kind === "videoinput");
+        console.log("[CAMERA] DMITScreen devices:", videoInputs.map((d) => d.label));
+
+        // Use RGB camera as CENTER; keep LEFT/RIGHT from index mapping if needed
+        const rgbDeviceId = await getRgbCamera();
+        const rgbCam = videoInputs.find((d) => d.deviceId === rgbDeviceId) ?? videoInputs[0];
 
         setDevices(videoInputs);
+        setMapped([
+          { role: "LEFT", cam: rgbCam },
+          { role: "CENTER", cam: rgbCam },
+          { role: "RIGHT", cam: rgbCam },
+        ]);
 
-        const mappedCams = mapCameras(videoInputs);
-        setMapped(mappedCams);
+        console.log("[CAMERA] DMITScreen → using camera:", rgbCam?.label, "for all roles");
       } catch (err) {
         console.error("enumerateDevices error:", err);
         setStatus(t('dmit.status.failed_camera'));

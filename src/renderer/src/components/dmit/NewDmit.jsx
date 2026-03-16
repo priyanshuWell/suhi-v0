@@ -21,6 +21,7 @@ import rightBack from "../../assets/hands/right-back.svg";
 
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
+import { getRgbCamera } from "../../utils/getRgbCamera";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -103,7 +104,7 @@ const NewDmitScreen = () => {
     setIsAudioPlaying(false);
   };
 
-   useEffect(() => {
+  useEffect(() => {
     if (currentStep && currentStep.audio) {
       playAudio(currentStep.audio);
     }
@@ -124,13 +125,9 @@ const NewDmitScreen = () => {
       setIsVerify(false);
       setStatus("Opening camera...");
 
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = all.filter((d) => d.kind === "videoinput");
-
-      if (!videoInputs?.length) throw new Error("No cameras found");
-
-      const cam = videoInputs[3]; // :white_check_mark: USE ONLY cams[1]
-      if (!cam) throw new Error("cams[1] not found");
+      // ✅ Prefer RGB camera; fall back to first available
+      const deviceId = await getRgbCamera();
+      if (!deviceId) throw new Error("No cameras found");
 
       // stop old stream if any
       if (streamRef.current) {
@@ -139,7 +136,7 @@ const NewDmitScreen = () => {
 
       const rawStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          deviceId: { exact: cam.deviceId },
+          deviceId: { exact: deviceId },
           width: 640,
           height: 480,
           frameRate: 30,
@@ -147,7 +144,7 @@ const NewDmitScreen = () => {
         audio: false,
       });
 
-      // :white_check_mark: rotate 90 degrees
+      // ✅ rotate 90 degrees
       const rotatedStream = await rotateStream90(rawStream);
 
       streamRef.current = rotatedStream;
@@ -158,7 +155,7 @@ const NewDmitScreen = () => {
       }
 
       setIsCameraReady(true);
-      setStatus("Camera ready :white_check_mark:");
+      setStatus("Camera ready ✅");
     } catch (err) {
       console.error("startSingleCamera error:", err);
       setPhase("ERROR");
@@ -386,7 +383,7 @@ const NewDmitScreen = () => {
             <video
               ref={videoRef}
               autoPlay
-            //  muted
+              //  muted
               playsInline
               className="w-full h-full object-cover"
             />
@@ -417,13 +414,12 @@ const NewDmitScreen = () => {
       <div className="absolute bottom-10 left-0 right-0 flex justify-center z-20">
         <div className="bg-black bg-opacity-75 px-6 py-3 rounded-lg">
           <p
-            className={`text-lg font-medium ${
-              phase === "ERROR"
+            className={`text-lg font-medium ${phase === "ERROR"
                 ? "text-red-500"
                 : isVerify
-                ? "text-green-500"
-                : "text-white"
-            }`}
+                  ? "text-green-500"
+                  : "text-white"
+              }`}
           >
             {status}
           </p>
