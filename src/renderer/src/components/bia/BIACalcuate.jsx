@@ -12,6 +12,7 @@ import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
 import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
+import { useBIARecording } from "../../utils/useBiaRecording";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -27,32 +28,13 @@ export default function BIACalculate({ user, onComplete }) {
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
+  const { startRecording, stopAndSend, saveBuffer } = useBIARecording({
+    sessionId: storeUser?.data?.buffer_id,
+    userId: storeUser?.data?.user_id,
+  });
 
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
-
-  // const trackStage = async (stage, status, data = {}, error = null) => {
-  //   const payload = {
-  //     session_id: storeUser?.data.buffer_id,
-  //     user_id: storeUser?.data?.user_id || "unknown",
-  //     measurement_stage: stage,
-  //     status: status,
-  //     retry_reason: error,
-  //     attempt_number: attemptTracking.current[stage.toLowerCase()] || 1,
-  //     measurement_timestamp: new Date().toISOString(),
-  //     data: {
-  //       ...data,
-
-  //     }
-  //   };
-
-  //   try {
-  //     // Replace with your actual fetch/axios call to /bia/measurement/stage
-  //     await BIAMeasurementStage(payload);
-  //   } catch (err) {
-  //     console.error(`[API ERROR] Failed to track stage ${stage}:`, err);
-  //   }
-  // };
   const resultsRef = useRef({
     legImpedance: null,
     weight: null,
@@ -281,6 +263,7 @@ export default function BIACalculate({ user, onComplete }) {
     const handleHeightError = async (payload) => {
       console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
       await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
+      await saveBuffer("height_port_error");
       navigate('/screen1');
 
       // Track attempt for height (continuous polling)
@@ -578,6 +561,7 @@ export default function BIACalculate({ user, onComplete }) {
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await saveBuffer("leg_max_retry");
       navigate("/screen1");
       return;
     }
@@ -672,6 +656,7 @@ export default function BIACalculate({ user, onComplete }) {
       // updatePhaseState('weight', 'failed', weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
       await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await saveBuffer("weight_error");
       navigate("/screen1");
       return;
     }
@@ -685,6 +670,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       await showError(ERROR_MESSAGES.height, 3000);
       await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await saveBuffer("height_max_retry");
       navigate("/screen1");
       return;
     }
@@ -744,6 +730,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await saveBuffer("arm_max_retry");
       navigate("/screen1");
       return;
     }
@@ -968,9 +955,8 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { bia_object: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
-
-      // Recording is handled by BackgroundCameraProvider automatically
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await stopAndSend(); // Upload full BIA recording
       await sleep(3000); // Wait for complete video
       // Clear timeouts
       //clearAllTimeouts();
@@ -988,6 +974,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       await sleep(3000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await saveBuffer("calc_error");
       setIsComplete(true);
       navigate("/screen1");
     }
@@ -1026,12 +1013,11 @@ export default function BIACalculate({ user, onComplete }) {
     setCurrentPhase('init');
     resultsRef.current.isShoesContinued = false;
     // clearMetadata(); // Reset metadata at start of flow
-
+    await startRecording();
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
     console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
 
     // Recording is handled by BackgroundCameraProvider automatically
-
     try {
       // Connect BIA port
       console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
@@ -1046,7 +1032,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error("[BIA DEBUG] Flow error:", e.message);
       // updatePhaseState('flow', 'failed', e.message);
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-
+      await saveBuffer("flow_exception");
       navigate("/screen1");
     } finally {
       setIsRunning(false);
