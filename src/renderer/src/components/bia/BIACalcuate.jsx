@@ -263,6 +263,7 @@ export default function BIACalculate({ user, onComplete }) {
     const handleHeightError = async (payload) => {
       console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
       await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
+      console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
       await saveBuffer("height_port_error");
       navigate('/screen1');
 
@@ -561,6 +562,7 @@ export default function BIACalculate({ user, onComplete }) {
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
       navigate("/screen1");
       return;
@@ -656,6 +658,7 @@ export default function BIACalculate({ user, onComplete }) {
       // updatePhaseState('weight', 'failed', weightError.message);
       await showError(ERROR_MESSAGES.weight, 3000);
       await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      console.log("[BIA REC] ⏏️  Phase 2 — weight failed → saveBuffer('weight_error')");
       await saveBuffer("weight_error");
       navigate("/screen1");
       return;
@@ -670,6 +673,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       await showError(ERROR_MESSAGES.height, 3000);
       await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      console.log("[BIA REC] ⏏️  Phase 2 — height max retries exhausted → saveBuffer('height_max_retry')");
       await saveBuffer("height_max_retry");
       navigate("/screen1");
       return;
@@ -730,6 +734,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
       navigate("/screen1");
       return;
@@ -956,6 +961,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
       await sleep(3000); // Wait for complete video
       // Clear timeouts
@@ -974,6 +980,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       await sleep(3000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
       setIsComplete(true);
       navigate("/screen1");
@@ -1013,6 +1020,7 @@ export default function BIACalculate({ user, onComplete }) {
     setCurrentPhase('init');
     resultsRef.current.isShoesContinued = false;
     // clearMetadata(); // Reset metadata at start of flow
+    console.log("[BIA REC] 🎬 Starting BIA recording — session:", storeUser?.data?.buffer_id, "user:", storeUser?.data?.user_id);
     await startRecording();
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
     console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
@@ -1032,6 +1040,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error("[BIA DEBUG] Flow error:", e.message);
       // updatePhaseState('flow', 'failed', e.message);
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
       await saveBuffer("flow_exception");
       navigate("/screen1");
     } finally {

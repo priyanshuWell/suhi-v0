@@ -336,7 +336,7 @@ const VideoCaptureScreen = () => {
             ? "User is not registered in the system.\nRedirecting to manual login..."
             : attemptCount < MAX_ATTEMPTS
               ? `No face detected OR Multiple faces detected.\nRetrying......`
-              : "Maximum attempts reached\nReturning to welcome screen..."
+              : "Maximum attempts reached\nReturning to login screen..."
         }
         visible={showError}
         onClose={handleErrorClose}
