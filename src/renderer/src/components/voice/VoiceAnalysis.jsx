@@ -7,6 +7,8 @@ import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
 import VoiceBars from "./VoiceBars";
 import { sendVoiceToBackend, runVoice } from "../../utils/api";
+import audioBufferToWav from "audiobuffer-to-wav";
+
 
 const VoiceCapture = () => {
     const { t } = useTranslation();
@@ -36,16 +38,16 @@ const VoiceCapture = () => {
     }, []);
 
     useEffect(() => {
-    let interval;
+        let interval;
 
-    if (status === "processing") {
-        interval = setInterval(() => {
-            setProcessingAngle(prev => (prev + 6) % 360); // smooth rotation
-        }, 16); // ~60fps
-    }
+        if (status === "processing") {
+            interval = setInterval(() => {
+                setProcessingAngle(prev => (prev + 6) % 360); // smooth rotation
+            }, 16); // ~60fps
+        }
 
-    return () => clearInterval(interval);
-}, [status]);
+        return () => clearInterval(interval);
+    }, [status]);
 
     useEffect(() => {
         let interval = null;
@@ -130,7 +132,8 @@ const VoiceCapture = () => {
             console.log("stream", stream);
 
             // Set up Web Audio API for visualization
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioContext = new AudioContext({ sampleRate: 16000 });
+            // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
 
@@ -166,6 +169,11 @@ const VoiceCapture = () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
 
+                // Convert to WAV 16kHz
+                const audioContext = new AudioContext({ sampleRate: 16000 });
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                const wavArrayBuffer = audioBufferToWav(audioBuffer);
+
                 // Get data from Redux store and config
                 const kioskId = getKioskId();
                 const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
@@ -175,8 +183,9 @@ const VoiceCapture = () => {
                     kiosk_id: kioskId,
                     user_id: userId,
                     session_id: sessionId,
-                    arrayBuffer: arrayBuffer
+                    arrayBuffer: wavArrayBuffer
                 };
+
 
                 console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
 
@@ -184,8 +193,9 @@ const VoiceCapture = () => {
                     const voiceData = {
                         role: "VOICE",
                         timestamp: Date.now(),
-                        buffer: new Uint8Array(arrayBuffer)
+                        buffer: new Uint8Array(wavArrayBuffer)
                     };
+
 
                     const storeResult = await sendVoiceToBackend(voiceData);
                     console.log("Store result voice:", storeResult);
