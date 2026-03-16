@@ -415,10 +415,10 @@ const NewDmitScreen = () => {
         <div className="bg-black bg-opacity-75 px-6 py-3 rounded-lg">
           <p
             className={`text-lg font-medium ${phase === "ERROR"
-                ? "text-red-500"
-                : isVerify
-                  ? "text-green-500"
-                  : "text-white"
+              ? "text-red-500"
+              : isVerify
+                ? "text-green-500"
+                : "text-white"
               }`}
           >
             {status}
@@ -450,6 +450,7 @@ export async function rotateStream90(stream) {
   canvas.height = w;
 
   const ctx = canvas.getContext("2d");
+  let rafId = null;
 
   function draw() {
     ctx.save();
@@ -461,11 +462,22 @@ export async function rotateStream90(stream) {
     ctx.drawImage(video, -w / 2, -h / 2, w, h);
     ctx.restore();
 
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
   }
 
   draw();
 
   const canvasStream = canvas.captureStream(30);
+
+  // ✅ Expose a stop() so callers can cancel the rAF loop + release the hidden video
+  canvasStream.stop = () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    video.pause();
+    video.srcObject = null;
+  };
+
   return canvasStream;
 }

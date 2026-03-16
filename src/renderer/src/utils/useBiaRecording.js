@@ -18,11 +18,12 @@ import { getKioskId } from "./config";
  * Usage:
  *   const { startRecording, stopAndSend, saveBuffer } = useBIARecording({ sessionId, userId });
  */
-const CHUNK_SIZE = 5000;
+const CHUNK_SIZE = 1000; // 1-second timeslices → denser keyframes, smoother playback
 export function useBIARecording({ sessionId, userId }) {
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
-  const streamRef        = useRef(null);
+  const streamRef        = useRef(null);      // canvas stream (rotated)
+  const rawStreamRef     = useRef(null);      // ✅ original getUserMedia stream (camera device)
   const isRecordingRef   = useRef(false);
 
 
@@ -47,7 +48,8 @@ export function useBIARecording({ sessionId, userId }) {
         audio: false,
       });
 
-      const stream = await rotateStream90(rawstream)
+      rawStreamRef.current = rawstream;                 // ✅ keep a ref so we can stop device later
+      const stream = await rotateStream90(rawstream);
       streamRef.current  = stream;
       chunksRef.current  = [];
 
@@ -156,11 +158,19 @@ export function useBIARecording({ sessionId, userId }) {
   );
 
   const _cleanup = () => {
+    // ✅ Cancel the rAF draw loop inside rotateStream90 and release the hidden video element
+    if (typeof streamRef.current?.stop === "function") {
+      streamRef.current.stop();
+    }
+    // Stop the canvas/rotated stream tracks
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current        = null;
+    streamRef.current = null;
+    // Stop the ORIGINAL camera device stream so other components can use the camera
+    rawStreamRef.current?.getTracks().forEach((t) => t.stop());
+    rawStreamRef.current     = null;
     mediaRecorderRef.current = null;
     chunksRef.current        = [];
-    console.log("[BIA REC] 🧹 Stream and recorder cleaned up");
+    console.log("[BIA REC] 🧹 Stream and recorder cleaned up (canvas + raw camera released)");
   };
 
   // ─── 1. COMPLETE — normal BIA finish ──────────────────────────────────────
