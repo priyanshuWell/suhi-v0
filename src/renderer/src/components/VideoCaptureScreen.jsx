@@ -106,22 +106,66 @@ const VideoCaptureScreen = () => {
         //   throw new Error("Failed to store video or shm_path not received");
         // }
 
-        setStatus("Processing face verification...");
+        setStatus("Processing scan and measurements...");
 
-        console.log("Running realtime capture + face verification");
+        console.log("Running realtime capture + measurements in parallel");
 
         let fptResponse;
+        let measurements;
 
         if (USE_DUMMY_FPT) {
           console.log("Using dummy FPT response...");
           fptResponse = dummyFptSuccessResponse;
+          // Still wait for measurements if they're running
+          measurements = await measurementPromiseRef.current;
         } else {
-          fptResponse = await realtimeCapture();
+          // Await both face capture and weight/height measurements in parallel
+          [fptResponse, measurements] = await Promise.all([
+            realtimeCapture(),
+            measurementPromiseRef.current
+          ]);
         }
-        console.log("FPT response:", fptResponse);
-        // dispatch(setUser(fptResponse));
 
-        // Check for API-level failure or face not recognized
+        console.log("FPT response:", fptResponse);
+        console.log("Measurement results:", measurements);
+
+        // -- Handle Measurements First (so they are available for tracking/display) --
+        if (measurements && !trackingDoneRef.current) {
+          trackingDoneRef.current = true;
+          console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
+
+          // Store measurements even if some failed
+          if (measurements.weight || measurements.height) {
+            storeFptMeasurements(
+              dispatch,
+              measurements.weight,
+              measurements.height
+            );
+            console.log('[VIDEO CAPTURE] Measurements saved!');
+          }
+
+          // Handle measurement errors for tracking
+          if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+            let errorMessage = "";
+            const hasWeightError = !!measurements.errors.weight;
+            const hasHeightError = !!measurements.errors.height;
+
+            if (hasWeightError && hasHeightError) {
+              errorMessage = "Failed to get weight and height measurement";
+            } else if (hasWeightError) {
+              errorMessage = "Failed to get weight measurement";
+            } else if (hasHeightError) {
+              errorMessage = "Failed to get height measurement";
+            } else {
+              errorMessage = "User is not standing on the platform";
+            }
+            console.warn('[VIDEO CAPTURE] Measurement warning:', errorMessage);
+
+            // Note: We'll track the error stage ONLY if FPT also fails or after we know FPT status
+          }
+        }
+
+        // -- Handle Face Recognition Result --
         const isFailed = !fptResponse.success || fptResponse.data?.student_status !== 'REGISTERED';
 
         // Check if user is not registered - redirect directly to login
@@ -142,6 +186,20 @@ const VideoCaptureScreen = () => {
           } else {
             setStatus("Face not recognized. Maximum attempts reached.");
           }
+
+          // Track failure with measurements if available
+          trackStage(
+            STAGES.FACE_SCAN,
+            STATUS.ERROR,
+            {
+              weight_kg: measurements?.weight,
+              height_cm: measurements?.height
+            },
+            fptResponse.error || "Face not recognized",
+            fptResponse?.data?.buffer_id,
+            fptResponse?.data?.user_id
+          );
+
           throw new Error(fptResponse.error || "Face not recognized");
         }
 
@@ -151,65 +209,18 @@ const VideoCaptureScreen = () => {
         setIsVerify(true);
         stopAudio();
 
-        // Wait for measurements to complete in background (non-blocking for FPT)
-        // This happens after FPT succeeds, so measurements don't block the flow
-        if (measurementPromiseRef.current) {
-          measurementPromiseRef.current.then((measurements) => {
-            if (measurements && !trackingDoneRef.current) {
-              trackingDoneRef.current = true;
-              console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
-
-              // Store measurements even if some failed
-              if (measurements.weight || measurements.height) {
-                storeFptMeasurements(
-                  dispatch,
-                  measurements.weight,
-                  measurements.height
-                );
-                console.log('[VIDEO CAPTURE] Measurements saved!');
-
-                // Track to backend
-                trackStage(STAGES.FACE_SCAN, STATUS.SUCCESS, {
-                  weight_kg: measurements.weight,
-                  height_cm: measurements.height
-                }, null, fptResponse?.data?.buffer_id, fptResponse?.data?.user_id);
-              }
-
-              // Log any errors
-              if (measurements.errors && Object.keys(measurements.errors).length > 0) {
-                let errorMessage = "";
-
-                const hasWeightError = !!measurements.errors.weight;
-                const hasHeightError = !!measurements.errors.height;
-
-                if (hasWeightError && hasHeightError) {
-                  errorMessage = "Failed to get weight and height measurement";
-                } else if (hasWeightError) {
-                  errorMessage = "Failed to get weight measurement";
-                } else if (hasHeightError) {
-                  errorMessage = "Failed to get height measurement";
-                } else {
-                  errorMessage = "User is not standing on the platform";
-                }
-
-                console.warn('[VIDEO CAPTURE] Measurement error:', errorMessage);
-
-                // Send SINGLE STRING to backend
-                trackStage(
-                  STAGES.FACE_SCAN,
-                  STATUS.ERROR,
-                  {},
-                  errorMessage,
-                  fptResponse?.data?.buffer_id,
-                  fptResponse?.data?.user_id
-                );
-              }
-
-            }
-          }).catch((error) => {
-            console.error('[VIDEO CAPTURE] Error storing measurements:', error);
-          });
-        }
+        // Track success to backend
+        trackStage(
+          STAGES.FACE_SCAN,
+          STATUS.SUCCESS,
+          {
+            weight_kg: measurements?.weight,
+            height_cm: measurements?.height
+          },
+          null,
+          fptResponse?.data?.buffer_id,
+          fptResponse?.data?.user_id
+        );
 
         await new Promise((r) => setTimeout(r, 500));
         navigate("/verified");

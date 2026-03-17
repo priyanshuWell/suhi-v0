@@ -285,26 +285,28 @@ export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREM
     status: "completed"
   };
 
-  // Weight
-  if (weightPortPath) {
-    const weightData = await measureWeight(weightPortPath, timeoutMs);
-    result.weight = weightData.weight;
-    if (weightData.error) {
-      result.errors.weight = weightData.error;
-    }
-  } else {
-    result.errors.weight = "No weight port available";
+  // Create measurement promises
+  const weightPromise = weightPortPath 
+    ? measureWeight(weightPortPath, timeoutMs)
+    : Promise.resolve({ weight: null, error: "No weight port available" });
+
+  const heightPromise = heightPortPath
+    ? measureHeight(heightPortPath, timeoutMs)
+    : Promise.resolve({ height: null, error: "No height port available" });
+
+  // Execute both measurements in parallel
+  const [weightData, heightData] = await Promise.all([weightPromise, heightPromise]);
+
+  // Handle weight result
+  result.weight = weightData.weight;
+  if (weightData.error) {
+    result.errors.weight = weightData.error;
   }
 
-  // Height
-  if (heightPortPath) {
-    const heightData = await measureHeight(heightPortPath, timeoutMs);
-    result.height = heightData.height;
-    if (heightData.error) {
-      result.errors.height = heightData.error;
-    }
-  } else {
-    result.errors.height = "No height port available";
+  // Handle height result
+  result.height = heightData.height;
+  if (heightData.error) {
+    result.errors.height = heightData.error;
   }
 
   return result;
