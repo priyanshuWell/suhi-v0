@@ -632,61 +632,23 @@ export default function BIACalculate({ user, onComplete }) {
 
   /* =======================
      PHASE 2: WEIGHT & HEIGHT
-     - After leg success, measure weight and height
-     - If height fails, retry height only
+     - After leg success, measure weight and height in parallel
+     - If weight fails or height retries exhausted, go back to screen 1
   ======================= */
   const runPhase2_WeightHeight = async () => {
     console.log("[BIA DEBUG] ========== PHASE 2: WEIGHT & HEIGHT ==========");
     setCurrentPhase('wh');
-    // updatePhaseState('weight', 'in_progress');
-    // updatePhaseState('height', 'in_progress');
 
     try {
-      // Measure Weight
-      await measureWeight();
-      await sleep(1200); // Required settle time
-      console.log("[BIA DEBUG] Weight measurement SUCCESS");
-      // updatePhaseState('weight', 'success');
-      // await trackStage(STAGES.WEIGHT, STATUS.SUCCESS, { weight_kg: resultsRef.current?.weight?.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      // Parallelize Weight and Height measurements
+      console.log("[BIA DEBUG] Starting Weight and Height measurements in parallel...");
+      
+      const [weightRes, heightRes] = await Promise.all([
+        measureWeight(),
+        performHeightWithRetry()
+      ]);
 
-      // Measure Height with retry logic
-      await runHeightWithRetry();
-
-    } catch (weightError) {
-      console.error("[BIA DEBUG] Phase 2 FAILED - Weight error:", weightError.message);
-      // updatePhaseState('weight', 'failed', weightError.message);
-      await showError(ERROR_MESSAGES.weight, 3000);
-      await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      console.log("[BIA REC] ⏏️  Phase 2 — weight failed → saveBuffer('weight_error')");
-      await saveBuffer("weight_error");
-      navigate("/screen1");
-      return;
-    }
-  };
-
-  const runHeightWithRetry = async (attemptCount = 0) => {
-    console.log(`[BIA DEBUG] Height measurement attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
-
-    // Check if we've exhausted retries BEFORE attempting
-    if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
-      await showError(ERROR_MESSAGES.height, 3000);
-      await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      console.log("[BIA REC] ⏏️  Phase 2 — height max retries exhausted → saveBuffer('height_max_retry')");
-      await saveBuffer("height_max_retry");
-      navigate("/screen1");
-      return;
-    }
-
-    // Reset height attempt tracking
-    attemptTracking.current.height = 0;
-    errorTriggered.current.height = false;
-    console.log("[BIA DEBUG] Reset height attempt tracking and error flag");
-
-    try {
-      await measureHeight();
-      console.log("[BIA DEBUG] Height measurement SUCCESS");
-      // updatePhaseState('height', 'success');
+      console.log("[BIA DEBUG] Both Weight and Height SUCCESS");
 
       // Track combined Weight and Height
       await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
@@ -700,24 +662,58 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Leg BIA immediately after weight/height
       await calculateAndStoreLegBIA();
 
-
       navigate("/bia/whcomplete");
-      await sleep(3000) // Wait for whComplete video
+      await sleep(3000); // Wait for whComplete video
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
       await sleep(7000); // Wait for whComplete video
 
+    } catch (phase2Error) {
+      console.error("[BIA DEBUG] Phase 2 FAILED:", phase2Error.message);
+      
+      if (phase2Error.message === "HEIGHT_MAX_RETRY_EXHAUSTED") {
+        await showError(ERROR_MESSAGES.height, 3000);
+        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        console.log("[BIA REC] ⏏️  Phase 2 — height max retries exhausted → saveBuffer('height_max_retry')");
+        await saveBuffer("height_max_retry");
+      } else {
+        // Assume failure was weight-related or other
+        await showError(ERROR_MESSAGES.weight, 3000);
+        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        console.log("[BIA REC] ⏏️  Phase 2 — weight or generic error → saveBuffer('weight_error')");
+        await saveBuffer("weight_error");
+      }
+      
+      navigate("/screen1");
+    }
+  };
+
+  const performHeightWithRetry = async (attemptCount = 0) => {
+    console.log(`[BIA DEBUG] Height measurement attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
+
+    // Check if we've exhausted retries
+    if (attemptCount >= MAX_RETRIES) {
+      console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries`);
+      throw new Error("HEIGHT_MAX_RETRY_EXHAUSTED");
+    }
+
+    // Reset height attempt tracking
+    attemptTracking.current.height = 0;
+    errorTriggered.current.height = false;
+
+    try {
+      return await measureHeight();
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
-      // updatePhaseState('height', 'failed', heightError.message);
-
+      
       // Retry with incremented attempt count
       console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
       await showError(ERROR_MESSAGES.height, 3000);
-      await runHeightWithRetry(attemptCount + 1);
+      return await performHeightWithRetry(attemptCount + 1);
     }
   };
+
 
   /* =======================
      PHASE 3: ARM IMPEDANCE + 20kHz + 100kHz
