@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import LoginComponent from '../ui/LoginComponent'
 import fingerprintImg from '../../assets/fingerprint.svg'
@@ -16,6 +16,23 @@ const LoginSuhi = () => {
   const [error, setError] = useState('')
 
   const isButtonDisabled = !suhiId.trim() || loading
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Backspace') {
+        setSuhiId(v => v.slice(0, -1))
+        setError('')
+      } else if (e.key === 'Enter') {
+        handleNext()
+      } else if (e.key.length === 1) {
+        setSuhiId(v => v + e.key)
+        setError('')
+        setKeyboardVisible(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [suhiId, loading])
 
   const handleNext = async () => {
     if (!suhiId.trim()) return
@@ -142,7 +159,7 @@ const LoginSuhi = () => {
             setSuhiId((v) => v.slice(0, -1))
             setError('')
           }}
-          onSubmit={() => setKeyboardVisible(false)}
+          onSubmit={() => { setKeyboardVisible(false); handleNext() }}
           onClose={() => setKeyboardVisible(false)}
         />
       )}

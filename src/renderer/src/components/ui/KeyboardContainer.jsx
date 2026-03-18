@@ -20,8 +20,6 @@ const QWERTY_ROWS = [
   ],
 ]
 
-const NUMBER_ROW = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
-
 const NUMPAD_ROWS = [
   ['1', '2', '3'],
   ['4', '5', '6'],
@@ -141,16 +139,6 @@ function QwertyKeyboard({ onKeyPress, onBackspace, onSubmit, onSwitchNumeric }) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      {/* Number row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5 }}>
-        {NUMBER_ROW.map(n => (
-          <Key key={n} id={`n-${n}`} active={active} onPress={(id) => { press(id); onKeyPress(n) }} onRelease={release}
-            style={{ aspectRatio: '1 / 0.78' }}>
-            <span style={{ color: CYAN, fontSize: 'clamp(16px, 3.8vw, 28px)', fontWeight: 400 }}>{n}</span>
-          </Key>
-        ))}
-      </div>
-
       {/* QWERTY row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, 1fr)', gap: 5 }}>
         {QWERTY_ROWS[0].map(letterKey)}
@@ -179,7 +167,7 @@ function QwertyKeyboard({ onKeyPress, onBackspace, onSubmit, onSwitchNumeric }) 
       </div>
 
       {/* Bottom row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 4fr 1fr 1fr', gap: 5 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 4fr 1fr 1fr', gap: 5, padding: '0 4px', height: 77 }}>
         {/* 123 */}
         <Key id="123" active={active}
           onPress={() => { press('123'); onSwitchNumeric() }} onRelease={release}
@@ -278,16 +266,19 @@ export default function KeyboardContainer({ onKeyPress, onBackspace, onSubmit, o
 
   return (
     <div
+      onTouchStart={e => e.preventDefault()}
       style={{
         position: 'fixed',
         bottom: 0, left: 0, right: 0,
         zIndex: 50,
         background: '#000',
         borderTop: '1px solid #1a1a1a',
-        padding: '8px 8px 12px',
+        padding: '8px 8px 16px',
         boxSizing: 'border-box',
         fontFamily: "'Inter', 'DM Sans', system-ui, sans-serif",
         animation: 'slideUp 0.25s ease-out',
+        touchAction: 'none',
+        userSelect: 'none',
       }}
     >
       <style>{`

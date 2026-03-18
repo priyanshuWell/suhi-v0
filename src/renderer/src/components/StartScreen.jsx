@@ -79,7 +79,7 @@ export const StartScreen = () => {
         <source src={instructionAudio} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
-      <div className={`absolute top-0 right-0  ${isActive ? 'z-51' : 'z-40'} p-4`}>
+      <div className={`absolute top-0 right-0 z-[51] p-4`}>
         <Setting setIsActive={setIsActive} isActive={isActive} />
       </div>
       {/* Background */}
