@@ -207,7 +207,7 @@ const VoiceCapture = () => {
                             user_id: userId,
                             session_id: sessionId
                         };
-
+                        navigate("/bia/result");
                         const runResult = await runVoice(runPayload);
                         console.log("Run result:", runResult);
 
@@ -215,7 +215,7 @@ const VoiceCapture = () => {
                             setStatus("success");
                             stopAudio();
                             await new Promise((r) => setTimeout(r, 500));
-                            navigate("/bia/result");
+                            // navigate("/bia/result");
                         } else {
                             setStatus("error");
                             console.error("Voice run failed:", runResult.error);

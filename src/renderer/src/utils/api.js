@@ -94,6 +94,33 @@ export async function sendVoiceToBackend(voiceData) {
   }
 }
 
+export async function loginSuhi(suhi_id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/kiosk_user/${suhi_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error logging in:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 export async function runVoice(payload) {
  try {
 

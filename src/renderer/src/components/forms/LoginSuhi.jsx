@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import LoginComponent from '../ui/LoginComponent'
 import fingerprintImg from '../../assets/fingerprint.svg'
 import BlueGradientButton from '../ui/BlueGradientButton'
 import BlackGradientButton from '../ui/BlackGradientButton'
 import KeyboardContainer from '../ui/KeyboardContainer'
+import ErrorAlert from '../ErrorAlert'
+import { loginSuhi } from '../../utils/api'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -14,6 +16,8 @@ const LoginSuhi = () => {
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showErrorAlert, setShowErrorAlert] = useState(false)
+  const retryRef = useRef(0)
 
   const isButtonDisabled = !suhiId.trim() || loading
 
@@ -41,9 +45,8 @@ const LoginSuhi = () => {
     setError('')
 
     try {
-      const fullSuhiId = `DPKS${suhiId}`
-      const response = await fetch(`${API_BASE_URL}/kiosk_user/${fullSuhiId}`)
-
+      // const fullSuhiId = `DPKS${suhiId}`
+      const response = await loginSuhi(suhiId)
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error('User not found. Please check your Suhi ID.')
@@ -53,10 +56,21 @@ const LoginSuhi = () => {
 
       const data = await response.json()
 
+      // Reset retry count on success
+      retryRef.current = 0
       // Navigate to next screen, passing user data along
-      navigate('/login-dob', { state: { user: data, suhiId: fullSuhiId } })
+      // navigate('/login-dob', { state: { user: data, suhiId: fullSuhiId } })
     } catch (err) {
-      setError(err.message || 'Network error. Please try again.')
+      if (retryRef.current < 2) {
+        setError(err.message || 'Network error. Retrying...')
+        setShowErrorAlert(true)
+      } else {
+        setError('Maximum retries reached. Redirecting...')
+        setTimeout(() => {
+          retryRef.current = 0 // Reset for next potential manual login attempt
+          navigate('/welcome')
+        }, 1500)
+      }
     } finally {
       setLoading(false)
     }
@@ -163,6 +177,21 @@ const LoginSuhi = () => {
           onClose={() => setKeyboardVisible(false)}
         />
       )}
+
+      <ErrorAlert
+        visible={showErrorAlert}
+        title="Login Failed"
+        description={error}
+        onRetry={() => {
+          setShowErrorAlert(false)
+          retryRef.current += 1
+          handleNext()
+        }}
+        onClose={() => {
+          setShowErrorAlert(false)
+          retryRef.current = 0 // Reset if user manually closes
+        }}
+      />
     </>
   )
 }
