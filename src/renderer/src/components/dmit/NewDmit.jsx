@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { useTranslation } from "react-i18next";
 // import { useNavigate } from "react-router-dom";
 
 import bg1 from "../../assets/lightbg.png";
@@ -22,6 +21,7 @@ import rightBack from "../../assets/hands/right-back.svg";
 
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
+import { getRgbCamera } from "../../utils/getRgbCamera";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -32,28 +32,28 @@ const API_BASE_URL = "http://127.0.0.1:8000";
 const CAPTURE_FLOW = [
   {
     key: "LEFT_FRONT",
-    labelKey: "dmit.hand_labels.left_front",
+    label: "Left Hand - Front",
     overlay: leftFront,
     handPayload: "LP",
     audio: "/src/assets/audio/lp.mp3"
   },
   {
     key: "LEFT_BACK",
-    labelKey: "dmit.hand_labels.left_back",
+    label: "Left Hand - Back",
     overlay: leftBack,
     handPayload: "LB",
     audio: "/src/assets/audio/lb.mp3"
   },
   {
     key: "RIGHT_FRONT",
-    labelKey: "dmit.hand_labels.right_front",
+    label: "Right Hand - Front",
     overlay: rightFront,
     handPayload: "RP",
     audio: "/src/assets/audio/rp.mp3"
   },
   {
     key: "RIGHT_BACK",
-    labelKey: "dmit.hand_labels.right_back",
+    label: "Right Hand - Back",
     overlay: rightBack,
     handPayload: "RB",
     audio: "/src/assets/audio/rb.mp3"
@@ -61,20 +61,19 @@ const CAPTURE_FLOW = [
 ];
 
 const NewDmitScreen = () => {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const user = useSelector((state) => state.common.user);
-  const sessionIdFromRedux = useSelector((state) => state.common.sessionId);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const rawStreamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const runLockRef = useRef(false);
   const audioRef = useRef(null);
   const [stepIndex, setStepIndex] = useState(0);
   const [isCameraReady, setIsCameraReady] = useState(false);
 
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState("Preparing camera...");
   const [isRecording, setIsRecording] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
@@ -112,10 +111,10 @@ const NewDmitScreen = () => {
     }
   }, [stepIndex]);
 
-  // :white_check_mark: required payload values
+  // :white_check_mark: required payload values (replace with your real values / redux / localstorage)
   const kioskId = "KIOSK_001";
   const userId = user?.data?.user_id;
-  const sessionId = sessionIdFromRedux || "session_fallback"; // Use Redux sessionId
+  const sessionId = "session001";
 
   /**
    * :white_check_mark: Start ONLY ONE camera: cams[1]
@@ -125,24 +124,24 @@ const NewDmitScreen = () => {
     try {
       setPhase("INFO");
       setIsVerify(false);
-      setStatus(t('dmit.status.opening'));
+      setStatus("Opening camera...");
 
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const videoInputs = all.filter((d) => d.kind === "videoinput");
+      // ✅ Prefer RGB camera; fall back to first available
+      const deviceId = await getRgbCamera();
+      if (!deviceId) throw new Error("No cameras found");
 
-      if (!videoInputs?.length) throw new Error("No cameras found");
-
-      const cam = videoInputs[1]; // :white_check_mark: USE ONLY cams[1]
-      if (!cam) throw new Error("cams[1] not found");
-
-      // stop old stream if any
+      // ✅ stop old streams if any
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       if (streamRef.current) {
+        if (typeof streamRef.current.stop === "function") streamRef.current.stop();
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
 
       const rawStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          deviceId: { exact: cam.deviceId },
+          deviceId: { exact: deviceId },
           width: 640,
           height: 480,
           frameRate: 30,
@@ -150,7 +149,7 @@ const NewDmitScreen = () => {
         audio: false,
       });
 
-      // :white_check_mark: rotate 90 degrees
+      // ✅ rotate 90 degrees
       const rotatedStream = await rotateStream90(rawStream);
 
       streamRef.current = rotatedStream;
@@ -161,11 +160,11 @@ const NewDmitScreen = () => {
       }
 
       setIsCameraReady(true);
-      setStatus(t('dmit.status.ready'));
+      setStatus("Camera ready ✅");
     } catch (err) {
       console.error("startSingleCamera error:", err);
       setPhase("ERROR");
-      setStatus(t('dmit.status.failed_camera'));
+      setStatus("Failed to open camera");
       setIsCameraReady(false);
     }
   };
@@ -197,7 +196,7 @@ const NewDmitScreen = () => {
 
         recorder.start();
         setIsRecording(true);
-        setStatus(`${t('dmit.status.recording')} (${t(currentStep.labelKey)})`);
+        setStatus(`Recording 5 seconds... (${currentStep.label})`);
 
         setTimeout(() => {
           recorder.stop();
@@ -215,7 +214,7 @@ const NewDmitScreen = () => {
   const storeHandBuffer = async (blob) => {
     setPhase("INFO");
     setIsVerify(false);
-    setStatus(t('dmit.status.storing'));
+    setStatus("Storing buffer...");
 
     const file = new File([blob], `${currentStep.key}.webm`, {
       type: "video/webm",
@@ -243,7 +242,7 @@ const NewDmitScreen = () => {
   const fireRegisterHandWith5SecWindow = (shmPath) => {
     setPhase("INFO");
     setIsVerify(false);
-    setStatus(t('dmit.status.registering'));
+    setStatus("Registering hand...");
 
     const payload = {
       shm_path: shmPath,
@@ -262,12 +261,12 @@ const NewDmitScreen = () => {
         // if response arrives within 5 sec, show green
         setIsVerify(true);
         setPhase("INFO");
-        setStatus(t('dmit.status.registered'));
+        setStatus("Hand registered :white_check_mark:");
       })
       .catch((err) => {
         console.error("/register/hand error:", err);
         setPhase("ERROR");
-        setStatus(t('dmit.status.error'));
+        setStatus("Register failed :x: (moving next)");
       });
 
     // :white_check_mark: always continue after 5 sec
@@ -305,7 +304,7 @@ const NewDmitScreen = () => {
       } else {
         setPhase("INFO");
         setIsVerify(true);
-        setStatus(t('dmit.status.all_complete'));
+        setStatus("All hands completed :white_check_mark: Redirecting...");
         stopAudio();
         setTimeout(() => {
           navigate("/voice");
@@ -314,7 +313,7 @@ const NewDmitScreen = () => {
     } catch (err) {
       console.error("runStep error:", err);
       setPhase("ERROR");
-      setStatus(t('dmit.status.error'));
+      setStatus("Error occurred. Retrying...");
       setTimeout(() => {
         runLockRef.current = false;
         runStep();
@@ -332,7 +331,12 @@ const NewDmitScreen = () => {
     startSingleCamera();
 
     return () => {
+      // ✅ Release both raw and rotated streams
+      if (rawStreamRef.current) {
+        rawStreamRef.current.getTracks().forEach((t) => t.stop());
+      }
       if (streamRef.current) {
+        if (typeof streamRef.current.stop === "function") streamRef.current.stop();
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
       stopAudio();
@@ -367,8 +371,8 @@ const NewDmitScreen = () => {
 
       {/* top text */}
       <div className="absolute top-[20px] left-1/2 -translate-x-1/2 z-30 w-[600px]">
-        <p className="text-4xl mt-[7rem] text-center font-light leading-snug text-white tracking-wider">
-          {t('dmit.instruction')}
+        <p className="text-5xl text-center font-light leading-snug text-white tracking-wider">
+          Align your hand inside the box and keep it still until the scan finishes.
         </p>
       </div>
 
@@ -410,7 +414,7 @@ const NewDmitScreen = () => {
           {/* small label */}
           <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2">
             <p className="text-white text-lg tracking-wide font-light">
-              {t(currentStep?.labelKey)} {isRecording ? "●" : ""}
+              {currentStep?.label} {isRecording ? "●" : ""}
             </p>
           </div>
         </div>
@@ -440,7 +444,7 @@ export default NewDmitScreen;
 /**
  * :white_check_mark: Rotates stream 90° left and outputs corrected stream
  */
-async function rotateStream90(stream) {
+export async function rotateStream90(stream) {
   const video = document.createElement("video");
   video.srcObject = stream;
   video.muted = true;
@@ -456,6 +460,7 @@ async function rotateStream90(stream) {
   canvas.height = w;
 
   const ctx = canvas.getContext("2d");
+  let rafId = null;
 
   function draw() {
     ctx.save();
@@ -467,11 +472,22 @@ async function rotateStream90(stream) {
     ctx.drawImage(video, -w / 2, -h / 2, w, h);
     ctx.restore();
 
-    requestAnimationFrame(draw);
+    rafId = requestAnimationFrame(draw);
   }
 
   draw();
 
   const canvasStream = canvas.captureStream(30);
+
+  // ✅ Expose a stop() so callers can cancel the rAF loop + release the hidden video
+  canvasStream.stop = () => {
+    if (rafId !== null) {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+    }
+    video.pause();
+    video.srcObject = null;
+  };
+
   return canvasStream;
 }

@@ -44,7 +44,7 @@ function App() {
 
       <Route path="/facecapture" element={<FaceCapture />} />
       <Route path="/confirmation" element={<ConfirmationScreen />} />
-      <Route path="/login-suhi" element={<LoginSuhi />} />
+      <Route path="/" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/' element={<SplashScreen />} />

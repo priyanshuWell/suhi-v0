@@ -11,15 +11,26 @@ import { useSelector } from 'react-redux'
 
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user);
-  const imagePath = user?.data?.image_path; // "/var/lib/suhi/.images/<folder>"
-  const folderName = imagePath?.split("/").pop(); // "<folder>"
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const audioRef = React.useRef(null);
-  const instructionAudio = "/src/assets/audio/confirm_user.mp3";
-  const profileImageSrc = folderName
+
+const imagePath = user?.data?.image_path || "";
+
+// safer extraction
+const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
+
+console.log("imagePath:", imagePath);
+console.log("folderName:", folderName);
+
+const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+const audioRef = React.useRef(null);
+
+const instructionAudio = "/src/assets/audio/confirm_user.mp3";
+
+const profileImageSrc =
+  folderName && folderName.length > 0
     ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
     : profilepic;
 
+console.log("profileImageSrc:", profileImageSrc);
   useEffect(() => {
     // Play audio when component mounts
     playAudio();

@@ -1,7 +1,7 @@
 import axios from "axios";
-
+const FPT_API_BASE_URL = "http://127.0.0.1:9000";
 const API_BASE_URL = "http://127.0.0.1:8000";
-
+const VOICE_API_BASE_URL = "http://127.0.0.1:9100"
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -51,12 +51,146 @@ formData.append('file', videoBlob, `${videoData.role}_${videoData.deviceId}.webm
   }
 }
 
-/**
- * Run FPT (Face Processing Task) with the stored video
- * @param {string} shmPath - Path to the shared memory video file
- * @param {string} kioskId - Kiosk identifier
- * @returns {Promise<Object>} Response with success status and result
- */
+export async function sendVoiceToBackend(voiceData) {
+  console.log(voiceData);
+  try {
+    // Convert Uint8Array to Blob
+    const audioBlob = new Blob([voiceData.buffer], { type: 'audio/wav' });
+
+    console.log("Uploading file:", `${voiceData.role}_${voiceData.timestamp}.wav`);
+    console.log("Uploading mimeType:", audioBlob.type);
+
+    const formData = new FormData();
+    formData.append(
+      'file',
+      audioBlob,
+      `${voiceData.role}_${voiceData.timestamp}.wav`
+    );
+
+    const response = await fetch(`${API_BASE_URL}/voice/store`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      success: true,
+      shm_path: data.shm_path,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error sending voice to backend:", error);
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function loginSuhi(suhi_id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/kiosk_user/${suhi_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error logging in:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function runVoice(payload) {
+ try {
+
+    const response = await fetch(`${API_BASE_URL}/voice/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+}
+}
+
+
+export async function realtimeCapture(kiosk_id=null) {
+  try {
+    const payload = {
+      kiosk_id: "aabbcc44",
+      camera_index: 10,
+      max_seconds: 5,
+      quality_threshold: 40
+    };
+
+    const response = await fetch(`${API_BASE_URL}/realtime/capture`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data?.error?.message || "Realtime capture failed");
+    }
+
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Realtime capture error:", error);
+
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+
+
 export async function runFPT(shmPath, kioskId) {
   try {
     const payload = {
@@ -90,24 +224,175 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
+export async function bufferCollection(shmPath, kioskId,user_id) {
+  try {
+    const payload = {
+      shm_path: shmPath,
+      kiosk_id: kioskId,
+      user_id,
+      buffer_type: "BIA"
+    };
+
+    const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+
 /**
  * Send all three videos to backend (for future use if needed)
  * @param {Array} recordings - Array of video recordings
  * @returns {Promise<Array>} Array of responses with shm_paths
  */
-export async function sendAllVideosToBackend(recordings) {
-  const promises = recordings.map(recording => sendVideoToBackend(recording));
-  return Promise.all(promises);
+export const BIAMeasurementStage = async (stage) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/bia/measurement/stage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(stage), // ✅ FIXED
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log("BIA measurement stage response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending BIA measurement stage to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+export const voiceSaveApi = async (payload) => {
+  try {
+    const response = await fetch(`${VOICE_API_BASE_URL}/voice/analyze`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Voice API tatus: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Voice save response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending voice save to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
 }
 
+export const BIAComplete = async (result) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/bia/session/complete`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(result),
+      }
+    );
 
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
+    const data = await response.json();
+    console.log("BIA complete response:", data);
 
+    return {
+      success: true,
+      ...data,
+    };
+  } catch (error) {
+    console.error("Error sending BIA complete to backend:", error);
+    return {
+      success: false,
+      error: error.message,
+    };
+  }
+};
 
+// /**
+//  * Send weight and height measurements to backend
+//  * @param {Object} data - Measurement data
+//  * @param {number} data.weight - Weight in kg
+//  * @param {number} data.height - Height in cm
+//  * @param {string} data.user_id - User ID
+//  * @param {string} data.timestamp - ISO timestamp
+//  * @returns {Promise<Object>} Response with success status
+//  */
+// export async function sendMeasurements(data) {
+//   try {
+//     const response = await fetch(`${API_BASE_URL}/measurements/store`, {
+//       method: 'POST',
+//       headers: {
+//         'Content-Type': 'application/json',
+//       },
+//       body: JSON.stringify(data),
+//     });
 
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
 
-
-
+//     const result = await response.json();
+//     return {
+//       success: true,
+//       ...result
+//     };
+//   } catch (error) {
+//     console.error("Error sending measurements to backend:", error);
+//     return {
+//       success: false,
+//       error: error.message
+//     };
+//   }
+// }
 
 /**
  * Calls: GET /sync/cloud-to-local

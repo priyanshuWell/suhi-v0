@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router";
+import { getRgbCameraConstraints } from "../utils/getRgbCamera";
 // import { useLocation } from "react-router-dom";
 
 const BackgroundCamContext = createContext(null);
 
-const RECORD_ROUTES = new Set(["/voice", "/screen1", "/progress", "/welcome"]);
+const RECORD_ROUTES = new Set(["/voice", "/screen1"]);
 const CHUNK_SECONDS = 30;
 
 export function BackgroundCameraProvider({ children }) {
@@ -37,13 +38,15 @@ export function BackgroundCameraProvider({ children }) {
       // If already started, do nothing
       if (streamRef.current) return;
 
+      const videoConstraints = await getRgbCameraConstraints({
+        width: { ideal: 640 },
+        height: { ideal: 480 },
+        frameRate: { ideal: 25, max: 30 },
+      });
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          frameRate: { ideal: 25, max: 30 },
-        },
-        audio: false, // usually safe for kiosk recording
+        video: videoConstraints,
+        audio: false,
       });
 
       streamRef.current = stream;
@@ -51,7 +54,7 @@ export function BackgroundCameraProvider({ children }) {
       // Attach stream to hidden video element to keep it alive
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => { });
       }
 
       setCameraReady(true);
@@ -150,7 +153,7 @@ export function BackgroundCameraProvider({ children }) {
       if (recorderRef.current && recorderRef.current.state === "recording") {
         recorderRef.current.stop();
       }
-    } catch {}
+    } catch { }
     recorderRef.current = null;
     chunkPartsRef.current = [];
     console.log("🛑 Background recording stopped");
@@ -163,7 +166,7 @@ export function BackgroundCameraProvider({ children }) {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
-    } catch {}
+    } catch { }
     streamRef.current = null;
     setCameraReady(false);
   }
@@ -181,7 +184,8 @@ export function BackgroundCameraProvider({ children }) {
     while (uploadQueueRef.current.length > 0) {
       const item = uploadQueueRef.current.shift();
       try {
-        await uploadVideoChunk(item);
+        // await uploadVideoChunk(item);
+        console.log("calling uploadVideoChunk with payload:");
       } catch (err) {
         console.error("❌ Upload failed:", err);
         // optionally: retry logic (push back)

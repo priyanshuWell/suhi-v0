@@ -12,9 +12,21 @@ const initialState = {
   recordedVideoInfo: null,
 
   // any hardware or measurement data
-  height: null,
-  weight: null,
-  biaResult: null,
+  height: {
+    fptHeight:null,
+    preliminaryHeight:null,
+    finalHeight:null,
+  },
+  weight: {
+    fptWeight:"",
+    preliminaryWeight:null,  
+    finalWeight:null,  
+  },
+  biaResult: {
+    biaLegs:null,
+    biaArms:null,
+    biaFinal:null
+  },
   bmiResult:null,
 };
 
@@ -42,18 +54,79 @@ const commonSlice = createSlice({
       state.recordedVideoInfo = action.payload;
     },
 
+    // update finalHeight while preserving the height object structure
     setHeight: (state, action) => {
-      state.height = action.payload;
+      // ensure height is an object
+      if (typeof state.height !== "object" || state.height === null) {
+        state.height = { finalHeight: action.payload };
+      } else {
+        state.height.finalHeight = action.payload;
+      }
     },
 
+    // update finalWeight while preserving the weight object structure
     setWeight: (state, action) => {
-      state.weight = action.payload;
+      if (typeof state.weight !== "object" || state.weight === null) {
+        state.weight = { finalWeight: action.payload };
+      } else {
+        state.weight.finalWeight = action.payload;
+      }
+    },
+
+    setFptHeight: (state, action) => {
+      if (typeof state.height !== "object" || state.height === null) {
+        // migrate numeric height -> finalHeight
+        const prev =
+          typeof state.height === "number" ? { finalHeight: state.height } : {};
+        state.height = { ...prev, fptHeight: action.payload };
+      } else {
+        state.height.fptHeight = action.payload;
+      }
+    },
+
+    setFptWeight: (state, action) => {
+      if (typeof state.weight !== "object" || state.weight === null) {
+        const prev =
+          typeof state.weight === "number" ? { finalWeight: state.weight } : {};
+        state.weight = { ...prev, fptWeight: action.payload };
+      } else {
+        state.weight.fptWeight = action.payload;
+      }
+    },
+
+    setPreliminaryHeight: (state, action) => {
+      if (typeof state.height !== "object" || state.height === null) {
+        const prev =
+          typeof state.height === "number" ? { finalHeight: state.height } : {};
+        state.height = { ...prev, preliminaryHeight: action.payload };
+      } else {
+        state.height.preliminaryHeight = action.payload;
+      }
+    },
+
+    setPreliminaryWeight: (state, action) => {
+      if (typeof state.weight !== "object" || state.weight === null) {
+        const prev =
+          typeof state.weight === "number" ? { finalWeight: state.weight } : {};
+        state.weight = { ...prev, preliminaryWeight: action.payload };
+      } else {
+        state.weight.preliminaryWeight = action.payload;
+      }
     },
 
     setBiaResult: (state, action) => {
-      state.biaResult = action.payload;
+      state.biaResult.biaFinal = action.payload;
     },
-     setBmiResult: (state, action) => {
+
+    setLegBiaResult: (state, action) => {
+      state.biaResult.biaLegs = action.payload;
+    },
+
+    setArmBiaResult: (state, action) => {
+      state.biaResult.biaArms = action.payload;
+    },
+
+    setBmiResult: (state, action) => {
       state.bmiResult = action.payload;
     },
 
@@ -73,7 +146,13 @@ export const {
   setRecordedVideoInfo,
   setHeight,
   setWeight,
+  setFptHeight,
+  setFptWeight,
+  setPreliminaryHeight,
+  setPreliminaryWeight,
   setBiaResult,
+  setLegBiaResult,
+  setArmBiaResult,
   resetCommonState,
   setBmiResult,
   setSessionId

@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from "electron"
 import { electronAPI } from "@electron-toolkit/preload"
 import { IpcEventChannel } from "./ipcEventChannel"
+import fs from 'fs';
+import path from "path";
 // Event handler
 const heightErrorChannel = new IpcEventChannel("height:error")
 const heightStatusChannel = new IpcEventChannel("height:status")
@@ -12,6 +14,8 @@ const legErrorChannel = new IpcEventChannel("leg:error")
 const legStatusChannel = new IpcEventChannel("leg:status")
 const armErrorChannel = new IpcEventChannel("arm:error")
 const armStatusChannel = new IpcEventChannel("arm:status")
+const legCalcResultChannel = new IpcEventChannel("leg:calc:result")
+const armCalcResultChannel = new IpcEventChannel("arm:calc:result")
 const api = {
   getPorts: (ports) => ipcRenderer.invoke("get-ports", ports),
   connectHeightPort: (portPath) => ipcRenderer.invoke("connect-heightPort", portPath),
@@ -25,7 +29,10 @@ const api = {
   startLegImpedance50kHz: () => ipcRenderer.invoke("start-leg-impedance-50khz"),
   startArmImpedance50kHz: () => ipcRenderer.invoke("start-arm-impedance-50khz"),
   calculateBIA: (payload) => ipcRenderer.invoke("calculate-bia", payload),
+  calculateLegBIA: (payload) => ipcRenderer.invoke("calculate-leg-bia", payload),
+  calculateArmBIA: (payload) => ipcRenderer.invoke("calculate-arm-bia", payload),
   saveVoiceBuffer: (request) => ipcRenderer.invoke("save-voice-buffer", request),
+  saveRecording: (data) => ipcRenderer.invoke("save-recording", data),
   onHeightError: (callback) => heightErrorChannel.subscribe(callback),
   onHeightStatus: (callback) => heightStatusChannel.subscribe(callback),
   onWeightStatus: (callback) => weightStatusChannel.subscribe(callback),
@@ -35,7 +42,21 @@ const api = {
   onLegError: (callback) => legErrorChannel.subscribe(callback),
   onLegStatus: (callback) => legStatusChannel.subscribe(callback),
   onArmError: (callback) => armErrorChannel.subscribe(callback),
-  onArmStatus: (callback) => armStatusChannel.subscribe(callback)
+  onArmStatus: (callback) => armStatusChannel.subscribe(callback),
+  onLegCalcResult: (callback) => legCalcResultChannel.subscribe(callback),
+  onArmCalcResult: (callback) => armCalcResultChannel.subscribe(callback),
+  disconnectHeightPort: ()=>ipcRenderer.invoke('disconnect-heightPort'),
+    disconnectBiaPort: ()=>ipcRenderer.invoke('disconnect-biaPort'),
+  blobToBuffer: async (blob) =>{
+    const arrayBuffer = await blob.arrayBuffer();
+    const base = Buffer.from(arrayBuffer).toString('base64');
+    // const filepath = path.join(process.cwd(), 'video_base64.txt');
+    // fs.writeFileSync(filepath,base,'utf8');
+    // return {
+    //   scuess:true
+    // }
+    return base;
+  }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

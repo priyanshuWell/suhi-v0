@@ -35,6 +35,12 @@ ipcMain.handle("connect-heightPort", async (_event, portPath) => {
   }
 })
 
+ipcMain.handle("disconnect-heightPort", async () => {
+  console.log("[MAIN] disconnect-heightPort request")
+  const result = await biaa.disconnectHeightPort()
+  return result
+})
+
 const startImageServer = () => {
   const app = express()
 
@@ -68,6 +74,12 @@ ipcMain.handle("connect-biaPort", async (_event, portPath) => {
       portPath
     }
   }
+})
+
+ipcMain.handle("disconnect-biaPort", async () => {
+  console.log("[MAIN] disconnect-biaPort request")
+  const result = await biaa.disconnectBiaPort()
+  return result
 })
 
 ipcMain.handle("start-weight-measurement", async () => {
@@ -188,79 +200,70 @@ ipcMain.handle("start-impedance-measurement", async (event, freq) => {
   }
 })
 
-// ipcMain.handle("calculate-bia", async (event, payload) => {
-//   try {
-//     const {
-//       height,
-//       weight,
-//       age,
-//       gender,
-//       impedance20,
-//       impedance100
-//     } = payload;
+ipcMain.handle("calculate-leg-bia", async (event, payload) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      return { success: false, error: "BIA port not connected" }
+    }
+    const { height, weight, age, gender, impedanceVal } = payload
+    // const genderCode = gender === "male" ? 1 : 0
 
-//     if (!biaa.biaPort || !biaa.biaPort.isOpen) {
-//       return { success: false, error: "BIA port not connected" };
-//     }
+ const genderCode = 0;    
+ const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
-//     if (!impedance20 || !impedance100) {
-//       return {
-//         success: false,
-//         error: "Both 20kHz and 100kHz impedance are required"
-//       };
-//     }
+    console.log(`\n📡 Requesting Legs Body Composition (Impedance: ${impedanceVal}Ω)...`);
 
-//     const genderCode = gender === "male" ? 1 : 0;
+    // Wait for the result that the global connectBiaPort data listener will emit
+    const resultPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Legs BIA timeout")), 8000);
+      eventBus.once("leg:calc:result", (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      });
+    });
 
-//     const cmd = biaa.create8ElectrodeBodyCompositionCommand(
-//       genderCode,
-//       Math.round(height),
-//       Math.round(age),
-//       weight,
+    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
 
-//       // 20 kHz
-//       impedance20.rightHand,
-//       impedance20.leftHand,
-//       impedance20.trunk,
-//       impedance20.rightFoot,
-//       impedance20.leftFoot,
+    const result = await resultPromise;
+    return { success: true, data: result }
 
-//       // 100 kHz
-//       impedance100.rightHand,
-//       impedance100.leftHand,
-//       impedance100.trunk,
-//       impedance100.rightFoot,
-//       impedance100.leftFoot
-//     );
+  } catch (error) {
+    console.error("Error calculating leg BIA:", error)
+    return { success: false, error: error.message }
+  }
+})
 
-//     // Send command (do NOT wait here)
-//     await biaa.sendBiaCommand(cmd, { waitForResponse: false });
+ipcMain.handle("calculate-arm-bia", async (event, payload) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      return { success: false, error: "BIA port not connected" }
+    }
+    const { height, weight, age, gender, impedanceVal } = payload
+    // const genderCode = gender === "male" ? 1 : 0
+     const genderCode = 0;
+    const command = biaa.createArmsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
-//     // Wait for all 5 packages
-//     const bodyCompisition = await biaa.collectBodyCompositionOnce(12000);
-//     // 🔥 Extract UI-friendly summary
-//     const p1 = bodyCompisition.package1;
-//     const p3 = bodyCompisition.package3;
+    console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
 
-//     return {
-//       success: true,
-//       raw: bodyCompisition,
-//       summary: {
-//         bodyFatPercent: p3.bodyFatPercentage,
-//         muscleMass: p1.muscleMass,
-//         bmi: p3.bodyMassIndex,
-//         visceralFat: p3.visceralFatLevel,
-//         basalMetabolism: p3.basalMetabolism,
-//         bodyScore: p3.bodyScore,
-//         physicalAge: p3.physicalAge
-//       }
-//     };
+    // Wait for the result that the global connectBiaPort data listener will emit
+    const resultPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Arms BIA timeout")), 8000);
+      eventBus.once("arm:calc:result", (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      });
+    });
 
-//   } catch (err) {
-//     console.error("[BIA] Error:", err);
-//     return { success: false, error: err.message };
-//   }
-// });
+    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
+
+    const result = await resultPromise;
+    return { success: true, data: result }
+
+  } catch (error) {
+    console.error("Error calculating arm BIA:", error)
+    return { success: false, error: error.message }
+  }
+})
 ipcMain.handle("calculate-bia", async (event, payload) => {
   try {
     const { height, weight, age, gender, impedance20, impedance100 } = payload
@@ -288,8 +291,8 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       }
     }
 
-    const genderCode = gender === "male" ? 1 : 0
-
+    const genderCode = gender.toLowerCase() === "male" ? 1 : 0
+    // const genderCode = 0; 
     // ✅ STEP 1: Ensure device is ready
     try {
       await biaa.sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
@@ -340,9 +343,18 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
     const p1 = bodyComposition.package1
     const p3 = bodyComposition.package3
 
-    const result = {
+
+    // Send to API
+    try {
+      const apiPayload = convertBIADataToAPIPayload(
+        bodyComposition,
+        { height, weight, age, gender },
+        { impedance20, impedance100 }
+      )
+        const result = {
       success: true,
       raw: JSON.stringify(bodyComposition),
+      finalBia: apiPayload,
       summary: {
         bodyFatPercent: p3.bodyFatPercentage || 0,
         muscleMass: p1.muscleMass || 0,
@@ -354,29 +366,14 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       }
     }
 
-    // Send to API
-    try {
-      const apiPayload = convertBIADataToAPIPayload(
-        bodyComposition,
-        { height, weight, age, gender },
-        { impedance20, impedance100 },
-        {
-          session_id: payload.session_id,
-          user_id: payload.user_id ,
-        }
-      )
+    return result;
+      // console.log("[MAIN] Sending BIA data to API:", apiPayload)
+      // const apiResponse = await axios.post("http://127.0.0.1:8000/bia/measurements", apiPayload)
 
-      console.log("[MAIN] Sending BIA data to API:", apiPayload)
-      const apiResponse = await axios.post("http://127.0.0.1:8000/bia/measurements", apiPayload)
-
-      console.log("[MAIN] BIA API Response:", apiResponse.data)
-      result.apiResponse = apiResponse.data
+      // console.log("[MAIN] BIA API Response:", apiResponse.data)
+      // result.apiResponse = apiResponse.data
     } catch (apiError) {
       console.error("[MAIN] BIA API Error:", apiError.message)
-      if (apiError.response?.data) {
-        console.error("[MAIN] BIA API Error Data:", apiError.response.data)
-      }
-      result.apiError = apiError.message
     }
 
     return result
@@ -391,36 +388,112 @@ ipcMain.handle("save-voice-buffer", async (event, request) => {
   try {
     const buffer = Buffer.from(request.arrayBuffer)
     const bufferId = crypto.randomUUID()
-    const fileName = `${bufferId}.webm`
+    const fileName = `${bufferId}.wav`
     const shmPath = `/dev/shm/${fileName}`
 
     // Write file to /dev/shm
     await fs.promises.writeFile(shmPath, buffer)
     console.log(`[MAIN] Voice file saved to: ${shmPath}`)
 
-    const payload = {
-      buffer_id: bufferId,
-      kiosk_id: request.kiosk_id,
-      user_id: request.user_id || "af341b46-4c88-4d67-bb0e-bdf575d0ef2b",
-      session_id: request.session_id,
-      shm_path: shmPath
-    }
-    console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`, payload)
-
-    try {
-      const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload)
-      console.log(`[MAIN] API Response:`, response.data)
-      return { success: true, data: response.data, filePath: shmPath }
-    } catch (apiError) {
-      console.error(`[MAIN] API Error:`, apiError.message)
-      if (apiError.response) {
-        console.error(`[MAIN] API Error Data:`, apiError.response.data)
-        return { success: false, error: "API_ERROR", details: apiError.response.data }
-      }
-      return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message }
-    }
+    // const payload = {
+    //   buffer_id: bufferId,
+    //   kiosk_id: request.kiosk_id,
+    //   user_id: request.user_id,
+    //   session_id: request.session_id,
+    //   shm_path: shmPath
+    // }
+    console.log(`[MAIN] Calling API http://0.0.0.0:9100/voice/analyze with payload:`)
+      return { success: true, filePath: shmPath }
+    // try {
+    //   const response = await axios.post("http://0.0.0.0:9100/voice/analyze", payload)
+    //   console.log(`[MAIN] API Response:`, response.data)
+    //   return { success: true, data: response.data, filePath: shmPath }
+    // } catch (apiError) {
+    //   console.error(`[MAIN] API Error:`, apiError.message)
+    //   if (apiError.response) {
+    //     console.error(`[MAIN] API Error Data:`, apiError.response.data)
+    //     return { success: false, error: "API_ERROR", details: apiError.response.data }
+    //   }
+    //   return { success: false, error: "API_CONNECTION_FAILED", details: apiError.message }
+    // }
   } catch (error) {
     console.error("[MAIN] save-voice-buffer error:", error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('save-recording', async (event, request) => {
+  console.log('[MAIN] save-recording called', {
+    filename: request.filename,
+    size: request.arrayBuffer.byteLength,
+    session_id: request.session_id,
+    user_id: request.user_id
+  })
+
+  try {
+    const buffer = Buffer.from(request.arrayBuffer)
+    
+    // Get user's home directory
+    const os = require('os')
+    const homeDir = os.homedir()
+    
+    // Create directory structure: ~/Documents/suhi-recordings/YYYY-MM-DD/
+    const date = new Date().toISOString().split('T')[0] // YYYY-MM-DD
+    const recordingsDir = `${homeDir}/Documents/suhi-recordings/${date}`
+    
+    // Ensure directory exists
+    if (!fs.existsSync(recordingsDir)) {
+      fs.mkdirSync(recordingsDir, { recursive: true })
+      console.log(`[MAIN] Created directory: ${recordingsDir}`)
+    }
+
+    const filePath = `${recordingsDir}/${request.filename}`
+    
+    // Write video file
+    await fs.promises.writeFile(filePath, buffer)
+    console.log(`[MAIN] Recording saved to: ${filePath}`)
+    console.log(`[MAIN] File size: ${(buffer.length / 1024 / 1024).toFixed(2)} MB`)
+
+    // Save phase states metadata to JSON file
+    if (request.phase_states) {
+      const metadataPath = filePath.replace('.webm', '_metadata.json')
+      const metadata = {
+        session_id: request.session_id,
+        user_id: request.user_id,
+        filename: request.filename,
+        file_size: buffer.length,
+        recorded_at: new Date().toISOString(),
+        phase_states: request.phase_states
+      }
+      await fs.promises.writeFile(metadataPath, JSON.stringify(metadata, null, 2))
+      console.log(`[MAIN] Metadata saved to: ${metadataPath}`)
+    }
+
+    // Optional: Send metadata to backend API
+    // try {
+    //   await axios.post('http://127.0.0.1:8000/bia/recordings', {
+    //     session_id: request.session_id,
+    //     user_id: request.user_id,
+    //     filename: request.filename,
+    //     file_path: filePath,
+    //     file_size: buffer.length,
+    //     recorded_at: new Date().toISOString(),
+    //     phase_states: request.phase_states || null
+    //   })
+    //   console.log('[MAIN] Recording metadata sent to API')
+    // } catch (apiError) {
+    //   console.warn('[MAIN] Failed to send metadata to API:', apiError.message)
+    //   // Don't fail if API is down - file is already saved locally
+    // }
+
+    return { 
+      success: true, 
+      filePath: filePath,
+      size: buffer.length 
+    }
+
+  } catch (error) {
+    console.error('[MAIN] save-recording error:', error)
     return { success: false, error: error.message }
   }
 })
@@ -432,7 +505,7 @@ function createWindow() {
     width: 1014,
     height: 1773,
     show: false,
-    autoHideMenuBar: true,
+    autoHideMenuBar: false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
@@ -530,6 +603,21 @@ app.whenReady().then(() => {
     }
   })
 
+  // Forward 4-electrode body composition calculation results to UI
+  eventBus.on('leg:calc:result', (p) => {
+    console.log('[MAIN] Forwarding leg calc result to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('leg:calc:result', p)
+    }
+  })
+
+  eventBus.on('arm:calc:result', (p) => {
+    console.log('[MAIN] Forwarding arm calc result to renderer:', p)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('arm:calc:result', p)
+    }
+  })
+
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
@@ -615,13 +703,6 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, 
   }
 
   return {
-    session_id: identifiers?.session_id || "dummy-session-id",
-    user_id: identifiers?.user_id ,
-
-    measurement_status: "BIA_SUCCESS",
-    error_type: 0,
-    error_details: {},
-
     height_cm: userInputs?.height || 170,
     weight_kg: userInputs?.weight || STD.bodyWeight,
     age_years: userInputs?.age || 29,

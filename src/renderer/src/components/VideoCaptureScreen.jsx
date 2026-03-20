@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from "react";
 import video2 from "../assets/avatar2.mp4";
-import { useNavigate } from "react-router";
+import { data, useNavigate } from "react-router";
 import { recordFromOpenCameras } from "../utils/recordSession";
-import { getVideoDuration, getKioskId } from "../utils/config";
-import { runFPT, sendVideoToBackend } from "../utils/api";
-import { useDispatch } from "react-redux";
+import { getVideoDuration, getKioskId, getSessionId } from "../utils/config";
+import { realtimeCapture, runFPT, sendVideoToBackend } from "../utils/api";
+import { measureWeightAndHeight } from "../utils/measurementUtils";
+import { storeFptMeasurements } from "../utils/measurementRedux";
+import { useDispatch, useSelector } from "react-redux";
 import { setUser } from "../features/common/commonSlice";
+import { BIAMeasurementStage } from "../utils/api";
+import { trackStage } from "../utils/config";
 import ErrorAlert from "./ErrorAlert";
-
+const USE_DUMMY_FPT = false;
 const VideoCaptureScreen = () => {
   const navigate = useNavigate();
   const [isVerify, setIsVerify] = useState(false);
@@ -15,94 +19,210 @@ const VideoCaptureScreen = () => {
   const [status, setStatus] = useState('Initializing...');
   const [showError, setShowError] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
+  const attemptCountRef = React.useRef(0);
   const [shouldRetry, setShouldRetry] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const dispatch = useDispatch();
   const audioRef = React.useRef(null);
+  const measurementStartedRef = React.useRef(false);
+  const measurementPromiseRef = React.useRef(null);
+  const trackingDoneRef = React.useRef(false);
+  const hasStartedRef = React.useRef(false);
+  const STAGES = {
+    FACE_SCAN: "FACE_SCAN",
+  };
 
+  const STATUS = {
+    SUCCESS: "SUCCESS",
+    ERROR: "ERROR",
+  };
+
+  const dummyFptSuccessResponse = {
+    success: true,
+    student_status: "REGISTERED",
+    buffer_id: "dummy_buffer_id_123",
+    user_id: "e6688f32-f9de-48fb-bfc9-e8815109d518",
+    name: "Priyanshu",
+  };
   const MAX_ATTEMPTS = 2;
-const instructionAudio = "/src/assets/audio/camera_scan.mp3";
+  const instructionAudio = "/src/assets/audio/camera_scan.mp3";
+
   useEffect(() => {
+    //   if (hasStartedRef.current) return;
+    // hasStartedRef.current = true;
     const run = async () => {
       try {
         setStatus("Preparing...");
         playAudio();
-      await new Promise((r) => setTimeout(r, 1000));
+        await new Promise((r) => setTimeout(r, 1000));
 
         const videoDuration = getVideoDuration();
         const kioskId = getKioskId();
+        const sessionId = getSessionId();
 
         setStatus(`Recording for ${videoDuration / 1000} seconds...`);
 
-        const recordings = await recordFromOpenCameras(videoDuration);
-        console.log("recordings", recordings);
+        // Start measurements in background (non-blocking)
+        // Use 20-second timeout to prevent infinite waiting if user not on sensors
+        const MEASUREMENT_TIMEOUT = 8000; // 0 seconds
 
-        if (!recordings || recordings.length === 0) {
-          throw new Error("No recordings captured");
+        if (!measurementStartedRef.current) {
+          measurementStartedRef.current = true;
+
+          measurementPromiseRef.current = (async () => {
+            try {
+              const ports = await window.api?.getPorts?.();
+              if (!ports || ports.length < 1) return null;
+
+              return await measureWeightAndHeight(ports, MEASUREMENT_TIMEOUT);
+            } catch (err) {
+              console.error("Measurement error:", err);
+              return null;
+            }
+          })();
         }
 
-        setStatus("Uploading video...");
+        // Record video
+        // const recordings = await recordFromOpenCameras(videoDuration);
+        // console.log("recordings", recordings);
 
-        const videoToSend =
-          recordings.find((r) => r.role === "CENTER") || recordings[0];
+        // if (!recordings || recordings.length === 0) {
+        //   throw new Error("No recordings captured");
+        // }
 
-        console.log(`Sending ${videoToSend.role} video to backend...`);
+        // setStatus("Uploading video...");
 
-        const storeResponse = await sendVideoToBackend(videoToSend);
-        console.log("Store response:", storeResponse);
+        // const videoToSend =
+        //   recordings.find((r) => r.role === "CENTER") || recordings[0];
 
-        const shmPath = storeResponse?.data?.shm_path;
+        // console.log(`Sending ${videoToSend.role} video to backend...`);
 
-        if (!storeResponse?.success || !shmPath) {
-          throw new Error("Failed to store video or shm_path not received");
+        // const storeResponse = await sendVideoToBackend(videoToSend);
+        // console.log("Store response:", storeResponse);
+
+        // const shmPath = storeResponse?.data?.shm_path;
+
+        // if (!storeResponse?.success || !shmPath) {
+        //   throw new Error("Failed to store video or shm_path not received");
+        // }
+
+        setStatus("Processing scan and measurements...");
+
+        console.log("Running realtime capture + measurements in parallel");
+
+        let fptResponse;
+        let measurements;
+
+        if (USE_DUMMY_FPT) {
+          console.log("Using dummy FPT response...");
+          fptResponse = dummyFptSuccessResponse;
+          // Still wait for measurements if they're running
+          measurements = await measurementPromiseRef.current;
+        } else {
+          // Await both face capture and weight/height measurements in parallel
+          [fptResponse, measurements] = await Promise.all([
+            realtimeCapture(),
+            measurementPromiseRef.current
+          ]);
         }
 
-        setStatus("Processing face verification...");
-
-        console.log("Running FPT with shm_path:", shmPath);
-         const fptResponse = await runFPT(shmPath, kioskId);
         console.log("FPT response:", fptResponse);
+        console.log("Measurement results:", measurements);
+
+        // -- Handle Measurements First (so they are available for tracking/display) --
+        if (measurements && !trackingDoneRef.current) {
+          trackingDoneRef.current = true;
+          console.log('[VIDEO CAPTURE] Storing measurements:', measurements);
+
+          // Store measurements even if some failed
+          if (measurements.weight || measurements.height) {
+            storeFptMeasurements(
+              dispatch,
+              measurements.weight,
+              measurements.height
+            );
+            console.log('[VIDEO CAPTURE] Measurements saved!');
+          }
+
+          // Handle measurement errors for tracking
+          if (measurements.errors && Object.keys(measurements.errors).length > 0) {
+            let errorMessage = "";
+            const hasWeightError = !!measurements.errors.weight;
+            const hasHeightError = !!measurements.errors.height;
+
+            if (hasWeightError && hasHeightError) {
+              errorMessage = "Failed to get weight and height measurement";
+            } else if (hasWeightError) {
+              errorMessage = "Failed to get weight measurement";
+            } else if (hasHeightError) {
+              errorMessage = "Failed to get height measurement";
+            } else {
+              errorMessage = "User is not standing on the platform";
+            }
+            console.warn('[VIDEO CAPTURE] Measurement warning:', errorMessage);
+
+            // Note: We'll track the error stage ONLY if FPT also fails or after we know FPT status
+          }
+        }
+
+        // -- Handle Face Recognition Result --
+        const isFailed = !fptResponse.success || fptResponse.data?.student_status !== 'REGISTERED';
 
         // Check if user is not registered - redirect directly to login
-        if (fptResponse?.data?.student_status === 'NOT_REGISTERED') {
+        if (fptResponse.success && fptResponse.data?.student_status === 'NOT_REGISTERED') {
           setShowError(true);
           setPhase("ERROR");
           setStatus("User not registered. Redirecting to login...");
           throw new Error("User not registered");
         }
 
-        // Check for specific error codes (502, 503, or general failure)
-        const errorStatus = fptResponse?.status || fptResponse?.statusCode;
-        const isFaceNotRecognized =
-          errorStatus === 502 ||
-          errorStatus === 503 ||
-          !fptResponse.success;
-
-        if (isFaceNotRecognized) {
-          // Increment attempt count
-          const newAttemptCount = attemptCount + 1;
-          setAttemptCount(newAttemptCount);
-
-          // Show error alert
+        if (isFailed) {
+          attemptCountRef.current += 1;
+          setAttemptCount(attemptCountRef.current);
           setShowError(true);
           setPhase("ERROR");
-
-          // If we haven't exceeded max attempts, prepare for retry
-          if (newAttemptCount < MAX_ATTEMPTS) {
+          if (attemptCountRef.current < MAX_ATTEMPTS) {
             setStatus("Face not recognized. Retrying...");
           } else {
-            setStatus("Face not recognized. Redirecting...");
+            setStatus("Face not recognized. Maximum attempts reached.");
           }
 
-          throw new Error("Face not recognized");
+          // Track failure with measurements if available
+          trackStage(
+            STAGES.FACE_SCAN,
+            STATUS.ERROR,
+            {
+              weight_kg: measurements?.weight,
+              height_cm: measurements?.height
+            },
+            fptResponse.error || "Face not recognized",
+            fptResponse?.data?.buffer_id,
+            fptResponse?.data?.user_id
+          );
+
+          throw new Error(fptResponse.error || "Face not recognized");
         }
 
-        // Success case
+        // Success case - Face recognition successful 
         dispatch(setUser(fptResponse));
         setStatus("Verification successful!");
         setIsVerify(true);
         stopAudio();
-        await new Promise((r) => setTimeout(r, 1000));
+
+        // Track success to backend
+        trackStage(
+          STAGES.FACE_SCAN,
+          STATUS.SUCCESS,
+          {
+            weight_kg: measurements?.weight,
+            height_cm: measurements?.height
+          },
+          null,
+          fptResponse?.data?.buffer_id,
+          fptResponse?.data?.user_id
+        );
+
+        await new Promise((r) => setTimeout(r, 500));
         navigate("/verified");
 
       } catch (error) {
@@ -115,7 +235,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
           setShowError(true);
         }
         stopAudio();
-    }
+      }
     };
 
     run();
@@ -126,14 +246,15 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
   };
 
   const handleRetry = () => {
-    // Check if error is user not registered, redirect to login instead
-    if (status.includes("not registered")) {
+    setShowError(false);
+    // Redirect to login if user is not registered or max attempts reached
+    if (status.includes("not registered") || attemptCountRef.current >= MAX_ATTEMPTS) {
       navigate("/login-suhi");
     } else {
-      // Navigate to FaceCapture screen for the second attempt
-      navigate("/facecapture");
+      // Retry in-place by toggling shouldRetry
+      setShouldRetry((prev) => !prev);
     }
-  };  const playAudio = () => {
+  }; const playAudio = () => {
     if (audioRef.current) {
       setIsAudioPlaying(true);
       audioRef.current.play().catch((err) => {
@@ -186,7 +307,7 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
         <video
           src={video2}
           autoPlay
-         // muted
+          // muted
           loop
           playsInline
           className="
@@ -225,8 +346,8 @@ const instructionAudio = "/src/assets/audio/camera_scan.mp3";
           status.includes("not registered")
             ? "User is not registered in the system.\nRedirecting to manual login..."
             : attemptCount < MAX_ATTEMPTS
-            ? `No face detected OR Multiple faces detected.\nRetrying......`
-            : "Maximum attempts reached\nReturning to welcome screen..."
+              ? `No face detected OR Multiple faces detected.\nRetrying......`
+              : "Maximum attempts reached\nReturning to login screen..."
         }
         visible={showError}
         onClose={handleErrorClose}

@@ -5,6 +5,10 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
+import VoiceBars from "./VoiceBars";
+import { sendVoiceToBackend, runVoice } from "../../utils/api";
+import audioBufferToWav from "audiobuffer-to-wav";
+
 
 const VoiceCapture = () => {
     const { t } = useTranslation();
@@ -25,12 +29,25 @@ const VoiceCapture = () => {
     const analyserRef = React.useRef(null);
     const dataArrayRef = React.useRef(null);
     const animationFrameRef = React.useRef(null);
+    const [processingAngle, setProcessingAngle] = useState(0);
     const instructionAudio = "/src/assets/audio/voice.mp3";
 
     useEffect(() => {
         // Play audio when component mounts
         playAudio();
     }, []);
+
+    useEffect(() => {
+        let interval;
+
+        if (status === "processing") {
+            interval = setInterval(() => {
+                setProcessingAngle(prev => (prev + 6) % 360); // smooth rotation
+            }, 16); // ~60fps
+        }
+
+        return () => clearInterval(interval);
+    }, [status]);
 
     useEffect(() => {
         let interval = null;
@@ -109,14 +126,14 @@ const VoiceCapture = () => {
             }
         };
     }, []);
-
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             console.log("stream", stream);
 
             // Set up Web Audio API for visualization
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioContext = new AudioContext({ sampleRate: 16000 });
+            // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaStreamSource(stream);
             const analyser = audioContext.createAnalyser();
 
@@ -152,40 +169,67 @@ const VoiceCapture = () => {
                 const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
                 const arrayBuffer = await blob.arrayBuffer();
 
+                // Convert to WAV 16kHz
+                const audioContext = new AudioContext({ sampleRate: 16000 });
+                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                const wavArrayBuffer = audioBufferToWav(audioBuffer);
+
                 // Get data from Redux store and config
                 const kioskId = getKioskId();
                 const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
-
+                const sessionId = user?.data?.buffer_id;
                 setStatus("processing");
                 const request = {
                     kiosk_id: kioskId,
                     user_id: userId,
                     session_id: sessionId,
-                    arrayBuffer: arrayBuffer
+                    arrayBuffer: wavArrayBuffer
                 };
+
 
                 console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
 
                 try {
-                    const result = await window.api.saveVoiceBuffer(request);
-                    console.log("result", result);
-                   if (result.success) {
-    setStatus("success");
-    stopAudio();
-    await new Promise((r) => setTimeout(r, 500));
-    navigate("/bia/result");
-} else {
-    setStatus("error");
-    console.error("Voice analysis failed:", result.error);
+                    const voiceData = {
+                        role: "VOICE",
+                        timestamp: Date.now(),
+                        buffer: new Uint8Array(wavArrayBuffer)
+                    };
 
-    // 👇 MOVE TO RESULT PAGE ON ERROR
-    await new Promise((r) => setTimeout(r, 500));
-    navigate("/bia/result");
-}
+
+                    const storeResult = await sendVoiceToBackend(voiceData);
+                    console.log("Store result voice:", storeResult);
+
+                    if (storeResult.success) {
+                        const runPayload = {
+                            shm_path: storeResult.shm_path,
+                            kiosk_id: kioskId,
+                            user_id: userId,
+                            session_id: sessionId
+                        };
+                        navigate("/bia/result");
+                        const runResult = await runVoice(runPayload);
+                        console.log("Run result:", runResult);
+
+                        if (runResult.success) {
+                            setStatus("success");
+                            stopAudio();
+                            await new Promise((r) => setTimeout(r, 500));
+                            // navigate("/bia/result");
+                        } else {
+                            setStatus("error");
+                            console.error("Voice run failed:", runResult.error);
+                            navigate("/bia/result");
+                        }
+                    } else {
+                        setStatus("error");
+                        console.error("Voice storage failed:", storeResult.error);
+                        navigate("/bia/result");
+                    }
                 } catch (err) {
                     setStatus("error");
-                    console.error("IPC error:", err);
-                     navigate("/bia/result");
+                    console.error("API error:", err);
+                    navigate("/bia/result");
                 }
 
                 // Stop all tracks
@@ -289,9 +333,21 @@ const VoiceCapture = () => {
                                 fill="none"
                                 strokeLinecap="round"
                                 strokeDasharray={2 * Math.PI * 186}
-                                strokeDashoffset={(2 * Math.PI * 186) * (1 - timeLeft /30)}
-                                transform="rotate(-90 202 202)"
-                                style={{ transition: 'stroke-dashoffset 1s linear' }}
+                                strokeDashoffset={
+                                    status === "processing"
+                                        ? (2 * Math.PI * 186) * 0.75  // fixed arc size while spinning
+                                        : (2 * Math.PI * 186) * (1 - timeLeft / 30)
+                                }
+                                transform={
+                                    status === "processing"
+                                        ? `rotate(${processingAngle - 90} 202 202)`
+                                        : "rotate(-90 202 202)"
+                                }
+                                style={{
+                                    transition: status === "processing"
+                                        ? "none"
+                                        : "stroke-dashoffset 1s linear"
+                                }}
                             />
 
                             {/* Rotating Knob */}
@@ -312,62 +368,63 @@ const VoiceCapture = () => {
 
                     {/* Voice Visualization - Show when recording */}
                     {status === 'recording' && (
-                        <div className="flex items-center justify-center gap-2">
-                            <svg
-                                width="400"
-                                height="200"
-                                viewBox="0 0 255 200"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                                preserveAspectRatio="xMidYMid meet"
-                            >
-                                {(() => {
-                                    const BAR_WIDTH = 12.1111;
-                                    const BAR_RADIUS = 6.05556;
-                                    const CENTER_Y = 100;
+                        // <div className="flex items-center justify-center gap-2">
+                        //     <svg
+                        //         width="400"
+                        //         height="200"
+                        //         viewBox="0 0 255 200"
+                        //         fill="none"
+                        //         xmlns="http://www.w3.org/2000/svg"
+                        //         preserveAspectRatio="xMidYMid meet"
+                        //     >
+                        //         {(() => {
+                        //             const BAR_WIDTH = 12.1111;
+                        //             const BAR_RADIUS = 6.05556;
+                        //             const CENTER_Y = 100;
 
-                                    const IDLE_HEIGHT = 20; // 👈 baseline height
-                                    const MAX_EXTRA_HEIGHT = 140; // growth above idle
+                        //             const IDLE_HEIGHT = 20; // 👈 baseline height
+                        //             const MAX_EXTRA_HEIGHT = 140; // growth above idle
 
-                                    const barPositions = [
-                                        { x: 0, scale: 0.3 },
-                                        { x: 30.2773, scale: 0.9 },
-                                        { x: 60.5547, scale: 0.25 },
-                                        { x: 90.832, scale: 1.1 },
-                                        { x: 121.109, scale: 0.6 },
-                                        { x: 151.391, scale: 0.4 },
-                                        { x: 181.668, scale: 0.7 },
-                                        { x: 211.945, scale: 0.25 },
-                                        { x: 242.223, scale: 0.9 }
-                                    ];
+                        //             const barPositions = [
+                        //                 { x: 0, scale: 0.3 },
+                        //                 { x: 30.2773, scale: 0.9 },
+                        //                 { x: 60.5547, scale: 0.25 },
+                        //                 { x: 90.832, scale: 1.1 },
+                        //                 { x: 121.109, scale: 0.6 },
+                        //                 { x: 151.391, scale: 0.4 },
+                        //                 { x: 181.668, scale: 0.7 },
+                        //                 { x: 211.945, scale: 0.25 },
+                        //                 { x: 242.223, scale: 0.9 }
+                        //             ];
 
-                                    return voiceBars.map((intensity, index) => {
-                                        const bar = barPositions[index];
+                        //             return voiceBars.map((intensity, index) => {
+                        //                 const bar = barPositions[index];
 
-                                        const height =
-                                            IDLE_HEIGHT +
-                                            MAX_EXTRA_HEIGHT * bar.scale * intensity;
+                        //                 const height =
+                        //                     IDLE_HEIGHT +
+                        //                     MAX_EXTRA_HEIGHT * bar.scale * intensity;
 
-                                        const y = CENTER_Y - height / 2;
+                        //                 const y = CENTER_Y - height / 2;
 
-                                        return (
-                                            <rect
-                                                key={index}
-                                                x={bar.x}
-                                                y={y}
-                                                width={BAR_WIDTH}
-                                                height={height}
-                                                rx={BAR_RADIUS}
-                                                fill="white"
-                                                style={{
-                                                    transition: 'height 0.1s ease-out, y 0.1s ease-out'
-                                                }}
-                                            />
-                                        );
-                                    });
-                                })()}
-                            </svg>
-                        </div>
+                        //                 return (
+                        //                     <rect
+                        //                         key={index}
+                        //                         x={bar.x}
+                        //                         y={y}
+                        //                         width={BAR_WIDTH}
+                        //                         height={height}
+                        //                         rx={BAR_RADIUS}
+                        //                         fill="white"
+                        //                         style={{
+                        //                             transition: 'height 0.1s ease-out, y 0.1s ease-out'
+                        //                         }}
+                        //                     />
+                        //                 );
+                        //             });
+                        //         })()}
+                        //     </svg>
+                        // </div>
+                        <VoiceBars />
                     )}
 
 
