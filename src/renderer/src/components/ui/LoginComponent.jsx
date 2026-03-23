@@ -32,15 +32,15 @@ const LoginComponent = () => {
           <img src={bg2} alt="dmit frame" className="w-full max-w-none h-auto" />
 
           {/* form positioned inside frame */}
-          
+
         </div>
       </div>
 
-      <div className="absolute bottom-10 flex justify-center left-1/2 -translate-x-1/2">
+      {/* <div className="absolute bottom-10 flex justify-center left-1/2 -translate-x-1/2">
         <BlackGradientButton onClick={()=>navigate('/welcome')} width={'w-[clamp(18rem,68vw,35rem)]'} padX={'px-2'} className='text-4xl'>
           New user? Register here
         </BlackGradientButton>
-      </div>
+      </div> */}
     </div>
   )
 }

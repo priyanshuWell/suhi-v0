@@ -502,8 +502,10 @@ ipcMain.handle('save-recording', async (event, request) => {
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 1014,
-    height: 1773,
+    // width: 1014,
+    // height: 1773,
+     width: 1080,
+    height: 1920,
     show: false,
     autoHideMenuBar: false,
     webPreferences: {

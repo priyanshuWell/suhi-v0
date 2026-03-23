@@ -145,35 +145,19 @@ export const StartScreen = () => {
             z-20
             px-4
             w-full
-            pb-[clamp(1rem,3vh,3rem)]
+            pb-[clamp(6rem,3vh,15rem)]
           "
         >
           <StartButton onClick={handleStartClick}>
             {t('common.start')}
           </StartButton>
 
-          <button
+          <div
             className="
               w-[clamp(16rem,40vw,31.25rem)]
               h-[clamp(4rem,8vh,6.25rem)]
-              flex items-center justify-center
-              text-center
-              rounded-[30px]
-              border-2 border-white/30
-              bg-white/5
-              backdrop-blur-sm
-              shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
-              text-white
-              text-[clamp(1.25rem,2.5vw,2.5rem)]
-              tracking-wide
-              active:scale-[0.98]
-              transition-all duration-300 ease-in-out
-              hover:bg-white/10
-              hover:border-white/50
             "
-          >
-            {t('common.new_user')}
-          </button>
+          />
         </div>
       </div>
     </motion.div>
