@@ -23,6 +23,8 @@ import LoginSuhi from './components/forms/LoginSuhi'
 import LoginDOB from './components/forms/LoginDOB'
 import LoginFather from './components/forms/LoginFather'
 import FingerPrintScreen from './components/forms/FingerPrintScreen'
+import ColorBlindPlate from './components/color-blindness/ColorBlindPlate'
+import ColorBlindQuiz from './components/color-blindness/ColorBlindQuiz'
 
 function App() {
   useEffect(() => {
@@ -55,6 +57,8 @@ function App() {
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
       <Route path="/fingerprint" element={<FingerPrintScreen />} />
+      <Route path="/colorblindness" element={<ColorBlindPlate />} />
+      <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
     </Routes>
   )
 }

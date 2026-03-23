@@ -17,9 +17,9 @@ createRoot(document.getElementById('root')).render(
   // <StrictMode>
   <Provider store={store}>
     <BrowserRouter>
-      <KioskScaler>
-        <App />
-      </KioskScaler>
+      {/* <KioskScaler> */}
+      <App />
+      {/* </KioskScaler> */}
     </BrowserRouter>
   </Provider>
   //  </StrictMode> 
