@@ -160,7 +160,7 @@ export const BIAComponent = ({
       <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
 
         <video
-          src={screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "whcomplete" ? biawhComplete : screenType === "imcomplete" ? biaImComplete : null}
+          src={screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "imcomplete" ? biaImComplete : null}
           autoPlay
           loop
           playsInline
