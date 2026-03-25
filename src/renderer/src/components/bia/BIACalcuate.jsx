@@ -28,6 +28,8 @@ export default function BIACalculate({ user, onComplete }) {
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
+  const whCompleteResolver = useRef(null);
+  const [measuredValues, setMeasuredValues] = useState({ height: "-- cm", weight: "-- kg" });
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
@@ -265,7 +267,7 @@ export default function BIACalculate({ user, onComplete }) {
       await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
       console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
       await saveBuffer("height_port_error");
-      navigate('/screen1');
+      navigate('/voice');
 
       // Track attempt for height (continuous polling)
       if (payload.attempt) {
@@ -334,10 +336,10 @@ export default function BIACalculate({ user, onComplete }) {
   // };
 
   const handleTimeout = (stepName) => {
-    console.error(`[BIA DEBUG] ${stepName} TIMEOUT - redirecting to /screen1`);
+    console.error(`[BIA DEBUG] ${stepName} TIMEOUT - redirecting to /voice`);
     // clearAllTimeouts();
     setIsRunning(false);
-    navigate("/screen1");
+    navigate("/voice");
   };
 
   const withTimeout = (promise, timeoutMs, stepName) => {
@@ -408,6 +410,13 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  const handleWhNextClick = () => {
+    console.log("[BIA DEBUG] whComplete Next button clicked");
+    if (whCompleteResolver.current) {
+      whCompleteResolver.current();
+      whCompleteResolver.current = null;
+    }
+  };
 
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
@@ -557,13 +566,13 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
-      navigate("/screen1");
+      navigate("/voice");
       return;
     }
 
@@ -586,10 +595,10 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
-        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
         await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
         // updatePhaseState('leg', 'failed', 'Max retries exhausted');
-        navigate("/screen1");
+        navigate("/voice");
         return;
       }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
@@ -642,7 +651,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Parallelize Weight and Height measurements
       console.log("[BIA DEBUG] Starting Weight and Height measurements in parallel...");
-      
+
       const [weightRes, heightRes] = await Promise.all([
         measureWeight(),
         performHeightWithRetry()
@@ -662,16 +671,23 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Leg BIA immediately after weight/height
       await calculateAndStoreLegBIA();
 
+      setMeasuredValues({
+        weight: resultsRef.current?.weight?.value ? `${resultsRef.current?.weight?.value} kg` : "-- kg",
+        height: resultsRef.current?.height?.value ? `${resultsRef.current?.height?.value} cm` : "-- cm"
+      });
+
       navigate("/bia/whcomplete");
-      await sleep(3000); // Wait for whComplete video
+
+      await new Promise((resolve) => {
+        whCompleteResolver.current = resolve;
+      });
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
-      await sleep(7000); // Wait for whComplete video
 
     } catch (phase2Error) {
       console.error("[BIA DEBUG] Phase 2 FAILED:", phase2Error.message);
-      
+
       if (phase2Error.message === "HEIGHT_MAX_RETRY_EXHAUSTED") {
         await showError(ERROR_MESSAGES.height, 3000);
         await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
@@ -684,8 +700,8 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA REC] ⏏️  Phase 2 — weight or generic error → saveBuffer('weight_error')");
         await saveBuffer("weight_error");
       }
-      
-      navigate("/screen1");
+
+      navigate("/voice");
     }
   };
 
@@ -706,7 +722,7 @@ export default function BIACalculate({ user, onComplete }) {
       return await measureHeight();
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
-      
+
       // Retry with incremented attempt count
       console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
       await showError(ERROR_MESSAGES.height, 3000);
@@ -726,12 +742,12 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
-      navigate("/screen1");
+      navigate("/voice");
       return;
     }
 
@@ -766,7 +782,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
         setIsComplete(true);
-        navigate("/screen1");
+        navigate("/voice");
         return;
       }
       // Impedance 20kHz
@@ -964,7 +980,7 @@ export default function BIACalculate({ user, onComplete }) {
       // Clear timeouts
       //clearAllTimeouts();
       setIsComplete(true);
-      navigate("/screen1");
+      navigate("/voice");
 
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
@@ -980,7 +996,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
       setIsComplete(true);
-      navigate("/screen1");
+      navigate("/voice");
     }
   };
 
@@ -1000,7 +1016,7 @@ export default function BIACalculate({ user, onComplete }) {
       portValidation.errors.forEach(err => console.error("[BIA DEBUG]", err));
       logPortConfiguration();
       await showError("Ports are not connected. Please check device connections.", 3000);
-      navigate("/screen1");
+      navigate("/voice");
       return;
     }
 
@@ -1039,7 +1055,7 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
       await saveBuffer("flow_exception");
-      navigate("/screen1");
+      navigate("/voice");
     } finally {
       setIsRunning(false);
       //clearAllTimeouts();
@@ -1074,8 +1090,8 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Handle video end - navigate to screen1
   const handleVideoEnd = () => {
-    console.log("[BIA DEBUG] Completion video ended, navigating to /screen1");
-    navigate("/screen1");
+    console.log("[BIA DEBUG] Completion video ended, navigating to /voice");
+    navigate("/voice");
   };
 
   /* =======================
@@ -1089,6 +1105,9 @@ export default function BIACalculate({ user, onComplete }) {
         texts={texts}
         isComplete={isComplete}
         onVideoEnd={handleVideoEnd}
+        heightValue={measuredValues.height}
+        weightValue={measuredValues.weight}
+        onNextClick={handleWhNextClick}
       />
 
       <ErrorAlert

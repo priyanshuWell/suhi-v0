@@ -189,7 +189,129 @@ export async function realtimeCapture(kiosk_id=null) {
   }
 }
 
+export async function colorBlindessStart(userId,kisokId){
+  try {
+    const payload ={
+      user_id:userId,
+      kiosk_id:kioskId
+    }
 
+    const response = await fetch(`${API_BASE_URL}/color-blindness/start`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function colorBlindessComplete(sessionId){
+  try {
+    const payload ={
+    session_id:sessionId,
+    }
+
+    const response = await fetch(`${API_BASE_URL}/color-blindness/complete`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function colorBlindessSubmit(sessionId){
+  try {
+    const payload ={
+      session_id:sessionId,
+    }
+
+    const response = await fetch(`${API_BASE_URL}/color-blindness/response`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function getColorBlindessPlates(){
+  try {
+  
+    const response = await fetch(`${API_BASE_URL}/plates/seed`)
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 export async function runFPT(shmPath, kioskId) {
   try {

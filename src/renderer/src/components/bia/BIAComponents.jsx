@@ -4,9 +4,14 @@ import { useParams } from "react-router";
 import progessbg from "../../assets/progress-bg.svg";
 import textframe from "../../assets/textFrame.png";
 import { useTranslation } from "react-i18next";
-
+import bmiWH from '../../assets/bia/bia-hwmeasuring.mp4'
+import biaIm from '../../assets/bia/bia-immeasuring.mp4'
+import biawhComplete from '../../assets/bia/bia-whcomplete.mp4'
+import biaImComplete from '../../assets/bia/bia-imcomplete.mp4'
 import heightResSvg from "../../assets/bia/height_res.svg";
 import weightResSvg from "../../assets/bia/weight_res.svg";
+import BlueGradientButton from "../ui/BlueGradientButton";
+import HeightWeightComplete from "./HeightWeightComplete";
 
 export const BIAComponent = ({
   texts,
@@ -17,6 +22,7 @@ export const BIAComponent = ({
   onVideoEnd,
   heightValue = "132 cm",
   weightValue = "30 kg",
+  onNextClick,
 }) => {
   const { t } = useTranslation();
   const { screenType } = useParams();
@@ -84,100 +90,83 @@ export const BIAComponent = ({
   const showResults = screenType === "whcomplete";
 
   return (
-    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-      <audio
-        ref={audioRef}
-        onEnded={handleAudioEnd}
-        onPlay={() => setIsAudioPlaying(true)}
-      >
-        <source src={getAudioPath(screenType)} type="audio/mpeg" />
-        {t("common.audio_not_supported")}
-      </audio>
+    <>
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+        <audio
+          ref={audioRef}
+          onEnded={handleAudioEnd}
+          onPlay={() => setIsAudioPlaying(true)}
+        >
+          <source src={getAudioPath(screenType)} type="audio/mpeg" />
+          {t("common.audio_not_supported")}
+        </audio>
 
-      {/* Background */}
-      <div
-        className="absolute inset-0 bg-center bg-cover z-0"
-        style={{ backgroundImage: `url(${bg1})` }}
-      />
+        {/* Background */}
+        <div
+          className="absolute inset-0 bg-center bg-cover z-0"
+          style={{ backgroundImage: `url(${bg1})` }}
+        />
 
-      {/* TEXT + PROGRESS */}
-      <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
-        <div className="relative text-center flex flex-col items-center justify-center">
-          <img src={textframe} alt="text-frame" className="absolute top-0" />
-          <p className="text-white text-center portrait:text-[32px] tracking-wider my-6">
-            {currentText.title}
-          </p>
-          <img
-            src={textframe}
-            alt="text-frame"
-            className="absolute top-[4.5rem] rotate-180"
-          />
+        {/* TEXT + PROGRESS */}
+        <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
+          <div className="relative text-center flex flex-col items-center justify-center">
+            <img src={textframe} alt="text-frame" className="absolute top-0" />
+            <p className="text-white text-center portrait:text-[32px] tracking-wider my-6">
+              {currentText.title}
+            </p>
+            <img
+              src={textframe}
+              alt="text-frame"
+              className="absolute top-[4.5rem] rotate-180"
+            />
 
-          <p className="text-white font-medium tracking-tight landscape:text-4xl portrait:text-[36px] mt-[4rem]">
-            {currentText.description}
-          </p>
+            <p className="text-white font-medium tracking-tight landscape:text-4xl portrait:text-[36px] mt-[4rem]">
+              {currentText.description}
+            </p>
 
-          {/* PROGRESS BAR (ONLY FOR IM) */}
-          {screenType === "im" && (
-            <div className="relative flex items-center justify-center">
-              <div className="absolute w-[456px] h-[320px]">
-                <img
-                  src={progessbg}
-                  alt="progress-bar-frame"
-                  className="w-full h-full object-contain"
-                />
+            {/* PROGRESS BAR (ONLY FOR IM) */}
+            {screenType === "im" && (
+              <div className="relative flex items-center justify-center">
+                <div className="absolute w-[456px] h-[320px]">
+                  <img
+                    src={progessbg}
+                    alt="progress-bar-frame"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex flex-col h-[280px] w-[32px] -rotate-90 overflow-y-clip relative z-10">
+                  {Array.from({ length: total }).map((_, i) => {
+                    const isActive = i < activeCount;
+                    return (
+                      <div
+                        key={i}
+                        className={`h-10 w-8 mb-1 skew-y-35 last:mb-0 transition-all duration-300 ${isActive ? "bg-[#368CC9]" : "bg-[#0F324D]"
+                          }`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-col h-[280px] w-[32px] -rotate-90 overflow-y-clip relative z-10">
-                {Array.from({ length: total }).map((_, i) => {
-                  const isActive = i < activeCount;
-                  return (
-                    <div
-                      key={i}
-                      className={`h-10 w-8 mb-1 skew-y-35 last:mb-0 transition-all duration-300 ${isActive ? "bg-[#368CC9]" : "bg-[#0F324D]"
-                        }`}
-                    />
-                  );
-                })}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
+
+        {/* SVG Result Frames (whcomplete screen) */}
+        {showResults && (
+          <HeightWeightComplete heightValue={heightValue} weightValue={weightValue} onNextClick={onNextClick} />
+        )}
       </div>
 
-      {/* SVG Result Frames (whcomplete screen) */}
-      {showResults && (
-        <div className="absolute inset-0 flex flex-col items-center gap-48 z-10 mt-[30rem]">
-          {/* Height SVG frame with value */}
-          <div className="relative w-2/3">
-            <img
-              src={heightResSvg}
-              alt="height-frame"
-              className="w-full h-auto"
-            />
-            <span
-              className="absolute inset-0 flex items-center justify-center text-white font-mono tracking-widest"
-              style={{ fontSize: "clamp(1.4rem, 4vw, 3rem)" }}
-            >
-              {heightValue}
-            </span>
-          </div>
+      <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
 
-          {/* Weight SVG frame with value */}
-          <div className="relative w-2/3">
-            <img
-              src={weightResSvg}
-              alt="weight-frame"
-              className="w-full h-auto"
-            />
-            <span
-              className="absolute inset-0 flex items-center justify-center text-white font-mono tracking-widest"
-              style={{ fontSize: "clamp(1.4rem, 4vw, 3rem)" }}
-            >
-              {weightValue}
-            </span>
-          </div>
-        </div>
-      )}
-    </div>
+        <video
+          src={screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "whcomplete" ? biawhComplete : screenType === "imcomplete" ? biaImComplete : null}
+          autoPlay
+          loop
+          playsInline
+          className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
+        />
+      </div>
+    </>
   );
 };
