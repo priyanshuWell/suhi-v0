@@ -1,62 +1,59 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const RADIUS = 186;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => {
-    const [timeLeft, setTimeLeft] = useState(timerSeconds);
-    const timerRef = useRef(null);
+    const [progress, setProgress] = useState(0);
+    const requestRef = useRef();
+    const startTimeRef = useRef();
 
     useEffect(() => {
-        setTimeLeft(timerSeconds);
+        startTimeRef.current = null;
+        setProgress(0);
     }, [currentPlate, timerSeconds]);
 
     useEffect(() => {
-        if (timeLeft <= 0) {
-            onExpire?.();
-            return;
-        }
-        timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
-        return () => clearTimeout(timerRef.current);
-    }, [timeLeft, onExpire]);
+        const duration = timerSeconds * 1000;
 
-    const dashOffset = CIRCUMFERENCE * (1 - timeLeft / timerSeconds);
+        const animate = (timestamp) => {
+            if (!startTimeRef.current) startTimeRef.current = timestamp;
+            const elapsed = timestamp - startTimeRef.current;
+            const progressValue = Math.min(elapsed / duration, 1);
+            setProgress(progressValue);
 
-    const knobAngle = ((timerSeconds - timeLeft) / timerSeconds) * 360 - 90;
+            if (progressValue < 1) {
+                requestRef.current = requestAnimationFrame(animate);
+            } else {
+                onExpire?.();
+            }
+        };
 
+        requestRef.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(requestRef.current);
+    }, [timerSeconds, currentPlate, onExpire]);
+
+    const dashOffset = CIRCUMFERENCE * (1 - progress);
+    const knobAngle = progress * 360;
+    const timeLeft = Math.ceil(timerSeconds * (1 - progress));
     const formatTime = (s) => String(s).padStart(2, "0");
 
     return (
         <div className="relative flex flex-col items-center justify-center gap-6">
             <div className="relative w-[180px] h-[180px] flex items-center justify-center">
-                <svg
-                    width="180"
-                    height="180"
-                    viewBox="0 0 404 404"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    <defs>
-                        <radialGradient
-                            id="paint0_radial_7767_5563"
-                            cx="0"
-                            cy="0"
-                            r="1"
-                            gradientUnits="userSpaceOnUse"
-                            gradientTransform="translate(62.5 -140) rotate(37.3605) scale(268.61)"
-                        >
-                            <stop stopColor="white" />
-                            <stop offset="1" stopColor="#094EC6" />
-                        </radialGradient>
-                    </defs>
+                <svg width="180" height="180" viewBox="0 0 404 404">
 
-                    {/* Static track background ring */}
-                    <path
-                        d="M404 202C404 313.561 313.561 404 202 404C90.4385 404 0 313.561 0 202C0 90.4385 90.4385 0 202 0C313.561 0 404 90.4385 404 202ZM32.32 202C32.32 295.712 108.288 371.68 202 371.68C295.712 371.68 371.68 295.712 371.68 202C371.68 108.288 295.712 32.32 202 32.32C108.288 32.32 32.32 108.288 32.32 202Z"
-                        fill="#DDF5FF"
+                    {/* Track */}
+                    <circle
+                        cx="202"
+                        cy="202"
+                        r={RADIUS}
+                        stroke="#DDF5FF"
+                        strokeWidth="32"
+                        fill="none"
                     />
 
-                    {/* Animated progress arc */}
+                    {/* Progress arc */}
                     <circle
                         cx="202"
                         cy="202"
@@ -68,23 +65,19 @@ export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => 
                         strokeDasharray={CIRCUMFERENCE}
                         strokeDashoffset={dashOffset}
                         transform="rotate(-90 202 202)"
-                        style={{ transition: "stroke-dashoffset 1s linear" }}
                     />
 
-                    {/* Rotating knob dot */}
-                    <g
-                        transform={`rotate(${knobAngle + 90} 202 202)`}
-                        style={{ transition: "transform 1s linear" }}
-                    >
-                        <path
-                            d="M202 16.16C202 7.2351 209.246 -0.0671478 218.143 0.646078C219.372 0.744589 220.6 0.85436 221.826 0.975363C230.708 1.85137 236.545 10.3231 234.962 19.1065L234.779 20.1224C233.297 28.3448 225.429 33.7378 217.108 32.9939C208.786 32.2501 202 25.5471 202 17.1923L202 16.16Z"
-                            fill="url(#paint0_radial_7767_5563)"
-                        />
-                    </g>
+                    {/* Knob — only visible once arc has started moving */}
+                    {progress > 0 && (
+                        <g transform={`rotate(${knobAngle - 90} 202 202)`}>
+                            <circle cx="202" cy="16" r="10" fill="#094EC6" />
+                        </g>
+                    )}
+
                 </svg>
 
                 {/* Countdown number */}
-                <span className="absolute text-4xl font-mono text-white tracking-widest">
+                <span className="absolute text-4xl font-mono text-white">
                     {formatTime(timeLeft)}
                 </span>
             </div>

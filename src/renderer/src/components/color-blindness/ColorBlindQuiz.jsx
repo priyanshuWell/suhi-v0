@@ -1,20 +1,93 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation, useNavigate } from "react-router";
 import bg1 from "../../assets/lightbg.png";
-import OptionButton from "./OptionButton";
 import { CircularTimer } from "./CircularTimer";
+import OptionButton from "./OptionButton";
+import { colorBlindessSubmit, colorBlindessComplete } from "../../utils/api";
 
-import {
-    colorBlindessStart,
-    colorBlindessSubmit,
-    colorBlindessComplete,
-    getColorBlindessPlates,
-} from "../../utils/api";
-// ─── Dynamically import all 14 plate images ───────────────────────────────────
-// Assumes files are named Card_1.png … Card_14.png in assets/color_blindness/
-const PLATE_IMAGES = Array.from({ length: 14 }, (_, i) => {
-    return new URL(`../../assets/color_blindness/Card_${i + 1}.png`, import.meta.url).href;
-});
+// ─── Static plate imports ─────────────────────────────────────────────────────
+import CARD_1 from "../../assets/color_blindness/Card_1.png";
+import CARD_2 from "../../assets/color_blindness/Card_2.png";
+import CARD_3 from "../../assets/color_blindness/Card_3.png";
+import CARD_4 from "../../assets/color_blindness/Card_4.png";
+import CARD_5 from "../../assets/color_blindness/Card_5.png";
+import CARD_6 from "../../assets/color_blindness/Card_6.png";
+import CARD_7 from "../../assets/color_blindness/Card_7.png";
+import CARD_8 from "../../assets/color_blindness/Card_8.png";
+import CARD_9 from "../../assets/color_blindness/Card_9.png";
+import CARD_10 from "../../assets/color_blindness/Card_10.png";
+import CARD_11 from "../../assets/color_blindness/Card_11.png";
+import CARD_12 from "../../assets/color_blindness/Card_12.png";
+import CARD_13 from "../../assets/color_blindness/Card_13.png";
+import CARD_14 from "../../assets/color_blindness/Card_14.png";
+
+const PLATES = [
+    {
+        plate_id: 1, image: CARD_1, correctAnswer: "12",
+        options: ["12", "93", "96", "89", "No number"]
+    },
+
+    {
+        plate_id: 2, image: CARD_2, correctAnswer: "8",
+        options: ["8", "3", "15", "23", "No number"]
+    },
+
+    {
+        plate_id: 3, image: CARD_3, correctAnswer: "5",
+        options: ["5", "2", "99", "69", "No number"]
+    },
+
+    {
+        plate_id: 4, image: CARD_4, correctAnswer: "29",
+        options: ["29", "70", "3", "83", "No number"]
+    },
+    {
+        plate_id: 5, image: CARD_5, correctAnswer: "74",
+        options: ["74", "21", "99", "12", "No number"]
+    },
+
+    {
+        plate_id: 6, image: CARD_6, correctAnswer: "7",
+        options: ["7", "61", "5", "93", "No number"]
+    },
+    {
+        plate_id: 7, image: CARD_7, correctAnswer: "45",
+        options: ["45", "94", "19", "27", "No number"]
+    },
+
+    {
+        plate_id: 8, image: CARD_8, correctAnswer: "2",
+        options: ["2", "56", "13", "69", "No number"]
+    },
+
+    {
+        plate_id: 9, image: CARD_9, correctAnswer: "2",
+        options: ["92", "2", "90", "73", "No number"]
+    },
+    {
+        plate_id: 10, image: CARD_10, correctAnswer: "16",
+        options: ["16", "72", "48", "21", "No number"]
+    },
+
+    {
+        plate_id: 11, image: CARD_11, correctAnswer: "Line",
+        options: ["Line", "70", "11", "13", "No number"]
+    },
+    {
+        plate_id: 12, image: CARD_12, correctAnswer: "35",
+        options: ["35", "5", "3", "36", "No number"]
+    },
+    {
+        plate_id: 13, image: CARD_13, correctAnswer: "96",
+        options: ["96", "6", "9", "35", "No number"]
+    },
+
+    {
+        plate_id: 14, image: CARD_14, correctAnswer: "Two Lines",
+        options: ["Two Lines", "Purple Line", "Red Line", "Three lines", "No lines"]
+    },
+];
 
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({ current, total }) => {
@@ -22,199 +95,126 @@ const ProgressBar = ({ current, total }) => {
     return (
         <div className="flex flex-col items-start gap-1 w-full">
             <span
-                className="text-white text-center"
+                className="text-white"
                 style={{ fontFamily: "'Noto Sans', sans-serif", fontSize: "clamp(0.7rem, 2vw, 2rem)" }}
             >
                 Image {current} of {total}
             </span>
-            <div
-                className="w-full overflow-hidden"
-                style={{
-                    height: "clamp(6px, 1.3vw, 21px)",
-                    background: "#e0e0e0",
-                    borderRadius: "169.6px",
-                }}
+            <div className="w-full overflow-hidden"
+                style={{ height: "clamp(6px, 1.3vw, 21px)", background: "#e0e0e0", borderRadius: "169.6px" }}
             >
-                <div
-                    style={{
-                        width: `${pct}%`,
-                        height: "100%",
-                        background: "#0d4aca",
-                        borderRadius: "169.6px",
-                        transition: "width 0.4s ease",
-                    }}
-                />
+                <div style={{
+                    width: `${pct}%`, height: "100%",
+                    background: "#0d4aca", borderRadius: "169.6px",
+                    transition: "width 0.4s ease",
+                }} />
             </div>
         </div>
     );
 };
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-/**
- * ColorBlindQuiz
- *
- * Props:
- *   userId       – user ID passed to /start
- *   kioskId      – kiosk ID passed to /start
- *   timerSeconds – countdown per plate (default 5)
- *   onComplete   – (completeApiResponse) => void  called when all 14 plates done
- *   onError      – (errorMessage) => void  called on any API error
- */
-export const ColorBlindQuiz = ({
-    userId,
-    kioskId,
-    timerSeconds: initialTimer = 5,
-    onComplete,
-    onError,
-}) => {
+const initialTimer = 5;
+export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
+    const location = useLocation();
+    const navigate = useNavigate();
 
-    // ── Session & plates state ──────────────────────────────────────────────
-    const [sessionId, setSessionId] = useState(null);
-    const [plates, setPlates] = useState([]);   // array from /plates API
-    const [currentIndex, setCurrentIndex] = useState(0);   // 0-based
-    const [isLoading, setIsLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // ── Timer state ─────────────────────────────────────────────────────────
+    const [sessionId, setSessionId] = useState(location.state?.sessionId);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
+
     const timerRef = useRef(null);
-    const startTimeMs = useRef(null); // records when current plate was shown
+    const plateStartMs = useRef(Date.now());
+    const submittingRef = useRef(false);
 
-    // ── Initialise: fetch plates + start session ────────────────────────────
+    const totalPlates = PLATES.length;         // 14
+    const currentPlate = PLATES[currentIndex];  // always valid
+
     useEffect(() => {
-        const init = async () => {
-            setIsLoading(true);
-            try {
-                // 1. Fetch plate definitions (options per plate, plate IDs, etc.)
-                const platesRes = await getColorBlindessPlates();
-                if (!platesRes.success) throw new Error("Failed to load plates");
-
-                // Normalise: API may return { plates: [...] } or array directly
-                const platesArray = Array.isArray(platesRes.plates)
-                    ? platesRes.plates
-                    : Array.isArray(platesRes.data)
-                        ? platesRes.data
-                        : [];
-
-                if (platesArray.length === 0) throw new Error("No plates returned from API");
-                setPlates(platesArray);
-
-                // 2. Start session — returns session_id
-                const startRes = await colorBlindessStart(userId, kioskId);
-                if (!startRes.success) throw new Error("Failed to start session");
-                setSessionId(startRes.session_id);
-            } catch (err) {
-                onError?.(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        init();
-    }, []); // run once on mount
-
-    // ── Reset timer + record start time whenever plate changes ─────────────
-    useEffect(() => {
-        if (isLoading || plates.length === 0) return;
         setTimeLeft(initialTimer);
-        startTimeMs.current = Date.now();
-    }, [currentIndex, isLoading, initialTimer, plates.length]);
+        plateStartMs.current = Date.now();
+        submittingRef.current = false;
+    }, [currentIndex]);
 
-    // ── Countdown tick ──────────────────────────────────────────────────────
+    // ── 3. Countdown tick ─────────────────────────────────────────────────────
     useEffect(() => {
-        if (isLoading || !sessionId) return;
-        if (timeLeft <= 0) {
-            handleAnswer(null, true); // null answer + no_response = 1
-            return;
-        }
+        if (!sessionId) return;
+        if (timeLeft <= 0) { handleAnswer(null, true); return; }
         timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearTimeout(timerRef.current);
-    }, [timeLeft, isLoading, sessionId]);
+    }, [timeLeft, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Handle an answer (or timeout) ──────────────────────────────────────
+    // ── 4. Submit answer ───────────────────────────────────────────────────────
     const handleAnswer = useCallback(
+
+
         async (selectedAnswer, isTimeout = false) => {
-            if (isSubmitting || !sessionId) return;
+            if (!sessionId || submittingRef.current) return;
+            submittingRef.current = true;
             clearTimeout(timerRef.current);
-            setIsSubmitting(true);
 
-            const currentPlate = plates[currentIndex];
-            const responseTimeMs = Date.now() - (startTimeMs.current ?? Date.now());
-
-            // Full payload matching the API contract
-            const submitPayload = {
-                session_id: sessionId,
-                plate_id: currentPlate?.id ?? currentIndex + 1,
-                selected_answer: isTimeout ? null : selectedAnswer,
-                no_response: isTimeout ? 1 : 0,
-                response_time_ms: responseTimeMs,
-            };
-
+            const responseTimeMs = Date.now() - plateStartMs.current;
+            const noResponse = isTimeout ? 1 : 0;
+            const answerToSend = isTimeout ? null : selectedAnswer;
             try {
-                const submitRes = await colorBlindessSubmit(submitPayload);
-                if (!submitRes.success) throw new Error("Failed to submit answer");
-
-                const nextIndex = currentIndex + 1;
-
-                if (nextIndex >= plates.length) {
-                    // All plates answered → call /complete
-                    const completeRes = await colorBlindessComplete(sessionId);
-                    if (!completeRes.success) throw new Error("Failed to complete session");
-                    onComplete?.(completeRes);
-                } else {
-                    // Move to next plate
-                    setCurrentIndex(nextIndex);
-                }
+                await colorBlindessSubmit(
+                    sessionId,
+                    currentPlate.plate_id,
+                    answerToSend,
+                    noResponse,
+                    responseTimeMs
+                );
             } catch (err) {
-                onError?.(err.message);
-            } finally {
-                setIsSubmitting(false);
+                console.error("colorBlindessSubmit error:", err);
+                navigate("/bia/result");
+                return;
+            }
+
+            const nextIndex = currentIndex + 1;
+
+            if (nextIndex >= totalPlates) {
+                try {
+                    const result = await colorBlindessComplete(sessionId);
+                    console.log("result colorBlindess", result)
+                    if (result.success) {
+                        navigate("/bia/result");
+                    }
+                } catch (err) {
+                    console.log(err);
+                    navigate("/bia/result");
+                }
+            } else {
+                setCurrentIndex(nextIndex);
             }
         },
-        [isSubmitting, sessionId, plates, currentIndex, onComplete, onError]
+        [sessionId, currentPlate, currentIndex, totalPlates, navigate]
     );
+    const { image, options } = currentPlate;
+    const shuffledOptions = useMemo(() => {
+        const arr = [...options];
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }, [currentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ── Derived values for current plate ───────────────────────────────────
-    const currentPlateData = plates[currentIndex];
-
-    // Prefer options from API; fall back to a sensible default shape
-    const options = currentPlateData?.options ?? [
-        { id: "option_a", label: "A" },
-        { id: "option_b", label: "B" },
-        { id: "cannot_read", label: "Cannot read plate" },
-    ];
-
-    const gridOptions = options.slice(0, -1);     // all but last
-    const lastOption = options[options.length - 1]; // "Cannot read plate"
-
-    const plateImage = PLATE_IMAGES[currentIndex];
-
-    // ── Loading screen ──────────────────────────────────────────────────────
-    if (isLoading) {
-        return (
-            <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
-                <p className="text-white text-2xl font-mono animate-pulse">
-                    {t("colorBlindness.loading", "Loading test…")}
-                </p>
-            </div>
-        );
-    }
-
-    // ── Render ──────────────────────────────────────────────────────────────
+    const gridOptions = shuffledOptions.slice(0, -1);
+    const lastOption = shuffledOptions[shuffledOptions.length - 1];
     return (
         <div className="flex flex-col gap-36 inset-0 w-screen h-screen overflow-hidden bg-black p-10">
+
             {/* Background */}
             <div
                 className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
                 style={{ backgroundImage: `url(${bg1})` }}
             />
 
+            {/* Content */}
             <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto py-4 px-4 gap-18">
 
                 {/* Progress bar */}
                 <div className="w-full max-w-[665px] mt-10">
-                    <ProgressBar current={currentIndex + 1} total={plates.length} />
+                    <ProgressBar current={currentIndex + 1} total={totalPlates} />
                 </div>
 
                 {/* Question */}
@@ -227,52 +227,43 @@ export const ColorBlindQuiz = ({
 
                 {/* Timer */}
                 <CircularTimer
-                    timerSeconds={timeLeft}
+                    timerSeconds={initialTimer}
                     onExpire={() => handleAnswer(null, true)}
                     currentPlate={currentIndex + 1}
                 />
 
-                {/* Plate card */}
+                {/* Plate image */}
                 <div className="bg-white rounded-3xl p-6 w-[70%] max-w-[1018px] flex items-center justify-center shadow-2xl">
                     <img
-                        src={plateImage}
-                        alt={t("colorBlindness.plateAlt", `Plate ${currentIndex + 1}`)}
+                        src={image}
+                        alt={t("colorBlindness.plateAlt", "Color blindness plate")}
                         className="w-full h-auto object-cover rounded-2xl"
                     />
                 </div>
 
                 {/* Answer buttons */}
                 <div className="flex flex-col items-center gap-5 w-full max-w-[1510px]">
+
+                    {/* Options A–D in a row */}
                     <div className="flex flex-wrap justify-center gap-6">
-                        {gridOptions.map((opt) => (
+                        {gridOptions.map((label) => (
                             <OptionButton
-                                key={opt.id}
-                                label={opt.label}
-                                onClick={() => handleAnswer(opt.id)}
-                                disabled={isSubmitting}
+                                key={label}
+                                label={label}
+                                onClick={() => handleAnswer(label)}
                             />
                         ))}
                     </div>
 
-                    {lastOption && (
-                        <OptionButton
-                            key={lastOption.id}
-                            label={lastOption.label}
-                            onClick={() => handleAnswer(lastOption.id)}
-                            disabled={isSubmitting}
-                            wide
-                        />
-                    )}
+                    {/* Option E — wide centred (No number / No lines) */}
+                    <OptionButton
+                        key={lastOption}
+                        label={lastOption}
+                        onClick={() => handleAnswer(lastOption)}
+                        wide
+                    />
                 </div>
 
-                {/* Submitting overlay – prevents double-tap */}
-                {isSubmitting && (
-                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center z-20">
-                        <p className="text-white text-xl font-mono animate-pulse">
-                            {t("colorBlindness.submitting", "Saving…")}
-                        </p>
-                    </div>
-                )}
             </div>
         </div>
     );

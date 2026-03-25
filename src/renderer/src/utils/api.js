@@ -189,11 +189,11 @@ export async function realtimeCapture(kiosk_id=null) {
   }
 }
 
-export async function colorBlindessStart(userId,kisokId){
+export async function colorBlindessStart(userId,kiosk_id){
   try {
     const payload ={
       user_id:userId,
-      kiosk_id:kioskId
+      kiosk_id
     }
 
     const response = await fetch(`${API_BASE_URL}/color-blindness/start`,{
@@ -256,10 +256,15 @@ export async function colorBlindessComplete(sessionId){
   }
 }
 
-export async function colorBlindessSubmit(sessionId){
+export async function colorBlindessSubmit(sessionId,plateId,selectedAnswer,noResponse,responseTimeMs){
+  console.log("colorBlindessSubmit",sessionId,plateId,selectedAnswer,noResponse,responseTimeMs)
   try {
     const payload ={
       session_id:sessionId,
+      plate_id:plateId,
+      selected_answer:selectedAnswer,
+      no_response:noResponse,
+      response_time_ms:responseTimeMs,
     }
 
     const response = await fetch(`${API_BASE_URL}/color-blindness/response`,{
@@ -291,10 +296,14 @@ export async function colorBlindessSubmit(sessionId){
 
 export async function getColorBlindessPlates(){
   try {
-  
-    const response = await fetch(`${API_BASE_URL}/plates/seed`)
+    const response = await fetch(`${API_BASE_URL}/plates/seed`,{
+      method: 'POST', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
 
-     if (!response.ok) {
+    if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
