@@ -117,7 +117,7 @@ export const BIAComponent = ({
             <img
               src={textframe}
               alt="text-frame"
-              className="absolute top-[4.5rem] rotate-180"
+              className="absolute top-[7.5rem] rotate-180"
             />
 
             <p className="text-white font-medium tracking-tight landscape:text-4xl portrait:text-[36px] mt-[4rem]">
