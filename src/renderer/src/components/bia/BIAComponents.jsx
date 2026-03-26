@@ -157,16 +157,21 @@ export const BIAComponent = ({
         )}
       </div>
 
-      <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
-
-        <video
-          src={screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "imcomplete" ? biaImComplete : null}
-          autoPlay
-          loop
-          playsInline
-          className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
-        />
-      </div>
+      {(() => {
+        const videoSrc = screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "imcomplete" ? biaImComplete : null;
+        return videoSrc ? (
+          <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
+            <video
+              key={videoSrc}
+              src={videoSrc}
+              autoPlay
+              loop
+              playsInline
+              className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
+            />
+          </div>
+        ) : null;
+      })()}
     </>
   );
 };
