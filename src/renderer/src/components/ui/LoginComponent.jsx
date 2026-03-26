@@ -7,6 +7,9 @@ import BlackGradientButton from './BlackGradientButton'
 import { useNavigate } from 'react-router'
 const LoginComponent = () => {
   const navigate = useNavigate();
+  const handleBack = () => {
+    navigate('/welcome');
+  }
   return (
     <div className="fixed inset-0 w-screen min-h-screen overflow-hidden bg-black font-['Share_Tech_Mono']">
       {/* background */}
@@ -15,7 +18,7 @@ const LoginComponent = () => {
         style={{ backgroundImage: `url(${bg1})` }}
       />
       <div className="fixed top-4 left-4">
-        <BackButton />
+        <BackButton onClick={handleBack} />
       </div>
 
       {/* top text */}
