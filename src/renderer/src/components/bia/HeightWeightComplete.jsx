@@ -31,7 +31,7 @@ export default function HeightWeightComplete({ heightValue, weightValue, onNextC
                     className="absolute inset-0 flex items-center justify-center text-white font-mono tracking-widest"
                     style={{ fontSize: "clamp(1.4rem, 4vw, 3rem)" }}
                 >
-                    {weightValue}
+                    {(parseFloat(weightValue).toFixed(2))} kg
                 </span>
             </div>
             <BlueGradientButton onClick={onNextClick}>
