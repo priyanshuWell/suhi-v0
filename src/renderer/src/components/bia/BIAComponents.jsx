@@ -12,7 +12,9 @@ import biaImComplete from '../../assets/bia/bia-imcomplete.mp4'
 import heightResSvg from "../../assets/bia/height_res.svg";
 import weightResSvg from "../../assets/bia/weight_res.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
+import { Volume2 } from "lucide-react";
 import HeightWeightComplete from "./HeightWeightComplete";
+import ReplayAudio from "../ReplayAudio";
 
 export const BIAComponent = ({
   texts,
@@ -125,6 +127,9 @@ export const BIAComponent = ({
             <p className="text-white font-medium tracking-tight landscape:text-4xl portrait:text-[36px] mt-[4rem]">
               {currentText.description}
             </p>
+
+            {/* Replay Button */}
+            <ReplayAudio playAudio={playAudio} />
 
             {/* PROGRESS BAR (ONLY FOR IM) */}
             {screenType === "im" && (

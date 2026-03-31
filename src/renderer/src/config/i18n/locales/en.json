@@ -8,7 +8,8 @@
     "congratulations": "Congratulations!",
     "here_are_results": "Here are your results",
     "go_to_homepage": "Go to homepage",
-    "audio_not_supported": "Your browser does not support the audio element."
+    "audio_not_supported": "Your browser does not support the audio element.",
+    "replay": "Replay Audio"
   },
   "profile": {
     "name": "Name",

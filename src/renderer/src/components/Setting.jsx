@@ -56,7 +56,7 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
       ref={trackRef}
       className="relative cursor-pointer touch-none select-none w-full"
       style={{
-        height: '44px',
+        height: '30px',
         filter: 'drop-shadow(0px 7px 36px rgba(154, 217, 255, 0.5))',
       }}
       onPointerDown={handlePointerDown}
@@ -70,7 +70,7 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
       {/* Value fill */}
       <div className="absolute inset-0 rounded-[24px] overflow-hidden">
         <div
-          className="h-full rounded-[44px] transition-[width] duration-75 ease-out"
+          className="h-full rounded-[34px] transition-[width] duration-75 ease-out"
           style={{
             width: `${fillWidth}px`,
             backgroundColor: '#9ad9ff',
@@ -80,7 +80,7 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
 
       {/* Grabber */}
       <div
-        className="absolute top-[10px] w-[24px] h-[24px] rounded-full pointer-events-none z-10 transition-[left] duration-75 ease-out bg-[#010508]"
+        className="absolute top-[5px] w-[20px] h-[20px] rounded-full pointer-events-none z-10 transition-[left] duration-75 ease-out bg-[#010508]"
         style={{ left: `${grabberLeft}px` }}
       />
     </div>

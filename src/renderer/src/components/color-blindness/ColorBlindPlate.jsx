@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import bg1 from "../../assets/lightbg.png";
@@ -8,6 +9,7 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
+import ReplayAudio from "../ReplayAudio";
 
 
 export const ColorBlindPlate = () => {
@@ -103,6 +105,13 @@ export const ColorBlindPlate = () => {
                     <br /><br />
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>
+
+                <ReplayAudio playAudio={() => {
+                    if (audioRef.current) {
+                        audioRef.current.currentTime = 0;
+                        audioRef.current.play();
+                    }
+                }} />
 
                 {/* Example plate */}
                 <div className="relative overflow-hidden rounded-3xl w-[70%] max-w-[1018px] flex items-center justify-center p-6">
