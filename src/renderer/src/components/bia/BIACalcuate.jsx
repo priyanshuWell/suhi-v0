@@ -30,9 +30,10 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [barefootCTAVisible, setBarefootCTAVisible] = useState(true);
+  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
+  const imCompleteResolver = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({ height: "-- cm", weight: "-- kg" });
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
@@ -422,6 +423,17 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  const handleImNextClick = () => {
+    console.log("[BIA DEBUG] imcomplete Next button clicked");
+    if (imCompleteResolver.current) {
+      imCompleteResolver.current();
+      imCompleteResolver.current = null;
+    } else {
+      setIsComplete(true);
+      navigate("/voice");
+    }
+  };
+
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!");
@@ -781,10 +793,10 @@ export default function BIACalculate({ user, onComplete }) {
       if (resultsRef.current.isShoesContinued) {
         console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
-        await sleep(3000);
         await BIAComplete({ session_id: storeUser?.data?.buffer_id });
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
+        await new Promise((resolve) => { imCompleteResolver.current = resolve; });
         setIsComplete(true);
         navigate("/voice");
         return;
@@ -980,9 +992,8 @@ export default function BIACalculate({ user, onComplete }) {
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
-      await sleep(3000); // Wait for complete video
-      // Clear timeouts
-      //clearAllTimeouts();
+
+      await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
       navigate("/voice");
 
@@ -995,10 +1006,10 @@ export default function BIACalculate({ user, onComplete }) {
       // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
-      await sleep(3000);
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
+      await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
       navigate("/voice");
     }
@@ -1112,6 +1123,7 @@ export default function BIACalculate({ user, onComplete }) {
         heightValue={measuredValues.height}
         weightValue={measuredValues.weight}
         onNextClick={handleWhNextClick}
+        onImNextClick={handleImNextClick}
       />
 
       <ErrorAlert

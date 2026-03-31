@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import bg1 from "../../assets/lightbg.png";
+import biaCompleteAlertSvg from "../../assets/bia/bia_complete_alert.svg";
 import { useParams } from "react-router";
 import progessbg from "../../assets/progress-bg.svg";
 import textframe from "../../assets/textFrame.png";
@@ -23,6 +24,7 @@ export const BIAComponent = ({
   heightValue = "132 cm",
   weightValue = "30 kg",
   onNextClick,
+  onImNextClick,
 }) => {
   const { t } = useTranslation();
   const { screenType } = useParams();
@@ -172,6 +174,23 @@ export const BIAComponent = ({
           </div>
         ) : null;
       })()}
+
+      {screenType === "imcomplete" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="relative w-[80%] max-w-4xl flex justify-center">
+            <img
+              src={biaCompleteAlertSvg}
+              alt="bia-complete"
+              className="w-full h-auto"
+            />
+            <div className="absolute bottom-[20%]">
+              <BlueGradientButton onClick={onImNextClick}>
+                Next
+              </BlueGradientButton>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

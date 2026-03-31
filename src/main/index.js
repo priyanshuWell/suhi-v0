@@ -8,8 +8,29 @@ import fs from "fs"
 import crypto from "crypto"
 import axios from "axios"
 import express from "express"
+const loudness = require("loudness")
 
 let mainWindow = null
+
+ipcMain.handle("set-volume", async (_event, volume) => {
+  try {
+    await loudness.setVolume(volume)
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to set volume:", error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle("get-volume", async () => {
+  try {
+    const volume = await loudness.getVolume()
+    return { success: true, volume }
+  } catch (error) {
+    console.error("Failed to get volume:", error)
+    return { success: false, error: error.message }
+  }
+})
 
 ipcMain.handle("get-ports", async () => {
   console.log("[MAIN] get-ports request received")

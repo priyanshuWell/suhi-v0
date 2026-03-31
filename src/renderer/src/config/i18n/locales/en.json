@@ -1,6 +1,7 @@
 {
   "common": {
     "start": "Start",
+    "next": "Next",
     "new_user": "New user? Register here",
     "yes_me": "Yes, it's me",
     "not_me": "Not You?",
@@ -21,7 +22,28 @@
     "good_job": "Good Job!",
     "holdThe_Hands": "Hold the two handles and keep your elbows straight and relaxed.",
     "weight": "Weight",
-    "height": "Height"
+    "height": "Height",
+    "whcomplete_title": "Good Job!",
+    "whcomplete_desc": "Weight and Height Measurement Completed!",
+    "imcomplete_title": "Good Job!",
+    "imcomplete_desc": "Body Composition Analysis Complete!"
+  },
+  "videoCapture": {
+    "instruction": "Look at the top Camera",
+    "error_unregistered_title": "face Not Registered",
+    "error_unregistered_desc": "User is not registered in the system.\nRedirecting to manual login...",
+    "error_unrecognized_title": "Face Not Recognized",
+    "error_unrecognized_retry_desc": "No face detected OR Multiple faces detected.\nRetrying......",
+    "error_unrecognized_max_desc": "Maximum attempts reached\nReturning to login screen..."
+  },
+  "colorBlindness": {
+    "title": "Color Blindness Test",
+    "instructions_line1": "You have to click the number/shape for each image.",
+    "instructions_line2": "If you don't see anything just click on Cannot read plate.",
+    "instructions_line3": "There will be 14 plates.",
+    "instructions_example": "Example: This Number is 6. Click on next button to start!",
+    "plateAlt": "Example color blindness plate",
+    "next": "Next"
   },
   "dmit": {
     "hand_labels": {
