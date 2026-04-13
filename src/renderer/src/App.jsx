@@ -25,6 +25,7 @@ import LoginFather from './components/forms/LoginFather'
 import FingerPrintScreen from './components/forms/FingerPrintScreen'
 import ColorBlindPlate from './components/color-blindness/ColorBlindPlate'
 import ColorBlindQuiz from './components/color-blindness/ColorBlindQuiz'
+import DivideAttentionGame from './components/games/divide-attention/DivideAttentionGame'
 
 function App() {
   useEffect(() => {
@@ -49,7 +50,7 @@ function App() {
       <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
-      <Route path='/' element={<SplashScreen />} />
+      {/* <Route path='/' element={<SplashScreen />} /> */}
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
@@ -59,6 +60,7 @@ function App() {
       <Route path="/fingerprint" element={<FingerPrintScreen />} />
       <Route path="/colorblindness" element={<ColorBlindPlate />} />
       <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
+      <Route path="/" element={<DivideAttentionGame />} />
     </Routes>
   )
 }

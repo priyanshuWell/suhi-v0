@@ -87,7 +87,7 @@ export default function BIACalculate({ user, onComplete }) {
     legImpedance_hasWeight: "Please make sure you are barefoot",
     weight: "Please step on the platform barefoot",
     height: "Please stand straight & still",
-    armImpedance: "Please be barefoot and hold the rods firmly",
+    armImpedance: "Please hold the rods firmly",
     impedance20: "Please be barefoot and hold the rods firmly",
     impedance100: "Please be barefoot and hold the rods firmly",
     maxRetryReached: "Maximum retries reached. redirecting to dmit.",
