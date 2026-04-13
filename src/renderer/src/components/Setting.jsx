@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect ,useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import settingbg from '../assets/setting-bg.svg'
 import soundIcon from '../assets/sound-btn.png'
 import langIcon from '../assets/language-btn.png'
 
-/* ── GlowSlider — Figma node 8662:1453 ── */
+
+
 const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
   const trackRef = useRef(null)
   const isDragging = useRef(false)
   const [trackWidth, setTrackWidth] = useState(380)
+
   const percent = ((value - min) / (max - min)) * 100
 
   useEffect(() => {
     const track = trackRef.current
     if (!track) return
+
     const observer = new ResizeObserver(([entry]) => {
       setTrackWidth(entry.contentRect.width)
     })
+
     observer.observe(track)
     return () => observer.disconnect()
   }, [])
@@ -25,52 +29,73 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
     (clientX) => {
       const track = trackRef.current
       if (!track) return
+
       const rect = track.getBoundingClientRect()
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width))
       const newValue = Math.round(min + (x / rect.width) * (max - min))
+
       onChange?.(newValue)
     },
     [min, max, onChange]
   )
 
+  // ✅ Attach global listeners for smooth touch drag
+  useEffect(() => {
+    const handleMove = (e) => {
+      if (!isDragging.current) return
+      updateValue(e.clientX || (e.touches && e.touches[0].clientX))
+    }
+
+    const handleUp = () => {
+      isDragging.current = false
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    window.addEventListener('touchmove', handleMove, { passive: false })
+    window.addEventListener('touchend', handleUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+      window.removeEventListener('touchmove', handleMove)
+      window.removeEventListener('touchend', handleUp)
+    }
+  }, [updateValue])
+
   const handlePointerDown = (e) => {
     isDragging.current = true
-    e.currentTarget.setPointerCapture(e.pointerId)
     updateValue(e.clientX)
   }
 
-  const handlePointerMove = (e) => {
-    if (!isDragging.current) return
-    updateValue(e.clientX)
-  }
+  // ✅ Fixed calculations
+  const fillWidth = (percent / 100) * trackWidth
 
-  const handlePointerUp = () => {
-    isDragging.current = false
-  }
-
-  const fillWidth = Math.max((percent / 100) * trackWidth, 20)
-  const grabberLeft = Math.max(5, Math.min(fillWidth - 20, trackWidth - 30))
+  const grabberSize = 15
+  const grabberLeft = Math.max(
+    0,
+    Math.min(fillWidth - grabberSize / 2, trackWidth - grabberSize)
+  )
 
   return (
     <div
       ref={trackRef}
-      className="relative cursor-pointer touch-none select-none w-full"
+      className="relative cursor-pointer select-none w-[200px]"
       style={{
-        height: '30px',
+        height: '24px',
+        touchAction: 'none', // ✅ critical for touch
+        WebkitUserSelect: 'none',
         filter: 'drop-shadow(0px 7px 36px rgba(154, 217, 255, 0.5))',
       }}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
     >
       {/* Base track */}
       <div className="absolute inset-0 rounded-[24px] bg-[#01060a]" />
 
-      {/* Value fill */}
+      {/* Fill */}
       <div className="absolute inset-0 rounded-[24px] overflow-hidden">
         <div
-          className="h-full rounded-[34px] transition-[width] duration-75 ease-out"
+          className="h-full rounded-[34px]"
           style={{
             width: `${fillWidth}px`,
             backgroundColor: '#9ad9ff',
@@ -80,13 +105,14 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
 
       {/* Grabber */}
       <div
-        className="absolute top-[5px] w-[20px] h-[20px] rounded-full pointer-events-none z-10 transition-[left] duration-75 ease-out bg-[#010508]"
+        className="absolute top-[4px] w-[15px] h-[15px] rounded-full pointer-events-none z-10 bg-[#010508]"
         style={{ left: `${grabberLeft}px` }}
       />
     </div>
   )
 }
 
+export default GlowSlider
 export const Setting = ({ setIsActive, isActive }) => {
   const { i18n } = useTranslation()
   const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || 'en')
