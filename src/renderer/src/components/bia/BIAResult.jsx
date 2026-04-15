@@ -106,14 +106,14 @@ const BIAResult = () => {
 
       body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
         ? {
-          vata: 0,
-          pitta: 60,
+          vata: 20,
+          pitta: 50,
           kapha: 30
         }
         : {
           vata: 40,
-          pitta: 60,
-          kapha: 0
+          pitta: 30,
+          kapha: 30
         },
 
       hydration: null,
@@ -326,28 +326,35 @@ const BIAResult = () => {
       />
 
       <div className="relative z-10 flex min-h-full w-full flex-col items-center p-4 pb-6">
-        <h1 className="mt-4 w-[50%] text-center text-4xl leading-10 tracking-wider font-bold text-white">
-          {t('bia_result.congratulations')}
+        <h1 className="mt-4 w-[80%] text-center text-4xl leading-10 tracking-wider font-bold text-white">
+          {t('bia_result.congratulations')} {`Aarav,`}
           <br />
-          {t('bia_result.here_are_results')} </h1>
+          {t('bia_result.here_are_results')}
+        </h1>
 
         {/* The Frame Container */}
-        <div className="relative mt-4 w-full max-w-[1080px]">
+        <div className="relative mt-8 max-w-[1080px] m-10 "
+          style={{
+            boxShadow: "0px 35.76px 176.82px rgba(154, 217, 255, 0.5)"
+          }}>
           <img
             src={biaResultFrame}
             alt="BIA Frame"
-            className="w-full mb-[33px] h-auto object-contain drop-shadow-[0px_35.76px_176.82px_0px_rgba(154,217,255,0.5)]"
+            style={{
+              filter: `drop-shadow(0px 35.76px 176.82px rgba(154, 217, 255, 0.5))`
+            }}
+            className="w-full h-auto object-contain"
           />
 
-          <div className="absolute inset-0 flex flex-col items-center gap-3 px-[14%] pb-[7%] pt-[13%] text-white">
+          <div className="absolute inset-0 flex flex-col items-center gap-3 px-[10%] pb-[18%] pt-[15%] text-white overflow-hidden">
 
             {/* Body Constitution - Circular Chart */}
             <div className="w-full flex justify-center items-center mb-2">
               <div className="w-full">
                 <BodyConstitution
-                // vata={apiReport?.body_constitution?.vata}
-                // pitta={apiReport?.body_constitution?.pitta}
-                // kapha={apiReport?.body_constitution?.kapha}
+                  vata={apiReport?.body_constitution?.vata}
+                  pitta={apiReport?.body_constitution?.pitta}
+                  kapha={apiReport?.body_constitution?.kapha}
                 />
               </div>
             </div>

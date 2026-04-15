@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { KaphaIcon, PittaIcon, VataIcon } from '../../assets/index'
 
 export const CircularChart = ({ data }) => {
-  const radius = 50
+  const radius = 70
   const strokeWidth = 10
   const circumference = 2 * Math.PI * radius
   const gapPercent = 4
 
   const svgWidth = 320
-  const svgHeight = 200
+  const svgHeight = 240
   const cx = svgWidth / 2
   const cy = svgHeight / 2
 
@@ -48,15 +48,15 @@ export const CircularChart = ({ data }) => {
       const edgeR = radius + strokeWidth / 2 + 2
       const edgePt = getPoint(midAngle, edgeR)
 
-      // Radial extension length — longer for small segments so labels don't sit on the circle
-      const radialLen = item.normalizedPercent < 15 ? 34 : 24
+      // Radial extension length
+      const radialLen = item.normalizedPercent < 15 ? 26 : 18
       const radialPt = getPoint(midAngle, edgeR + radialLen)
 
       // Which half of the circle determines horizontal direction
       const isRightSide = radialPt.x >= cx
 
       // Horizontal tail at the end of the radial extension
-      const tailLen = 20
+      const tailLen = 16
       const tailPt = {
         x: isRightSide ? radialPt.x + tailLen : radialPt.x - tailLen,
         y: radialPt.y,
