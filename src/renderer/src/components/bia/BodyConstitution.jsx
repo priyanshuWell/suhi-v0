@@ -10,11 +10,9 @@ import { CircularChart } from './CircularChart'
  * @param {number} vata - Vata percentage (0-100)
  * @param {number} pitta - Pitta percentage (0-100)
  * @param {number} kapha - Kapha percentage (0-100)
- * 
- * Usage:
- * <BodyConstitution vata={40} pitta={30} kapha={30} />
+
  */
-const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
+const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
   const { t } = useTranslation()
 
   // Ensure values are numbers and handle null/undefined
@@ -60,11 +58,11 @@ const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
   return (
     <div className="w-full bg-transparent p-2">
       {/* Title */}
-      <h2 className="text-[#FFFFFF] text-3xl xl:text-4xl  text-center mb-4 tracking-wider">
+      <h2 className="text-[#FFFFFF] text-2xl xl:text-3xl text-center mb-4 tracking-wider">
         {t('bia_result.head_desc')}
       </h2>
 
-      <div className="flex justify-center pb-8">
+      <div className="flex justify-center">
         <CircularChart data={doshaConfig} />
       </div>
     </div>

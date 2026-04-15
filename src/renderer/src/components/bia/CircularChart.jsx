@@ -1,15 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowKapha, ArrowPitta, ArrowVata, KaphaIcon, PittaIcon, VataIcon } from '../../assets/index'
-import { getCoordinates } from '../../utils/utility'
+import { useEffect, useState } from 'react'
+import { KaphaIcon, PittaIcon, VataIcon } from '../../assets/index'
 
 export const CircularChart = ({ data }) => {
-  const radius = 74
+  const radius = 50
   const strokeWidth = 10
   const circumference = 2 * Math.PI * radius
   const gapPercent = 4
 
-  const containerRef = useRef(null)
-  const [size, setSize] = useState({ width: 0, height: 0 })
+  const svgWidth = 320
+  const svgHeight = 200
+  const cx = svgWidth / 2
+  const cy = svgHeight / 2
+
   const [animatedData, setAnimatedData] = useState([])
 
   useEffect(() => {
@@ -17,81 +19,84 @@ export const CircularChart = ({ data }) => {
     return () => clearTimeout(timer)
   }, [data])
 
-  useEffect(() => {
-    if (!containerRef.current) return
+  // Convert cumulative percent position to angle in radians
+  // 0% = top of circle (−90°), going clockwise
+  const percentToAngle = (percent) => {
+    const angleDeg = (percent / 100) * 360 - 90
+    return (angleDeg * Math.PI) / 180
+  }
 
-    const updateSize = () => {
-      const rect = containerRef.current.getBoundingClientRect()
-      setSize({ width: rect.width, height: rect.height })
-    }
-
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    return () => window.removeEventListener('resize', updateSize)
-  }, [])
-
-
-  let cumulativePercent = 0
-
-  const arrowPositions = data.map((item) => {
-    const start = cumulativePercent
-    const mid = start + item.normalizedPercent / 2
-    cumulativePercent += item.normalizedPercent
-
-    const dynamicRadius =
-      item.normalizedPercent < 5 ? radius + 35 : radius + 20
-
-    const base = getCoordinates(mid, dynamicRadius, size)
-
-    let offsetX = 0
-    let offsetY = 0
-
-    const label = item.label.toLowerCase()
-
-    if (label === 'kapha') {
-      offsetY += 40
-      offsetX -= 100
-    }
-
-    if (label === 'pitta') {
-      offsetY -= 2
-      offsetX += 126
-    }
-
-    if (label === 'vata') {
-      offsetY += 20
-      offsetX += 92
-    }
-
-    return {
-      x: base.x + offsetX,
-      y: base.y + offsetY,
-      label: item.label,
-      percent: item.normalizedPercent,
-    }
+  // Get x,y at given angle and distance from center
+  const getPoint = (angleRad, r) => ({
+    x: cx + r * Math.cos(angleRad),
+    y: cy + r * Math.sin(angleRad),
   })
 
-  cumulativePercent = 0
+  // Build geometry for each segment's arrow + label
+  let cumPercent = 0
+  const segments = data
+    .filter((item) => item.normalizedPercent > 0)
+    .map((item) => {
+      const startPercent = cumPercent
+      cumPercent += item.normalizedPercent
+
+      // Midpoint of the arc = where the arrow originates
+      const midPercent = startPercent + item.normalizedPercent / 2
+      const midAngle = percentToAngle(midPercent)
+
+      // Arrow starts just outside the stroke edge
+      const edgeR = radius + strokeWidth / 2 + 2
+      const edgePt = getPoint(midAngle, edgeR)
+
+      // Radial extension length — longer for small segments so labels don't sit on the circle
+      const radialLen = item.normalizedPercent < 15 ? 34 : 24
+      const radialPt = getPoint(midAngle, edgeR + radialLen)
+
+      // Which half of the circle determines horizontal direction
+      const isRightSide = radialPt.x >= cx
+
+      // Horizontal tail at the end of the radial extension
+      const tailLen = 20
+      const tailPt = {
+        x: isRightSide ? radialPt.x + tailLen : radialPt.x - tailLen,
+        y: radialPt.y,
+      }
+
+      const arrowPoints = `${edgePt.x},${edgePt.y} ${radialPt.x},${radialPt.y} ${tailPt.x},${tailPt.y}`
+
+      return {
+        ...item,
+        startPercent,
+        midAngle,
+        edgePt,
+        radialPt,
+        tailPt,
+        isRightSide,
+        arrowPoints,
+      }
+    })
+
+  // Render arc cumulative offset
+  let arcCumPercent = 0
 
   return (
-    <div
-      ref={containerRef}
-      className="w-full max-w-[420px] mx-auto aspect-[2/1] relative"
-    >
-      <svg viewBox="0 0 260 160" className="w-full h-full">
-        {/* Chart */}
-        <g transform="translate(130,80) rotate(-90)">
+    <div className="w-full max-w-[420px] mx-auto aspect-[16/10] relative">
+      <svg
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        className="w-full h-full"
+        overflow="visible"
+      >
+        {/* Donut arcs */}
+        <g transform={`translate(${cx},${cy}) rotate(-90)`}>
           {data.map((item, index) => {
             const adjustedPercent = Math.max(
               item.normalizedPercent - gapPercent,
               0
             )
-
             const finalDash = (adjustedPercent / 100) * circumference
             const dash = animatedData.length ? finalDash : 0
-
-            const offset = circumference * (cumulativePercent / 100)
-            cumulativePercent += item.normalizedPercent
+            const offset = circumference * (arcCumPercent / 100)
+            arcCumPercent += item.normalizedPercent
 
             return (
               <circle
@@ -114,73 +119,108 @@ export const CircularChart = ({ data }) => {
         </g>
 
         {/* Center Text */}
-        <g transform="translate(130,80)" textAnchor="middle">
-          <text y="-6" fill="#38BDF8" className="text-2xl font-medium">
+        <g transform={`translate(${cx},${cy})`} textAnchor="middle">
+          <text y="-8" fill="#38BDF8" fontSize="22" fontWeight="600">
             Energy
           </text>
-          <text y="20" fill="#38BDF8" className="text-2xl font-medium">
+          <text y="20" fill="#38BDF8" fontSize="22" fontWeight="600">
             Mix
           </text>
         </g>
+
+        {/* Arrows + Labels for each segment */}
+        {segments.map((seg, i) => {
+          const lbl = seg.label.toLowerCase()
+
+          // foreignObject sizing for the inline label
+          const foWidth = 150
+          const foHeight = 40
+          const labelGap = 6
+
+          // Position the label block at the end of the tail
+          let foX, foY
+
+          if (seg.isRightSide) {
+            // Label sits to the right of the tail end
+            foX = seg.tailPt.x + labelGap
+            foY = seg.tailPt.y - foHeight / 2
+          } else {
+            // Label sits to the left of the tail end
+            foX = seg.tailPt.x - labelGap - foWidth
+            foY = seg.tailPt.y - foHeight / 2
+          }
+
+          return (
+            <g key={i}>
+              {/* Dashed arrow: circle edge → radial out → horizontal tail */}
+              <polyline
+                points={seg.arrowPoints}
+                fill="none"
+                stroke="white"
+                strokeWidth="1.2"
+                strokeDasharray="3 3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {/* Label: icon + name + percent (all inline) */}
+              <foreignObject
+                x={foX}
+                y={foY}
+                width={foWidth}
+                height={foHeight}
+                overflow="visible"
+              >
+                <div
+                  xmlns="http://www.w3.org/1999/xhtml"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: seg.isRightSide ? 'flex-start' : 'flex-end',
+                    gap: '6px',
+                    width: '100%',
+                    height: '100%',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      width: 28,
+                      height: 28,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {lbl === 'vata' && <VataIcon />}
+                    {lbl === 'pitta' && <PittaIcon />}
+                    {lbl === 'kapha' && <KaphaIcon />}
+                  </span>
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '18px',
+                      fontFamily: 'var(--font-tech-mono), monospace',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {seg.label}
+                  </span>
+                  <span
+                    style={{
+                      color: 'white',
+                      fontSize: '16px',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {Math.round(seg.normalizedPercent)}%
+                  </span>
+                </div>
+              </foreignObject>
+            </g>
+          )
+        })}
       </svg>
-
-      {arrowPositions.map((pos, i) => {
-        const isKapha = pos.label.toLowerCase() === 'kapha'
-        const isVata = pos.label.toLowerCase() === 'vata'
-        const isPitta = pos.label.toLowerCase() === 'pitta'
-
-
-        return (
-          <div
-            key={i}
-            className={`absolute text-white text-sm flex gap-2 ${isKapha || isVata ? 'items-start' : 'items-end'}`}
-            style={{
-              left: pos.x,
-              top: pos.y,
-              transform: 'translate(-50%, -50%)',
-            }}
-          >
-            {/* ✅ Kapha → Label First */}
-            {isKapha && (
-              <div className="flex items-baseline mt-auto gap-2 whitespace-nowrap">
-                <span className="">
-                  <KaphaIcon />
-                </span>
-
-                <span className="font-[var(--font-tech-mono)] text-4xl leading-none pb-4">
-                  {pos.label}
-                </span>
-
-                <span className=" leading-none translate-y-[2px] text-3xl pb-4">
-                  {pos.percent}%
-                </span>
-              </div>
-            )}
-            <div className={`flex  py-4  ${isKapha ? 'flex-col-reverse' : ''}`}>
-              {/* Arrow */}
-              {pos.label.toLowerCase() === 'vata' && <ArrowVata />}
-              {pos.label.toLowerCase() === 'pitta' && <ArrowPitta />}
-              {pos.label.toLowerCase() === 'kapha' && <ArrowKapha />}
-            </div>
-
-            {!isKapha && (
-              <div className="mt-1 flex items-baseline gap-2 whitespace-nowrap">
-                <span className="flex-shrink-0">
-                  {isVata ? <VataIcon /> : <PittaIcon />}
-                </span>
-
-                <span className="font-[var(--font-tech-mono)] text-4xl leading-none">
-                  {pos.label}
-                </span>
-
-                <span className=" leading-none translate-y-[2px] text-3xl">
-                  {pos.percent}%
-                </span>
-              </div>
-            )}
-          </div>
-        )
-      })}
     </div>
   )
 }
