@@ -26,12 +26,12 @@ const renderInsightCard = ({
       </div>
     </div>
 
-    <div className="mt-3 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch">
+    <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch">
       {items.map((item, index) => (
         <div key={item.label} className="contents">
-          <div className="flex flex-col items-center justify-center px-4 py-3 text-center shadow-[0_0_44px_rgba(255,255,255,0.05)_inset]">
-            <p className="text-[14px] text-white/75 tracking-[0.1em] font-light">{item.label}</p>
-            <p className="mt-2 text-[22px] leading-tight text-white tracking-[0.06em] font-medium">
+          <div className="flex flex-col items-center justify-center px-4 py-4 text-center shadow-[0_0_44px_rgba(255,255,255,0.05)_inset]">
+            <p className="text-[15px] text-white/75 tracking-[0.1em] font-light">{item.label}</p>
+            <p className={`mt-2.5 text-[28px] leading-tight tracking-[0.06em] font-medium ${item.valueClassName || 'text-white'}`}>
               {item.value}
             </p>
           </div>
@@ -255,46 +255,55 @@ const BIAResult = () => {
 
   const feelingsItems = [
     {
-      label: 'Emotion',
-      value: formatLabel(personalityTraits[0], 'Balanced')
+      label: 'Emotion Regulation',
+      value: formatLabel(personalityTraits[0], 'Good'),
+      valueClassName: 'text-[#2CEF94]'
     },
     {
-      label: 'Self-esteem',
-      value: formatLabel(apiReport?.personality?.type, 'Balanced')
+      label: 'Self-Esteem',
+      value: 'Well Developed',
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Personality',
-      value: personalityAnimal
+      value: 'Dominant',
+      valueClassName: 'text-[#2CEF94]'
     }
   ]
 
   const learningItems = [
     {
       label: 'Attention',
-      value: formatLabel(personalityTraits[1], 'Focused')
+      value: 'Well Developed',
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Memory',
-      value: formatLabel(personalityTraits[2], 'Developing')
+      value: 'Developing',
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Learning Style',
-      value: learnerStyleLabel
+      value: 'Visual',
+      valueClassName: 'text-[#2CEF94]'
     }
   ]
 
   const healthItems = [
     {
       label: t('bia_result.height'),
-      value: `${formatLabel(finalHeight, '--')} cm`
+      value: `${formatLabel(finalHeight, '--')} cm`,
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: t('bia_result.weight'),
-      value: `${formatLabel(finalWeight, '--')} kg`
+      value: `${formatLabel(finalWeight, '--')} kg`,
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: t('bia_result.hydration'),
-      value: hydrationLevel
+      value: hydrationLevel,
+      valueClassName: 'text-[#2CEF94]'
     }
   ]
 
@@ -305,15 +314,18 @@ const BIAResult = () => {
   const healthSummaryItems = [
     {
       label: t('bia_result.hydration'),
-      value: hydrationLevel
+      value: hydrationLevel,
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Muscle Mass',
-      value: formatLabel(apiReport?.muscle_mass?.level, 'Optimal')
+      value: formatLabel(apiReport?.muscle_mass?.level, 'Optimal'),
+      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Fat Mass',
-      value: formatLabel(apiReport?.fat_mass?.level, 'Low')
+      value: formatLabel(apiReport?.fat_mass?.level, 'Low'),
+      valueClassName: 'text-[#2CEF94]'
     }
   ]
 
@@ -346,10 +358,10 @@ const BIAResult = () => {
             className="w-full h-auto object-contain"
           />
 
-          <div className="absolute inset-0 flex flex-col items-center gap-3 px-[10%] pb-[18%] pt-[15%] text-white overflow-hidden">
+          <div className="absolute inset-0 flex flex-col items-center gap-4 px-[10.5%] pb-[18%] pt-[14%] text-white overflow-hidden">
 
             {/* Body Constitution - Circular Chart */}
-            <div className="w-full flex justify-center items-center mb-2">
+            <div className="w-full flex justify-center items-center mb-1">
               <div className="w-full">
                 <BodyConstitution
                   vata={apiReport?.body_constitution?.vata}
@@ -360,49 +372,49 @@ const BIAResult = () => {
             </div>
 
             {hasInsightCardsData ? (
-              <>
-                {/* Feelings & Behavior Card */}
+              <div className="w-full flex flex-col gap-6">
+                {/* Mind Card */}
                 {renderInsightCard({
-                  title: "Feelings & Behavior",
+                  title: "Mind",
                   icon: "🧠",
                   titleClassName: "text-[#29ABE2]",
                   cardClassName:
-                    "bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] border-[#29ABE2]",
+                    "bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] border-[#29ABE2] rounded-[12px]",
                   items: feelingsItems,
                   separatorClassName: "bg-[#29ABE2]",
                 })}
 
-                {/* Learning & Thinking Card */}
+                {/* Brain Card */}
                 {renderInsightCard({
-                  title: "Learning & Thinking",
-                  icon: learnerEmoji,
+                  title: "Brain",
+                  icon: "🧠",
                   titleClassName: "text-[#2CEF94]",
                   cardClassName:
-                    "bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)] border-[#2CEF94]",
+                    "bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)] border-[#2CEF94] rounded-[12px]",
                   items: learningItems,
                   separatorClassName: "bg-[#2CEF94]",
-                  footer: analysisData?.studyTip?.description || analysisData?.studyTip?.title,
+                  // footer: "Visual",
                   footerClassName: "text-[#2CEF94]"
                 })}
 
-                {/* Health & Growth Card */}
-                <div className="w-full rounded-[10px] border-[0.5px] border-[#FF9D5C] bg-[linear-gradient(180deg,rgba(255,157,92,0.05)_0%,rgba(255,157,92,0.2)_100%)] px-5 py-4">
+                {/* Body Card */}
+                <div className="w-full rounded-[12px] border-[0.5px] border-[#FF9D5C] bg-[linear-gradient(180deg,rgba(255,157,92,0.05)_0%,rgba(255,157,92,0.2)_100%)] px-5 py-3">
                   <div className="mx-auto flex w-fit items-center justify-center text-center">
                     <div className="flex items-center justify-center gap-2.5 px-3 py-1">
                       <span className="text-[22px] leading-none">🧍</span>
-                      <h3 className="text-[20px] tracking-[0.12em] text-[#FF9D5C]">Health & Growth</h3>
+                      <h3 className="text-[20px] tracking-[0.12em] text-[#FF9D5C]">Body</h3>
                     </div>
                   </div>
 
                   {/* Height & Weight row */}
-                  <div className="mt-3 grid grid-cols-2 gap-4">
+                  <div className="mt-4 grid grid-cols-2 gap-4">
                     {healthItems.slice(0, 2).map((item) => (
                       <div
                         key={item.label}
-                        className="flex min-h-[60px] items-center justify-center gap-4 rounded-[4px] border border-white/20 bg-[rgba(0,0,0,0.6)] px-4 py-3 text-center shadow-[0_0_20px_rgba(255,255,255,0.05)_inset]"
+                        className="flex min-h-[64px] items-center justify-center gap-4 rounded-[4px] border border-white/20 bg-[rgba(0,0,0,0.6)] px-4 py-3 text-center shadow-[0_0_20px_rgba(255,255,255,0.05)_inset]"
                       >
-                        <p className="text-[15px] text-white/85 tracking-[0.1em] font-light">{item.label}</p>
-                        <p className="text-[22px] leading-none tracking-[0.06em] text-[#FF9D5C] font-medium">
+                        <p className="text-[18px] text-white/85 tracking-[0.1em] font-light">{item.label}</p>
+                        <p className="text-[26px] leading-none tracking-[0.06em] text-[#FF9D5C] font-medium">
                           {item.value}
                         </p>
                       </div>
@@ -410,12 +422,12 @@ const BIAResult = () => {
                   </div>
 
                   {/* Hydration / Muscle / Fat row */}
-                  <div className="mt-3 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch px-2">
+                  <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch px-2">
                     {healthSummaryItems.map((item, index) => (
                       <div key={item.label} className="contents">
-                        <div className="flex flex-col items-center justify-center px-4 py-3 text-center shadow-[0_0_44px_rgba(255,157,92,0.08)_inset]">
-                          <p className="text-[14px] text-white/78 tracking-[0.1em] font-light">{item.label}</p>
-                          <p className="mt-2 text-[22px] leading-tight tracking-[0.06em] text-[#FFAB6B] font-medium">
+                        <div className="flex flex-col items-center justify-center px-4 py-4 text-center shadow-[0_0_44px_rgba(255,157,92,0.08)_inset]">
+                          <p className="text-[15px] text-white/78 tracking-[0.1em] font-light">{item.label}</p>
+                          <p className="mt-2.5 text-[26px] leading-tight tracking-[0.06em] text-[#FFAB6B] font-medium">
                             {item.value}
                           </p>
                         </div>
@@ -430,18 +442,18 @@ const BIAResult = () => {
                 </div>
 
                 {/* Color Blindness Card */}
-                <div className="w-full rounded-[10px] border-[0.5px] border-[#FFE15C] bg-[linear-gradient(180deg,rgba(255,225,92,0.05)_0%,rgba(255,225,92,0.2)_100%)] px-5 py-4">
+                <div className="w-full rounded-[12px] border-[0.5px] border-[#FFE15C] bg-[linear-gradient(180deg,rgba(255,225,92,0.05)_0%,rgba(255,225,92,0.2)_100%)] px-5 py-3.5">
                   <div className="flex items-center justify-center gap-3 text-center">
                     <span className="text-[22px] leading-none">👀</span>
                     <h3 className="text-[20px] tracking-[0.12em] text-[#FFE15C]">
-                      Color Blindness -
+                      Color Blindness-
                     </h3>
-                    <span className="text-[22px] tracking-[0.06em] text-white font-medium">
+                    <span className="text-[22px] tracking-[0.06em] text-white font-medium ml-1">
                       {formatLabel(apiReport?.color_blindness?.status, 'Not present')}
                     </span>
                   </div>
                 </div>
-              </>
+              </div>
             ) : (
               <div className="w-full rounded-[10px] border-[0.5px] border-[#29ABE2] bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] p-5">
                 <div className="flex flex-col items-center justify-center gap-2.5 text-center">

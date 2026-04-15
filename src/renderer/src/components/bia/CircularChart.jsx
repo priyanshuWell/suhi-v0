@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { KaphaIcon, PittaIcon, VataIcon } from '../../assets/index'
 
 export const CircularChart = ({ data }) => {
-  const radius = 70
+  const radius = 90
   const strokeWidth = 10
   const circumference = 2 * Math.PI * radius
   const gapPercent = 4
@@ -120,12 +120,12 @@ export const CircularChart = ({ data }) => {
 
         {/* Center Text */}
         <g transform={`translate(${cx},${cy})`} textAnchor="middle">
-          <text y="-8" fill="#38BDF8" fontSize="22" fontWeight="600">
-            Energy
+          <text y="0" fill="#38BDF8" fontSize="28" fontWeight="600">
+            Prakriti
           </text>
-          <text y="20" fill="#38BDF8" fontSize="22" fontWeight="600">
+          {/* <text y="20" fill="#38BDF8" fontSize="22" fontWeight="600">
             Mix
-          </text>
+          </text> */}
         </g>
 
         {/* Arrows + Labels for each segment */}

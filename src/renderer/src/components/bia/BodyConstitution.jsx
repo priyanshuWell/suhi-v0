@@ -62,7 +62,7 @@ const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
         {t('bia_result.head_desc')}
       </h2>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center relative">
         <CircularChart data={doshaConfig} />
       </div>
     </div>
