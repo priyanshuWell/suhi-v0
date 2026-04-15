@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import biaResultFrame from '../../assets/biaResultFrame.svg'
+import biaResultFrame from '../../assets/biaResultFrame1.svg'
 import bg1 from '../../assets/lightbg.png'
 import { useLocation, useNavigate } from 'react-router'
 import ErrorAlert from '../ErrorAlert'
@@ -269,7 +269,7 @@ const BIAResult = () => {
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-black">
       <div
         className="absolute inset-0 bg-no-repeat bg-cover bg-center z-0 opacity-60"
-        style={{ backgroundImage: `url(${bg1})` }}
+      // style={{ backgroundImage: `url(${bg1})` }}
       />
 
       <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
@@ -282,53 +282,24 @@ const BIAResult = () => {
           <img
             src={biaResultFrame}
             alt="BIA Frame"
-            className="w-full mb-[33px] h-auto object-contain drop-shadow-[0_0_25px_rgba(6,182,212,0.6)]"
+            className="w-full mb-[33px] h-auto object-contain drop-shadow-[0px_35.76px_176.82px_0px_rgba(154,217,255,0.5)]"
           />
 
-          <div className="absolute inset-0 flex flex-col items-center pt-[18%] pb-[8%] px-[14%] text-white">
-            <div className="w-full flex justify-between gap-6 mb-8">
-              <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                <div className="flex items-center gap-3 text-cyan-400 mb-2">
-                  <Dumbbell size={32} className="fill-cyan-400/20 rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.weight')}</span>
-                </div>
-                <div className="text-3xl font-bold tracking-tight">
-                  {Number(finalWeight).toFixed(2) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
-                </div>
-              </div>
+          <div className="absolute inset-0 flex flex-col items-center pt-[14%] pb-[1%] px-[14%] text-white gap-4">
 
-              <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                <div className="flex items-center gap-3 text-cyan-400 mb-2">
-                  <Ruler size={32} className="rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.height')}</span>
-                </div>
-                <div className="text-3xl font-bold tracking-tight">
-                  {Number(finalHeight) || 156.3}
-                  <span className="text-3xl text-gray-400 font-medium"> cm</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-grow"></div>
-
-            <div className="w-[50%] h-1/2 flex justify-center items-center mb-3 ">
+            <div className="w-full h-auto flex justify-center items-center mb-4">
               <div className="w-full">
                 <BodyConstitution
-                  vata={apiReport?.body_constitution?.vata}
-                  pitta={apiReport?.body_constitution?.pitta}
-                  kapha={apiReport?.body_constitution?.kapha}
+                // vata={apiReport?.body_constitution?.vata}
+                // pitta={apiReport?.body_constitution?.pitta}
+                // kapha={apiReport?.body_constitution?.kapha}
                 />
               </div>
             </div>
 
             {/* ✅ Hydration Card */}
             <div
-              className="rounded-[10px] p-6 mb-6 w-full"
-              style={{
-                background: 'linear-gradient(180deg, rgba(41, 171, 226, 0.05) 0%, rgba(41, 171, 226, 0.2) 100%)',
-                border: '0.5px solid #29ABE2',
-                borderRadius: '10px'
-              }}
+              className="w-full mb-6 p-6 rounded-[10px]  border-[0.5px] border-[#29ABE2] bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.2)_100%)]"
             >
               <div className="flex flex-col items-center justify-center text-center gap-3">
                 <div className="flex items-center justify-center gap-3">
@@ -473,13 +444,13 @@ const BIAResult = () => {
 
           </div>
         </div>
-        <div className="absolute bottom-[50px] ">
+        {/* <div className="absolute bottom-[50px] ">
           <img
             src={download_report}
             alt="hologram"
             className="landscape:w-[300px] portrait:w-[640px] drop-shadow-[0_0_40px_rgba(0,200,255,0.8)]"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* <ErrorAlert
