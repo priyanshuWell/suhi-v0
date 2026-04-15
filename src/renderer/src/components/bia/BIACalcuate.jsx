@@ -30,7 +30,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
+  const [barefootCTAVisible, setBarefootCTAVisible] = useState(true);
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
@@ -1301,7 +1301,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
               <button
                 onClick={onRemoveShoe}
                 className="
-                mr-32
+                ml-36
                   w-[clamp(16rem,33vw,31.25rem)]
                   h-[clamp(4rem,8vh,6.25rem)]
                   flex items-center justify-center
