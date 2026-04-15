@@ -25,7 +25,10 @@ import LoginFather from './components/forms/LoginFather'
 import FingerPrintScreen from './components/forms/FingerPrintScreen'
 import ColorBlindPlate from './components/color-blindness/ColorBlindPlate'
 import ColorBlindQuiz from './components/color-blindness/ColorBlindQuiz'
-import DivideAttentionGame from './components/games/divide-attention/DivideAttentionGame'
+import SpaceConvoyMain from './components/games/space-convoy/SpaceConvoyMain'
+import DivideAttentionGame from './components/games/space-convoy/DivideAttentionGame'
+import SpaceConveyDemo from './components/games/space-convoy/SpaceConveyDemo'
+import { StartCountDown } from './components/games/space-convoy/StartCountDown'
 
 function App() {
   useEffect(() => {
@@ -60,7 +63,9 @@ function App() {
       <Route path="/fingerprint" element={<FingerPrintScreen />} />
       <Route path="/colorblindness" element={<ColorBlindPlate />} />
       <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
-      <Route path="/" element={<DivideAttentionGame />} />
+      <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
+      <Route path='/divide-attention' element={<DivideAttentionGame />} />
+
     </Routes>
   )
 }
