@@ -418,7 +418,6 @@ import VoiceImageScreen from "./VoiceImageScreen";
 
 
 const VoiceCapture = () => {
-    const { t } = useTranslation();
     const navigate = useNavigate();
     const location = useLocation();
     console.log(location)
@@ -616,7 +615,7 @@ const VoiceCapture = () => {
                             user_id: userId,
                             session_id: sessionId
                         };
-                        navigate("/colorblindness");
+                        navigate("/space-convoy-main");
                         const runResult = await runVoice(runPayload);
                         console.log("Run result:", runResult);
 
@@ -624,21 +623,21 @@ const VoiceCapture = () => {
                             setStatus("success");
                             stopAudio();
                             await new Promise((r) => setTimeout(r, 500));
-                            // navigate("/colorblindness");
+                            // navigate("/space-convoy-main");
                         } else {
                             setStatus("error");
                             console.error("Voice run failed:", runResult.error);
-                            navigate("/colorblindness");
+                            navigate("/space-convoy-main");
                         }
                     } else {
                         setStatus("error");
                         console.error("Voice storage failed:", storeResult.error);
-                        navigate("/colorblindness");
+                        navigate("/space-convoy-main");
                     }
                 } catch (err) {
                     setStatus("error");
                     console.error("API error:", err);
-                    navigate("/colorblindness");
+                    navigate("/space-convoy-main");
                 }
 
                 // Stop all tracks

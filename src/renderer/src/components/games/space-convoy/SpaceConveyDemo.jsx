@@ -7,6 +7,11 @@ import stimulus_error_1 from "../../../assets/games/stimulus_error_1.svg";
 import textFrameSvg from "../../../assets/textFrame.svg";
 import divideAttentionBg from "../../../assets/games/divideAttentionbg.png";
 import { StepTextPanel } from "./StepTextPanel";
+import {
+    DivideAttentionTrialStart,
+    DivideAttentionTrialComplete,
+    DivideAttentionResponseBatch,
+} from "../../../utils/api"; // adjust path as needed
 
 /*
  * ─── DEMO CONFIGURATION ───
@@ -273,7 +278,7 @@ function drawTextPanel(ctx, frameImg, text, time) {
 // ════════════════════════════════════════════
 //  DEMO COMPONENT
 // ════════════════════════════════════════════
-export default function SpaceConveyDemo({ onComplete }) {
+export default function SpaceConveyDemo({ sessionId, onComplete }) {
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const cvRef = useRef(null);
@@ -289,7 +294,15 @@ export default function SpaceConveyDemo({ onComplete }) {
         allGuessed: false,
         globalTime: 0,
         resultHandled: false,
-        practiceRound: 1
+        practiceRound: 1,
+        freezeStartTime: 0,   // performance.now() when STOPPED begins
+        trialStarted: false,  // guard: only call TrialStart once per round entry
+    });
+    // API state per practice round
+    const apiRef = useRef({
+        trialId: null,
+        trialNumber: 0,       // increments: 1 for first practice, 2 for second
+        pendingResponses: [], // taps collected during STOPPED
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
@@ -315,6 +328,83 @@ export default function SpaceConveyDemo({ onComplete }) {
             setDisplayStep(STEP.SHOW_TARGETS);
         })();
     }, []);
+
+    // ─── Trial API helpers ───
+    const startPracticeTrial = useCallback(async () => {
+        const api = apiRef.current;
+        api.trialNumber += 1;
+        api.trialId = null;
+        api.pendingResponses = [];
+
+        if (!sessionId) return;
+        const result = await DivideAttentionTrialStart({
+            session_id: sessionId,
+            trial_number: api.trialNumber,
+            trial_type: "practice",
+            num_targets: DEMO_TARGETS,
+            num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
+            total_objects: DEMO_PARTICLES,
+            tracking_duration_ms: STEP_FREEZE_MS,
+        });
+        if (result.success) {
+            api.trialId = result.data.trial_id ?? result.data.id ?? null;
+            console.log("[Demo] Trial started:", api.trialId, "| trial_number:", api.trialNumber);
+        } else {
+            console.warn("[Demo] Trial start failed, continuing offline");
+        }
+    }, [sessionId]);
+
+    const finishPracticeTrial = useCallback(async (ps) => {
+        const api = apiRef.current;
+        if (!sessionId || !api.trialId) return;
+
+        // Build responses — only tapped particles (correct_hit / false_alarm)
+        const freezeDurationMs = STEP_FREEZE_MS;
+        const speedThresholdMs = freezeDurationMs * 0.5;
+        const responses = [];
+
+        ps.forEach((p, idx) => {
+            if (!p.selected) return;
+            if (p.isTarget) {
+                const hasSpeedBonus = p.responseTimeMs != null && p.responseTimeMs < speedThresholdMs;
+                responses.push({
+                    object_index: idx,
+                    object_type: "target",
+                    response_time_ms: p.responseTimeMs ?? 0,
+                    tap_x: p.tapX ?? 0,
+                    tap_y: p.tapY ?? 0,
+                    response_type: "correct_hit",
+                    is_correct: true,
+                    points_awarded: 10 + (hasSpeedBonus ? 3 : 0),
+                    speed_bonus: hasSpeedBonus,
+                });
+            } else {
+                responses.push({
+                    object_index: idx,
+                    object_type: "distractor",
+                    response_time_ms: p.responseTimeMs ?? 0,
+                    tap_x: p.tapX ?? 0,
+                    tap_y: p.tapY ?? 0,
+                    response_type: "false_alarm",
+                    is_correct: false,
+                    points_awarded: -5,
+                    speed_bonus: false,
+                });
+            }
+        });
+
+        if (responses.length > 0) {
+            const batchResult = await DivideAttentionResponseBatch({
+                trial_id: api.trialId,
+                responses,
+            });
+            if (!batchResult.success) console.warn("[Demo] Response batch failed");
+        }
+
+        const completeResult = await DivideAttentionTrialComplete(api.trialId);
+        if (!completeResult.success) console.warn("[Demo] Trial complete failed");
+        else console.log("[Demo] Trial complete:", api.trialId);
+    }, [sessionId]);
 
     // ─── Game loop ───
     useEffect(() => {
@@ -360,17 +450,26 @@ export default function SpaceConveyDemo({ onComplete }) {
                             g.ps.forEach((p) => { p.vx = 0; p.vy = 0; });
                             g.step = STEP.STOPPED;
                             g.elapsed = 0;
+                            g.freezeStartTime = performance.now();
+                            g.trialStarted = false; // reset guard for this round
                             setDisplayMsg(STEP_MESSAGES[STEP.STOPPED]);
                         }
                         break;
 
                     case STEP.STOPPED:
+                        // Call TrialStart exactly once when we enter STOPPED
+                        if (!g.trialStarted) {
+                            console.log("Trial started");
+                            g.trialStarted = true;
+                            startPracticeTrial();
+                        }
                         // Wait for user taps
                         physics(g.ps, dt, false);
                         if (g.elapsed >= STEP_FREEZE_MS || g.allGuessed) {
                             g.step = STEP.RESULT;
                             g.elapsed = 0;
-                            // setDisplayMsg(STEP_MESSAGES[STEP.RESULT]);
+                            // Send batch + complete for this practice trial
+                            finishPracticeTrial(g.ps);
                         }
                         break;
 
@@ -397,6 +496,7 @@ export default function SpaceConveyDemo({ onComplete }) {
                                         g.allGuessed = false;
                                         g.revealProgress = 0;
                                         g.resultHandled = false;
+                                        g.trialStarted = false;
                                         g.step = STEP.SHOW_TARGETS;
                                         g.elapsed = 0;
                                     }, 2000);
@@ -409,6 +509,7 @@ export default function SpaceConveyDemo({ onComplete }) {
                                     g.allGuessed = false;
                                     g.revealProgress = 0;
                                     g.resultHandled = false;
+                                    g.trialStarted = false;
                                     g.step = STEP.SHOW_TARGETS;
                                     g.elapsed = 0;
                                     setDisplayStep(STEP.SHOW_TARGETS);
@@ -551,10 +652,15 @@ export default function SpaceConveyDemo({ onComplete }) {
         if (g.step !== STEP.STOPPED || g.allGuessed) return;
         const { x, y } = toCanvasXY(cx, cy);
 
+        const responseTimeMs = Math.round(performance.now() - g.freezeStartTime);
+
         for (let i = g.ps.length - 1; i >= 0; i--) {
             const p = g.ps[i];
             if (!p.selected && d2d({ x, y }, p) <= p.radius + 8) {
                 p.selected = true;
+                p.tapX = Math.round(x);
+                p.tapY = Math.round(y);
+                p.responseTimeMs = responseTimeMs;
                 const selCount = g.ps.filter((pp) => pp.selected).length;
                 if (selCount >= DEMO_TARGETS) g.allGuessed = true;
                 break;

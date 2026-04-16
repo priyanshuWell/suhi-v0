@@ -21,6 +21,7 @@ import SpaceConveyDemo from './SpaceConveyDemo'
 import { StartCountDown } from './StartCountDown'
 import DivideAttentionGame from './DivideAttentionGame'
 import { useNavigate } from 'react-router'
+import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.
@@ -46,9 +47,10 @@ const SCREENS = {
 const SpaceConvoyMain = () => {
     const { t } = useTranslation()
     const [screen, setScreen] = useState(SCREENS.LOADING)
+    const [sessionId, setSessionId] = useState(null)
     const assetsRef = useRef(null)
     const navigate = useNavigate();
-
+    const storeUser = useSelector((state) => state.common.user);
     // ─── Preload ALL assets once at mount ───
     useEffect(() => {
         (async () => {
@@ -82,11 +84,22 @@ const SpaceConvoyMain = () => {
         })();
     }, []);
 
-    const handleStartDemo = () => setScreen(SCREENS.DEMO)
+    const handleStartDemo = async () => {
+        // TODO: replace with real userId from your auth/Redux store
+        const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
+        const result = await DivideAttentionSession(userId, "practice")
+        if (result.success) {
+            setSessionId(result.data.session_id ?? result.data.id ?? null)
+            console.log("[SpaceConvoy] Session created:", result.data.session_id ?? result.data.id)
+        } else {
+            console.warn("[SpaceConvoy] Session create failed, continuing offline")
+        }
+        setScreen(SCREENS.DEMO)
+    }
     const handleDemoComplete = () => setScreen(SCREENS.COUNTDOWN)
     const handleCountdownComplete = () => {
         setScreen(SCREENS.GAME)
-        navigate('/divide-attention')
+        navigate('/divide-attention', { state: { sessionId } })
     }
 
     // Use lightbg for instruction/countdown, divideAttentionBg for demo/game
@@ -114,7 +127,7 @@ const SpaceConvoyMain = () => {
             )}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo onComplete={handleDemoComplete} />
+                <SpaceConveyDemo sessionId={sessionId} onComplete={handleDemoComplete} />
             )}
 
             {screen === SCREENS.COUNTDOWN && (

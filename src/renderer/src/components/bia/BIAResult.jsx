@@ -97,37 +97,66 @@ const BIAResult = () => {
   }
 
   const fallbackPartialJson = {
-    success: true,
-    user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
-    session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
-    data: {
-      height: null,
-      weight: null,
+    height: 170,
+    weight: 70,
 
-      body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
-        ? {
-          vata: 20,
-          pitta: 50,
-          kapha: 30
-        }
-        : {
-          vata: 40,
-          pitta: 30,
-          kapha: 30
-        },
+    body_constitution: {
+      vata: 34,
+      pitta: 40,
+      kapha: 26
+    },
 
-      hydration: null,
-      learner_type: {
-        type: "kinesthetic",
-        title: "When studying your ears are your hero ",
-        subtitle: "When studying, all your senses are your heroes.",
-        description: "Listen, Discuss, and Explain out Loud"
-      },
-      personality: {
-        type: "Balanced",
-        animal: "You are an Eagle",
-        traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
+    hydration: {
+      level: "Low",
+      message: "Increase your water intake for better performance"
+    },
+
+    learner_type: {
+      type: "integrated",
+      title: "You learn best using multiple methods",
+      description: "Use visual, auditory, and hands-on techniques together"
+    },
+
+    personality: {
+      animal: "Balanced",
+      traits: ["Calm", "Adaptive", "Focused"]
+    },
+
+    attention: {
+      tracking_accuracy: 55,
+      level: "Medium"
+    },
+
+    memory: {
+      score: 3,
+      level: "Beginner"
+    },
+
+    self_esteem: {
+      level: "Average",
+      jitter: 1.5,
+      shimmer: 4
+    },
+
+    emotional_regulation: {
+      level: "Good",
+      details: {
+        jitter: "Good",
+        pitch: "Good",
+        pace: "Average"
       }
+    },
+
+    color_blindness: {
+      status: "Not Present"
+    },
+
+    muscle_mass: {
+      level: "Ideal"
+    },
+
+    fat_mass: {
+      level: "Ideal"
     }
   };
 
@@ -139,19 +168,103 @@ const BIAResult = () => {
   const kapha = Number(constitution?.kapha ?? 0);
 
   // ✅ Merge API response with fallback only if null
-  const mergeWithFallback = (apiData) => {
-    const api = apiData?.data || {}
+  const mergeWithFallback = (api) => {
+    return {
+      height: api?.height ?? fallbackPartialJson.height,
+      weight: api?.weight ?? fallbackPartialJson.weight,
+
+      body_constitution:
+        api?.body_constitution ?? fallbackPartialJson.body_constitution,
+
+      hydration: api?.hydration ?? fallbackPartialJson.hydration,
+
+      learner_type: api?.learner_type ?? fallbackPartialJson.learner_type,
+
+      personality: api?.personality ?? fallbackPartialJson.personality,
+
+      attention: api?.attention ?? fallbackPartialJson.attention,
+
+      memory: api?.memory ?? fallbackPartialJson.memory,
+
+      self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
+
+      emotional_regulation:
+        api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
+
+      color_blindness:
+        api?.color_blindness ?? fallbackPartialJson.color_blindness,
+
+      muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
+
+      fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass
+    };
+  };
+  const mapReportToUI = (api) => {
+    if (!api) return null;
 
     return {
-      height: api?.height ?? fallbackPartialJson?.data?.height,
-      weight: api?.weight ?? fallbackPartialJson?.data?.weight,
+      height: api?.bia?.height_cm ?? null,
+      weight: api?.bia?.weight_kg ?? null,
 
-      body_constitution: api?.body_constitution ?? fallbackPartialJson?.data?.body_constitution,
-      hydration: api?.hydration ?? fallbackPartialJson?.data?.hydration,
-      learner_type: api?.learner_type ?? fallbackPartialJson?.data?.learner_type,
-      personality: api?.personality ?? fallbackPartialJson?.data?.personality,
-    }
-  }
+      //  prakriti → body_constitution
+      body_constitution: api?.prakriti
+        ? {
+          vata: api.prakriti.vata,
+          pitta: api.prakriti.pitta,
+          kapha: api.prakriti.kapha,
+        }
+        : null,
+
+      //  hydration from bia
+      hydration: api?.bia?.hydration
+        ? {
+          level: api.bia.hydration,
+        }
+        : null,
+
+      //  learning_style → learner_type
+      learner_type: api?.learning_style
+        ? {
+          type: api.learning_style.toLowerCase(),
+          title: `Your learning style is ${api.learning_style}`,
+          description: "Personalized learning recommendation",
+        }
+        : null,
+
+      //personality string → object
+      personality: api?.personality
+        ? {
+          animal: api.personality,
+          traits: [api.personality],
+        }
+        : null,
+
+      //attention
+      attention: api?.attention,
+
+      // memory
+      memory: api?.memory,
+
+      // self esteem
+      self_esteem: api?.self_esteem,
+
+      // emotional regulation
+      emotional_regulation: api?.emotional_regulation,
+
+      // color blindness
+      color_blindness: api?.color_blindness
+        ? { status: api.color_blindness }
+        : null,
+
+      //  muscle & fat (for your UI)
+      muscle_mass: {
+        level: api?.bia?.muscle_mass?.status,
+      },
+      fat_mass: {
+        level: api?.bia?.fat_mass?.status,
+      },
+    };
+  };
 
 
 
@@ -160,28 +273,25 @@ const BIAResult = () => {
       const userId = storeUser?.data?.user_id;
       const sessionId = storeUser?.data?.buffer_id;
 
-      const payload = {
+      const res = await axios.post("http://localhost:8000/report/", {
         user_id: userId,
         session_id: sessionId,
-      };
+      });
 
-      const res = await axios.post("http://localhost:8000/biometric-report/generate", payload);
-      console.log("✅ biometric-report API response:", res);
-      // ✅ if API response is valid & success
-      if (res?.data?.success && res?.data?.data) {
-        const merged = mergeWithFallback(res.data);
+      console.log("✅ /report response:", res.data);
+
+      if (res?.data) {
+        const mapped = mapReportToUI(res.data);
+        const merged = mergeWithFallback(mapped);
+
         setApiReport(merged);
         return;
       }
 
-      // ✅ if API returns invalid structure / success false
-      console.log("⚠️ API success false / data missing. Using fallback JSON...");
-      setApiReport(fallbackPartialJson.data);
+      setApiReport(fallbackPartialJson);
     } catch (err) {
-      console.log("❌ biometric-report API error:", err);
-
-      // ✅ API failed completely → show fallback data
-      setApiReport(fallbackPartialJson.data);
+      console.log("❌ report API error:", err);
+      setApiReport(fallbackPartialJson);
     }
   };
 
@@ -256,38 +366,38 @@ const BIAResult = () => {
   const feelingsItems = [
     {
       label: 'Emotion Regulation',
-      value: formatLabel(personalityTraits[0], 'Good'),
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.emotional_regulation?.level, 'Good'),
+      valueClassName: 'text-[#29ABE2]',
     },
     {
       label: 'Self-Esteem',
-      value: 'Well Developed',
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.self_esteem?.level, 'Average'),
+      valueClassName: 'text-[#29ABE2]',
     },
     {
       label: 'Personality',
-      value: 'Dominant',
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.personality?.animal, 'Balanced'),
+      valueClassName: 'text-[#29ABE2]',
     }
-  ]
+  ];
 
   const learningItems = [
     {
       label: 'Attention',
-      value: 'Well Developed',
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.attention?.level, 'Medium'),
+      valueClassName: 'text-[#2CEF94]',
     },
     {
       label: 'Memory',
-      value: 'Developing',
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.memory?.level, 'Beginner'),
+      valueClassName: 'text-[#2CEF94]',
     },
     {
       label: 'Learning Style',
-      value: 'Visual',
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.learner_type?.type, 'Integrated'),
+      valueClassName: 'text-[#2CEF94]',
     }
-  ]
+  ];
 
   const healthItems = [
     {
@@ -315,19 +425,16 @@ const BIAResult = () => {
     {
       label: t('bia_result.hydration'),
       value: hydrationLevel,
-      valueClassName: 'text-[#2CEF94]'
     },
     {
       label: 'Muscle Mass',
-      value: formatLabel(apiReport?.muscle_mass?.level, 'Optimal'),
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal'),
     },
     {
       label: 'Fat Mass',
-      value: formatLabel(apiReport?.fat_mass?.level, 'Low'),
-      valueClassName: 'text-[#2CEF94]'
+      value: formatLabel(apiReport?.fat_mass?.level, 'Ideal'),
     }
-  ]
+  ];
 
 
   return (

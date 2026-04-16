@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_2 from "../../../assets/games/stimulus_2.svg";
 import stimulus_3 from "../../../assets/games/stimulus_3.svg";
@@ -16,6 +16,21 @@ import stimulus_error_2 from "../../../assets/games/stimulus_error_2.svg";
 import stimulus_error_3 from "../../../assets/games/stimulus_error_3.svg";
 import divideAttentionBg from "../../../assets/games/divideAttentionbg.png";
 import { ROUNDS } from "./rounds";
+import {
+    DivideAttentionTrialStart,
+    DivideAttentionTrialComplete,
+    DivideAttentionResponseBatch,
+    DivideAttentionSessionComplete,
+} from "../../../utils/api"; // adjust path as needed
+
+// ─── Scoring constants ───
+// Only correct_hit and false_alarm are sent to backend;
+// miss and correct_rejection are calculated server-side.
+const SCORE = {
+    CORRECT_HIT: 10,
+    FALSE_ALARM: -5,
+    SPEED_BONUS: 3,
+};
 
 const ROUNDS_ARR = Object.values(ROUNDS);
 const NUM_ROUNDS = ROUNDS_ARR.length;
@@ -106,6 +121,10 @@ function spawn(cfg) {
             opacity: isTgt ? 1 : 0,
             stimIdx: roundStimIdx,
             distIdx: Math.floor(Math.random() * 2),
+            // Scoring fields (set on tap)
+            tapX: null,
+            tapY: null,
+            responseTimeMs: null,
         });
     }
 
@@ -165,6 +184,64 @@ function drawParticleImg(ctx, img, p, scale = 1) {
 }
 
 /*
+ * ─── SCORING LOGIC ───
+ *
+ * At FREEZE end, for every particle:
+ *   - Target + selected     → correct_hit     (+10, +3 speed bonus if fast)
+ *   - Target + not selected → miss            (−5,  no bonus)
+ *   - Distractor + selected → false_alarm     (−5,  no bonus)
+ *   - Distractor + not sel  → correct_rejection (+5, +3 speed bonus if particle was probed fast)
+ *
+ * Speed bonus: response_time_ms < 50% of freeze window
+ *
+ * NOTE: correct_rejection is implicit — the child simply did NOT tap a distractor.
+ * We award CRs for every distractor that was NOT selected. response_time_ms = null for CR.
+ */
+function buildResponses(ps, freezeDurationMs) {
+    const speedThresholdMs = freezeDurationMs * 0.5;
+    let roundScore = 0;
+    const responses = [];
+
+    ps.forEach((p, idx) => {
+        if (!p.selected) return; // backend calculates miss & correct_rejection itself
+
+        if (p.isTarget) {
+            // Correct Hit
+            const hasSpeedBonus = p.responseTimeMs !== null && p.responseTimeMs < speedThresholdMs;
+            const points = SCORE.CORRECT_HIT + (hasSpeedBonus ? SCORE.SPEED_BONUS : 0);
+            roundScore += points;
+            responses.push({
+                object_index: idx,
+                object_type: "target",
+                response_time_ms: p.responseTimeMs ?? 0,
+                tap_x: p.tapX ?? 0,
+                tap_y: p.tapY ?? 0,
+                response_type: "correct_hit",
+                is_correct: true,
+                points_awarded: points,
+                speed_bonus: hasSpeedBonus,
+            });
+        } else {
+            // False Alarm
+            roundScore += SCORE.FALSE_ALARM;
+            responses.push({
+                object_index: idx,
+                object_type: "distractor",
+                response_time_ms: p.responseTimeMs ?? 0,
+                tap_x: p.tapX ?? 0,
+                tap_y: p.tapY ?? 0,
+                response_type: "false_alarm",
+                is_correct: false,
+                points_awarded: SCORE.FALSE_ALARM,
+                speed_bonus: false,
+            });
+        }
+    });
+
+    return { responses, roundScore };
+}
+
+/*
  * ─── SESSION LOGIC ───
  *
  * State machine for wrong answers:
@@ -173,32 +250,37 @@ function drawParticleImg(ctx, img, p, scale = 1) {
  *   failState = "goback"  → 2nd wrong (retry failed), go to previous round
  *   failState = "final"   → came back from previous, now re-attempting the
  *                            failed round. If wrong again → abort
- *
- * Flow:
- *   Pass → advance, reset failState to "none"
- *   1st Fail (failState "none") → retry same round, failState = "retry"
- *   2nd Fail (failState "retry") → go to prev round, failState = "goback"
- *   Pass prev (failState "goback") → advance back to failed round, failState = "final"
- *   Fail again (failState "final") → abort session
- * 
  */
 export default function SpaceConvoy() {
     const navigate = useNavigate();
+    const location = useLocation();
+    // sessionId was created in SpaceConvoyMain when user clicked "Start Demo"
+    const sessionId = location.state?.sessionId ?? null;
+
     const cvRef = useRef(null);
     const assets = useRef({
         stim: [], glow: [], correct: [], error: [], distImgs: [],
         bg: null, loaded: false,
     });
+
+    // ─── API state ───
+    const apiState = useRef({
+        trialId: null,
+        trialNumber: 0,  // resets to 0 on session start; each initRound increments it
+        totalScore: 0,
+    });
+
     const G = useRef({
         sess: SESS.IDLE,
         ph: PHASE.PREPARE,
-        ri: 0,              // current round index
-        ps: [],             // particles
+        ri: 0,
+        ps: [],
         phaseElapsed: 0,
         freezeRemaining: 0,
+        freezeStartTime: 0,  // wall-clock ms when FREEZE began (for response_time_ms)
         revealProgress: 0,
         allGuessed: false,
-        failState: "none",  // "none" | "retry" | "goback" | "final"
+        failState: "none",
         results: [],
         highestRound: 0,
         totalCorrect: 0,
@@ -230,42 +312,85 @@ export default function SpaceConvoy() {
         })();
     }, []);
 
-
+    // ─── Start session: reset state, then init round 0 ───
     const startSession = useCallback(() => {
         const g = G.current;
+        const api = apiState.current;
+
         Object.assign(g, {
             sess: SESS.PLAYING, ri: 0, results: [],
             failState: "none", highestRound: 0,
             totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
         });
-        initRound(0);
-    }, []);
+        // trial_number resets to 0 here; initRound increments to 1 on first call
+        api.trialNumber = 0;
+        api.totalScore = 0;
 
-    const initRound = useCallback((idx) => {
+        console.log("[DivideAttention] Main game starting | sessionId:", sessionId);
+        initRound(0);
+    }, [sessionId]);
+
+    // ─── Init round: spawn particles, call TrialStart ───
+    const initRound = useCallback(async (idx) => {
         const g = G.current;
+        const api = apiState.current;
         const cfg = ROUNDS_ARR[idx];
+
         Object.assign(g, {
             ri: idx, ph: PHASE.PREPARE, phaseElapsed: 0, freezeRemaining: 0,
-            revealProgress: 0, allGuessed: false, ps: spawn(cfg),
+            freezeStartTime: 0, revealProgress: 0, allGuessed: false, ps: spawn(cfg),
         });
+
+        api.trialNumber += 1;
+
         console.log(
             `[DivideAttention] Round ${idx + 1}: ${cfg.name} | ${cfg.targets}t / ${cfg.particles}p | r:${cfg.radius} | failState:${g.failState}`
         );
-    }, []);
 
-    const evaluateRound = useCallback(() => {
+        if (sessionId) {
+            const trialResult = await DivideAttentionTrialStart({
+                session_id: sessionId,
+                trial_number: api.trialNumber,
+                trial_type: "main",
+                num_targets: cfg.targets,
+                num_distractors: cfg.particles - cfg.targets,
+                total_objects: cfg.particles,
+                tracking_duration_ms: cfg.time.freeze,
+            });
+
+            if (trialResult.success) {
+                api.trialId = trialResult.data.trial_id ?? trialResult.data.id ?? null;
+                console.log("[DivideAttention] Trial started:", api.data.trial_id);
+            } else {
+                console.warn("[DivideAttention] Trial start failed, continuing offline");
+                api.trialId = null;
+            }
+        }
+    }, [sessionId]);
+
+    // ─── Evaluate round: score, send batch, complete trial ───
+    const evaluateRound = useCallback(async () => {
         const g = G.current;
+        const api = apiState.current;
         const cfg = ROUNDS_ARR[g.ri];
+
         let ok = 0, bad = 0, miss = 0;
         g.ps.forEach((p) => {
             if (p.isTarget && p.selected) ok++;
             else if (!p.isTarget && p.selected) bad++;
             else if (p.isTarget && !p.selected) miss++;
         });
+
         const passed = bad === 0 && miss === 0;
+
+        // ─── Build scored responses ───
+        const { responses, roundScore } = buildResponses(g.ps, cfg.time.freeze);
+        api.totalScore += roundScore;
+
         const result = {
             round: g.ri + 1, name: cfg.name, targets: cfg.targets,
             particles: cfg.particles, correct: ok, wrong: bad, missed: miss, passed,
+            score: roundScore,
         };
         g.results.push(result);
         g.totalCorrect += ok;
@@ -274,7 +399,25 @@ export default function SpaceConvoy() {
         if (g.ri + 1 > g.highestRound) g.highestRound = g.ri + 1;
         g.ph = PHASE.OVER;
         g.phaseElapsed = 0;
+
         console.log(`[DivideAttention] Round ${g.ri + 1} result:`, result);
+        console.log(`[DivideAttention] Round score: ${roundScore} | Total: ${api.totalScore}`);
+
+        // ─── Send responses to backend ───
+        if (api.trialId) {
+            const batchResult = await DivideAttentionResponseBatch({
+                trial_id: api.trialId,
+                responses,
+            });
+            if (!batchResult.success) {
+                console.warn("[DivideAttention] Response batch failed");
+            }
+
+            const completeResult = await DivideAttentionTrialComplete(api.trialId);
+            if (!completeResult.success) {
+                console.warn("[DivideAttention] Trial complete failed");
+            }
+        }
 
         setTimeout(() => {
             if (g.sess !== SESS.PLAYING) return;
@@ -296,36 +439,30 @@ export default function SpaceConvoy() {
                     }
                 }
             } else {
-                // ─── FAILED ───
                 switch (g.failState) {
                     case "none":
-                        // 1st fail → retry SAME round
                         console.log("[DivideAttention] 1st fail → retry same round");
                         g.failState = "retry";
                         initRound(g.ri);
                         break;
 
                     case "retry":
-                        // 2nd fail (retry failed) → go to previous round
                         console.log("[DivideAttention] 2nd fail → go to previous round");
                         if (g.ri > 0) {
                             g.failState = "goback";
                             initRound(g.ri - 1);
                         } else {
-                            // Already at round 1, can't go back → abort
                             console.log("[DivideAttention] Can't go back from round 1 → abort");
                             endSession();
                         }
                         break;
 
                     case "goback":
-                        // Failed the previous round too → abort
                         console.log("[DivideAttention] Failed previous round → abort");
                         endSession();
                         break;
 
                     case "final":
-                        // Failed the re-attempted round → abort
                         console.log("[DivideAttention] Final attempt failed → abort");
                         endSession();
                         break;
@@ -338,13 +475,28 @@ export default function SpaceConvoy() {
         }, OVER_MS);
     }, []);
 
-    const endSession = useCallback(() => {
+    // ─── End session ───
+    const endSession = useCallback(async () => {
         const g = G.current;
+        const api = apiState.current;
         g.sess = SESS.ENDED;
+
         console.log("[DivideAttention] Session complete:", {
-            highestRound: g.highestRound, totalCorrect: g.totalCorrect,
-            totalWrong: g.totalWrong, totalAttempts: g.totalAttempts, rounds: g.results,
+            highestRound: g.highestRound,
+            totalCorrect: g.totalCorrect,
+            totalWrong: g.totalWrong,
+            totalAttempts: g.totalAttempts,
+            totalScore: api.totalScore,
+            rounds: g.results,
         });
+
+        if (sessionId) {
+            const result = await DivideAttentionSessionComplete(sessionId);
+            if (!result.success) {
+                console.warn("[DivideAttention] Session complete API failed");
+            }
+        }
+
         setTimeout(() => { navigate("/"); }, 500);
     }, [navigate]);
 
@@ -389,6 +541,7 @@ export default function SpaceConvoy() {
                             g.ph = PHASE.FREEZE;
                             g.phaseElapsed = 0;
                             g.freezeRemaining = cfg.time.freeze;
+                            g.freezeStartTime = performance.now(); // ← record freeze start
                             g.ps.forEach((p) => { p.vx = 0; p.vy = 0; });
                         }
                         break;
@@ -421,7 +574,6 @@ export default function SpaceConvoy() {
 
         ctx.clearRect(0, 0, CW, CH);
 
-        // Background
         if (a.bg) {
             ctx.drawImage(a.bg, 0, 0, CW, CH);
         } else {
@@ -443,18 +595,7 @@ export default function SpaceConvoy() {
 
             const si = p.stimIdx;
 
-            /*
-             * IMAGE SELECTION + DRAW
-             *
-             * Priority: selected state > hover > phase default
-             *
-             * Key change: In OVER phase, we NEVER show distractor images.
-             * All unselected particles just show the normal stimulus.
-             * Only selected particles show correct/error glow.
-             */
-
             if (p.selected && (g.ph === PHASE.FREEZE || g.ph === PHASE.OVER)) {
-                // SELECTED → correct or error SVG (scaled up)
                 if (p.isTarget) {
                     const img = correct[si] || stim[si];
                     if (img && img === correct[si]) {
@@ -471,7 +612,6 @@ export default function SpaceConvoy() {
                     }
                 }
             } else if (g.ph === PHASE.PREPARE && p.isTarget) {
-                // PREPARE → glow SVG (scaled up)
                 const img = glow[si] || stim[si];
                 if (img && img === glow[si]) {
                     drawParticleImg(ctx, img, p, GLOW_SCALE[si]);
@@ -479,7 +619,6 @@ export default function SpaceConvoy() {
                     drawParticleImg(ctx, img, p);
                 }
             } else if (g.ph === PHASE.FREEZE && p.hovered && !p.selected) {
-                // FREEZE hover → glow SVG (scaled up)
                 const img = glow[si] || stim[si];
                 if (img && img === glow[si]) {
                     drawParticleImg(ctx, img, p, GLOW_SCALE[si]);
@@ -487,7 +626,6 @@ export default function SpaceConvoy() {
                     drawParticleImg(ctx, img, p);
                 }
             } else {
-                // Default → normal stimulus (REVEAL / START / FREEZE / OVER unselected)
                 const img = stim[si];
                 if (img) {
                     drawParticleImg(ctx, img, p);
@@ -514,15 +652,29 @@ export default function SpaceConvoy() {
 
     const handleTap = useCallback((cx, cy) => {
         const g = G.current;
+        const api = apiState.current;
         if (g.ph !== PHASE.FREEZE || g.allGuessed) return;
         const { x, y } = toCanvasXY(cx, cy);
         const cfg = ROUNDS_ARR[g.ri];
+
+        // response_time_ms = time elapsed since FREEZE began
+        const responseTimeMs = performance.now() - g.freezeStartTime;
+
         for (let i = g.ps.length - 1; i >= 0; i--) {
             const p = g.ps[i];
             if (!p.selected && d2d({ x, y }, p) <= p.radius + 8) {
                 p.selected = true;
-                console.log(`[DivideAttention] Tap ${i}: ${p.isTarget ? "TARGET ✓" : "DISTRACTOR ✗"}`);
-                if (g.ps.filter((pp) => pp.selected).length >= cfg.targets) g.allGuessed = true;
+                p.tapX = Math.round(x);
+                p.tapY = Math.round(y);
+                p.responseTimeMs = Math.round(responseTimeMs);
+
+                console.log(
+                    `[DivideAttention] Tap ${i}: ${p.isTarget ? "TARGET ✓" : "DISTRACTOR ✗"} | ${p.responseTimeMs}ms`
+                );
+
+                if (g.ps.filter((pp) => pp.selected).length >= cfg.targets) {
+                    g.allGuessed = true;
+                }
                 break;
             }
         }
@@ -535,8 +687,6 @@ export default function SpaceConvoy() {
         g.ps.forEach((p) => { p.hovered = d2d({ x, y }, p) <= p.radius + 8; });
     }, [toCanvasXY]);
 
-    // ─── JSX ───
-    // Canvas is centered and scales to cover the viewport while maintaining 1014:1802 aspect ratio
     return (
         <div
             style={{
@@ -556,11 +706,6 @@ export default function SpaceConvoy() {
                 style={{
                     display: "block",
                     touchAction: "none",
-                    /*
-                     * object-fit: contain scales the canvas to fit inside the viewport
-                     * while maintaining aspect ratio and centering it.
-                     * width/height 100% with object-fit handles all screen sizes.
-                     */
                     maxWidth: "100vw",
                     maxHeight: "100vh",
                     width: "auto",

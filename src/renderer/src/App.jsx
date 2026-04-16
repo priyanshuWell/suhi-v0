@@ -53,7 +53,7 @@ function App() {
       <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
-      {/* <Route path='/' element={<SplashScreen />} /> */}
+      <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />

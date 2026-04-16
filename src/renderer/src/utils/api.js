@@ -455,6 +455,196 @@ export const voiceSaveApi = async (payload) => {
   }
 }
 
+export const DivideAttentionSession = async (userId,sessionType) => {
+
+  /*
+{
+  "user_id": "bdabcfad-558f-4d36-9cfd-5deaedfdd629",
+  "session_type": "practice"
+}
+
+  */
+  const payload = {
+    user_id:userId,
+    session_type:sessionType
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention session response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention session to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const DivideAttentionTrialStart = async (payload) => {
+  /*
+{
+  "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c",
+  "trial_number": 1,
+  "trial_type": "practice",
+  "num_targets": 2,
+  "num_distractors": 2,
+  "total_objects": 4,
+  "tracking_duration_ms": 8000
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/trials/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention trial start response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention trial start to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
+export const DivideAttentionTrialComplete = async (trial_id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/trials/${trial_id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention trial complete response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention trial complete to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
+export const DivideAttentionResponseBatch = async (payload) => {
+  /*
+  {
+  "trial_id": "8c62e47b-aec8-4237-83de-994a8dc9bba6",
+  "responses": [
+    {
+      "object_index": 0,
+      "object_type": "target",
+      "response_time_ms": 1800,
+      "tap_x": 0,
+      "tap_y": 0,
+      "response_type": "correct_hit",
+      "is_correct": false,
+      "points_awarded": -5,
+      "speed_bonus": false
+    }
+  ]
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/responses/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention response batch response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention response batch to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const DivideAttentionSessionComplete = async (session_id) => {
+  /*
+  {
+  "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c"
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention session complete response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention session complete to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
+
 export const BIAComplete = async (result) => {
   try {
     const response = await fetch(
