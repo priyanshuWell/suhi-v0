@@ -53,7 +53,7 @@ function App() {
       <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
-      {/* <Route path='/' element={<SplashScreen />} /> */}
+      <Route path='/' element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
@@ -63,7 +63,7 @@ function App() {
       <Route path="/fingerprint" element={<FingerPrintScreen />} />
       <Route path="/colorblindness" element={<ColorBlindPlate />} />
       <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
-      <Route path="/" element={<SpaceConvoyMain />} />
+      <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
       <Route path='/divide-attention' element={<DivideAttentionGame />} />
 
     </Routes>
