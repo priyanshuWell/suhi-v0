@@ -438,6 +438,7 @@ const VoiceCapture = () => {
     const animationFrameRef = React.useRef(null);
     const [processingAngle, setProcessingAngle] = useState(0);
     const instructionAudio = "/src/assets/audio/voice.mp3";
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Play audio when component mounts

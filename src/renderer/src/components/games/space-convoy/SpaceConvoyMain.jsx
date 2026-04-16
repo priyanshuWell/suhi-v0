@@ -22,6 +22,7 @@ import { StartCountDown } from './StartCountDown'
 import DivideAttentionGame from './DivideAttentionGame'
 import { useNavigate } from 'react-router'
 import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
+import { useSelector } from 'react-redux'
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.

@@ -497,7 +497,7 @@ export default function SpaceConvoy() {
             }
         }
 
-        setTimeout(() => { navigate("/"); }, 500);
+        setTimeout(() => { navigate("/colorblindness"); }, 500);
     }, [navigate]);
 
     // ─── Game loop ───
