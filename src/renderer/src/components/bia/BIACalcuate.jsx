@@ -34,7 +34,14 @@ export default function BIACalculate({ user, onComplete }) {
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
-  const [measuredValues, setMeasuredValues] = useState({ height: "-- cm", weight: "-- kg" });
+  const [measuredValues, setMeasuredValues] = useState({
+    height: "-- cm", weight: "-- kg", arms50k: {
+      fatPercentage: "20",
+      waterPercentage: "55",
+      muscleMassKg: "30",
+      boneMassKg: "3",
+    }
+  });
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
@@ -49,6 +56,7 @@ export default function BIACalculate({ user, onComplete }) {
     height: null,
     preHeight: null,
     armImpedance: null,
+    arms50k: null,
     isShoesContinued: false,
     impedance: { k20: null, k100: null }
   });
@@ -533,6 +541,18 @@ export default function BIACalculate({ user, onComplete }) {
       throw new Error("Arm impedance failed");
 
     }
+
+    resultsRef.current.arms50k = {
+      fatPercentage: res.bodyComposition.fatPercentage,
+      waterPercentage: res.bodyComposition.waterPercentage,
+      muscleMassKg: res.bodyComposition.muscleMassKg,
+      boneMassKg: res.bodyComposition.boneMassKg,
+    };
+    setMeasuredValues((prev) => ({
+      ...prev,
+      arms50k: resultsRef.current.arms50k,
+    }));
+    console.log("measuredValues 50khz", measuredValues);
 
     resultsRef.current.armImpedance = {
       phaseAngle: res.measurement.phaseAngle.value,
@@ -1124,6 +1144,7 @@ export default function BIACalculate({ user, onComplete }) {
         weightValue={measuredValues.weight}
         onNextClick={handleWhNextClick}
         onImNextClick={handleImNextClick}
+        arms50k={measuredValues.arms50k}
       />
 
       <ErrorAlert

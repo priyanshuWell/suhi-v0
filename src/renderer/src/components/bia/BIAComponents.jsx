@@ -15,6 +15,7 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import { Volume2 } from "lucide-react";
 import HeightWeightComplete from "./HeightWeightComplete";
 import ReplayAudio from "../ReplayAudio";
+import ImComplete from "./ImComplete";
 
 export const BIAComponent = ({
   texts,
@@ -27,6 +28,7 @@ export const BIAComponent = ({
   weightValue = "30 kg",
   onNextClick,
   onImNextClick,
+  arms50k
 }) => {
   const { t } = useTranslation();
   const { screenType } = useParams();
@@ -91,7 +93,8 @@ export const BIAComponent = ({
   };
 
   // Show SVGs only on whcomplete screen
-  const showResults = screenType === "whcomplete";
+  const showWhResults = screenType === "whcomplete";
+  const showIMResults = screenType === "imcomplete";
 
   return (
     <>
@@ -129,7 +132,7 @@ export const BIAComponent = ({
             </p>
 
             {/* Replay Button */}
-            <ReplayAudio playAudio={playAudio} />
+            {/* <ReplayAudio playAudio={playAudio} /> */}
 
             {/* PROGRESS BAR (ONLY FOR IM) */}
             {screenType === "im" && (
@@ -159,13 +162,17 @@ export const BIAComponent = ({
         </div>
 
         {/* SVG Result Frames (whcomplete screen) */}
-        {showResults && (
+        {showWhResults && (
           <HeightWeightComplete heightValue={heightValue} weightValue={weightValue} onNextClick={onNextClick} />
         )}
+
+        {/* {showIMResults && (
+          <ImComplete onNextClick={onImNextClick} />
+        )} */}
       </div>
 
       {(() => {
-        const videoSrc = screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : screenType === "imcomplete" ? biaImComplete : null;
+        const videoSrc = screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : null;
         return videoSrc ? (
           <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
             <video
@@ -181,21 +188,23 @@ export const BIAComponent = ({
       })()}
 
       {screenType === "imcomplete" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="relative w-[80%] max-w-4xl flex justify-center">
-            <img
-              src={biaCompleteAlertSvg}
-              alt="bia-complete"
-              className="w-full h-auto"
-            />
-            <div className="absolute bottom-[20%]">
-              <BlueGradientButton onClick={onImNextClick}>
-                Next
-              </BlueGradientButton>
-            </div>
-          </div>
-        </div>
+        // <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        //   <div className="relative w-[80%] max-w-4xl flex justify-center">
+        //     <img
+        //       src={biaCompleteAlertSvg}
+        //       alt="bia-complete"
+        //       className="w-full h-auto"
+        //     />
+        //     <div className="absolute bottom-[20%]">
+        //       <BlueGradientButton onClick={onImNextClick}>
+        //         Next
+        //       </BlueGradientButton>
+        //     </div>
+        //   </div>
+        // </div>
+        <ImComplete onNextClick={onImNextClick} arms50k={arms50k} />
       )}
     </>
   );
 };
+

@@ -2395,28 +2395,28 @@ export async function sendBiaCommand(command, options = {}) {
 
           // Custom or default response handling
           if (config.responseHandler) {
-            config.responseHandler(data)
+            config?.responseHandler(data)
           } else {
             // Default parsing
             // parseBodyComposition1(data);
           }
 
           // Remove listener to prevent memory leaks
-          biaPort.removeListener('data', responseListener)
+          biaPort?.removeListener('data', responseListener)
 
           resolve(data)
         }
 
         // Set timeout
         responseTimeout = setTimeout(() => {
-          biaPort.removeListener('data', responseListener)
+          biaPort?.removeListener('data', responseListener)
           const timeoutError = new Error('No response received')
           if (config.verbose) console.warn('\n  WARNING:', timeoutError.message)
           reject(timeoutError)
         }, config.timeout)
 
         // Add response listener
-        biaPort.on('data', responseListener)
+        biaPort?.on('data', responseListener)
       } else {
         resolve()
       }
