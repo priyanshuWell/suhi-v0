@@ -222,7 +222,7 @@ export const ColorBlindQuiz = () => {
                     className="text-white text-center font-mono w-full max-w-[1149px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
-                    {t("colorBlindness.question", "What number/shape do you see in the image?")}
+                    {t("colorBlindness.question", "Select what you see")}
                 </p>
 
                 {/* Timer */}
