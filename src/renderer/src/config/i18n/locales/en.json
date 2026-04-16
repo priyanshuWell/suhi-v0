@@ -81,6 +81,12 @@
       "error": "error"
     }
   },
+  "spaceConvoy": {
+    "title": "Space Convoy",
+    "countdownText": "Game starting in...",
+    "instruction": "Let’s play a game, Keep your eyes on all moving asteroids—don’t lose track!",
+    "start": "Start Demo"
+  },
   "bia_result": {
     "congratulations": "Congratulations!",
     "here_are_results": "Here are your results",
