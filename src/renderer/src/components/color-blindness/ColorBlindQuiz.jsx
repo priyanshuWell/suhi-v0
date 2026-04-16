@@ -233,7 +233,7 @@ export const ColorBlindQuiz = () => {
                 />
 
                 {/* Plate image */}
-                <div className="bg-white rounded-3xl p-6 w-[70%] max-w-[1018px] flex items-center justify-center shadow-2xl">
+                <div className="bg-transparent rounded-3xl p-6 w-[70%] max-w-[1018px] flex items-center justify-center shadow-2xl">
                     <img
                         src={image}
                         alt={t("colorBlindness.plateAlt", "Color blindness plate")}
