@@ -56,9 +56,9 @@ const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
   ]
 
   return (
-    <div className="w-full bg-transparent p-2">
+    <div className="w-full bg-transparent p-2 m-4">
       {/* Title */}
-      <h2 className="text-[#FFFFFF] text-2xl xl:text-3xl text-center mb-4 tracking-wider">
+      <h2 className="text-[#FFFFFF] text-3xl xl:text-3xl text-center mb-[5%] tracking-wider">
         {t('bia_result.head_desc')}
       </h2>
 
