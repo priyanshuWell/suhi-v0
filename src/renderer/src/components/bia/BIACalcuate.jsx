@@ -778,7 +778,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Navigate to impedance screen
     navigate("/bia/im");
-    await sleep(2000);
+    await sleep(8000);
 
     try {
       // Arm Impedance 50kHz

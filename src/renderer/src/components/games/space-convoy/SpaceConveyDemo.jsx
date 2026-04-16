@@ -281,6 +281,7 @@ function drawTextPanel(ctx, frameImg, text, time) {
 export default function SpaceConveyDemo({ sessionId, onComplete }) {
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
+    const navigate = useNavigate();
     const cvRef = useRef(null);
     const assets = useRef({
         stim: null, glow: null, correct: null, error: null,
@@ -295,13 +296,14 @@ export default function SpaceConveyDemo({ sessionId, onComplete }) {
         globalTime: 0,
         resultHandled: false,
         practiceRound: 1,
-        freezeStartTime: 0,   // performance.now() when STOPPED begins
-        trialStarted: false,  // guard: only call TrialStart once per round entry
+        failCount: 0,
+        freezeStartTime: 0,
+        trialStarted: false,
     });
     // API state per practice round
     const apiRef = useRef({
         trialId: null,
-        trialNumber: 0,       // increments: 1 for first practice, 2 for second
+        trialNumber: 0,
         pendingResponses: [], // taps collected during STOPPED
     });
     const rafRef = useRef(null);
@@ -502,19 +504,27 @@ export default function SpaceConveyDemo({ sessionId, onComplete }) {
                                     }, 2000);
                                 }
                             } else {
-                                setDisplayMsg("Make sure you keep the track of the right asteroids. Let's try again.");
-                                // brief pause so user sees the message, then reset
-                                setTimeout(() => {
-                                    g.ps = spawnDemo();
-                                    g.allGuessed = false;
-                                    g.revealProgress = 0;
-                                    g.resultHandled = false;
-                                    g.trialStarted = false;
-                                    g.step = STEP.SHOW_TARGETS;
-                                    g.elapsed = 0;
-                                    setDisplayStep(STEP.SHOW_TARGETS);
-                                    setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
-                                }, 2000);
+                                g.failCount += 1;
+                                if (g.failCount >= 3) {
+                                    // Max retries reached — move on
+                                    // setDisplayMsg("No worries! Let's start the game.");
+                                    setTimeout(() => {
+                                        navigate("/colorblindness");
+                                    }, 2000);
+                                } else {
+                                    setDisplayMsg("Make sure you keep the track of the right asteroids. Let's try again.");
+                                    setTimeout(() => {
+                                        g.ps = spawnDemo();
+                                        g.allGuessed = false;
+                                        g.revealProgress = 0;
+                                        g.resultHandled = false;
+                                        g.trialStarted = false;
+                                        g.step = STEP.SHOW_TARGETS;
+                                        g.elapsed = 0;
+                                        setDisplayStep(STEP.SHOW_TARGETS);
+                                        setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+                                    }, 2000);
+                                }
                             }
                         }
                         break;
