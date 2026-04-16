@@ -529,6 +529,7 @@ function createWindow() {
     height: 1920,
     show: false,
     autoHideMenuBar: false,
+    fullscreen:false,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,

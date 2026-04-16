@@ -11,14 +11,13 @@ const VoiceTextScreen = ({ t, handleStart, audioRef, handleAudioEnd, isAudioPlay
             <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl mb-20">
                 {t('voice.instruction')}
 
-                <ReplayAudio playAudio={() => {
+                {/* <ReplayAudio playAudio={() => {
                     if (audioRef.current) {
                         audioRef.current.currentTime = 0;
                         audioRef.current.play();
                     }
                 }}
-                    className="absolute right-[128px] bottom-[49%]"
-                />
+                /> */}
             </h1>
 
             {/* Image Container */}

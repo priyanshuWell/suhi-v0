@@ -106,12 +106,12 @@ export const ColorBlindPlate = () => {
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>
 
-                <ReplayAudio playAudio={() => {
+                {/* <ReplayAudio playAudio={() => {
                     if (audioRef.current) {
                         audioRef.current.currentTime = 0;
                         audioRef.current.play();
                     }
-                }} />
+                }} /> */}
 
                 {/* Example plate */}
                 <div className="relative overflow-hidden rounded-3xl w-[70%] max-w-[1018px] flex items-center justify-center p-6">

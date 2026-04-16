@@ -71,7 +71,7 @@
     }
   },
   "voice": {
-    "instruction": "Look at the image, notice what it makes you feel or think, then click Start and speak freely for 30 seconds.",
+    "instruction": "On the next page, you will see an image. Look at it and think about how it makes you feel. Then click “Start” and speak about it for 30 seconds.",
     "start": "Start",
     "status": {
       "idle": "idle",

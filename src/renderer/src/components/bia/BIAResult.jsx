@@ -426,13 +426,15 @@ const BIAResult = () => {
       label: t('bia_result.height'),
       value: `${formatLabel(finalHeight, '--')} cm`,
       valueClassName: 'text-[#2CEF94]',
-      icon: HeightIcon
+      icon: HeightIcon,
+      unit: 'cm'
     },
     {
       label: t('bia_result.weight'),
       value: `${formatLabel(finalWeight, '--')} kg`,
       valueClassName: 'text-[#2CEF94]',
-      icon: WeightIcon
+      icon: WeightIcon,
+      unit: 'kg'
     },
     {
       label: t('bia_result.hydration'),
@@ -561,7 +563,7 @@ const BIAResult = () => {
                         {/* 🔹 RIGHT → Value + Unit (separate control) */}
                         <div className="flex items-baseline">
                           <p className="text-[26px] leading-none text-[#FF9D5C] font-medium">
-                            {item.value}
+                            {parseInt(item.value).toFixed(2)}
                           </p>
 
                           {item.unit && (

@@ -112,7 +112,7 @@ const ProgressBar = ({ current, total }) => {
         </div>
     );
 };
-const initialTimer = 5;
+const initialTimer = 8;
 export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
     const location = useLocation();
