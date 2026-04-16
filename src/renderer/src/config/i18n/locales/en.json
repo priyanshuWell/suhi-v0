@@ -99,7 +99,8 @@
     "body_constitution": "Body Constitution",
     "vata": "Vata",
     "pitta": "Pitta",
-    "kapha": "Kapha"
+    "kapha": "Kapha",
+    "head_desc":"In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!"
   },
   "bia_component": {
     "attempt": "Attempt"
