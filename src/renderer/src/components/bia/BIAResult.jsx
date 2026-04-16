@@ -238,66 +238,53 @@ const BIAResult = () => {
   const mapReportToUI = (api) => {
     if (!api) return null;
 
+    const data = api.data;
+
     return {
-      height: api?.bia?.height_cm ?? null,
-      weight: api?.bia?.weight_kg ?? null,
+      height: data?.bia?.height_cm ?? null,
+      weight: data?.bia?.weight_kg ?? null,
 
-      //  prakriti → body_constitution
-      body_constitution: api?.prakriti
+      body_constitution: data?.prakriti
         ? {
-          vata: api.prakriti.vata,
-          pitta: api.prakriti.pitta,
-          kapha: api.prakriti.kapha,
+          vata: data.prakriti.vata,
+          pitta: data.prakriti.pitta,
+          kapha: data.prakriti.kapha,
         }
         : null,
 
-      //  hydration from bia
-      hydration: api?.bia?.hydration
-        ? {
-          level: api.bia.hydration,
-        }
+      hydration: data?.bia?.hydration
+        ? { level: data.bia.hydration }
         : null,
 
-      //  learning_style → learner_type
-      learner_type: api?.learning_style
+      learner_type: data?.learning_style
         ? {
-          type: api.learning_style.toLowerCase(),
-          title: `Your learning style is ${api.learning_style}`,
+          type: data.learning_style.toLowerCase(),
+          title: `Your learning style is ${data.learning_style}`,
           description: "Personalized learning recommendation",
         }
         : null,
 
-      //personality string → object
-      personality: api?.personality
+      personality: data?.personality
         ? {
-          animal: api.personality,
-          traits: [api.personality],
+          animal: data.personality,
+          traits: [data.personality],
         }
         : null,
 
-      //attention
-      attention: api?.attention,
+      attention: data?.attention,
+      memory: data?.memory,
+      self_esteem: data?.self_esteem,
+      emotional_regulation: data?.emotional_regulation,
 
-      // memory
-      memory: api?.memory,
-
-      // self esteem
-      self_esteem: api?.self_esteem,
-
-      // emotional regulation
-      emotional_regulation: api?.emotional_regulation,
-
-      // color blindness
-      color_blindness: api?.color_blindness
-        ? { status: api.color_blindness }
+      color_blindness: data?.color_blindness
+        ? { status: data.color_blindness }
         : null,
 
-      //  muscle & fat (for your UI)
       muscle_mass: {
-        level: api?.bia?.muscle_mass?.status,
+        level: data?.bia?.muscle_mass?.status,
       },
       fat_mass: {
-        level: api?.bia?.fat_mass?.status,
+        level: data?.bia?.fat_mass?.status,
       },
     };
   };
@@ -316,10 +303,9 @@ const BIAResult = () => {
 
       console.log("✅ /report response:", res.data);
 
-      if (res?.data) {
+      if (res?.data?.success) {
         const mapped = mapReportToUI(res.data);
         const merged = mergeWithFallback(mapped);
-
         setApiReport(merged);
         return;
       }
