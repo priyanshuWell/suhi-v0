@@ -1,4 +1,3 @@
-// SpaceConvoyText.jsx
 import textframe from "../../../assets/textFrame.png"
 import BlueGradientButton from '../../ui/BlueGradientButton'
 import { useTranslation } from "react-i18next"

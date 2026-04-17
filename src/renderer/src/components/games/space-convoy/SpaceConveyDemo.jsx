@@ -278,7 +278,7 @@ function drawTextPanel(ctx, frameImg, text, time) {
 // ════════════════════════════════════════════
 //  DEMO COMPONENT
 // ════════════════════════════════════════════
-export default function SpaceConveyDemo({ sessionId, onComplete }) {
+export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToComplete }) {
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const navigate = useNavigate();

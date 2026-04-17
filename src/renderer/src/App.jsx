@@ -29,6 +29,7 @@ import SpaceConvoyMain from './components/games/space-convoy/SpaceConvoyMain'
 import DivideAttentionGame from './components/games/space-convoy/DivideAttentionGame'
 import SpaceConveyDemo from './components/games/space-convoy/SpaceConveyDemo'
 import { StartCountDown } from './components/games/space-convoy/StartCountDown'
+import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConveyComplete'
 
 function App() {
   useEffect(() => {
@@ -53,7 +54,7 @@ function App() {
       <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
-      <Route path='/' element={<SplashScreen />} />
+      <Route path='/' element={<VoiceAnalysis />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path='/bia/:screenType' element={<BIACalcuate />} />
@@ -65,6 +66,7 @@ function App() {
       <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
       <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
       <Route path='/divide-attention' element={<DivideAttentionGame />} />
+      <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
 
     </Routes>
   )

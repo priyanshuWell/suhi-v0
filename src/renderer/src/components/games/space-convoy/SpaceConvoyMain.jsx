@@ -23,6 +23,7 @@ import DivideAttentionGame from './DivideAttentionGame'
 import { useNavigate } from 'react-router'
 import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
 import { useSelector } from 'react-redux'
+import { SpaceConvoyComplete } from './SpaceConveyComplete'
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.
@@ -43,6 +44,7 @@ const SCREENS = {
     DEMO: "DEMO",
     COUNTDOWN: "COUNTDOWN",
     GAME: "GAME",
+    COMPLETE: "COMPLETE",
 }
 
 const SpaceConvoyMain = () => {
@@ -85,6 +87,9 @@ const SpaceConvoyMain = () => {
         })();
     }, []);
 
+    const handleMoveToComplete = () => {
+        setScreen(SCREENS.COMPLETE)
+    }
     const handleStartDemo = async () => {
         // TODO: replace with real userId from your auth/Redux store
         const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
@@ -128,11 +133,15 @@ const SpaceConvoyMain = () => {
             )}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo sessionId={sessionId} onComplete={handleDemoComplete} />
+                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} sessionId={sessionId} onComplete={handleDemoComplete} />
             )}
 
             {screen === SCREENS.COUNTDOWN && (
                 <StartCountDown onComplete={handleCountdownComplete} />
+            )}
+
+            {screen === SCREENS.COMPLETE && (
+                <SpaceConvoyComplete />
             )}
         </div>
     )

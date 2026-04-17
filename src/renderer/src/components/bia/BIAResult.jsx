@@ -472,7 +472,7 @@ const BIAResult = () => {
 
       <div className="relative z-10 flex min-h-full w-full flex-col items-center p-4 pb-6">
         <h1 className="mt-4 w-[80%] text-center text-4xl leading-10 tracking-wider font-bold text-white">
-          {t('bia_result.congratulations')} {`Aarav,`}
+          {t('bia_result.congratulations')}
           <br />
           {t('bia_result.here_are_results')}
         </h1>

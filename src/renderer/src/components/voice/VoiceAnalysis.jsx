@@ -416,11 +416,9 @@ import audioBufferToWav from "audiobuffer-to-wav";
 import VoiceTextScreen from "./VoiceTextScreen";
 import VoiceImageScreen from "./VoiceImageScreen";
 
-
 const VoiceCapture = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    console.log(location)
     // Get data from Redux store
     const user = useSelector((state) => state.common.user);
     const sessionId = useSelector((state) => state.common.sessionId);
@@ -438,7 +436,13 @@ const VoiceCapture = () => {
     const animationFrameRef = React.useRef(null);
     const [processingAngle, setProcessingAngle] = useState(0);
     const instructionAudio = "/src/assets/audio/voice.mp3";
+    const [showCompleteAlert, setShowCompleteAlert] = useState(false);
+
     const { t } = useTranslation();
+
+    const handleNext = () => {
+        setShowCompleteAlert(true);
+    }
 
     useEffect(() => {
         // Play audio when component mounts
@@ -616,7 +620,7 @@ const VoiceCapture = () => {
                             user_id: userId,
                             session_id: sessionId
                         };
-                        navigate("/space-convoy-main");
+                        handleNext();
                         const runResult = await runVoice(runPayload);
                         console.log("Run result:", runResult);
 
@@ -628,17 +632,17 @@ const VoiceCapture = () => {
                         } else {
                             setStatus("error");
                             console.error("Voice run failed:", runResult.error);
-                            navigate("/space-convoy-main");
+                            handleNext();
                         }
                     } else {
                         setStatus("error");
                         console.error("Voice storage failed:", storeResult.error);
-                        navigate("/space-convoy-main");
+                        handleNext();
                     }
                 } catch (err) {
                     setStatus("error");
                     console.error("API error:", err);
-                    navigate("/space-convoy-main");
+                    handleNext();
                 }
 
                 // Stop all tracks
@@ -670,30 +674,32 @@ const VoiceCapture = () => {
     };
 
     return (
-        <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
-            <audio
-                ref={audioRef}
-                onEnded={handleAudioEnd}
-                onPlay={() => setIsAudioPlaying(true)}
-            >
-                <source src={instructionAudio} type="audio/mpeg" />
-                Your browser does not support the audio element.
-            </audio>
-            {/* Background */}
-            <div
-                className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
-                style={{ backgroundImage: `url(${bg1})` }}
-            />
+        <>
+            <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
+                <audio
+                    ref={audioRef}
+                    onEnded={handleAudioEnd}
+                    onPlay={() => setIsAudioPlaying(true)}
+                >
+                    <source src={instructionAudio} type="audio/mpeg" />
+                    Your browser does not support the audio element.
+                </audio>
+                {/* Background */}
+                <div
+                    className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
+                    style={{ backgroundImage: `url(${bg1})` }}
+                />
 
-            {/* Content Container */}
-            {
-                tab === "start" ? (
-                    <VoiceTextScreen t={t} handleStart={handleStart} audioRef={audioRef} handleAudioEnd={handleAudioEnd} isAudioPlaying={isAudioPlaying} status={status} instructionAudio={instructionAudio} />
-                ) : (
-                    <VoiceImageScreen timeLeft={timeLeft} status={status} />
-                )
-            }
-        </div>
+                {/* Content Container */}
+                {
+                    tab === "start" ? (
+                        <VoiceTextScreen t={t} handleStart={handleStart} audioRef={audioRef} handleAudioEnd={handleAudioEnd} isAudioPlaying={isAudioPlaying} status={status} instructionAudio={instructionAudio} />
+                    ) : (
+                        <VoiceImageScreen showCompleteAlert={showCompleteAlert} timeLeft={timeLeft} status={status} />
+                    )
+                }
+            </div>
+        </>
     );
 };
 
