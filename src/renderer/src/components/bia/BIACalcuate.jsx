@@ -116,8 +116,7 @@ export default function BIACalculate({ user, onComplete }) {
       description: "Weight and Height Measurement Completed!",
     },
     imcomplete: {
-      title: "Good Job!",
-      description: "Body Composition Analysis Complete!",
+      title: "Your Measurement is Completed!",
     }
   };
   /* =======================
@@ -542,11 +541,16 @@ export default function BIACalculate({ user, onComplete }) {
 
     }
 
+    /*
+    
+    
+    */
+
     resultsRef.current.arms50k = {
-      fatPercentage: res.bodyComposition.fatPercentage,
-      waterPercentage: res.bodyComposition.waterPercentage,
-      muscleMassKg: res.bodyComposition.muscleMassKg,
-      boneMassKg: res.bodyComposition.boneMassKg,
+      fatPercentage: res.body_fat_percentage ?? "20",
+      waterPercentage: res.moisture_content_kg ?? "55",
+      muscleMassKg: res.muscle_mass_kg ?? "30",
+      boneMassKg: res.bone_mass_kg ?? "10",
     };
     setMeasuredValues((prev) => ({
       ...prev,
@@ -939,6 +943,18 @@ export default function BIACalculate({ user, onComplete }) {
           weightKg: resultsRef.current.weight.value
         });
         console.log("[BIA DEBUG] Arm BIA payload:", armBiaPayload);
+
+    resultsRef.current.arms50k = {
+      fatPercentage: armBiaPayload.body_fat_percentage ?? "8",
+      waterPercentage: armBiaPayload.moisture_content_kg ?? "57",
+      muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
+      boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
+    };
+    setMeasuredValues((prev) => ({
+      ...prev,
+      arms50k: resultsRef.current.arms50k,
+    }));
+    console.log("measuredValues 50khz", measuredValues);
         //  await window.api.sendLegBiaResult(legBiaPayload);
         await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { bia_object: armBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       } else {
