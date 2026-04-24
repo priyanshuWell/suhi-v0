@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
@@ -16,9 +16,6 @@ export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user);
     const { t } = useTranslation();
     const navigate = useNavigate();
-    const audioRef = useRef(null);
-
-    const [audioPlaying, setAudioPlaying] = useState(false);
     const [loading, setLoading] = useState(true);  // seeding + starting
     const [sessionId, setSessionId] = useState(null);
     const [error, setError] = useState(null);
@@ -42,11 +39,6 @@ export const ColorBlindPlate = () => {
             }
         })();
 
-        // Auto-play instruction audio
-        audioRef.current?.play().catch((err) =>
-            console.warn("Audio playback failed:", err)
-        );
-
         return () => { cancelled = true; };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -58,16 +50,6 @@ export const ColorBlindPlate = () => {
 
     return (
         <div className="flex flex-col gap-36 inset-0 w-screen h-screen overflow-hidden bg-black p-10">
-
-            {/* Hidden audio */}
-            <audio
-                ref={audioRef}
-                onPlay={() => setAudioPlaying(true)}
-                onEnded={() => setAudioPlaying(false)}
-            >
-                <source src="/src/assets/audio/colorblindness_intro.mp3" type="audio/mpeg" />
-                {t("common.audio_not_supported")}
-            </audio>
 
             {/* Background */}
             <div

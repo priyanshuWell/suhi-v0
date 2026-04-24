@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import video2 from "../assets/avatar2.mp4";
+import cameraScanAudio from "../assets/audio/camera_scan.mp3";
 import { data, useNavigate } from "react-router";
 import { recordFromOpenCameras } from "../utils/recordSession";
 import { getVideoDuration, getKioskId, getSessionId } from "../utils/config";
@@ -45,7 +46,7 @@ const VideoCaptureScreen = () => {
     name: "Priyanshu",
   };
   const MAX_ATTEMPTS = 2;
-  const instructionAudio = "/src/assets/audio/camera_scan.mp3";
+  const instructionAudio = cameraScanAudio;
 
   useEffect(() => {
     //   if (hasStartedRef.current) return;

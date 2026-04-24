@@ -415,6 +415,7 @@ import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import audioBufferToWav from "audiobuffer-to-wav";
 import VoiceTextScreen from "./VoiceTextScreen";
 import VoiceImageScreen from "./VoiceImageScreen";
+import voiceAudio from "../../assets/audio/voice.mp3";
 
 const VoiceCapture = () => {
     const navigate = useNavigate();
@@ -435,7 +436,7 @@ const VoiceCapture = () => {
     const dataArrayRef = React.useRef(null);
     const animationFrameRef = React.useRef(null);
     const [processingAngle, setProcessingAngle] = useState(0);
-    const instructionAudio = "/src/assets/audio/voice.mp3";
+    const instructionAudio = voiceAudio;
     const [showCompleteAlert, setShowCompleteAlert] = useState(false);
 
     const { t } = useTranslation();

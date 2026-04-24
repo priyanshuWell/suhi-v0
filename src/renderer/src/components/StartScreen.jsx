@@ -8,6 +8,7 @@ import { openCamerasInBackground } from '../utils/cameraSession'
 import { Setting } from './Setting'
 import { useTranslation } from 'react-i18next'
 import StartButton from './ui/BlueGradientButton'
+import welcomeScreenAudio from '../assets/audio/welcome_screen.mp3'
 
 const Flag = true;
 export const StartScreen = () => {
@@ -18,7 +19,7 @@ export const StartScreen = () => {
   const [isActive, setIsActive] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = React.useRef(null);
-  const instructionAudio = "/src/assets/audio/welcome_screen.mp3";
+  const instructionAudio = welcomeScreenAudio;
   useEffect(() => {
     // const openCameras = async () => {
     //   return await openCamerasInBackground()

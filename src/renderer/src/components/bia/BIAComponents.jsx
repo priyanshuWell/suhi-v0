@@ -14,6 +14,8 @@ import weightResSvg from "../../assets/bia/weight_res.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import { Volume2 } from "lucide-react";
 import HeightWeightComplete from "./HeightWeightComplete";
+import standstraightAudio from "../../assets/audio/standstraight.mp3";
+import impedanceAudio from "../../assets/audio/impedance.mp3";
 import ReplayAudio from "../ReplayAudio";
 import ImComplete from "./ImComplete";
 
@@ -41,10 +43,10 @@ export const BIAComponent = ({
   // Map screen types to audio files
   const getAudioPath = (type) => {
     const audioMap = {
-      wh: "/src/assets/audio/standstraight.mp3",
-      im: "/src/assets/audio/impedance.mp3",
+      wh: standstraightAudio,
+      im: impedanceAudio,
     };
-    return audioMap[type] || "/src/assets/audio/standstraight.mp3";
+    return audioMap[type] || standstraightAudio;
   };
 
   useEffect(() => {

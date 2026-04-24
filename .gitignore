@@ -5,3 +5,6 @@ out
 .eslintcache
 *.log*
 /build
+/graph-output
+/scripts
+/.agent

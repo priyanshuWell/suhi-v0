@@ -17,6 +17,10 @@ import leftBack from "../../assets/hands/left-back.svg";
 
 import rightFront from "../../assets/hands/right-front.svg";
 import rightBack from "../../assets/hands/right-back.svg";
+import lpAudio from "../../assets/audio/lp.mp3";
+import lbAudio from "../../assets/audio/lb.mp3";
+import rpAudio from "../../assets/audio/rp.mp3";
+import rbAudio from "../../assets/audio/rb.mp3";
 
 
 import { useNavigate } from "react-router";
@@ -35,28 +39,28 @@ const CAPTURE_FLOW = [
     label: "Left Hand - Front",
     overlay: leftFront,
     handPayload: "LP",
-    audio: "/src/assets/audio/lp.mp3"
+    audio: lpAudio
   },
   {
     key: "LEFT_BACK",
     label: "Left Hand - Back",
     overlay: leftBack,
     handPayload: "LB",
-    audio: "/src/assets/audio/lb.mp3"
+    audio: lbAudio
   },
   {
     key: "RIGHT_FRONT",
     label: "Right Hand - Front",
     overlay: rightFront,
     handPayload: "RP",
-    audio: "/src/assets/audio/rp.mp3"
+    audio: rpAudio
   },
   {
     key: "RIGHT_BACK",
     label: "Right Hand - Back",
     overlay: rightBack,
     handPayload: "RB",
-    audio: "/src/assets/audio/rb.mp3"
+    audio: rbAudio
   },
 ];
 

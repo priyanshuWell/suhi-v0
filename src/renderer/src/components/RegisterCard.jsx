@@ -7,30 +7,31 @@ import profilepic from '../assets/profile-pic.png'
 import { useNavigate } from 'react-router'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
+import confirmUserAudio from '../assets/audio/confirm_user.mp3'
 
 
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user);
 
-const imagePath = user?.data?.image_path || "";
+  const imagePath = user?.data?.image_path || "";
 
-// safer extraction
-const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
+  // safer extraction
+  const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
 
-console.log("imagePath:", imagePath);
-console.log("folderName:", folderName);
+  console.log("imagePath:", imagePath);
+  console.log("folderName:", folderName);
 
-const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-const audioRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const audioRef = React.useRef(null);
 
-const instructionAudio = "/src/assets/audio/confirm_user.mp3";
+  const instructionAudio = confirmUserAudio;
 
-const profileImageSrc =
-  folderName && folderName.length > 0
-    ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-    : profilepic;
+  const profileImageSrc =
+    folderName && folderName.length > 0
+      ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+      : profilepic;
 
-console.log("profileImageSrc:", profileImageSrc);
+  console.log("profileImageSrc:", profileImageSrc);
   useEffect(() => {
     // Play audio when component mounts
     playAudio();
@@ -57,7 +58,7 @@ console.log("profileImageSrc:", profileImageSrc);
     setIsAudioPlaying(false);
   };
 
-  console.log("users",user);
+  console.log("users", user);
   const navigate = useNavigate()
   const { t } = useTranslation()
   const handleYesClick = () => {

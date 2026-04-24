@@ -200,6 +200,10 @@ import rightBack from "../../assets/hands/left-back.svg";
 
 import leftFront from "../../assets/hands/right-front.svg";
 import leftBack from "../../assets/hands/right-back.svg";
+import lpAudio from "../../assets/audio/lp.mp3";
+import lbAudio from "../../assets/audio/lb.mp3";
+import rpAudio from "../../assets/audio/rp.mp3";
+import rbAudio from "../../assets/audio/rb.mp3";
 
 const API_BASE_URL = "http://127.0.0.1:8000";
 
@@ -215,10 +219,10 @@ const mapCameras = (cams) => {
 
 // ✅ Your 4 steps
 const CAPTURE_FLOW = [
-  { key: "LEFT_FRONT", labelKey: "dmit.hand_labels.left_front", role: "LEFT", overlay: leftFront, audio: "/src/assets/audio/lp.mp3" },
-  { key: "LEFT_BACK", labelKey: "dmit.hand_labels.left_back", role: "LEFT", overlay: leftBack, audio: "/src/assets/audio/lb.mp3" },
-  { key: "RIGHT_FRONT", labelKey: "dmit.hand_labels.right_front", role: "RIGHT", overlay: rightFront, audio: "/src/assets/audio/rp.mp3" },
-  { key: "RIGHT_BACK", labelKey: "dmit.hand_labels.right_back", role: "RIGHT", overlay: rightBack, audio: "/src/assets/audio/rb.mp3" },
+  { key: "LEFT_FRONT", labelKey: "dmit.hand_labels.left_front", role: "LEFT", overlay: leftFront, audio: lpAudio },
+  { key: "LEFT_BACK", labelKey: "dmit.hand_labels.left_back", role: "LEFT", overlay: leftBack, audio: lbAudio },
+  { key: "RIGHT_FRONT", labelKey: "dmit.hand_labels.right_front", role: "RIGHT", overlay: rightFront, audio: rpAudio },
+  { key: "RIGHT_BACK", labelKey: "dmit.hand_labels.right_back", role: "RIGHT", overlay: rightBack, audio: rbAudio },
 ];
 
 const DMITScreen = () => {
