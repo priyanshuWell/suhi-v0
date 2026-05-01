@@ -21,11 +21,8 @@ import {
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
     DivideAttentionSessionComplete,
-} from "../../../utils/api"; // adjust path as needed
+} from "../../../utils/api";
 
-// ─── Scoring constants ───
-// Only correct_hit and false_alarm are sent to backend;
-// miss and correct_rejection are calculated server-side.
 const SCORE = {
     CORRECT_HIT: 10,
     FALSE_ALARM: -5,
@@ -169,7 +166,7 @@ function physics(ps, dt, moving) {
                     if (dot > 0) {
                         a.vx -= dot * nx; a.vy -= dot * ny;
                         b.vx += dot * nx; b.vy += dot * ny;
-                    }
+                    } dt
                 }
             }
         }
@@ -183,20 +180,7 @@ function drawParticleImg(ctx, img, p, scale = 1) {
     ctx.drawImage(img, p.x - p.radius - offset, p.y - p.radius - offset, sz, sz);
 }
 
-/*
- * ─── SCORING LOGIC ───
- *
- * At FREEZE end, for every particle:
- *   - Target + selected     → correct_hit     (+10, +3 speed bonus if fast)
- *   - Target + not selected → miss            (−5,  no bonus)
- *   - Distractor + selected → false_alarm     (−5,  no bonus)
- *   - Distractor + not sel  → correct_rejection (+5, +3 speed bonus if particle was probed fast)
- *
- * Speed bonus: response_time_ms < 50% of freeze window
- *
- * NOTE: correct_rejection is implicit — the child simply did NOT tap a distractor.
- * We award CRs for every distractor that was NOT selected. response_time_ms = null for CR.
- */
+
 function buildResponses(ps, freezeDurationMs) {
     const speedThresholdMs = freezeDurationMs * 0.5;
     let roundScore = 0;
@@ -241,16 +225,6 @@ function buildResponses(ps, freezeDurationMs) {
     return { responses, roundScore };
 }
 
-/*
- * ─── SESSION LOGIC ───
- *
- * State machine for wrong answers:
- *   failState = "none"    → no failures yet on current round advancement
- *   failState = "retry"   → 1st wrong, will retry SAME round
- *   failState = "goback"  → 2nd wrong (retry failed), go to previous round
- *   failState = "final"   → came back from previous, now re-attempting the
- *                            failed round. If wrong again → abort
- */
 export default function SpaceConvoy() {
     const navigate = useNavigate();
     const location = useLocation();
@@ -266,7 +240,7 @@ export default function SpaceConvoy() {
     // ─── API state ───
     const apiState = useRef({
         trialId: null,
-        trialNumber: 0,  // resets to 0 on session start; each initRound increments it
+        trialNumber: 0,
         totalScore: 0,
     });
 
@@ -277,7 +251,7 @@ export default function SpaceConvoy() {
         ps: [],
         phaseElapsed: 0,
         freezeRemaining: 0,
-        freezeStartTime: 0,  // wall-clock ms when FREEZE began (for response_time_ms)
+        freezeStartTime: 0,
         revealProgress: 0,
         allGuessed: false,
         failState: "none",
@@ -287,7 +261,7 @@ export default function SpaceConvoy() {
         totalWrong: 0,
         totalAttempts: 0,
         globalTime: 0,
-    });
+    }); dt
     const rafRef = useRef(null);
     const prevTime = useRef(0);
 
@@ -312,7 +286,6 @@ export default function SpaceConvoy() {
         })();
     }, []);
 
-    // ─── Start session: reset state, then init round 0 ───
     const startSession = useCallback(() => {
         const g = G.current;
         const api = apiState.current;
@@ -322,7 +295,7 @@ export default function SpaceConvoy() {
             failState: "none", highestRound: 0,
             totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
         });
-        // trial_number resets to 0 here; initRound increments to 1 on first call
+
         api.trialNumber = 0;
         api.totalScore = 0;
 
@@ -330,7 +303,6 @@ export default function SpaceConvoy() {
         initRound(0);
     }, [sessionId]);
 
-    // ─── Init round: spawn particles, call TrialStart ───
     const initRound = useCallback(async (idx) => {
         const g = G.current;
         const api = apiState.current;

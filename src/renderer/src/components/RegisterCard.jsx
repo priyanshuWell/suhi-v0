@@ -1,84 +1,81 @@
-import React, { useEffect, useState } from 'react'
-import lightbg from '../assets/lightbg.png'
-import lightblub from '../assets/lightblub.png'
-import projector from '../assets/projector.png'
-import frame1 from '../assets/verfied-frame.svg'
-import profilepic from '../assets/profile-pic.png'
-import { useNavigate } from 'react-router'
-import { useTranslation } from 'react-i18next'
-import { useSelector } from 'react-redux'
-import confirmUserAudio from '../assets/audio/confirm_user.mp3'
-
+import React, { useEffect, useState } from "react"
+import lightbg from "../assets/lightbg.png"
+import lightblub from "../assets/lightblub.png"
+import projector from "../assets/projector.png"
+import frame1 from "../assets/verfied-frame.svg"
+import profilepic from "../assets/profile-pic.png"
+import { useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
+import { useSelector } from "react-redux"
+import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 
 export default function RegisterCard() {
-  const user = useSelector((state) => state.common.user);
+  const user = useSelector((state) => state.common.user)
 
-  const imagePath = user?.data?.image_path || "";
+  const imagePath = user?.data?.image_path || ""
 
   // safer extraction
-  const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
+  const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1)
 
-  console.log("imagePath:", imagePath);
-  console.log("folderName:", folderName);
+  console.log("imagePath:", imagePath)
+  console.log("folderName:", folderName)
 
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const audioRef = React.useRef(null);
-
-  const instructionAudio = confirmUserAudio;
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const audioRef = React.useRef(null)
 
   const profileImageSrc =
     folderName && folderName.length > 0
       ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-      : profilepic;
+      : profilepic
 
-  console.log("profileImageSrc:", profileImageSrc);
+  console.log("profileImageSrc:", profileImageSrc)
   useEffect(() => {
     // Play audio when component mounts
-    playAudio();
-  }, []);
+    playAudio()
+  }, [])
 
-  const playAudio = () => {
-    if (audioRef.current) {
-      setIsAudioPlaying(true);
+  const playAudio = async () => {
+    const audioPath = await getAudioForCurrentLanguage("confirm_user")
+    if (audioPath && audioRef.current) {
+      audioRef.current.src = audioPath
+      setIsAudioPlaying(true)
       audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err);
-      });
+        console.log("Audio playback failed:", err)
+        setIsAudioPlaying(false)
+      })
+    } else if (!audioPath) {
+      console.log("No audio for confirm_user in current language")
     }
-  };
+  }
 
   const stopAudio = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsAudioPlaying(false);
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsAudioPlaying(false)
     }
-  };
+  }
 
   const handleAudioEnd = () => {
-    setIsAudioPlaying(false);
-  };
+    setIsAudioPlaying(false)
+  }
 
-  console.log("users", user);
+  console.log("users", user)
   const navigate = useNavigate()
   const { t } = useTranslation()
   const handleYesClick = () => {
-    stopAudio();
-    navigate('/bia/wh');
-  };
+    stopAudio()
+    navigate("/bia/wh")
+  }
 
   const handleNoClick = () => {
-    stopAudio();
-    navigate('/');
-  };
+    stopAudio()
+    navigate("/")
+  }
 
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center">
-      <audio
-        ref={audioRef}
-        onEnded={handleAudioEnd}
-        onPlay={() => setIsAudioPlaying(true)}
-      >
-        <source src={instructionAudio} type="audio/mpeg" />
+      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
         Your browser does not support the audio element.
       </audio>
       {/* Card Wrapper */}
@@ -93,11 +90,7 @@ export default function RegisterCard() {
           z-20
         "
         >
-          <img
-            src={frame1}
-            alt="dmt background"
-            className="w-[850px] max-w-none h-auto"
-          />
+          <img src={frame1} alt="dmt background" className="w-[850px] max-w-none h-auto" />
         </div>
 
         <div
@@ -115,25 +108,30 @@ export default function RegisterCard() {
             />
           </div> */}
 
-
           <img
             src={profileImageSrc}
             onError={(e) => {
-              e.currentTarget.src = profilepic;
+              e.currentTarget.src = profilepic
             }}
             alt="profile pic"
             className="w-full portrait:max-w-96 h-auto object-cover rounded-3xl"
           />
 
-
           {/* text */}
 
           <div className="info max-w-full mt-8">
             <p className="text-[28px] flex flex-col items-center text-center tracking-wider gap-y-3 text-white text-nowrap">
-              <span>{t('profile.name')} - {user?.data?.student_name} </span>
-              {user?.data?.class && <span> {t('profile.class')}- 8th A</span>}
-              {user?.data?.age && <span>{t('profile.age')} - {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years</span>}
-              {user?.data?.contact_number && <span>{t('profile.number')} - 0987654321</span>}
+              <span>
+                {t("profile.name")} - {user?.data?.student_name}{" "}
+              </span>
+              {user?.data?.class && <span> {t("profile.class")}- 8th A</span>}
+              {user?.data?.age && (
+                <span>
+                  {t("profile.age")} -{" "}
+                  {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years
+                </span>
+              )}
+              {user?.data?.contact_number && <span>{t("profile.number")} - 0987654321</span>}
             </p>
           </div>
 
@@ -142,7 +140,7 @@ export default function RegisterCard() {
               onClick={handleYesClick}
               style={{
                 borderImageSource:
-                  'radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)',
+                  "radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)",
                 borderImageSlice: 1
               }}
               className="
@@ -161,7 +159,7 @@ transition-transform duration-300 ease-in-out
 
   "
             >
-              {t('common.yes_me')}
+              {t("common.yes_me")}
             </button>
 
             <button
@@ -185,7 +183,7 @@ active:scale-[0.98]
 transition-transform duration-300 ease-in-out
           "
             >
-              {t('common.not_me')}
+              {t("common.not_me")}
             </button>
           </div>
         </div>
@@ -200,11 +198,6 @@ transition-transform duration-300 ease-in-out
     </div>
   )
 }
-
-
-
-
-
 
 // {
 //     "success": true,

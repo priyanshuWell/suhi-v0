@@ -8,7 +8,6 @@
 // import { sendVoiceToBackend, runVoice } from "../../utils/api";
 // import audioBufferToWav from "audiobuffer-to-wav";
 
-
 // const VoiceCapture = () => {
 //     const { t } = useTranslation();
 //     const navigate = useNavigate();
@@ -185,7 +184,6 @@
 //                     arrayBuffer: wavArrayBuffer
 //                 };
 
-
 //                 console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
 
 //                 try {
@@ -194,7 +192,6 @@
 //                         timestamp: Date.now(),
 //                         buffer: new Uint8Array(wavArrayBuffer)
 //                     };
-
 
 //                     const storeResult = await sendVoiceToBackend(voiceData);
 //                     console.log("Store result voice:", storeResult);
@@ -362,9 +359,6 @@
 //                         </span> */}
 //                     </div>
 
-
-
-
 //                 </div>
 
 //                 {/* Start Button - Hide when recording or processing, Disable when audio playing */}
@@ -401,307 +395,311 @@
 
 // export default VoiceCapture;
 
+import React, { useEffect, useState } from "react"
+import bg1 from "../../assets/lightbg.png"
 
-
-
-import React, { useEffect, useState } from "react";
-import bg1 from "../../assets/lightbg.png";
-
-import { useLocation, useNavigate } from "react-router";
-import { useTranslation } from "react-i18next";
-import { useSelector } from "react-redux";
-import { getKioskId } from "../../utils/config";
-import { sendVoiceToBackend, runVoice } from "../../utils/api";
-import audioBufferToWav from "audiobuffer-to-wav";
-import VoiceTextScreen from "./VoiceTextScreen";
-import VoiceImageScreen from "./VoiceImageScreen";
-import voiceAudio from "../../assets/audio/voice.mp3";
+import { useLocation, useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
+import { useSelector } from "react-redux"
+import { getKioskId } from "../../utils/config"
+import { sendVoiceToBackend, runVoice } from "../../utils/api"
+import audioBufferToWav from "audiobuffer-to-wav"
+import VoiceTextScreen from "./VoiceTextScreen"
+import VoiceImageScreen from "./VoiceImageScreen"
+import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 
 const VoiceCapture = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    // Get data from Redux store
-    const user = useSelector((state) => state.common.user);
-    const sessionId = useSelector((state) => state.common.sessionId);
-    const [timeLeft, setTimeLeft] = useState(30);
-    const [isActive, setIsActive] = useState(false);
-    const [tab, setTab] = useState("start");
-    const [status, setStatus] = useState("idle"); // idle, recording, processing, success, error
-    const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-    const [voiceBars, setVoiceBars] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0]); // Heights for 9 bars
-    const mediaRecorderRef = React.useRef(null);
-    const audioRef = React.useRef(null);
-    const chunksRef = React.useRef([]);
-    const analyserRef = React.useRef(null);
-    const dataArrayRef = React.useRef(null);
-    const animationFrameRef = React.useRef(null);
-    const [processingAngle, setProcessingAngle] = useState(0);
-    const instructionAudio = voiceAudio;
-    const [showCompleteAlert, setShowCompleteAlert] = useState(false);
+  const navigate = useNavigate()
+  const location = useLocation()
+  // Get data from Redux store
+  const user = useSelector((state) => state.common.user)
+  const sessionId = useSelector((state) => state.common.sessionId)
+  const [timeLeft, setTimeLeft] = useState(30)
+  const [isActive, setIsActive] = useState(false)
+  const [tab, setTab] = useState("start")
+  const [status, setStatus] = useState("idle") // idle, recording, processing, success, error
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const [voiceBars, setVoiceBars] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0]) // Heights for 9 bars
+  const mediaRecorderRef = React.useRef(null)
+  const audioRef = React.useRef(null)
+  const chunksRef = React.useRef([])
+  const analyserRef = React.useRef(null)
+  const dataArrayRef = React.useRef(null)
+  const animationFrameRef = React.useRef(null)
+  const [processingAngle, setProcessingAngle] = useState(0)
+  const [showCompleteAlert, setShowCompleteAlert] = useState(false)
 
-    const { t } = useTranslation();
+  const { t } = useTranslation()
 
-    const handleNext = () => {
-        setShowCompleteAlert(true);
+  const handleNext = () => {
+    setShowCompleteAlert(true)
+  }
+
+  useEffect(() => {
+    // Play audio when component mounts
+    playAudio()
+  }, [])
+
+  useEffect(() => {
+    let interval
+
+    if (status === "processing") {
+      interval = setInterval(() => {
+        setProcessingAngle((prev) => (prev + 6) % 360) // smooth rotation
+      }, 16) // ~60fps
     }
 
-    useEffect(() => {
-        // Play audio when component mounts
-        playAudio();
-    }, []);
+    return () => clearInterval(interval)
+  }, [status])
 
-    useEffect(() => {
-        let interval;
+  useEffect(() => {
+    let interval = null
+    if (isActive && timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1)
+      }, 1000)
+    } else if (timeLeft === 0 && isActive) {
+      clearInterval(interval)
+      setIsActive(false)
+      stopRecording()
+    }
+    return () => clearInterval(interval)
+  }, [isActive, timeLeft])
 
-        if (status === "processing") {
-            interval = setInterval(() => {
-                setProcessingAngle(prev => (prev + 6) % 360); // smooth rotation
-            }, 16); // ~60fps
+  const playAudio = async () => {
+    const audioPath = await getAudioForCurrentLanguage("voice")
+    if (audioPath && audioRef.current) {
+      audioRef.current.src = audioPath
+      setIsAudioPlaying(true)
+      audioRef.current.play().catch((err) => {
+        console.log("Audio playback failed:", err)
+        setIsAudioPlaying(false)
+      })
+    } else if (!audioPath) {
+      console.log("No audio for voice in current language")
+    }
+  }
+
+  const stopAudio = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsAudioPlaying(false)
+    }
+  }
+
+  const handleAudioEnd = () => {
+    setIsAudioPlaying(false)
+  }
+
+  // Visualize voice using Web Audio API
+  const visualizeVoice = () => {
+    if (!analyserRef.current || !dataArrayRef.current) return
+
+    const analyser = analyserRef.current
+    const dataArray = dataArrayRef.current
+
+    analyser.getByteFrequencyData(dataArray)
+
+    // Map frequency data to 9 bars
+    const barCount = 9
+    const bufferLength = dataArray.length
+    const barWidth = Math.floor(bufferLength / barCount)
+
+    const newBars = []
+    for (let i = 0; i < barCount; i++) {
+      let sum = 0
+      const start = i * barWidth
+      const end = start + barWidth
+
+      for (let j = start; j < end; j++) {
+        sum += dataArray[j]
+      }
+
+      const average = sum / barWidth
+      // Normalize to 0-1 range and smooth it out
+      const normalized = Math.min(1, average / 255)
+      newBars.push(normalized)
+    }
+
+    setVoiceBars(newBars)
+    animationFrameRef.current = requestAnimationFrame(visualizeVoice)
+  }
+
+  // Cleanup animation on unmount
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [])
+  const startRecording = async () => {
+    setTab("voice")
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      console.log("stream", stream)
+
+      // Set up Web Audio API for visualization
+      const audioContext = new AudioContext({ sampleRate: 16000 })
+      // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioContext.createMediaStreamSource(stream)
+      const analyser = audioContext.createAnalyser()
+
+      analyser.fftSize = 256
+      const bufferLength = analyser.frequencyBinCount
+      const dataArray = new Uint8Array(bufferLength)
+
+      source.connect(analyser)
+      analyserRef.current = analyser
+      dataArrayRef.current = dataArray
+
+      // Start visualization
+      visualizeVoice()
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
+      mediaRecorderRef.current = mediaRecorder
+      chunksRef.current = []
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data)
+        }
+      }
+      console.log("mediaRecorder", mediaRecorder, chunksRef.current)
+      mediaRecorder.onstop = async () => {
+        // Stop visualization
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+        }
+        // Reset bars
+        setVoiceBars([0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" })
+        const arrayBuffer = await blob.arrayBuffer()
+
+        // Convert to WAV 16kHz
+        const audioContext = new AudioContext({ sampleRate: 16000 })
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
+        const wavArrayBuffer = audioBufferToWav(audioBuffer)
+
+        // Get data from Redux store and config
+        const kioskId = getKioskId()
+        const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa" // Corrected property path
+        const sessionId = user?.data?.buffer_id
+        setStatus("processing")
+        const request = {
+          kiosk_id: kioskId,
+          user_id: userId,
+          session_id: sessionId,
+          arrayBuffer: wavArrayBuffer
         }
 
-        return () => clearInterval(interval);
-    }, [status]);
+        console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId })
 
-    useEffect(() => {
-        let interval = null;
-        if (isActive && timeLeft > 0) {
-            interval = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && isActive) {
-            clearInterval(interval);
-            setIsActive(false);
-            stopRecording();
-        }
-        return () => clearInterval(interval);
-    }, [isActive, timeLeft]);
-
-    const playAudio = () => {
-        if (audioRef.current) {
-            setIsAudioPlaying(true);
-            audioRef.current.play().catch((err) => {
-                console.log("Audio playback failed:", err);
-            });
-        }
-    };
-
-    const stopAudio = () => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-            setIsAudioPlaying(false);
-        }
-    };
-
-    const handleAudioEnd = () => {
-        setIsAudioPlaying(false);
-    };
-
-    // Visualize voice using Web Audio API
-    const visualizeVoice = () => {
-        if (!analyserRef.current || !dataArrayRef.current) return;
-
-        const analyser = analyserRef.current;
-        const dataArray = dataArrayRef.current;
-
-        analyser.getByteFrequencyData(dataArray);
-
-        // Map frequency data to 9 bars
-        const barCount = 9;
-        const bufferLength = dataArray.length;
-        const barWidth = Math.floor(bufferLength / barCount);
-
-        const newBars = [];
-        for (let i = 0; i < barCount; i++) {
-            let sum = 0;
-            const start = i * barWidth;
-            const end = start + barWidth;
-
-            for (let j = start; j < end; j++) {
-                sum += dataArray[j];
-            }
-
-            const average = sum / barWidth;
-            // Normalize to 0-1 range and smooth it out
-            const normalized = Math.min(1, average / 255);
-            newBars.push(normalized);
-        }
-
-        setVoiceBars(newBars);
-        animationFrameRef.current = requestAnimationFrame(visualizeVoice);
-    };
-
-    // Cleanup animation on unmount
-    useEffect(() => {
-        return () => {
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-        };
-    }, []);
-    const startRecording = async () => {
-        setTab("voice")
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            console.log("stream", stream);
+          const voiceData = {
+            role: "VOICE",
+            timestamp: Date.now(),
+            buffer: new Uint8Array(wavArrayBuffer)
+          }
 
-            // Set up Web Audio API for visualization
-            const audioContext = new AudioContext({ sampleRate: 16000 });
-            // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const source = audioContext.createMediaStreamSource(stream);
-            const analyser = audioContext.createAnalyser();
+          const storeResult = await sendVoiceToBackend(voiceData)
+          console.log("Store result voice:", storeResult)
 
-            analyser.fftSize = 256;
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
+          if (storeResult.success) {
+            const runPayload = {
+              shm_path: storeResult.shm_path,
+              kiosk_id: kioskId,
+              user_id: userId,
+              session_id: sessionId
+            }
+            handleNext()
+            const runResult = await runVoice(runPayload)
+            console.log("Run result:", runResult)
 
-            source.connect(analyser);
-            analyserRef.current = analyser;
-            dataArrayRef.current = dataArray;
-
-            // Start visualization
-            visualizeVoice();
-
-            const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-            mediaRecorderRef.current = mediaRecorder;
-            chunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    chunksRef.current.push(e.data);
-                }
-            };
-            console.log("mediaRecorder", mediaRecorder, chunksRef.current);
-            mediaRecorder.onstop = async () => {
-                // Stop visualization
-                if (animationFrameRef.current) {
-                    cancelAnimationFrame(animationFrameRef.current);
-                }
-                // Reset bars
-                setVoiceBars([0, 0, 0, 0, 0, 0, 0, 0, 0]);
-
-                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
-                const arrayBuffer = await blob.arrayBuffer();
-
-                // Convert to WAV 16kHz
-                const audioContext = new AudioContext({ sampleRate: 16000 });
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                const wavArrayBuffer = audioBufferToWav(audioBuffer);
-
-                // Get data from Redux store and config
-                const kioskId = getKioskId();
-                const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa"; // Corrected property path
-                const sessionId = user?.data?.buffer_id;
-                setStatus("processing");
-                const request = {
-                    kiosk_id: kioskId,
-                    user_id: userId,
-                    session_id: sessionId,
-                    arrayBuffer: wavArrayBuffer
-                };
-
-
-                console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId });
-
-                try {
-                    const voiceData = {
-                        role: "VOICE",
-                        timestamp: Date.now(),
-                        buffer: new Uint8Array(wavArrayBuffer)
-                    };
-
-
-                    const storeResult = await sendVoiceToBackend(voiceData);
-                    console.log("Store result voice:", storeResult);
-
-                    if (storeResult.success) {
-                        const runPayload = {
-                            shm_path: storeResult.shm_path,
-                            kiosk_id: kioskId,
-                            user_id: userId,
-                            session_id: sessionId
-                        };
-                        handleNext();
-                        const runResult = await runVoice(runPayload);
-                        console.log("Run result:", runResult);
-
-                        if (runResult.success) {
-                            setStatus("success");
-                            stopAudio();
-                            await new Promise((r) => setTimeout(r, 500));
-                            // navigate("/space-convoy-main");
-                        } else {
-                            setStatus("error");
-                            console.error("Voice run failed:", runResult.error);
-                            handleNext();
-                        }
-                    } else {
-                        setStatus("error");
-                        console.error("Voice storage failed:", storeResult.error);
-                        handleNext();
-                    }
-                } catch (err) {
-                    setStatus("error");
-                    console.error("API error:", err);
-                    handleNext();
-                }
-
-                // Stop all tracks
-                stream.getTracks().forEach(track => track.stop());
-                // Close audio context
-                audioContext.close();
-            };
-
-            mediaRecorder.start();
-            setIsActive(true);
-            setStatus("recording");
+            if (runResult.success) {
+              setStatus("success")
+              stopAudio()
+              await new Promise((r) => setTimeout(r, 500))
+              // navigate("/space-convoy-main");
+            } else {
+              setStatus("error")
+              console.error("Voice run failed:", runResult.error)
+              handleNext()
+            }
+          } else {
+            setStatus("error")
+            console.error("Voice storage failed:", storeResult.error)
+            handleNext()
+          }
         } catch (err) {
-            console.error("Microphone permission denied or error:", err);
-            setStatus("error");
+          setStatus("error")
+          console.error("API error:", err)
+          handleNext()
         }
-    };
 
-    const handleStart = () => {
-        setTab("voice")
-        if (status === "recording" || status === "processing") return;
-        setTimeLeft(30);
-        startRecording();
-    };
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop())
+        // Close audio context
+        audioContext.close()
+      }
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-            mediaRecorderRef.current.stop();
-        }
-    };
+      mediaRecorder.start()
+      setIsActive(true)
+      setStatus("recording")
+    } catch (err) {
+      console.error("Microphone permission denied or error:", err)
+      setStatus("error")
+    }
+  }
 
-    return (
-        <>
-            <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
-                <audio
-                    ref={audioRef}
-                    onEnded={handleAudioEnd}
-                    onPlay={() => setIsAudioPlaying(true)}
-                >
-                    <source src={instructionAudio} type="audio/mpeg" />
-                    Your browser does not support the audio element.
-                </audio>
-                {/* Background */}
-                <div
-                    className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
-                    style={{ backgroundImage: `url(${bg1})` }}
-                />
+  const handleStart = () => {
+    setTab("voice")
+    if (status === "recording" || status === "processing") return
+    setTimeLeft(30)
+    startRecording()
+  }
 
-                {/* Content Container */}
-                {
-                    tab === "start" ? (
-                        <VoiceTextScreen t={t} handleStart={handleStart} audioRef={audioRef} handleAudioEnd={handleAudioEnd} isAudioPlaying={isAudioPlaying} status={status} instructionAudio={instructionAudio} />
-                    ) : (
-                        <VoiceImageScreen showCompleteAlert={showCompleteAlert} timeLeft={timeLeft} status={status} />
-                    )
-                }
-            </div>
-        </>
-    );
-};
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop()
+    }
+  }
 
-export default VoiceCapture;
+  return (
+    <>
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
+        <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
+          Your browser does not support the audio element.
+        </audio>
+        {/* Background */}
+        <div
+          className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
+          style={{ backgroundImage: `url(${bg1})` }}
+        />
+
+        {/* Content Container */}
+        {tab === "start" ? (
+          <VoiceTextScreen
+            t={t}
+            handleStart={handleStart}
+            audioRef={audioRef}
+            handleAudioEnd={handleAudioEnd}
+            isAudioPlaying={isAudioPlaying}
+            status={status}
+            instructionAudio={instructionAudio}
+          />
+        ) : (
+          <VoiceImageScreen
+            showCompleteAlert={showCompleteAlert}
+            timeLeft={timeLeft}
+            status={status}
+          />
+        )}
+      </div>
+    </>
+  )
+}
+
+export default VoiceCapture
