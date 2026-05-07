@@ -2140,7 +2140,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           }
 
           const distanceCm = distance / 10
-          const calculatedHeight = 192 - distanceCm
+          const calculatedHeight = 196.3 - distanceCm
 
           /* ---------- RANGE CHECK ---------- */
           if (calculatedHeight < 80) {
@@ -4362,7 +4362,7 @@ export async function case41_WeightMeasurement() {
         // ══════════════════════════════════════════════════════════
 
         const WEIGHT_ZERO_OFFSET = 0.0 // Set from case 15
-        const CALIBRATION_FACTOR = 1.35675765459537366 // Set from case 15
+        const CALIBRATION_FACTOR =0.6011 // Set from case 15
         const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR
         const calibratedWeight = calibratedWeightCatty;
         // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;

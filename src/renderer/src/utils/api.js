@@ -155,7 +155,7 @@ export async function realtimeCapture(kiosk_id=null) {
   try {
     const payload = {
       kiosk_id: "aabbcc44",
-      camera_index: 10,
+      camera_index: 6,
       max_seconds: 5,
       quality_threshold: 40
     };

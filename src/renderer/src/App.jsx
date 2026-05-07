@@ -32,19 +32,19 @@ import { StartCountDown } from './components/games/space-convoy/StartCountDown'
 import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConveyComplete'
 
 function App() {
-  useEffect(() => {
-    const doSync = async () => {
-      try {
-        console.log('🔄 Starting cloud-to-local sync...')
-        const data = await cloudToLocalSync()
-        console.log('✅ Sync success:', data)
-      } catch (err) {
-        console.error('❌ Sync failed:', err?.message || err)
-      }
-    }
+  // useEffect(() => {
+  //   const doSync = async () => {
+  //     try {
+  //       console.log('🔄 Starting cloud-to-local sync...')
+  //       const data = await cloudToLocalSync()
+  //       console.log('✅ Sync success:', data)
+  //     } catch (err) {
+  //       console.error('❌ Sync failed:', err?.message || err)
+  //     }
+  //   }
 
-    doSync()
-  }, [])
+  //   doSync()
+  // }, [])
 
   return (
     <Routes>

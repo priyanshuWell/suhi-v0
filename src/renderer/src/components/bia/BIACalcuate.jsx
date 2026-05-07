@@ -787,7 +787,7 @@ export default function BIACalculate({ user, onComplete }) {
       await BIAComplete({ session_id: storeUser?.data?.buffer_id });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
-      navigate("/voice");
+   navigate("/bia/imcomplete");
       return;
     }
 
