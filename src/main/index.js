@@ -8,9 +8,83 @@ import fs from "fs"
 import crypto from "crypto"
 import axios from "axios"
 import express from "express"
+import { spawn } from "child_process"
 const loudness = require("loudness")
 
 let mainWindow = null
+
+// ─── Unity Game process handle ───────────────────────────────────────────────
+let unityProcess = null
+
+/**
+ * Resolve path to the Unity binary.
+ * In development the binary lives at src/Divided_Attention/Divided_Attention.x86_64
+ * relative to the project root.  In production it is bundled under resources/.
+ */
+function getUnityBinaryPath() {
+  if (is.dev) {
+    // __dirname is src/main, so go up two levels to the project root
+    return join(__dirname, '../../src/Divided_Attention/Divided_Attention.x86_64')
+  }
+  // Packaged: app.getAppPath() points inside the asar, use process.resourcesPath
+  return join(process.resourcesPath, 'Divided_Attention', 'Divided_Attention.x86_64')
+}
+
+ipcMain.handle('launch-unity-game', async () => {
+  // Kill any stale instance
+  if (unityProcess && !unityProcess.killed) {
+    unityProcess.kill()
+    unityProcess = null
+  }
+
+  const binaryPath = getUnityBinaryPath()
+  console.log('[MAIN] Launching Unity game:', binaryPath)
+
+  try {
+    // Make sure the binary is executable
+    fs.chmodSync(binaryPath, 0o755)
+  } catch (e) {
+    console.warn('[MAIN] chmod failed (may already be executable):', e.message)
+  }
+
+  try {
+    unityProcess = spawn(binaryPath, [], {
+      detached: false,
+      stdio: 'ignore',
+    })
+
+    unityProcess.on('error', (err) => {
+      console.error('[MAIN] Unity process error:', err)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('unity:game-exit', -1)
+      }
+      unityProcess = null
+    })
+
+    unityProcess.on('exit', (code) => {
+      console.log('[MAIN] Unity process exited with code:', code)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('unity:game-exit', code ?? 0)
+      }
+      unityProcess = null
+    })
+
+    return { success: true }
+  } catch (err) {
+    console.error('[MAIN] Failed to spawn Unity game:', err)
+    return { success: false, error: err.message }
+  }
+})
+
+ipcMain.handle('stop-unity-game', async () => {
+  if (unityProcess && !unityProcess.killed) {
+    console.log('[MAIN] Stopping Unity game process')
+    unityProcess.kill()
+    unityProcess = null 
+  }
+  return { success: true }
+})
+// ─────────────────────────────────────────────────────────────────────────────
 
 ipcMain.handle("set-volume", async (_event, volume) => {
   try {

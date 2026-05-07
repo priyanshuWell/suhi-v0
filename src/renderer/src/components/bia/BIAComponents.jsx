@@ -14,8 +14,8 @@ import weightResSvg from "../../assets/bia/weight_res.svg"
 import BlueGradientButton from "../ui/BlueGradientButton"
 import { Volume2 } from "lucide-react"
 import HeightWeightComplete from "./HeightWeightComplete"
-import standstraightAudio from "../../assets/audio/standstraight.mp3"
-import impedanceAudio from "../../assets/audio/impedance.mp3"
+import standstraightAudio from "../../assets/audio/standstraight_en.mp3"
+import impedanceAudio from "../../assets/audio/impedance_en.mp3"
 import ReplayAudio from "../ReplayAudio"
 import ImComplete from "./ImComplete"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
@@ -150,9 +150,8 @@ export const BIAComponent = ({
                     return (
                       <div
                         key={i}
-                        className={`h-10 w-8 mb-1 skew-y-35 last:mb-0 transition-all duration-300 ${
-                          isActive ? "bg-[#368CC9]" : "bg-[#0F324D]"
-                        }`}
+                        className={`h-10 w-8 mb-1 skew-y-35 last:mb-0 transition-all duration-300 ${isActive ? "bg-[#368CC9]" : "bg-[#0F324D]"
+                          }`}
                       />
                     )
                   })}
