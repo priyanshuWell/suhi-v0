@@ -414,6 +414,7 @@ const VoiceCapture = () => {
   // Get data from Redux store
   const user = useSelector((state) => state.common.user)
   const sessionId = useSelector((state) => state.common.sessionId)
+  const screeningState = useSelector((state) => state.common.screening)
   const [timeLeft, setTimeLeft] = useState(30)
   const [isActive, setIsActive] = useState(false)
   const [tab, setTab] = useState("start")
@@ -612,7 +613,8 @@ const VoiceCapture = () => {
               shm_path: storeResult.shm_path,
               kiosk_id: kioskId,
               user_id: userId,
-              session_id: sessionId
+              session_id: sessionId,
+              screening_session_id: screeningState?.sessionId
             }
             handleNext()
             const runResult = await runVoice(runPayload)

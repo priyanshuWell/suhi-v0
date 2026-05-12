@@ -7,7 +7,7 @@ import { realtimeCapture, runFPT, sendVideoToBackend } from "../utils/api"
 import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch, useSelector } from "react-redux"
-import { setUser } from "../features/common/commonSlice"
+import { setUser, setScreening } from "../features/common/commonSlice"
 import { BIAMeasurementStage } from "../utils/api"
 import { trackStage } from "../utils/config"
 import ErrorAlert from "./ErrorAlert"
@@ -201,6 +201,7 @@ const VideoCaptureScreen = () => {
 
         // Success case - Face recognition successful
         dispatch(setUser(fptResponse))
+        dispatch(setScreening(fptResponse.screening || null))
         setStatus("Verification successful!")
         setIsVerify(true)
         stopAudio()
@@ -219,6 +220,9 @@ const VideoCaptureScreen = () => {
         )
 
         await new Promise((r) => setTimeout(r, 500))
+        
+        // Let RegisterCard handle the actual routing via its handleYesClick,
+        // so we just navigate to /verified first
         navigate("/verified")
       } catch (error) {
         console.error("Error in video capture flow:", error)

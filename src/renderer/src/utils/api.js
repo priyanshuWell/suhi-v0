@@ -189,7 +189,7 @@ export async function realtimeCapture(kiosk_id=null) {
   }
 }
 
-export async function colorBlindessStart(userId,kiosk_id){
+export async function colorBlindessStart(userId, kiosk_id, screeningSessionId = null){
   try {
     const payload ={
       user_id:userId,

@@ -74,9 +74,14 @@ export function getSessionId(){
   return crypto.randomUUID();
 }
 
-  export const trackStage = async (stage, status, data = {}, error = null,sessionId,userId,attemptNumber=1) => {
+  export const trackStage = async (stage, status, data = {}, error = null, sessionId, userId, attemptNumber=1) => {
+    // Dynamically import store to avoid circular dependencies
+    const store = (await import('../features/store')).default;
+    const screeningSessionId = store.getState()?.common?.screening?.sessionId;
+    
     const payload = {
       session_id: sessionId,
+      screening_session_id: screeningSessionId,
       user_id: userId,
       measurement_stage: stage,
       status: status,
