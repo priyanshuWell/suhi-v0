@@ -688,7 +688,7 @@ const VoiceCapture = () => {
             handleAudioEnd={handleAudioEnd}
             isAudioPlaying={isAudioPlaying}
             status={status}
-            instructionAudio={instructionAudio}
+            // instructionAudio={instructionAudio}
           />
         ) : (
           <VoiceImageScreen
