@@ -22,6 +22,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
   // Base state
@@ -611,7 +612,7 @@ export default function BIACalculate({ user, onComplete }) {
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ 
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.sessionId
+        screening_session_id: storeUser?.screening?.session_id
       });
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
@@ -789,7 +790,7 @@ export default function BIACalculate({ user, onComplete }) {
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({ 
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.sessionId
+        screening_session_id: storeUser?.screening?.session_id
       });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
@@ -825,7 +826,7 @@ export default function BIACalculate({ user, onComplete }) {
         navigate("/bia/imcomplete");
         await BIAComplete({ 
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.sessionId
+          screening_session_id: storeUser?.screening?.session_id
         });
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
@@ -1036,7 +1037,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       await BIAComplete({ 
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.sessionId
+        screening_session_id: storeUser?.screening?.session_id
       });
       console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
@@ -1056,7 +1057,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       await BIAComplete({ 
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.sessionId
+        screening_session_id: storeUser?.screening?.session_id
       });
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
