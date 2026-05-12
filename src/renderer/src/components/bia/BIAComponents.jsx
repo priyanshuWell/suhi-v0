@@ -100,6 +100,13 @@ export const BIAComponent = ({
     setIsAudioPlaying(false)
   }
 
+const getAudioPath = (type) => {
+    const audioMap = {
+      wh: standstraightAudio,
+      im: impedanceAudio,
+    };
+    return audioMap[type] || standstraightAudio;
+  };
   // Show SVGs only on whcomplete screen
   const showWhResults = screenType === "whcomplete"
   const showIMResults = screenType === "imcomplete"

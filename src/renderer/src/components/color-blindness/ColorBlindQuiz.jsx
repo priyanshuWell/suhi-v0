@@ -137,7 +137,7 @@ export const ColorBlindQuiz = () => {
 
     // ── 3. Countdown tick ─────────────────────────────────────────────────────
     useEffect(() => {
-        if (!sessionId) return;
+       // if (!sessionId) return;
         if (timeLeft <= 0) { handleAnswer(null, true); return; }
         timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearTimeout(timerRef.current);
@@ -148,7 +148,7 @@ export const ColorBlindQuiz = () => {
 
 
         async (selectedAnswer, isTimeout = false) => {
-            if (!sessionId || submittingRef.current) return;
+           //if (!sessionId || submittingRef.current) return;
             submittingRef.current = true;
             clearTimeout(timerRef.current);
 
@@ -180,6 +180,8 @@ export const ColorBlindQuiz = () => {
                     }
                 } catch (err) {
                     console.log(err);
+                   // navigate("/bia/result");
+                } finally {
                     navigate("/bia/result");
                 }
             } else {
