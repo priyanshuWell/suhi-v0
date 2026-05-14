@@ -28,6 +28,7 @@ import {
     DivideAttentionResponseBatch,
     DivideAttentionSessionComplete,
 } from "../../../utils/api";
+import { useSelector } from "react-redux";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -525,7 +526,7 @@ export default function SpaceConvoy() {
     const navigate = useNavigate();
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
-
+    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
     const cvRef = useRef(null);
     const bgRef = useRef(null);
     const assets = useRef({ stim: [], glow: [], correct: [], error: [], distImgs: [], loaded: false });
@@ -637,7 +638,7 @@ export default function SpaceConvoy() {
 
     const endSession = useCallback(async () => {
         G.current.sess = SESS.ENDED;
-        if (sessionId) await DivideAttentionSessionComplete(sessionId);
+        if (sessionId) await DivideAttentionSessionComplete(sessionId, screeningSessionId);
         setTimeout(() => navigate("/space-convoy-complete", {
             state: { results: G.current.results, totalScore: apiState.current.totalScore }
         }), 500);

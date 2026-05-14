@@ -612,14 +612,14 @@ export const DivideAttentionResponseBatch = async (payload) => {
   }
 }
 
-export const DivideAttentionSessionComplete = async (session_id) => {
+export const DivideAttentionSessionComplete = async (session_id, screening_session_id) => {
   /*
   {
   "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c"
 }
   */
   try {
-    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete`, {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete?screening_session_id=${screening_session_id}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

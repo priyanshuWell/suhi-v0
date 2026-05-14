@@ -70,17 +70,19 @@ export default function RegisterCard() {
     // Map backend stage keys to frontend routes
     const stageRouteMap = {
       login: '/verified',
-      bia: '/bia/wh',
-      voice: '/voice',
-      colorblindness: '/colorblindness',
-      dmit: '/screen1'
+      bia: '/bia/:screenType',
+      voice_analysis: '/voice',
+      color_blindness: '/colorblindness',
+      divide_attention: '/space-convoy-main',
+       result: '/bia/result',
     }
 
     if (screening?.isResumed && screening?.nextStage) {
-      const nextRoute = stageRouteMap[screening.nextStage.stage_key]
-      navigate(nextRoute || "/bia/wh")
+      const nextRoute = stageRouteMap[screening.nextStage.stage_key];
+      console.log("Resuming screening, next stage:", screening.nextStage.stage_key, "navigating to:", nextRoute)
+     navigate(nextRoute || "/bia/wh")
     } else {
-      navigate("/bia/wh")
+    navigate("/bia/wh")
     }
   }
 
