@@ -16,6 +16,7 @@ const armErrorChannel = new IpcEventChannel("arm:error")
 const armStatusChannel = new IpcEventChannel("arm:status")
 const legCalcResultChannel = new IpcEventChannel("leg:calc:result")
 const armCalcResultChannel = new IpcEventChannel("arm:calc:result")
+const unityGameExitChannel = new IpcEventChannel("unity:game-exit")
 const api = {
   getPorts: (ports) => ipcRenderer.invoke("get-ports", ports),
   connectHeightPort: (portPath) => ipcRenderer.invoke("connect-heightPort", portPath),
@@ -33,6 +34,8 @@ const api = {
   calculateArmBIA: (payload) => ipcRenderer.invoke("calculate-arm-bia", payload),
   saveVoiceBuffer: (request) => ipcRenderer.invoke("save-voice-buffer", request),
   saveRecording: (data) => ipcRenderer.invoke("save-recording", data),
+  setVolume: (volume) => ipcRenderer.invoke("set-volume", volume),
+  getVolume: () => ipcRenderer.invoke("get-volume"),
   onHeightError: (callback) => heightErrorChannel.subscribe(callback),
   onHeightStatus: (callback) => heightStatusChannel.subscribe(callback),
   onWeightStatus: (callback) => weightStatusChannel.subscribe(callback),
@@ -50,13 +53,11 @@ const api = {
   blobToBuffer: async (blob) =>{
     const arrayBuffer = await blob.arrayBuffer();
     const base = Buffer.from(arrayBuffer).toString('base64');
-    // const filepath = path.join(process.cwd(), 'video_base64.txt');
-    // fs.writeFileSync(filepath,base,'utf8');
-    // return {
-    //   scuess:true
-    // }
     return base;
-  }
+  },
+  launchUnityGame: () => ipcRenderer.invoke('launch-unity-game'),
+  stopUnityGame: () => ipcRenderer.invoke('stop-unity-game'),
+  onUnityGameExit: (callback) => unityGameExitChannel.subscribe(callback),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -1,47 +1,103 @@
-import React, { useState, useEffect } from 'react'
-import biaResultFrame from '../../assets/biaResultFrame.svg'
-import bg1 from '../../assets/lightbg.png'
-import { useLocation, useNavigate } from 'react-router'
-import ErrorAlert from '../ErrorAlert'
-import download_report from '../../assets/download_report.png'
+import { useEffect, useState } from 'react'
+import biaResultFrame from '../../assets/biaResultFrame1.svg';
+import BodyIcon from '../../assets/bia/BodyIcon.svg'
+import WeightIcon from '../../assets/bia/weight.svg'
+import HeightIcon from '../../assets/bia/height.svg'
+import Eye_Icon from '../../assets/bia/Eye_Icon.svg'
+import { useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
-import { Dumbbell, Ruler, Calculator, Droplets } from 'lucide-react'
 import axios from "axios"
 import BodyConstitution from './BodyConstitution'
 import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
-import GradientButton from '../ui/BlackGradientButton'
 import { releaseAllResources } from '../../utils/cleanup'
+import { BrainIconS, MindIcon } from '../../assets'
+
+const renderInsightCard = ({
+  title,
+  icon,
+  titleClassName,
+  cardClassName,
+  items,
+  separatorClassName,
+  footer,
+  footerClassName,
+  borderColor
+}) => (
+  <div className={`relative w-full rounded-[10px] px-5 py-3 overflow-hidden ${cardClassName} border border-${borderColor || 'white/20'}`}>
+
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="w-[220px] h-[220px] bg-[#3EC6FF]/20 blur-[70px] rounded-full" />
+    </div>
+
+    <div className="relative z-10">
+
+      <div className="mx-auto flex items-center justify-center text-center w-fit">
+        <div className="flex items-center justify-center gap-2.5 px-3 py-1">
+          <span className="text-[28px] leading-none">{icon}</span>
+          <h3 className={`text-[22px] tracking-[0.12em] ${titleClassName}`}>
+            {title}
+          </h3>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch">
+        {items.map((item, index) => (
+          <div key={item.label} className="contents">
+
+            <div className="flex flex-col items-center justify-center px-4 py-6 text-center relative">
+
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-[140px] h-[100px] rounded-full blur-[40px] bg-white/15" />
+              </div>
+
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <p className="text-[15px] text-white/75 tracking-[0.1em] font-light">
+                  {item.label}
+                </p>
+
+                <p
+                  className={`mt-2.5 text-[28px] leading-tight tracking-[0.06em] font-medium ${item.valueClassName || 'text-white'}`}
+                >
+                  {item.value}
+                </p>
+              </div>
+
+            </div>
+
+            {index < items.length - 1 ? (
+              <div className="flex items-center justify-center">
+                <div className={`h-8 w-[1.5px] rounded-full ${separatorClassName}`} />
+              </div>
+            ) : null}
+
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      {footer ? (
+        <p className={`mt-2 text-center text-[15px] tracking-[0.06em] font-light ${footerClassName || 'text-white/80'}`}>
+          {footer}
+        </p>
+      ) : null}
+
+    </div>
+  </div>
+);
 
 const BIAResult = () => {
   const navigate = useNavigate()
-  const location = useLocation()
 
   // Read from Redux store (primary source)
   const storeWeight = useSelector((state) => state.common.weight)
   const storeHeight = useSelector((state) => state.common.height)
-  const storeBiaResult = useSelector((state) => state.common.biaResult)
-  const storeSessionId = useSelector((state) => state.common.sessionId)
   const storeUser = useSelector((state) => state.common.user)
   console.log("`BIAResult storeUser:", storeUser, storeHeight, storeHeight);
-  // Fallback to navigation state for backward compatibility
-  const bia = storeBiaResult || location.state?.biaResult
-  const weight = storeWeight || location.state?.weight
-  const height = storeHeight || location.state?.height
   const { t } = useTranslation()
-  const [showError, setShowError] = useState(false)
 
   // ✅ API State
   const [apiReport, setApiReport] = useState(null)
-
-  // ✅ Missing emojis added
-  const animalEmojis = {
-    Lion: '🦁',
-    Deer: '🦌',
-    Dolphin: '🐬',
-    Owl: '🦉',
-    Eagle: '🦅',
-  }
 
   const learnerTypeConfig = {
     visual: {
@@ -76,70 +132,67 @@ const BIAResult = () => {
     }
   }
 
-  // ✅ fallback JSON for NULL sections
-  // const fallbackPartialJson = {
-  //   success: true,
-  //   user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
-  //   session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
-  //   data: {
-  //     height: null,
-  //     weight: null,
-  //   storeUser.student_name.includes("Mukul") ?  body_constitution: {
-  //       vata: 0,
-  //       pitta: 60,
-  //       kapha: 30
-  //     }: body_constitution: {
-  //       vata: 0,
-  //       pitta: 35,
-  //       kapha: 35
-  //     } ,
-  //     hydration: null,
-  //     learner_type: {
-  //       type: "kinesthetic",
-  //       title: "When studying your ears are your hero ",
-  //       subtitle: "When studying, all your senses are your heroes.",
-  //       description: "Listen, Discuss, and Explain out Loud"
-  //     },
-  //     personality: {
-  //       type: "Balanced",
-  //       animal: "You are an Eagle",
-  //       traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
-  //     }
-  //   }
-  // }
-
   const fallbackPartialJson = {
-    success: true,
-    user_id: "bc242a07-a8a4-4397-a7c8-d898bf50b4d5",
-    session_id: "7318cade-bbac-43a8-bf7f-4c8463bcbfe7",
-    data: {
-      height: null,
-      weight: null,
+    height: 170,
+    weight: 70,
 
-      body_constitution: storeUser?.data?.student_name?.toLowerCase().includes("mukul")
-        ? {
-          vata: 0,
-          pitta: 60,
-          kapha: 30
-        }
-        : {
-          vata: 40,
-          pitta: 60,
-          kapha: 0
-        },
+    body_constitution: {
+      vata: 34,
+      pitta: 40,
+      kapha: 26
+    },
 
-      hydration: null,
-      learner_type: {
-        type: "kinesthetic",
-        title: "When studying your ears are your hero ",
-        subtitle: "When studying, all your senses are your heroes.",
-        description: "Listen, Discuss, and Explain out Loud"
-      },
-      personality: {
-        type: "Balanced",
-        animal: "You are an Eagle",
-        traits: ["Confident", "Expressive", "Kind", "Thoughtful"]
+    hydration: {
+      level: "Low",
+      message: "Increase your water intake for better performance"
+    },
+
+    learner_type: {
+      type: "integrated",
+      title: "You learn best using multiple methods",
+      description: "Use visual, auditory, and hands-on techniques together"
+    },
+
+    personality: {
+      animal: "Balanced",
+      traits: ["Calm", "Adaptive", "Focused"]
+    },
+
+    attention: {
+      tracking_accuracy: 55,
+      level: "Medium"
+    },
+
+    memory: {
+      score: 3,
+      level: "Beginner"
+    },
+
+    self_esteem: {
+      level: "Average",
+      jitter: 1.5,
+      shimmer: 4
+    },
+
+    emotional_regulation: {
+      level: "Good",
+      details: {
+        jitter: "Good",
+        pitch: "Good",
+        pace: "Average"
       }
+    },
+
+    color_blindness: {
+      status: "Not Present"
+    },
+
+    muscle_mass: {
+      level: "Ideal"
+    },
+
+    fat_mass: {
+      level: "Ideal"
     }
   };
 
@@ -150,31 +203,91 @@ const BIAResult = () => {
   const pitta = Number(constitution?.pitta ?? 0);
   const kapha = Number(constitution?.kapha ?? 0);
 
-  // svg bar max width (same as your rect width)
-  const BAR_MAX = 235.765;
-
-  // Make safe percent 0-100
-  const clamp = (n) => Math.min(100, Math.max(0, n));
-
-  const vataW = (clamp(vata) / 100) * BAR_MAX;
-  const pittaW = (clamp(pitta) / 100) * BAR_MAX;
-  const kaphaW = (clamp(kapha) / 100) * BAR_MAX;
-
-
   // ✅ Merge API response with fallback only if null
-  const mergeWithFallback = (apiData) => {
-    const api = apiData?.data || {}
+  const mergeWithFallback = (api) => {
+    return {
+      height: api?.height ?? fallbackPartialJson.height,
+      weight: api?.weight ?? fallbackPartialJson.weight,
+
+      body_constitution:
+        api?.body_constitution ?? fallbackPartialJson.body_constitution,
+
+      hydration: api?.hydration ?? fallbackPartialJson.hydration,
+
+      learner_type: api?.learner_type ?? fallbackPartialJson.learner_type,
+
+      personality: api?.personality ?? fallbackPartialJson.personality,
+
+      attention: api?.attention ?? fallbackPartialJson.attention,
+
+      memory: api?.memory ?? fallbackPartialJson.memory,
+
+      self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
+
+      emotional_regulation:
+        api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
+
+      color_blindness:
+        api?.color_blindness ?? fallbackPartialJson.color_blindness,
+
+      muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
+
+      fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass
+    };
+  };
+  const mapReportToUI = (api) => {
+    if (!api) return null;
+
+    const data = api.data;
 
     return {
-      height: api?.height ?? fallbackPartialJson?.data?.height,
-      weight: api?.weight ?? fallbackPartialJson?.data?.weight,
+      height: data?.bia?.height_cm ?? null,
+      weight: data?.bia?.weight_kg ?? null,
 
-      body_constitution: api?.body_constitution ?? fallbackPartialJson?.data?.body_constitution,
-      hydration: api?.hydration ?? fallbackPartialJson?.data?.hydration,
-      learner_type: api?.learner_type ?? fallbackPartialJson?.data?.learner_type,
-      personality: api?.personality ?? fallbackPartialJson?.data?.personality,
-    }
-  }
+      body_constitution: data?.prakriti
+        ? {
+          vata: data.prakriti.vata,
+          pitta: data.prakriti.pitta,
+          kapha: data.prakriti.kapha,
+        }
+        : null,
+
+      hydration: data?.bia?.hydration
+        ? { level: data.bia.hydration }
+        : null,
+
+      learner_type: data?.learning_style
+        ? {
+          type: data.learning_style.toLowerCase(),
+          title: `Your learning style is ${data.learning_style}`,
+          description: "Personalized learning recommendation",
+        }
+        : null,
+
+      personality: data?.personality
+        ? {
+          animal: data.personality,
+          traits: [data.personality],
+        }
+        : null,
+
+      attention: data?.attention,
+      memory: data?.memory,
+      self_esteem: data?.self_esteem,
+      emotional_regulation: data?.emotional_regulation,
+
+      color_blindness: data?.color_blindness
+        ? { status: data.color_blindness }
+        : null,
+
+      muscle_mass: {
+        level: data?.bia?.muscle_mass?.status,
+      },
+      fat_mass: {
+        level: data?.bia?.fat_mass?.status,
+      },
+    };
+  };
 
 
 
@@ -183,53 +296,42 @@ const BIAResult = () => {
       const userId = storeUser?.data?.user_id;
       const sessionId = storeUser?.data?.buffer_id;
 
-      const payload = {
+      const res = await axios.post("http://localhost:8000/report/", {
         user_id: userId,
         session_id: sessionId,
-      };
+        screening_session_id: storeUser?.screening?.session_id
+      });
 
-      const res = await axios.post("http://localhost:8000/biometric-report/generate", payload);
-      console.log("✅ biometric-report API response:", res);
-      // ✅ if API response is valid & success
-      if (res?.data?.success && res?.data?.data) {
-        const merged = mergeWithFallback(res.data);
+      console.log("✅ /report response:", res.data);
+
+      if (res?.data?.success) {
+        const mapped = mapReportToUI(res.data);
+        const merged = mergeWithFallback(mapped);
         setApiReport(merged);
         return;
       }
 
-      // ✅ if API returns invalid structure / success false
-      console.log("⚠️ API success false / data missing. Using fallback JSON...");
-      setApiReport(fallbackPartialJson.data);
+      setApiReport(fallbackPartialJson);
     } catch (err) {
-      console.log("❌ biometric-report API error:", err);
-
-      // ✅ API failed completely → show fallback data
-      setApiReport(fallbackPartialJson.data);
+      console.log("❌ report API error:", err);
+      setApiReport(fallbackPartialJson);
     }
   };
 
 
   useEffect(() => {
-    fetchBiometricReport()
-  }, [])
+    const timer = setTimeout(() => {
+      fetchBiometricReport()
+    }, 0)
 
-  // Check for errors when component mounts
-  useEffect(() => {
-    if (!bia) {
-      setShowError(true)
-    }
-  }, [bia])
+    return () => clearTimeout(timer)
+  }, [])
 
   console.log(apiReport)
 
   // ✅ Final Data Source:
   // - height/weight from API (if exists)
   // - else from redux/location
-  // const finalHeight =
-  //   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 172 : storeHeight || 170;
-
-  // const finalWeight =
-  //   storeUser?.data?.student_name?.toLowerCase().includes("mukul") ? 90 : storeWeight || 70;
 
   // after reshaping the redux store we now keep weights/heights in nested objects
   const finalHeight = (storeHeight && storeHeight.finalHeight) || apiReport?.height || 170;
@@ -260,58 +362,140 @@ const BIAResult = () => {
   const learnerType = apiReport?.learner_type?.type?.toLowerCase()
   const learnerEmoji = learnerTypeConfig?.[learnerType]?.emoji || "👂"
 
-  const vataText = `${clamp(vata).toFixed(0)}%`;
-  const pittaText = `${clamp(pitta).toFixed(0)}%`;
-  const kaphaText = `${clamp(kapha).toFixed(0)}%`;
+  const formatLabel = (value, fallback = 'Not Available') => {
+    if (value === null || value === undefined || value === '') return fallback
+    return String(value)
+  }
+
+  const titleCase = (value) =>
+    formatLabel(value, '')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, (char) => char.toUpperCase())
+      .trim()
+
+  const learnerStyleLabel = titleCase(learnerType) || 'Balanced'
+  const personalityTraits = analysisData?.personality?.traits || []
+  const personalityAnimal = formatLabel(analysisData?.personality?.animal, 'Balanced')
+  const hydrationLevel = formatLabel(analysisData?.hydration?.level, 'Low')
+  const hydrationMessage =
+    analysisData?.hydration?.message || t('bia_result.hydration_low_message')
+
+  const primaryDosha = [
+    { key: 'Vata', value: vata },
+    { key: 'Pitta', value: pitta },
+    { key: 'Kapha', value: kapha }
+  ].sort((a, b) => b.value - a.value)[0]?.key || 'Balanced'
+
+  const feelingsItems = [
+    {
+      label: 'Emotion Regulation',
+      value: formatLabel(apiReport?.emotional_regulation?.level, 'Good'),
+      valueClassName: 'text-[#29ABE2]',
+    },
+    {
+      label: 'Self-Esteem',
+      value: formatLabel(apiReport?.self_esteem?.level, 'Average'),
+      valueClassName: 'text-[#29ABE2]',
+    },
+    {
+      label: 'Personality',
+      value: formatLabel(apiReport?.personality?.animal, 'Balanced'),
+      valueClassName: 'text-[#29ABE2]',
+    }
+  ];
+
+  const learningItems = [
+    {
+      label: 'Attention',
+      value: formatLabel(apiReport?.attention?.level, 'Medium'),
+      valueClassName: 'text-[#2CEF94]',
+    },
+    {
+      label: 'Memory',
+      value: formatLabel(apiReport?.memory?.level, 'Beginner'),
+      valueClassName: 'text-[#2CEF94]',
+    },
+    {
+      label: 'Learning Style',
+      value: formatLabel(apiReport?.learner_type?.type, 'Integrated'),
+      valueClassName: 'text-[#2CEF94]',
+    }
+  ];
+
+  const healthItems = [
+    {
+      label: t('bia_result.height'),
+      value: `${formatLabel(finalHeight, '--')} cm`,
+      valueClassName: 'text-[#2CEF94]',
+      icon: HeightIcon,
+      unit: 'cm'
+    },
+    {
+      label: t('bia_result.weight'),
+      value: `${formatLabel(finalWeight, '--')} kg`,
+      valueClassName: 'text-[#2CEF94]',
+      icon: WeightIcon,
+      unit: 'kg'
+    },
+    {
+      label: t('bia_result.hydration'),
+      value: hydrationLevel,
+      valueClassName: 'text-[#2CEF94]'
+    }
+  ]
+
+  const hasInsightCardsData = Boolean(
+    apiReport?.personality || apiReport?.learner_type || apiReport?.color_blindness
+  )
+
+  const healthSummaryItems = [
+    {
+      label: t('bia_result.hydration'),
+      value: hydrationLevel,
+    },
+    {
+      label: 'Muscle Mass',
+      value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal'),
+    },
+    {
+      label: 'Fat Mass',
+      value: formatLabel(apiReport?.fat_mass?.level, 'Ideal'),
+    }
+  ];
 
 
   return (
     <div className="fixed inset-0 w-full h-full overflow-hidden bg-black">
       <div
         className="absolute inset-0 bg-no-repeat bg-cover bg-center z-0 opacity-60"
-        style={{ backgroundImage: `url(${bg1})` }}
+      // style={{ backgroundImage: `url(${bg1})` }}
       />
 
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
-        <h1 className="text-white w-[50%] text-center text-4xl leading-10 tracking-wider font-bold ">
+      <div className="relative z-10 flex min-h-full w-full flex-col items-center p-4 pb-6">
+        <h1 className="mt-4 w-[80%] text-center text-4xl leading-10 tracking-wider font-bold text-white">
           {t('bia_result.congratulations')}
           <br />
-          {t('bia_result.here_are_results')} </h1>
+          {t('bia_result.here_are_results')}
+        </h1>
+
         {/* The Frame Container */}
-        <div className="relative w-full max-w-[1080px]">
+        <div className="relative mt-8 max-w-[1080px] m-10 "
+          style={{
+            boxShadow: "0px 35.76px 176.82px rgba(154, 217, 255, 0.5)"
+          }}>
           <img
             src={biaResultFrame}
             alt="BIA Frame"
-            className="w-full mb-[33px] h-auto object-contain drop-shadow-[0_0_25px_rgba(6,182,212,0.6)]"
+            style={{
+              filter: `drop-shadow(0px 35.76px 176.82px rgba(154, 217, 255, 0.5))`
+            }}
+            className="w-full h-auto object-contain"
           />
 
-          <div className="absolute inset-0 flex flex-col items-center pt-[18%] pb-[8%] px-[14%] text-white">
-            <div className="w-full flex justify-between gap-6 mb-8">
-              <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                <div className="flex items-center gap-3 text-cyan-400 mb-2">
-                  <Dumbbell size={32} className="fill-cyan-400/20 rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.weight')}</span>
-                </div>
-                <div className="text-3xl font-bold tracking-tight">
-                  {Number(finalWeight).toFixed(2) || 55} <span className="text-3xl text-gray-400 font-medium">kg</span>
-                </div>
-              </div>
+          <div className="absolute inset-0 flex flex-col items-center gap-4 px-[8.5%] pb-[18%] pt-[6%] text-white overflow-hidden">
 
-              <div className="flex-1 bg-black/50 border border-cyan-500/30 rounded-3xl p-6 flex flex-col items-center justify-center backdrop-blur-md shadow-[0_0_20px_rgba(6,182,212,0.15)]">
-                <div className="flex items-center gap-3 text-cyan-400 mb-2">
-                  <Ruler size={32} className="rotate-45" />
-                  <span className="uppercase tracking-widest text-xl font-bold">{t('bia_result.height')}</span>
-                </div>
-                <div className="text-3xl font-bold tracking-tight">
-                  {Number(finalHeight) || 156.3}
-                  <span className="text-3xl text-gray-400 font-medium"> cm</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-grow"></div>
-
-            <div className="w-[50%] h-1/2 flex justify-center items-center mb-3 ">
+            {/* Body Constitution - Circular Chart */}
+            <div className="w-full flex justify-center items-center mb-1">
               <div className="w-full">
                 <BodyConstitution
                   vata={apiReport?.body_constitution?.vata}
@@ -321,104 +505,138 @@ const BIAResult = () => {
               </div>
             </div>
 
-            {/* ✅ Hydration Card */}
-            <div
-              className="rounded-[10px] p-6 mb-6 w-full"
-              style={{
-                background: 'linear-gradient(180deg, rgba(41, 171, 226, 0.05) 0%, rgba(41, 171, 226, 0.2) 100%)',
-                border: '0.5px solid #29ABE2',
-                borderRadius: '10px'
-              }}
-            >
-              <div className="flex flex-col items-center justify-center text-center gap-3">
-                <div className="flex items-center justify-center gap-3">
-                  <img src={droplet} className="text-cyan-400 w-7 h-7" />
+            {hasInsightCardsData ? (
+              <div className="w-full flex flex-col gap-6">
+                {/* Mind Card */}
+                {renderInsightCard({
+                  title: "Mind",
+                  icon: <MindIcon />,
+                  titleClassName: "text-[#29ABE2]",
+                  cardClassName:
+                    "bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] border-[#29ABE2] rounded-[12px]",
+                  items: feelingsItems,
+                  separatorClassName: "bg-[#29ABE2]",
+                  borderColor: '#29ABE2',
+                })}
 
-                  <h3 className="text-[#29ABE2] text-[25px] tracking-wide">
-                    {t('bia_result.hydration')} -{" "}
-                    <span
-                      className={
-                        analysisData?.hydration?.level === "Low"
-                          ? "text-red-400"
-                          : "text-red-400"
-                      }
-                    >
-                      {analysisData?.hydration?.level || "Low"}
-                    </span>
-                  </h3>
-                </div>
+                {/* Brain Card */}
+                {renderInsightCard({
+                  title: "Brain",
+                  icon: <BrainIconS />,
+                  titleClassName: "text-[#2CEF94]",
+                  cardClassName:
+                    "bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)] border-[#2CEF94] rounded-[12px]",
+                  items: learningItems,
+                  separatorClassName: "bg-[#2CEF94]",
+                  // footer: "Visual",
+                  footerClassName: "text-[#2CEF94]",
+                  borderColor: '#2CEF94',
 
-                <p className="text-white/90 text-2xl pt-1 tracking-wider">
-                  {analysisData?.hydration?.message ||
-                    t('bia_result.hydration_low_message')}
-                </p>
-              </div>
-            </div>
+                })}
 
-            {/* ✅ Study Tip Card */}
-            <div
-              className="rounded-[10px] p-6 mb-6 w-full"
-              style={{
-                background: 'linear-gradient(180deg, rgba(41, 171, 226, 0.05) 0%, rgba(41, 171, 226, 0.2) 100%)',
-                border: '0.5px solid #29ABE2',
-                borderRadius: '10px'
-              }}
-            >
-              <div className="flex flex-col items-center justify-center text-center gap-3">
-                <div className="flex items-center justify-center gap-3">
-                  <span className="text-4xl">{learnerEmoji}</span>
-                  <h3 className="text-[#2CEF94] text-[24px] font-bold tracking-wide">
-                    {analysisData?.studyTip?.title || t('bia_result.study_tip_default')}
-                  </h3>
-                </div>
-
-                <p className="text-white/90 text-2xl tracking-wider">
-                  {analysisData?.studyTip?.description ||
-                    t('bia_result.study_tip_default')}
-                </p>
-              </div>
-            </div>
-
-            {/* ✅ Personality/Animal Card */}
-            <div
-              className="rounded-[10px] p-6 mb-8 w-full     bg-gradient-to-b
-    from-[rgba(195,68,0,0.2)]
-    to-[rgba(195,68,0,0.05)]
-    border
-    border-[#FEE45A]/80
-    shadow-[0_8px_30px_rgba(195,68,0,0.25)] "
-              style={{
-                background: "linear - gradient(180deg, rgba(255, 157, 92, 0.2) 0 %, rgba(255, 157, 92, 0.05) 100 %)",
-                border: " 0.5px solid #FEE45A",
-                borderRadius: "10px"
-
-              }}
-            >
-              <div className="text-center mb-4">
-                <h3 className="text-orange-300 text-3xl font-bold">
-                  <span className="text-5xl mb-2 inline-block">
-                    {animalEmojis[analysisData?.personality?.animal] || "🦅"}
-                  </span> {analysisData?.personality?.animal || "Lion"}
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {(analysisData?.personality?.traits || []).map((trait, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      background: " rgba(255, 255, 255, 0.1)",
-                      border: " 1px solid rgba(255, 157, 92, 0.3)",
-                      borderRadius: "10px"
-                    }}
-                    className="py-3 text-center text-white/90 text-xl"
-                  >
-                    {trait}
+                {/* Body Card */}
+                <div className="w-full rounded-[12px] border-[0.5px] border-[#FF9D5C] bg-[linear-gradient(180deg,rgba(255,157,92,0.05)_0%,rgba(255,157,92,0.2)_100%)] px-5 py-3">
+                  <div className="mx-auto flex w-fit items-center justify-center text-center">
+                    <div className="flex items-center justify-center gap-2.5 px-3 py-1">
+                      <span className="text-[22px] leading-none"><img src={BodyIcon} alt='body icon' /></span>
+                      <h3 className="text-[22px] tracking-[0.12em] text-[#FF9D5C]">Body</h3>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
+                  {/* Height & Weight row */}
+                  <div className="mt-4 grid grid-cols-2 gap-4">
+                    {healthItems.slice(0, 2).map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex items-center justify-center gap-3 rounded-[4px] border border-white/20 bg-[rgba(0,0,0,0.6)] px-4 py-3 shadow-[0_0_20px_rgba(255,255,255,0.05)_inset]"
+                      >
+
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={item.icon}
+                            alt={item.label}
+                            className="w-[20px] h-[20px] object-contain"
+                          />
+                          <p className="text-[18px] text-white/80 tracking-[0.08em] font-light">
+                            {item.label}</p>
+                        </div>
+
+                        {/* 🔹 RIGHT → Value + Unit (separate control) */}
+                        <div className="flex items-baseline">
+                          <p className="text-[26px] leading-none text-[#FF9D5C] font-medium">
+                            {parseInt(item.value).toFixed(2)}
+                          </p>
+
+                          {item.unit && (
+                            <span className=" text-[14px] text-white/60">
+                              {item.unit}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Hydration / Muscle / Fat row */}
+                  <div className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch px-2">
+                    {healthSummaryItems.map((item, index) => (
+                      <div key={item.label} className="contents">
+                        <div className="flex flex-col items-center justify-center px-4 py-6 text-center relative">
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="w-[140px] h-[100px] rounded-full blur-[40px] bg-white/15" />
+                          </div>
+
+                          {/* Content */}
+                          <div className="relative z-10">
+                            <p className="text-[15px] text-white/78 tracking-[0.1em] font-light">
+                              {item.label}
+                            </p>
+                            <p className="mt-2.5 text-[26px] leading-tight tracking-[0.06em] text-[#FFAB6B] font-medium">
+                              {item.value}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Separator */}
+                        {index < healthSummaryItems.length - 1 ? (
+                          <div className="flex items-center justify-center">
+                            <div className="h-8 w-[1.5px] rounded-full bg-[#FF9D5C]" />
+                          </div>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Blindness Card */}
+                <div className="w-full rounded-[12px] border-[0.5px] border-[#FFE15C] bg-[linear-gradient(180deg,rgba(255,225,92,0.05)_0%,rgba(255,225,92,0.2)_100%)] px-5 py-3.5">
+                  <div className="flex items-center justify-center gap-3 text-center">
+                    <span className="text-[22px] leading-none"><img className='w-[36px] h-[36px]' src={Eye_Icon} alt='eye icon' /> </span>
+                    <h3 className="text-[20px] tracking-[0.12em] text-[#FFE15C]">
+                      Color Blindness-
+                    </h3>
+                    <span className="text-[22px] tracking-[0.06em] text-white font-medium ml-1">
+                      {formatLabel(apiReport?.color_blindness?.status, 'Not present')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full rounded-[10px] border-[0.5px] border-[#29ABE2] bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] p-5">
+                <div className="flex flex-col items-center justify-center gap-2.5 text-center">
+                  <div className="flex items-center justify-center gap-2.5">
+                    <img src={droplet} className="h-6 w-6 text-cyan-400" />
+                    <h3 className="text-[22px] tracking-wide text-[#29ABE2]">
+                      {t('bia_result.hydration')} - <span className="text-white">{hydrationLevel}</span>
+                    </h3>
+                  </div>
+
+                  <p className="pt-0.5 text-xl tracking-wider text-white/90">{hydrationMessage}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Go to Homepage Button */}
             <button
               onClick={() => {
                 releaseAllResources()
@@ -430,20 +648,19 @@ const BIAResult = () => {
               }}
               className="
     relative
-    mt-8
-    mb-[14rem]
+    mt-6
+    mb-6
     flex items-center justify-center
     text-center
 
-    rounded-[30px]
-    px-[5rem]
-    py-[2rem]
+    rounded-[24px]
+    px-[4rem]
+    py-[1.4rem]
 
     text-white
-    text-4xl
+    text-3xl
     tracking-wide
 
-    /* 🔹 more transparent bg */
     bg-[#0b0f14]/70
     mix-blend-plus-darker
 
@@ -456,7 +673,7 @@ const BIAResult = () => {
     before:content-['']
     before:absolute
     before:inset-0
-    before:rounded-[20px]
+    before:rounded-[24px]
     before:bg-gradient-to-b
     before:from-white/12
     before:via-white/4
@@ -473,13 +690,13 @@ const BIAResult = () => {
 
           </div>
         </div>
-        <div className="absolute bottom-[50px] ">
+        {/* <div className="absolute bottom-[50px] ">
           <img
             src={download_report}
             alt="hologram"
             className="landscape:w-[300px] portrait:w-[640px] drop-shadow-[0_0_40px_rgba(0,200,255,0.8)]"
           />
-        </div>
+        </div> */}
       </div>
 
       {/* <ErrorAlert
@@ -495,5 +712,3 @@ const BIAResult = () => {
 }
 
 export default BIAResult
-
-

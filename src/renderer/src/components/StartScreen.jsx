@@ -1,24 +1,24 @@
-import { motion } from 'framer-motion'
-import React, { useState, useEffect } from 'react'
-import bg from '../assets/background.png'
-import video1 from '../assets/avatar.mp4'
-import startFrame from '../assets/start_frame.svg'
-import { useNavigate } from 'react-router'
-import { openCamerasInBackground } from '../utils/cameraSession'
-import { Setting } from './Setting'
-import { useTranslation } from 'react-i18next'
-import StartButton from './ui/BlueGradientButton'
+import { motion } from "framer-motion"
+import React, { useState, useEffect } from "react"
+import bg from "../assets/background.png"
+import video1 from "../assets/avatar.mp4"
+import startFrame from "../assets/start_frame.svg"
+import { useNavigate } from "react-router"
+import { openCamerasInBackground } from "../utils/cameraSession"
+import { Setting } from "./Setting"
+import { useTranslation } from "react-i18next"
+import StartButton from "./ui/BlueGradientButton"
+import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 
-const Flag = true;
+const Flag = true
 export const StartScreen = () => {
   const { t } = useTranslation()
   // const [isCameraReady, setIsCameraReady] = React.useState(false)
   const [error, setError] = useState(false)
   const navigate = useNavigate()
-  const [isActive, setIsActive] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const audioRef = React.useRef(null);
-  const instructionAudio = "/src/assets/audio/welcome_screen.mp3";
+  const [isActive, setIsActive] = useState(false)
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const audioRef = React.useRef(null)
   useEffect(() => {
     // const openCameras = async () => {
     //   return await openCamerasInBackground()
@@ -31,37 +31,43 @@ export const StartScreen = () => {
       console.log(error)
     }
   }, [])
-  const playAudio = () => {
-    if (audioRef.current) {
-      setIsAudioPlaying(true);
+  const playAudio = async () => {
+    const audioPath = await getAudioForCurrentLanguage("welcome_screen")
+    console.log("audiopath", audioPath)
+    if (audioPath && audioRef.current) {
+      audioRef.current.src = audioPath
+      setIsAudioPlaying(true)
       audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err);
-      });
+        console.log("Audio playback failed:", err)
+        setIsAudioPlaying(false)
+      })
+    } else if (!audioPath) {
+      console.log("No audio for welcome_screen in current language")
     }
-  };
+  }
 
   const stopAudio = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsAudioPlaying(false);
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsAudioPlaying(false)
     }
-  };
+  }
 
   const handleAudioEnd = () => {
-    setIsAudioPlaying(false);
-  };
+    setIsAudioPlaying(false)
+  }
 
   const handleStartClick = () => {
-    stopAudio();
-    navigate("/capture");
-  };
+    stopAudio()
+    navigate("/capture")
+  }
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 1, ease: 'easeOut' }}
+      transition={{ duration: 1, ease: "easeOut" }}
       className="
         fixed inset-0
         w-screen h-screen
@@ -69,14 +75,13 @@ export const StartScreen = () => {
         bg-black
       "
     >
-      {/* Audio Element - plays kajal_neural_bmi.mp3 on load */}
+      {/* Audio Element - plays language-specific audio on load */}
       <audio
         ref={audioRef}
         onEnded={handleAudioEnd}
         onPlay={() => setIsAudioPlaying(true)}
         autoPlay
       >
-        <source src={instructionAudio} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
       <div className={`absolute top-0 right-0 z-[51] p-4`}>
@@ -145,35 +150,17 @@ export const StartScreen = () => {
             z-20
             px-4
             w-full
-            pb-[clamp(1rem,3vh,3rem)]
+            pb-[clamp(6rem,3vh,15rem)]
           "
         >
-          <StartButton onClick={handleStartClick}>
-            {t('common.start')}
-          </StartButton>
+          <StartButton onClick={handleStartClick}>{t("common.start")}</StartButton>
 
-          <button
+          <div
             className="
               w-[clamp(16rem,40vw,31.25rem)]
               h-[clamp(4rem,8vh,6.25rem)]
-              flex items-center justify-center
-              text-center
-              rounded-[30px]
-              border-2 border-white/30
-              bg-white/5
-              backdrop-blur-sm
-              shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
-              text-white
-              text-[clamp(1.25rem,2.5vw,2.5rem)]
-              tracking-wide
-              active:scale-[0.98]
-              transition-all duration-300 ease-in-out
-              hover:bg-white/10
-              hover:border-white/50
             "
-          >
-            {t('common.new_user')}
-          </button>
+          />
         </div>
       </div>
     </motion.div>

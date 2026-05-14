@@ -8,6 +8,7 @@ import { BackgroundCameraProvider } from './services/BackgroundCameraProvider'
 import { Provider } from 'react-redux'
 import { store } from '../../store/store'
 import { initCameraTracker } from './utils/cameraTracker'
+import KioskScaler from './components/KioskScaler'
 
 // Initialize global camera tracking
 initCameraTracker();
@@ -16,9 +17,9 @@ createRoot(document.getElementById('root')).render(
   // <StrictMode>
   <Provider store={store}>
     <HashRouter>
-      {/* <BackgroundCameraProvider> */}
+      {/* <KioskScaler> */}
       <App />
-      {/* </BackgroundCameraProvider> */}
+      {/* </KioskScaler> */}
     </HashRouter>
   </Provider>
   //  </StrictMode> 

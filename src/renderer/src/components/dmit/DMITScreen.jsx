@@ -51,37 +51,6 @@
 
 // export default DMITScreen
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // import React from 'react'
 // import bg1 from '../../assets/lightbg.png'
 // import bg2 from '../../assets/dmt-bg.svg'
@@ -147,61 +116,23 @@
 
 // export default DMITScreen
 
+import React, { useEffect, useMemo, useRef, useState } from "react"
+import axios from "axios"
+import { useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
+import { getRgbCamera } from "../../utils/getRgbCamera"
 
+import bg1 from "../../assets/lightbg.png"
+import bg2 from "../../assets/dmt-bg.svg"
 
+import rightFront from "../../assets/hands/left-front.svg"
+import rightBack from "../../assets/hands/left-back.svg"
 
+import leftFront from "../../assets/hands/right-front.svg"
+import leftBack from "../../assets/hands/right-back.svg"
+import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import axios from "axios";
-import { useNavigate } from "react-router";
-import { useTranslation } from "react-i18next";
-import { getRgbCamera } from "../../utils/getRgbCamera";
-
-import bg1 from "../../assets/lightbg.png";
-import bg2 from "../../assets/dmt-bg.svg";
-
-import rightFront from "../../assets/hands/left-front.svg";
-import rightBack from "../../assets/hands/left-back.svg";
-
-import leftFront from "../../assets/hands/right-front.svg";
-import leftBack from "../../assets/hands/right-back.svg";
-
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "http://127.0.0.1:8000"
 
 // ✅ You can change this mapping any time
 const mapCameras = (cams) => {
@@ -209,248 +140,271 @@ const mapCameras = (cams) => {
   return [
     { role: "LEFT", cam: cams[2] },
     { role: "CENTER", cam: cams[0] },
-    { role: "RIGHT", cam: cams[1] },
-  ];
-};
+    { role: "RIGHT", cam: cams[1] }
+  ]
+}
 
 // ✅ Your 4 steps
 const CAPTURE_FLOW = [
-  { key: "LEFT_FRONT", labelKey: "dmit.hand_labels.left_front", role: "LEFT", overlay: leftFront, audio: "/src/assets/audio/lp.mp3" },
-  { key: "LEFT_BACK", labelKey: "dmit.hand_labels.left_back", role: "LEFT", overlay: leftBack, audio: "/src/assets/audio/lb.mp3" },
-  { key: "RIGHT_FRONT", labelKey: "dmit.hand_labels.right_front", role: "RIGHT", overlay: rightFront, audio: "/src/assets/audio/rp.mp3" },
-  { key: "RIGHT_BACK", labelKey: "dmit.hand_labels.right_back", role: "RIGHT", overlay: rightBack, audio: "/src/assets/audio/rb.mp3" },
-];
+  {
+    key: "LEFT_FRONT",
+    labelKey: "dmit.hand_labels.left_front",
+    role: "LEFT",
+    overlay: leftFront,
+    audio: "lp"
+  },
+  {
+    key: "LEFT_BACK",
+    labelKey: "dmit.hand_labels.left_back",
+    role: "LEFT",
+    overlay: leftBack,
+    audio: "lb"
+  },
+  {
+    key: "RIGHT_FRONT",
+    labelKey: "dmit.hand_labels.right_front",
+    role: "RIGHT",
+    overlay: rightFront,
+    audio: "rp"
+  },
+  {
+    key: "RIGHT_BACK",
+    labelKey: "dmit.hand_labels.right_back",
+    role: "RIGHT",
+    overlay: rightBack,
+    audio: "rb"
+  }
+]
 
 const DMITScreen = () => {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioRef = useRef(null);
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const videoRef = useRef(null)
+  const streamRef = useRef(null)
+  const mediaRecorderRef = useRef(null)
+  const audioRef = useRef(null)
 
-  const [devices, setDevices] = useState([]);
-  const [mapped, setMapped] = useState([]);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [devices, setDevices] = useState([])
+  const [mapped, setMapped] = useState([])
+  const [stepIndex, setStepIndex] = useState(0)
 
-  const [status, setStatus] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [status, setStatus] = useState("")
+  const [isRecording, setIsRecording] = useState(false)
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
 
-  const currentStep = CAPTURE_FLOW[stepIndex];
-
+  const currentStep = CAPTURE_FLOW[stepIndex]
 
   // ✅ Load cameras list
   useEffect(() => {
     const loadDevices = async () => {
       try {
-        const all = await navigator.mediaDevices.enumerateDevices();
-        const videoInputs = all.filter((d) => d.kind === "videoinput");
-        console.log("[CAMERA] DMITScreen devices:", videoInputs.map((d) => d.label));
+        const all = await navigator.mediaDevices.enumerateDevices()
+        const videoInputs = all.filter((d) => d.kind === "videoinput")
+        console.log(
+          "[CAMERA] DMITScreen devices:",
+          videoInputs.map((d) => d.label)
+        )
 
         // Use RGB camera as CENTER; keep LEFT/RIGHT from index mapping if needed
-        const rgbDeviceId = await getRgbCamera();
-        const rgbCam = videoInputs.find((d) => d.deviceId === rgbDeviceId) ?? videoInputs[0];
+        const rgbDeviceId = await getRgbCamera()
+        const rgbCam = videoInputs.find((d) => d.deviceId === rgbDeviceId) ?? videoInputs[0]
 
-        setDevices(videoInputs);
+        setDevices(videoInputs)
         setMapped([
           { role: "LEFT", cam: rgbCam },
           { role: "CENTER", cam: rgbCam },
-          { role: "RIGHT", cam: rgbCam },
-        ]);
+          { role: "RIGHT", cam: rgbCam }
+        ])
 
-        console.log("[CAMERA] DMITScreen → using camera:", rgbCam?.label, "for all roles");
+        console.log("[CAMERA] DMITScreen → using camera:", rgbCam?.label, "for all roles")
       } catch (err) {
-        console.error("enumerateDevices error:", err);
-        setStatus(t('dmit.status.failed_camera'));
+        console.error("enumerateDevices error:", err)
+        setStatus(t("dmit.status.failed_camera"))
       }
-    };
+    }
 
-    loadDevices();
-  }, []);
+    loadDevices()
+  }, [])
   useEffect(() => {
     if (currentStep) {
-      playAudio(currentStep.audio);
+      playAudio(currentStep.audio)
     }
-  }, [stepIndex]);
+  }, [stepIndex])
 
-  const playAudio = (audioPath) => {
-    if (audioRef.current) {
-      audioRef.current.src = audioPath;
-      setIsAudioPlaying(true);
+  const playAudio = async (audioBaseName) => {
+    const audioPath = await getAudioForCurrentLanguage(audioBaseName)
+    if (audioPath && audioRef.current) {
+      audioRef.current.src = audioPath
+      setIsAudioPlaying(true)
       audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err);
-      });
+        console.log("Audio playback failed:", err)
+      })
     }
-  };
+  }
 
   const stopAudio = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsAudioPlaying(false);
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsAudioPlaying(false)
     }
-  };
+  }
 
   const handleAudioEnd = () => {
-    setIsAudioPlaying(false);
-  };
+    setIsAudioPlaying(false)
+  }
 
   // ✅ Get camera deviceId by role
   const getCameraForRole = (role) => {
-    const camObj = mapped.find((m) => m.role === role);
-    return camObj?.cam?.deviceId;
-  };
+    const camObj = mapped.find((m) => m.role === role)
+    return camObj?.cam?.deviceId
+  }
 
   // ✅ Start camera in the box
   const startCamera = async (role) => {
     try {
-      setStatus(t('dmit.status.opening'));
-      const deviceId = getCameraForRole(role);
+      setStatus(t("dmit.status.opening"))
+      const deviceId = getCameraForRole(role)
 
       if (!deviceId) {
-        throw new Error(`Camera not found for role: ${role}`);
+        throw new Error(`Camera not found for role: ${role}`)
       }
 
       // stop previous
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current.getTracks().forEach((t) => t.stop())
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { deviceId: { exact: deviceId }, width: 1280, height: 720 },
-        audio: false,
-      });
+        audio: false
+      })
 
-      streamRef.current = stream;
+      streamRef.current = stream
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
       }
 
-      setStatus(`${t('dmit.status.ready')}: ${t(currentStep.labelKey)}`);
+      setStatus(`${t("dmit.status.ready")}: ${t(currentStep.labelKey)}`)
     } catch (err) {
-      console.error("startCamera error:", err);
-      setStatus(t('dmit.status.failed_camera'));
+      console.error("startCamera error:", err)
+      setStatus(t("dmit.status.failed_camera"))
     }
-  };
+  }
 
   // ✅ Record buffer for 5 seconds
   const record5SecBuffer = async () => {
     return new Promise((resolve, reject) => {
       try {
-        const stream = streamRef.current;
-        if (!stream) return reject(new Error("No stream found"));
+        const stream = streamRef.current
+        if (!stream) return reject(new Error("No stream found"))
 
-        const chunks = [];
-        const recorder = new MediaRecorder(stream, { mimeType: "video/webm" });
+        const chunks = []
+        const recorder = new MediaRecorder(stream, { mimeType: "video/webm" })
 
-        mediaRecorderRef.current = recorder;
+        mediaRecorderRef.current = recorder
 
         recorder.ondataavailable = (e) => {
-          if (e.data.size > 0) chunks.push(e.data);
-        };
+          if (e.data.size > 0) chunks.push(e.data)
+        }
 
         recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: "video/webm" });
-          resolve(blob);
-        };
+          const blob = new Blob(chunks, { type: "video/webm" })
+          resolve(blob)
+        }
 
-        recorder.onerror = (e) => reject(e);
+        recorder.onerror = (e) => reject(e)
 
-        recorder.start();
-        setIsRecording(true);
-        setStatus(`${t('dmit.status.recording')} (${t(currentStep.labelKey)})`);
+        recorder.start()
+        setIsRecording(true)
+        setStatus(`${t("dmit.status.recording")} (${t(currentStep.labelKey)})`)
 
         setTimeout(() => {
-          recorder.stop();
-          setIsRecording(false);
-        }, 5000);
+          recorder.stop()
+          setIsRecording(false)
+        }, 5000)
       } catch (err) {
-        reject(err);
+        reject(err)
       }
-    });
-  };
+    })
+  }
 
   // ✅ Upload buffer to API
   const uploadBuffer = async (blob) => {
-    setStatus(t('dmit.status.uploading'));
-    const file = new File([blob], `${currentStep.key}.webm`, { type: "video/webm" });
+    setStatus(t("dmit.status.uploading"))
+    const file = new File([blob], `${currentStep.key}.webm`, { type: "video/webm" })
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("handType", currentStep.key); // you can rename
-    formData.append("role", currentStep.role);
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("handType", currentStep.key) // you can rename
+    formData.append("role", currentStep.role)
 
     const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+      headers: { "Content-Type": "multipart/form-data" }
+    })
 
-    return res.data;
-  };
+    return res.data
+  }
 
   // ✅ Main step runner
   const runStep = async () => {
-    if (!currentStep) return;
+    if (!currentStep) return
 
     try {
       // 1. Open correct camera based on step role
-      await startCamera(currentStep.role);
+      await startCamera(currentStep.role)
 
       // 2. wait 500ms for stable stream
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500))
 
       // 3. record 5 sec
-      const buffer = await record5SecBuffer();
+      const buffer = await record5SecBuffer()
 
       // 4. upload
-      const result = await uploadBuffer(buffer);
+      const result = await uploadBuffer(buffer)
 
       // 5. success -> next
-      setStatus(t('dmit.status.success'));
+      setStatus(t("dmit.status.success"))
 
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 800))
 
       if (stepIndex < CAPTURE_FLOW.length - 1) {
-        setStepIndex((prev) => prev + 1);
+        setStepIndex((prev) => prev + 1)
       } else {
-        setStatus(t('dmit.status.all_captured'));
+        setStatus(t("dmit.status.all_captured"))
         // Navigate to voice analysis
-        await new Promise((r) => setTimeout(r, 1000));
-        navigate("/voice");
+        await new Promise((r) => setTimeout(r, 1000))
+        navigate("/voice")
       }
     } catch (err) {
-      console.error("runStep error:", err);
-      setStatus(t('dmit.status.error'));
-      setTimeout(() => runStep(), 1500);
+      console.error("runStep error:", err)
+      setStatus(t("dmit.status.error"))
+      setTimeout(() => runStep(), 1500)
     }
-  };
+  }
 
   // ✅ Run every time step changes
   useEffect(() => {
-    if (!mapped.length) return; // wait until mapping is ready
-    runStep();
+    if (!mapped.length) return // wait until mapping is ready
+    runStep()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stepIndex, mapped]);
+  }, [stepIndex, mapped])
 
   // ✅ Cleanup
   useEffect(() => {
     return () => {
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current.getTracks().forEach((t) => t.stop())
       }
-      stopAudio();
-    };
-  }, []);
+      stopAudio()
+    }
+  }, [])
 
   return (
     <div className="fixed inset-0 w-screen min-h-screen overflow-hidden bg-black">
-      <audio
-        ref={audioRef}
-        onEnded={handleAudioEnd}
-        onPlay={() => setIsAudioPlaying(true)}
-      >
+      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
         <source src={currentStep?.audio} type="audio/mpeg" />
         Your browser does not support the audio element.
       </audio>
@@ -467,7 +421,7 @@ const DMITScreen = () => {
         w-[600px]"
       >
         <p className="text-5xl text-center font-light leading-snug text-white tracking-wider">
-          {t('dmit.instruction')}
+          {t("dmit.instruction")}
         </p>
       </div>
 
@@ -486,11 +440,7 @@ const DMITScreen = () => {
 
         <div className="relative inline-block">
           {/* outer frame */}
-          <img
-            src={bg2}
-            alt="dmit frame"
-            className="w-[750px] max-w-none h-auto"
-          />
+          <img src={bg2} alt="dmit frame" className="w-[750px] max-w-none h-auto" />
 
           {/* ✅ CAMERA INSIDE THE RECTANGLE ONLY */}
           <div
@@ -531,7 +481,7 @@ const DMITScreen = () => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default DMITScreen;
+export default DMITScreen

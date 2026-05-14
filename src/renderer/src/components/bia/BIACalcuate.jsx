@@ -13,11 +13,16 @@ import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "
 import { trackStage } from "../../utils/config";
 import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
 import { useBIARecording } from "../../utils/useBiaRecording";
+import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
+import BlueGradientButton from "../ui/BlueGradientButton";
+import BlackGradientButton from "../ui/BlackGradientButton";
+import { CircleAlert, FileWarning } from "lucide-react";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
   // Base state
@@ -28,6 +33,16 @@ export default function BIACalculate({ user, onComplete }) {
   const [isComplete, setIsComplete] = useState(false);
   const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
+  const whCompleteResolver = useRef(null);
+  const imCompleteResolver = useRef(null);
+  const [measuredValues, setMeasuredValues] = useState({
+    height: "-- cm", weight: "-- kg", arms50k: {
+      fatPercentage: "20",
+      waterPercentage: "55",
+      muscleMassKg: "30",
+      boneMassKg: "3",
+    }
+  });
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
@@ -42,6 +57,7 @@ export default function BIACalculate({ user, onComplete }) {
     height: null,
     preHeight: null,
     armImpedance: null,
+    arms50k: null,
     isShoesContinued: false,
     impedance: { k20: null, k100: null }
   });
@@ -80,7 +96,7 @@ export default function BIACalculate({ user, onComplete }) {
     legImpedance_hasWeight: "Please make sure you are barefoot",
     weight: "Please step on the platform barefoot",
     height: "Please stand straight & still",
-    armImpedance: "Please be barefoot and hold the rods firmly",
+    armImpedance: "Please hold the rods firmly",
     impedance20: "Please be barefoot and hold the rods firmly",
     impedance100: "Please be barefoot and hold the rods firmly",
     maxRetryReached: "Maximum retries reached. redirecting to dmit.",
@@ -101,8 +117,7 @@ export default function BIACalculate({ user, onComplete }) {
       description: "Weight and Height Measurement Completed!",
     },
     imcomplete: {
-      title: "Good Job!",
-      description: "Body Composition Analysis Complete!",
+      title: "Your Measurement is Completed!",
     }
   };
   /* =======================
@@ -265,7 +280,7 @@ export default function BIACalculate({ user, onComplete }) {
       await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
       console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
       await saveBuffer("height_port_error");
-      navigate('/screen1');
+      navigate('/voice');
 
       // Track attempt for height (continuous polling)
       if (payload.attempt) {
@@ -334,10 +349,10 @@ export default function BIACalculate({ user, onComplete }) {
   // };
 
   const handleTimeout = (stepName) => {
-    console.error(`[BIA DEBUG] ${stepName} TIMEOUT - redirecting to /screen1`);
+    console.error(`[BIA DEBUG] ${stepName} TIMEOUT - redirecting to /voice`);
     // clearAllTimeouts();
     setIsRunning(false);
-    navigate("/screen1");
+    navigate("/voice");
   };
 
   const withTimeout = (promise, timeoutMs, stepName) => {
@@ -408,6 +423,24 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  const handleWhNextClick = () => {
+    console.log("[BIA DEBUG] whComplete Next button clicked");
+    if (whCompleteResolver.current) {
+      whCompleteResolver.current();
+      whCompleteResolver.current = null;
+    }
+  };
+
+  const handleImNextClick = () => {
+    console.log("[BIA DEBUG] imcomplete Next button clicked");
+    if (imCompleteResolver.current) {
+      imCompleteResolver.current();
+      imCompleteResolver.current = null;
+    } else {
+      setIsComplete(true);
+      navigate("/voice");
+    }
+  };
 
   const measurePreliminaryWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
@@ -509,6 +542,23 @@ export default function BIACalculate({ user, onComplete }) {
 
     }
 
+    /*
+    
+    
+    */
+
+    resultsRef.current.arms50k = {
+      fatPercentage: res.body_fat_percentage ?? "20",
+      waterPercentage: res.moisture_content_kg ?? "55",
+      muscleMassKg: res.muscle_mass_kg ?? "30",
+      boneMassKg: res.bone_mass_kg ?? "10",
+    };
+    setMeasuredValues((prev) => ({
+      ...prev,
+      arms50k: resultsRef.current.arms50k,
+    }));
+    console.log("measuredValues 50khz", measuredValues);
+
     resultsRef.current.armImpedance = {
       phaseAngle: res.measurement.phaseAngle.value,
       impedance: res.measurement.impedance.value,
@@ -557,13 +607,16 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
-      navigate("/screen1");
+      navigate("/voice");
       return;
     }
 
@@ -586,10 +639,10 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
-        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
         await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
         // updatePhaseState('leg', 'failed', 'Max retries exhausted');
-        navigate("/screen1");
+        navigate("/voice");
         return;
       }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
@@ -642,7 +695,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Parallelize Weight and Height measurements
       console.log("[BIA DEBUG] Starting Weight and Height measurements in parallel...");
-      
+
       const [weightRes, heightRes] = await Promise.all([
         measureWeight(),
         performHeightWithRetry()
@@ -662,16 +715,23 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Leg BIA immediately after weight/height
       await calculateAndStoreLegBIA();
 
+      setMeasuredValues({
+        weight: resultsRef.current?.weight?.value ? `${resultsRef.current?.weight?.value} kg` : "-- kg",
+        height: resultsRef.current?.height?.value ? `${resultsRef.current?.height?.value} cm` : "-- cm"
+      });
+
       navigate("/bia/whcomplete");
-      await sleep(3000); // Wait for whComplete video
+
+      await new Promise((resolve) => {
+        whCompleteResolver.current = resolve;
+      });
 
       // Proceed to Phase 3
       await runPhase3_Impedance();
-      await sleep(7000); // Wait for whComplete video
 
     } catch (phase2Error) {
       console.error("[BIA DEBUG] Phase 2 FAILED:", phase2Error.message);
-      
+
       if (phase2Error.message === "HEIGHT_MAX_RETRY_EXHAUSTED") {
         await showError(ERROR_MESSAGES.height, 3000);
         await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
@@ -684,8 +744,8 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA REC] ⏏️  Phase 2 — weight or generic error → saveBuffer('weight_error')");
         await saveBuffer("weight_error");
       }
-      
-      navigate("/screen1");
+
+      navigate("/voice");
     }
   };
 
@@ -706,7 +766,7 @@ export default function BIACalculate({ user, onComplete }) {
       return await measureHeight();
     } catch (heightError) {
       console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
-      
+
       // Retry with incremented attempt count
       console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
       await showError(ERROR_MESSAGES.height, 3000);
@@ -726,12 +786,15 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /screen1`);
+      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
-      navigate("/screen1");
+   navigate("/bia/imcomplete");
       return;
     }
 
@@ -746,7 +809,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Navigate to impedance screen
     navigate("/bia/im");
-    await sleep(2000);
+    await sleep(8000);
 
     try {
       // Arm Impedance 50kHz
@@ -761,12 +824,15 @@ export default function BIACalculate({ user, onComplete }) {
       if (resultsRef.current.isShoesContinued) {
         console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
-        await sleep(3000);
-        await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+        await BIAComplete({ 
+          session_id: storeUser?.data?.buffer_id,
+          screening_session_id: storeUser?.screening?.session_id
+        });
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
+        await new Promise((resolve) => { imCompleteResolver.current = resolve; });
         setIsComplete(true);
-        navigate("/screen1");
+        navigate("/voice");
         return;
       }
       // Impedance 20kHz
@@ -887,6 +953,18 @@ export default function BIACalculate({ user, onComplete }) {
           weightKg: resultsRef.current.weight.value
         });
         console.log("[BIA DEBUG] Arm BIA payload:", armBiaPayload);
+
+    resultsRef.current.arms50k = {
+      fatPercentage: armBiaPayload.body_fat_percentage ?? "8",
+      waterPercentage: armBiaPayload.moisture_content_kg ?? "57",
+      muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
+      boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
+    };
+    setMeasuredValues((prev) => ({
+      ...prev,
+      arms50k: resultsRef.current.arms50k,
+    }));
+    console.log("measuredValues 50khz", measuredValues);
         //  await window.api.sendLegBiaResult(legBiaPayload);
         await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { bia_object: armBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       } else {
@@ -957,14 +1035,16 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { bia_object: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
-      await sleep(3000); // Wait for complete video
-      // Clear timeouts
-      //clearAllTimeouts();
+
+      await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
-      navigate("/screen1");
+      navigate("/voice");
 
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
@@ -975,12 +1055,15 @@ export default function BIACalculate({ user, onComplete }) {
       // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
-      await sleep(3000);
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
+      await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
-      navigate("/screen1");
+      navigate("/voice");
     }
   };
 
@@ -1000,7 +1083,7 @@ export default function BIACalculate({ user, onComplete }) {
       portValidation.errors.forEach(err => console.error("[BIA DEBUG]", err));
       logPortConfiguration();
       await showError("Ports are not connected. Please check device connections.", 3000);
-      navigate("/screen1");
+      navigate("/voice");
       return;
     }
 
@@ -1039,7 +1122,7 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
       await saveBuffer("flow_exception");
-      navigate("/screen1");
+      navigate("/voice");
     } finally {
       setIsRunning(false);
       //clearAllTimeouts();
@@ -1074,8 +1157,8 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Handle video end - navigate to screen1
   const handleVideoEnd = () => {
-    console.log("[BIA DEBUG] Completion video ended, navigating to /screen1");
-    navigate("/screen1");
+    console.log("[BIA DEBUG] Completion video ended, navigating to /voice");
+    navigate("/voice");
   };
 
   /* =======================
@@ -1089,6 +1172,11 @@ export default function BIACalculate({ user, onComplete }) {
         texts={texts}
         isComplete={isComplete}
         onVideoEnd={handleVideoEnd}
+        heightValue={measuredValues.height}
+        weightValue={measuredValues.weight}
+        onNextClick={handleWhNextClick}
+        onImNextClick={handleImNextClick}
+        arms50k={measuredValues.arms50k}
       />
 
       <ErrorAlert
@@ -1110,56 +1198,187 @@ export default function BIACalculate({ user, onComplete }) {
   );
 }
 
-/* =======================
-   BAREFOOT CTA MODAL
-   Shown when leg impedance fails - pauses flow until user chooses
-======================= */
-function BarefootCTAModal({ onRemoveShoe, onContinueWithShoes }) {
+
+
+// ✅ Import ctaShoes.svg the same way bg2 is imported in NewDmitScreen
+
+
+// ── Figma asset URLs (valid 7 days — download and move to local assets) ──
+
+const imgWarningCircle =
+  "https://www.figma.com/api/mcp/asset/7c65b087-0dc1-4eee-90e6-b1eaf5c2bb0c";
+
+const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
+  const [step, setStep] = useState("choose"); // "choose" | "barefoot"
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="relative w-[90%] max-w-[700px] rounded-2xl border border-[#FFC568]/40 bg-[#1a1208] px-10 py-10 shadow-2xl flex flex-col items-center gap-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+      <div
+        className="relative w-[750px] max-w-[92vw]"
+        style={{ filter: "drop-shadow(0px 0px 40px rgba(139, 195, 229, 0.4))" }}
+      >
+        {/* ── Inline SVG border/frame ── */}
+        <svg
+          width={500}
+          height={700}
+          viewBox="0 0 1326 550"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-full h-auto block"
+        >
+          <path d="M29.5695 0L545.532 5.17449H1262.19L1304.32 46.9393V466.436L1263.29 510.788L76.8776 510.418L27.3516 459.413L29.5695 0Z" fill="#0C3046" fillOpacity="0.5" />
+          <path fillRule="evenodd" clipRule="evenodd" d="M854.5 510.814L866.698 491.595H878.524L864.11 514.51H854.5V510.814ZM883.33 491.964H895.156L880.742 514.88H868.546L883.33 491.964ZM900.332 491.964H912.158L897.744 514.88H885.548L900.332 491.964ZM917.332 491.964H929.16L914.376 514.88H902.918L917.332 491.964ZM933.596 491.964H945.422L931.008 514.88H919.18L933.596 491.964ZM949.858 491.964H962.054L947.64 514.88H935.444L949.858 491.964ZM966.86 491.964H978.686L963.902 515.249H952.076L966.86 491.964ZM983.492 491.964H995.318L980.904 514.88H969.076L983.492 491.964ZM1000.12 491.964H1011.95L997.536 514.88H985.708L1000.12 491.964ZM1016.39 491.964H1028.58L1014.17 514.88H1001.97L1016.39 491.964ZM1033.39 491.964H1045.21L1030.8 514.88H1018.6L1033.39 491.964ZM1050.02 491.964H1065.17V514.88H1052.24L1064.06 496.4L1061.11 493.443L1047.43 514.88H1035.6L1050.02 491.964ZM854.87 503.792V491.964H862.262L854.87 503.792Z" fill="#8BC3E5" />
+          <path d="M761.016 539.266V532.243C768.9 525.098 776.908 517.952 785.04 510.807H835.306C841.958 516.72 848.611 522.634 855.264 528.547H1062.98C1071.85 522.634 1080.84 516.72 1089.96 510.807H1261.82L1250.74 521.895L1093.29 521.525L1065.94 539.266H953.578C919.574 539.266 885.447 539.266 851.198 539.266L831.24 521.525H789.106L772.104 537.048V539.266H761.016Z" fill="#8BC3E5" />
+          <path d="M239.863 525.978L311.935 526.347L317.109 520.434C355.794 520.434 394.479 520.434 433.163 520.434L437.969 526.347H501.171L505.235 550.002H433.533L428.729 544.088H321.545L316.739 550.002C290.498 550.002 266.105 550.002 239.863 550.002V525.978Z" fill="#8BC3E5" />
+          <path d="M19.9727 510.821V505.647C25.6399 500.226 31.431 494.928 37.3446 489.754H73.9346C78.8626 493.943 83.6671 498.255 88.3487 502.69H239.885C246.538 498.255 253.19 493.943 259.843 489.754H381.441V497.885H262.061L242.473 510.821H160.421C135.534 510.821 110.525 510.821 85.3926 510.821L70.9768 497.885H40.3007L27.7346 508.973V510.821H19.9727Z" fill="#8BC3E5" />
+          <path fillRule="evenodd" clipRule="evenodd" d="M18.1289 545.915L31.0649 526.326H43.261L28.1088 549.981H18.1289V545.915ZM48.4368 526.326H61.0029L45.8489 549.981H32.9129L48.4368 526.326ZM66.1769 526.326H79.1129L63.589 549.981H51.023L66.1769 526.326ZM83.917 526.326H96.1149L80.9609 549.981H68.3949L83.917 526.326ZM101.289 526.326H113.855L98.3329 549.981H86.135L101.289 526.326ZM118.661 526.326H131.597L116.073 549.981H103.137L118.661 526.326ZM136.401 526.326H148.967L133.813 549.981H121.247L136.401 526.326ZM153.773 526.326H166.339L151.185 549.981H138.619L153.773 526.326ZM171.143 526.326H183.709L168.557 549.981H155.989L171.143 526.326ZM188.515 526.326H201.451L185.927 549.981H173.361L188.515 526.326ZM206.255 526.326H218.821L203.299 549.981H190.733L206.255 526.326ZM223.997 526.326H239.519V549.981H226.213L238.411 530.761L235.453 528.174L221.039 549.981H208.473L223.997 526.326ZM18.1289 538.523V526.326H25.8909L18.1289 538.523Z" fill="#8BC3E5" />
+          <path fillRule="evenodd" clipRule="evenodd" d="M723.319 549.632H713.34L697.816 525.978H710.383L723.319 545.936V549.632ZM708.166 549.632H695.598L680.446 525.978H693.012L708.166 549.632ZM690.424 549.632H677.488L662.334 525.608H675.27L690.424 549.632ZM672.684 549.632H660.118L644.594 525.978H657.16L672.684 549.632ZM655.312 549.632H643.116L627.592 525.978H640.158L655.312 549.632ZM637.942 549.632H625.006L609.852 525.978H622.418L637.942 549.632ZM620.2 549.632H607.634L592.48 525.978H605.046L620.2 549.632ZM602.46 549.632H589.894L574.74 525.978H587.306L602.46 549.632ZM584.718 549.632H572.152L556.998 525.978H569.566L584.718 549.632ZM566.978 549.632H554.412L538.888 525.978H551.824L566.978 549.632ZM549.238 549.632H536.67L521.148 525.978H533.714L549.238 549.632ZM531.866 549.632H519.3L504.886 527.456L501.558 530.413L514.126 549.632H500.82V525.978H516.342L531.866 549.632ZM714.818 525.978H722.58V537.805L714.818 525.978Z" fill="#8BC3E5" />
+          <path d="M718.515 510.821V505.647C712.848 500.226 707.057 494.928 701.143 489.754H664.553C659.625 493.943 654.697 498.255 649.769 502.69H498.233C491.827 498.255 485.298 493.943 478.645 489.754H357.047V497.885H476.057L496.015 510.821H578.067C602.953 510.821 627.962 510.821 653.095 510.821L667.511 497.885H698.187L710.753 508.973V510.821H718.515Z" fill="#8BC3E5" />
+          <path d="M29.9274 430.598L0.359375 467.558V481.233L29.9274 442.795V430.598Z" fill="#8BC3E5" />
+          <path d="M12.5508 492.348V527.46L18.0948 535.591L18.4647 484.217L12.5508 492.348Z" fill="#8BC3E5" />
+          <path d="M0.722656 457.22L38.4226 401.41L38.7926 378.864L0.722656 433.935V457.22Z" fill="#8BC3E5" />
+          <path d="M38.8225 357.797V69.1387L29.2126 83.5532L28.4727 372.211L38.8225 357.797Z" fill="#8BC3E5" />
+          <path d="M1.12109 411.773L38.821 357.812V338.962L1.12109 392.554V411.773Z" fill="#8BC3E5" />
+          <path d="M18.85 444.276L18.11 549.982H0L0.369961 467.561L18.85 444.276Z" fill="#8BC3E5" />
+          <path d="M1317.63 324.515L1310.61 338.929L1310.24 368.867L1317.63 376.259L1318.37 446.113H1318.74L1298.41 474.572L1297.67 92.0361L1317.63 116.43C1317.63 199.22 1317.63 241.724 1317.63 324.515Z" fill="#8BC3E5" />
+          <path d="M29.1953 17.3713H1256.64L1309.86 81.6818H1325.75L1258.86 0H29.1953V17.3713Z" fill="#8BC3E5" />
+          <path d="M1.125 125.33L38.8249 69.151V46.6055L1.125 101.676V125.33Z" fill="#8BC3E5" />
+          <path d="M39.1858 25.872V0H29.5759L28.8359 40.2865L39.1858 25.872Z" fill="#8BC3E5" />
+          <path d="M1.48438 79.4673L39.1843 25.8753V6.65625L1.48438 60.6178V79.4673Z" fill="#8BC3E5" />
+          <path d="M1168.68 73.5604L1191.22 95.7364C1185.31 101.65 1174.96 111.999 1169.05 118.282C1174.96 124.196 1178.29 127.522 1184.2 133.436C1190.48 127.522 1199.35 118.652 1206.38 111.26L1228.92 133.436L1242.97 119.391L1220.79 97.2149L1242.97 74.6691L1227.44 59.5156L1205.27 81.6916L1182.72 59.5156L1168.68 73.5604Z" fill="#8BC3E5" />
+        </svg>
 
-        {/* Icon */}
-        <div className="flex items-center justify-center w-20 h-20 rounded-full bg-[#FFC568]/10 border border-[#FFC568]/30">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
-              stroke="#FFC568" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
+        {/* ── X close button (over SVG's built-in X icon) ── */}
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="absolute z-10 bg-transparent border-none cursor-pointer p-2 leading-[0] hover:opacity-70 transition-opacity"
+          style={{ top: "10%", right: "4%" }}
+        >
+          <div className="w-[55px] h-[55px]" />
+        </button>
 
-        {/* Title */}
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-[#FFC568]">Please be on the bare foot</h2>
-          <p className="mt-3 text-lg text-[#FFC568]/70">
-            How would you like to proceed?
-          </p>
-        </div>
+        {/* ── Content ── */}
+        <div
+          className="absolute flex flex-col justify-center"
+          style={{
+            top: "18%",
+            bottom: "20%",
+            left: "6%",
+            right: "6%",
+          }}
+        >
+          {step === "choose" ? (
+            <>
+              {/* Title */}
+              <div className="flex items-start gap-2.5 mb-[5%]">
+                <CircleAlert className="text-[#8BC3E5]" size={32} />
+                <h2
+                  className="text-[#8BC3E5] text-3xl leading-snug font-normal m-0"
+                  style={{ fontFamily: "'Share Tech Mono', monospace" }}
+                >
+                  Choose how you'd like
+                  <br />
+                  to continue.
+                </h2>
+              </div>
 
-        {/* Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-          {/* Remove Shoe - primary action */}
-          <button
-            onClick={onRemoveShoe}
-            className="flex-1 max-w-[280px] py-4 px-6 rounded-xl text-xl font-semibold
-              bg-[#FFC568] text-[#1a1208]
-              hover:bg-[#ffd48a] active:scale-95
-              transition-all duration-200 shadow-lg shadow-[#FFC568]/20"
-          >
-            Remove the Shoe
-          </button>
+              {/* Two-choice buttons */}
+              <div className="w-full flex gap-x-10">
+                <button
+                  onClick={() => setStep("barefoot")}
+                  className="
+                    w-[clamp(16rem,33vw,31.25rem)]
+                    h-[clamp(4rem,8vh,6.25rem)]
+                    flex items-center justify-center
+                    text-center
+                    rounded-[30px]
+                    border-2 border-white/30
+                    bg-white/5
+                    backdrop-blur-sm
+                    shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
+                    text-white
+                    text-[clamp(1.25rem,3vw,3rem)]
+                    tracking-wide
+                    active:scale-[0.98]
+                    transition-all duration-300 ease-in-out
+                    hover:bg-white/10
+                    hover:border-white/50
+                    px-2
+                  "
+                  style={{ fontFamily: "'Share Tech Mono', monospace" }}
+                >
+                  🦶 Without Shoes
+                </button>
 
-          {/* Continue with Shoes - secondary action */}
-          <button
-            onClick={onContinueWithShoes}
-            className="flex-1 max-w-[280px] py-4 px-6 rounded-xl text-xl font-semibold
-              border border-[#FFC568]/50 text-[#FFC568]
-              hover:bg-[#FFC568]/10 active:scale-95
-              transition-all duration-200"
-          >
-            Continue with Shoes
-          </button>
+                <button
+                  onClick={onContinueWithShoes}
+                  className="
+                    w-[clamp(16rem,33vw,31.25rem)]
+                    h-[clamp(4rem,8vh,6.25rem)]
+                    flex items-center justify-center
+                    text-center
+                    rounded-[30px]
+                    border-2 border-white/50
+                    bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
+                    shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
+                    text-white
+                    text-[clamp(1.5rem,3vw,3rem)]
+                    tracking-wide
+                    active:scale-[0.98]
+                    transition-all duration-300 ease-in-out
+                    hover:border-white
+                  "
+                  style={{ fontFamily: "'Share Tech Mono', monospace" }}
+                >
+                  👟 With Shoes
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Instruction screen */}
+              <div className="flex items-start gap-2.5 mb-[6%]">
+                <CircleAlert className="text-[#8BC3E5] shrink-0 mt-1" size={32} />
+                <p
+                  className="text-[#8BC3E5] text-3xl leading-snug font-normal m-0"
+                  style={{ fontFamily: "'Share Tech Mono', monospace" }}
+                >
+                  Remove your socks and shoes
+                  <br />
+                  and click on start.
+                </p>
+              </div>
+
+              {/* Start button */}
+              <button
+                onClick={onRemoveShoe}
+                className="
+                ml-36
+                  w-[clamp(16rem,33vw,31.25rem)]
+                  h-[clamp(4rem,8vh,6.25rem)]
+                  flex items-center justify-center
+                  text-center
+                  rounded-[30px]
+                  border-2 border-white/50
+                  bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
+                  shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
+                  text-white
+                  text-[clamp(1.5rem,3vw,3rem)]
+                  tracking-wide
+                  active:scale-[0.98]
+                  transition-all duration-300 ease-in-out
+                  hover:border-white
+                "
+                style={{ fontFamily: "'Share Tech Mono', monospace" }}
+              >
+                Start
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
-}
+};
+

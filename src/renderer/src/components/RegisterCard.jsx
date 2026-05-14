@@ -1,83 +1,99 @@
-import React, { useEffect, useState } from 'react'
-import lightbg from '../assets/lightbg.png'
-import lightblub from '../assets/lightblub.png'
-import projector from '../assets/projector.png'
-import frame1 from '../assets/verfied-frame.svg'
-import profilepic from '../assets/profile-pic.png'
-import { useNavigate } from 'react-router'
-import { useTranslation } from 'react-i18next'
-import { useSelector } from 'react-redux'
-
+import React, { useEffect, useState } from "react"
+import lightbg from "../assets/lightbg.png"
+import lightblub from "../assets/lightblub.png"
+import projector from "../assets/projector.png"
+import frame1 from "../assets/verfied-frame.svg"
+import profilepic from "../assets/profile-pic.png"
+import { useNavigate } from "react-router"
+import { useTranslation } from "react-i18next"
+import { useSelector } from "react-redux"
+import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 
 export default function RegisterCard() {
-  const user = useSelector((state) => state.common.user);
+  const user = useSelector((state) => state.common.user)
+  const screening = useSelector((state) => state.common.screening)
 
-const imagePath = user?.data?.image_path || "";
+  const imagePath = user?.data?.image_path || ""
 
-// safer extraction
-const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1);
+  // safer extraction
+  const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1)
 
-console.log("imagePath:", imagePath);
-console.log("folderName:", folderName);
+  console.log("imagePath:", imagePath)
+  console.log("folderName:", folderName)
 
-const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-const audioRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+  const audioRef = React.useRef(null)
 
-const instructionAudio = "/src/assets/audio/confirm_user.mp3";
+  const profileImageSrc =
+    folderName && folderName.length > 0
+      ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+      : profilepic
 
-const profileImageSrc =
-  folderName && folderName.length > 0
-    ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-    : profilepic;
-
-console.log("profileImageSrc:", profileImageSrc);
+  console.log("profileImageSrc:", profileImageSrc)
   useEffect(() => {
     // Play audio when component mounts
-    playAudio();
-  }, []);
+    playAudio()
+  }, [])
 
-  const playAudio = () => {
-    if (audioRef.current) {
-      setIsAudioPlaying(true);
+  const playAudio = async () => {
+    const audioPath = await getAudioForCurrentLanguage("confirm_user")
+    if (audioPath && audioRef.current) {
+      audioRef.current.src = audioPath
+      setIsAudioPlaying(true)
       audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err);
-      });
+        console.log("Audio playback failed:", err)
+        setIsAudioPlaying(false)
+      })
+    } else if (!audioPath) {
+      console.log("No audio for confirm_user in current language")
     }
-  };
+  }
 
   const stopAudio = () => {
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsAudioPlaying(false);
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+      setIsAudioPlaying(false)
     }
-  };
+  }
 
   const handleAudioEnd = () => {
-    setIsAudioPlaying(false);
-  };
+    setIsAudioPlaying(false)
+  }
 
-  console.log("users",user);
+  console.log("users", user)
   const navigate = useNavigate()
   const { t } = useTranslation()
   const handleYesClick = () => {
-    stopAudio();
-    navigate('/bia/wh');
-  };
+    stopAudio()
+
+    // Map backend stage keys to frontend routes
+    const stageRouteMap = {
+      login: '/verified',
+      bia: '/bia/wh',
+      voice_analysis: '/voice',
+      color_blindness: '/colorblindness',
+      divide_attention: '/space-convoy-main',
+      result: '/bia/result',
+    }
+
+    if (screening?.isResumed && screening?.nextStage) {
+      const nextRoute = stageRouteMap[screening.nextStage.stage_key];
+      console.log("Resuming screening, next stage:", screening.nextStage.stage_key, "navigating to:", nextRoute)
+      navigate(nextRoute || "/bia/wh")
+    } else {
+      navigate("/bia/wh")
+    }
+  }
 
   const handleNoClick = () => {
-    stopAudio();
-    navigate('/');
-  };
+    stopAudio()
+    navigate("/")
+  }
 
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center">
-      <audio
-        ref={audioRef}
-        onEnded={handleAudioEnd}
-        onPlay={() => setIsAudioPlaying(true)}
-      >
-        <source src={instructionAudio} type="audio/mpeg" />
+      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
         Your browser does not support the audio element.
       </audio>
       {/* Card Wrapper */}
@@ -92,11 +108,7 @@ console.log("profileImageSrc:", profileImageSrc);
           z-20
         "
         >
-          <img
-            src={frame1}
-            alt="dmt background"
-            className="w-[850px] max-w-none h-auto"
-          />
+          <img src={frame1} alt="dmt background" className="w-[850px] max-w-none h-auto" />
         </div>
 
         <div
@@ -114,25 +126,30 @@ console.log("profileImageSrc:", profileImageSrc);
             />
           </div> */}
 
-
           <img
             src={profileImageSrc}
             onError={(e) => {
-              e.currentTarget.src = profilepic;
+              e.currentTarget.src = profilepic
             }}
             alt="profile pic"
             className="w-full portrait:max-w-96 h-auto object-cover rounded-3xl"
           />
 
-
           {/* text */}
 
           <div className="info max-w-full mt-8">
             <p className="text-[28px] flex flex-col items-center text-center tracking-wider gap-y-3 text-white text-nowrap">
-              <span>{t('profile.name')} - {user?.data?.student_name} </span>
-              {user?.data?.class && <span> {t('profile.class')}- 8th A</span>}
-              {user?.data?.age && <span>{t('profile.age')} - {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years</span>}
-              {user?.data?.contact_number && <span>{t('profile.number')} - 0987654321</span>}
+              <span>
+                {t("profile.name")} - {user?.data?.student_name}{" "}
+              </span>
+              {user?.data?.class && <span> {t("profile.class")}- 8th A</span>}
+              {user?.data?.age && (
+                <span>
+                  {t("profile.age")} -{" "}
+                  {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years
+                </span>
+              )}
+              {user?.data?.contact_number && <span>{t("profile.number")} - 0987654321</span>}
             </p>
           </div>
 
@@ -141,7 +158,7 @@ console.log("profileImageSrc:", profileImageSrc);
               onClick={handleYesClick}
               style={{
                 borderImageSource:
-                  'radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)',
+                  "radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)",
                 borderImageSlice: 1
               }}
               className="
@@ -160,7 +177,7 @@ transition-transform duration-300 ease-in-out
 
   "
             >
-              {t('common.yes_me')}
+              {t("common.yes_me")}
             </button>
 
             <button
@@ -184,7 +201,7 @@ active:scale-[0.98]
 transition-transform duration-300 ease-in-out
           "
             >
-              {t('common.not_me')}
+              {t("common.not_me")}
             </button>
           </div>
         </div>
@@ -200,24 +217,34 @@ transition-transform duration-300 ease-in-out
   )
 }
 
-
-
-
-
-
 // {
-//     "success": true,
-//     "data": {
-//         "buffer_id": "36d051db-99f2-447c-818e-44b0e06c923b",
-//         "status": "COMPLETED",
-//         "student_status": "REGISTERED",
-//         "user_id": "11e24be9-ed9b-4e65-8eeb-51a2561cb1da",
-//         "face_id": "8577d7b5-a227-4402-962b-78f0c11ffce1",
-//         "student_name": "Shivam Tripathi",
-//         "gender": "MALE",
-//         "age": 24,
-//         "video_path": "/var/lib/suhi/.videos/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001",
-//         "image_path": "/var/lib/suhi/.images/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001"
+//   "success": true,
+//   "data": {
+//     "buffer_id": "60f3ed9e-2c21-43d1-8363-9a08d9186baa",
+//     "status": "COMPLETED",
+//     "student_status": "REGISTERED",
+//     "user_id": "a158d845-5c4e-42f1-bff5-1c6e66fa2746",
+//     "face_id": "f2107488-5f4a-4095-a5f5-d2a7a4bcbb15",
+//     "student_name": "Ayaan Bajaj",
+//     "gender": "FEMALE",
+//     "age": 7,
+//     "video_path": null,
+//     "image_path": "/var/lib/suhi/.images/a158d845-5c4e-42f1-bff5-1c6e66fa2746_20260512_052503_aabbcc44",
+//     "frames_processed": 1,
+//     "elapsed_seconds": 1.434
+//   },
+//   "error": null,
+//   "screening": {
+//     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
+//     "is_resumed": true,
+//     "resume_count": 1,
+//     "next_stage": {
+//       "stage_key": "bia",
+//       "display_name": "BIA",
+//       "stage_order": 2
 //     },
-//     "error": null
+//     "completed_stages": [
+//       "login"
+//     ]
+//   }
 // }

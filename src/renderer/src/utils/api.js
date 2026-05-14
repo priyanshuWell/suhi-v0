@@ -155,7 +155,7 @@ export async function realtimeCapture(kiosk_id=null) {
   try {
     const payload = {
       kiosk_id: "aabbcc44",
-      camera_index: 10,
+      camera_index: 6,
       max_seconds: 5,
       quality_threshold: 40
     };
@@ -189,7 +189,139 @@ export async function realtimeCapture(kiosk_id=null) {
   }
 }
 
+export async function colorBlindessStart(userId, kiosk_id, screeningSessionId = null){
+  try {
+    const payload ={
+      user_id:userId,
+      kiosk_id
+    }
 
+    const response = await fetch(`${API_BASE_URL}/color-blindness/start`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function colorBlindessComplete(sessionId= '56af196c-9914-453f-8761-2e0176f6f3db', screeningSessionId = null){
+  try {
+    const payload ={
+    screening_session_id: screeningSessionId,
+    session_id:sessionId,
+    }
+
+    const response = await fetch(`${API_BASE_URL}/color-blindness/complete`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function colorBlindessSubmit(sessionId,plateId,selectedAnswer,noResponse,responseTimeMs){
+  console.log("colorBlindessSubmit",sessionId,plateId,selectedAnswer,noResponse,responseTimeMs)
+  try {
+    const payload ={
+      session_id:sessionId,
+      plate_id:plateId,
+      selected_answer:selectedAnswer,
+      no_response:noResponse,
+      response_time_ms:responseTimeMs,
+    }
+
+    const response = await fetch(`${API_BASE_URL}/color-blindness/response`,{
+       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    })
+
+     if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export async function getColorBlindessPlates(){
+  try {
+    const response = await fetch(`${API_BASE_URL}/plates/seed`,{
+      method: 'POST', 
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+
+  } catch (error) {
+    console.error("Error running FPT:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
 
 export async function runFPT(shmPath, kioskId) {
   try {
@@ -323,6 +455,196 @@ export const voiceSaveApi = async (payload) => {
     };
   }
 }
+
+export const DivideAttentionSession = async (userId,sessionType) => {
+
+  /*
+{
+  "user_id": "bdabcfad-558f-4d36-9cfd-5deaedfdd629",
+  "session_type": "practice"
+}
+
+  */
+  const payload = {
+    user_id:userId,
+    session_type:sessionType
+  }
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention session response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention session to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const DivideAttentionTrialStart = async (payload) => {
+  /*
+{
+  "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c",
+  "trial_number": 1,
+  "trial_type": "practice",
+  "num_targets": 2,
+  "num_distractors": 2,
+  "total_objects": 4,
+  "tracking_duration_ms": 8000
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/trials/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention trial start response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention trial start to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
+export const DivideAttentionTrialComplete = async (trial_id) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/trials/${trial_id}/complete`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention trial complete response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention trial complete to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
+export const DivideAttentionResponseBatch = async (payload) => {
+  /*
+  {
+  "trial_id": "8c62e47b-aec8-4237-83de-994a8dc9bba6",
+  "responses": [
+    {
+      "object_index": 0,
+      "object_type": "target",
+      "response_time_ms": 1800,
+      "tap_x": 0,
+      "tap_y": 0,
+      "response_type": "correct_hit",
+      "is_correct": false,
+      "points_awarded": -5,
+      "speed_bonus": false
+    }
+  ]
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/responses/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention response batch response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention response batch to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
+export const DivideAttentionSessionComplete = async (session_id, screening_session_id) => {
+  /*
+  {
+  "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c"
+}
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete?screening_session_id=${screening_session_id}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Divide attention session complete response:", data);
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error sending divide attention session complete to backend:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+} 
+
 
 export const BIAComplete = async (result) => {
   try {

@@ -5,3 +5,7 @@ out
 .eslintcache
 *.log*
 /build
+/graph-output
+/scripts
+/.agent
+/src/Divided_Attention

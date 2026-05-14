@@ -1,4 +1,6 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
+import { CircularChart } from './CircularChart'
 
 /**
  * Body Constitution Component
@@ -8,11 +10,11 @@ import React from 'react'
  * @param {number} vata - Vata percentage (0-100)
  * @param {number} pitta - Pitta percentage (0-100)
  * @param {number} kapha - Kapha percentage (0-100)
- * 
- * Usage:
- * <BodyConstitution vata={40} pitta={30} kapha={30} />
+
  */
-const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
+const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
+  const { t } = useTranslation()
+
   // Ensure values are numbers and handle null/undefined
   const vataPercent = Number(vata) || 0
   const pittaPercent = Number(pitta) || 0
@@ -54,50 +56,14 @@ const BodyConstitution = ({ vata = 33, pitta = 33, kapha = 34 }) => {
   ]
 
   return (
-    <div className="w-full bg-transparent p-2">
+    <div className="w-full bg-transparent p-2 m-4">
       {/* Title */}
-      <h2 className="text-[#29ABE2] text-3xl xl:text-4xl  text-center mb-4 tracking-wider">
-        Body Constitution
+      <h2 className="text-[#FFFFFF] text-3xl xl:text-3xl text-center mb-[5%] tracking-wider">
+        {t('bia_result.head_desc')}
       </h2>
 
-      {/* Three column layout for percentages */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {doshaConfig.map((dosha) => (
-          <div key={dosha.key} className="text-center">
-            <span className="text-gray-400 text-2xl xl:text-3xl font-medium">
-              {dosha.percentage.toFixed(0)}%
-            </span>
-          </div>
-        ))}
-      </div>
-
-      {/* Progress Bars Container - Single row with proportional widths */}
-      <div className="w-full flex gap-1 mb-6 h-3 rounded-full overflow-hidden">
-        {doshaConfig.map((dosha) => (
-          <div
-            key={dosha.key}
-            className="h-full transition-all duration-1000 ease-out"
-            style={{
-              width: `${dosha.normalizedPercent}%`,
-              backgroundColor: dosha.color,
-              minWidth: dosha.percentage > 0 ? '2%' : '0%' // Ensure visibility if > 0
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Labels with Emojis */}
-      <div className="grid grid-cols-3 gap-4">
-        {doshaConfig.map((dosha) => (
-          <div key={dosha.key} className="flex items-center justify-center gap-2">
-            <span className="text-2xl">{dosha.emoji}</span>
-            <span
-              className="text-xl xl:text-2xl font-semibold tracking-wide text-gray-400"
-            >
-              {dosha.label}
-            </span>
-          </div>
-        ))}
+      <div className="flex justify-center relative">
+        <CircularChart data={doshaConfig} />
       </div>
     </div>
   )

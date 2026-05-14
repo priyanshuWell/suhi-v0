@@ -2140,7 +2140,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           }
 
           const distanceCm = distance / 10
-          const calculatedHeight = 194 - distanceCm
+          const calculatedHeight = 196.3 - distanceCm
 
           /* ---------- RANGE CHECK ---------- */
           if (calculatedHeight < 80) {
@@ -2395,28 +2395,28 @@ export async function sendBiaCommand(command, options = {}) {
 
           // Custom or default response handling
           if (config.responseHandler) {
-            config.responseHandler(data)
+            config?.responseHandler(data)
           } else {
             // Default parsing
             // parseBodyComposition1(data);
           }
 
           // Remove listener to prevent memory leaks
-          biaPort.removeListener('data', responseListener)
+          biaPort?.removeListener('data', responseListener)
 
           resolve(data)
         }
 
         // Set timeout
         responseTimeout = setTimeout(() => {
-          biaPort.removeListener('data', responseListener)
+          biaPort?.removeListener('data', responseListener)
           const timeoutError = new Error('No response received')
           if (config.verbose) console.warn('\n  WARNING:', timeoutError.message)
           reject(timeoutError)
         }, config.timeout)
 
         // Add response listener
-        biaPort.on('data', responseListener)
+        biaPort?.on('data', responseListener)
       } else {
         resolve()
       }
@@ -4362,9 +4362,9 @@ export async function case41_WeightMeasurement() {
         // ══════════════════════════════════════════════════════════
 
         const WEIGHT_ZERO_OFFSET = 0.0 // Set from case 15
-        const CALIBRATION_FACTOR = 2.200244 // Set from case 15
+        const CALIBRATION_FACTOR =0.6011 // Set from case 15
         const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR
-        const calibratedWeight = calibratedWeightCatty * 0.5
+        const calibratedWeight = calibratedWeightCatty;
         // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;
         // Validate calibrated weight
         if (isNaN(calibratedWeight) || calibratedWeight < 0) {

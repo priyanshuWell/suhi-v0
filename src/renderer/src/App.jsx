@@ -23,28 +23,35 @@ import LoginSuhi from './components/forms/LoginSuhi'
 import LoginDOB from './components/forms/LoginDOB'
 import LoginFather from './components/forms/LoginFather'
 import FingerPrintScreen from './components/forms/FingerPrintScreen'
+import ColorBlindPlate from './components/color-blindness/ColorBlindPlate'
+import ColorBlindQuiz from './components/color-blindness/ColorBlindQuiz'
+import SpaceConvoyMain from './components/games/space-convoy/SpaceConvoyMain'
+import DivideAttentionGame from './components/games/space-convoy/DivideAttentionGame'
+import SpaceConveyDemo from './components/games/space-convoy/SpaceConveyDemo'
+import { StartCountDown } from './components/games/space-convoy/StartCountDown'
+import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConveyComplete'
 
 function App() {
-  useEffect(() => {
-    const doSync = async () => {
-      try {
-        console.log('🔄 Starting cloud-to-local sync...')
-        const data = await cloudToLocalSync()
-        console.log('✅ Sync success:', data)
-      } catch (err) {
-        console.error('❌ Sync failed:', err?.message || err)
-      }
-    }
+  // useEffect(() => {
+  //   const doSync = async () => {
+  //     try {
+  //       console.log('🔄 Starting cloud-to-local sync...')
+  //       const data = await cloudToLocalSync()
+  //       console.log('✅ Sync success:', data)
+  //     } catch (err) {
+  //       console.error('❌ Sync failed:', err?.message || err)
+  //     }
+  //   }
 
-    doSync()
-  }, [])
+  //   doSync()
+  // }, [])
 
   return (
     <Routes>
 
       <Route path="/facecapture" element={<FaceCapture />} />
       <Route path="/confirmation" element={<ConfirmationScreen />} />
-      <Route path="/" element={<LoginSuhi />} />
+      <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path="/login-father" element={<LoginFather />} />
       <Route path='/verified' element={<RegisterCard />} />
       <Route path='/' element={<SplashScreen />} />
@@ -55,6 +62,12 @@ function App() {
       <Route path='/bia/result' element={<BIAResult />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
       <Route path="/fingerprint" element={<FingerPrintScreen />} />
+      <Route path="/colorblindness" element={<ColorBlindPlate />} />
+      <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
+      <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
+      <Route path='/divide-attention' element={<DivideAttentionGame />} />
+      <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
+
     </Routes>
   )
 }
