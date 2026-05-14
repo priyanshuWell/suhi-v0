@@ -6,6 +6,13 @@ const initialState = {
   user: null,
   lang: "en",
   sessionId: null, // BIA session identifier
+  screening: {
+    sessionId: null,
+    isResumed: false,
+    resumeCount: 0,
+    nextStage: null,
+    completedStages: [],
+  },
 
   // example shared states
   videoBase64: null,
@@ -134,6 +141,20 @@ const commonSlice = createSlice({
       state.sessionId = action.payload;
     },
 
+    setScreening: (state, action) => {
+      if (action.payload) {
+        state.screening = {
+          sessionId: action.payload.session_id || null,
+          isResumed: action.payload.is_resumed || false,
+          resumeCount: action.payload.resume_count || 0,
+          nextStage: action.payload.next_stage || null,
+          completedStages: action.payload.completed_stages || [],
+        };
+      } else {
+        state.screening = initialState.screening;
+      }
+    },
+
     resetCommonState: () => initialState,
   },
 });
@@ -155,7 +176,8 @@ export const {
   setArmBiaResult,
   resetCommonState,
   setBmiResult,
-  setSessionId
+  setSessionId,
+  setScreening
 } = commonSlice.actions;
 
 export default commonSlice.reducer;

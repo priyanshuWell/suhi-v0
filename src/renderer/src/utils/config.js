@@ -1,7 +1,7 @@
 
 
 import { BIAMeasurementStage } from "./api";
-
+// import store from '../../../store/store'
 export const VIDEO_CONFIG = {
   // Video buffer duration in milliseconds
   // Can be adjusted based on requirements (5000ms = 5 seconds, 7000ms = 7 seconds, etc.)
@@ -74,9 +74,11 @@ export function getSessionId(){
   return crypto.randomUUID();
 }
 
-  export const trackStage = async (stage, status, data = {}, error = null,sessionId,userId,attemptNumber=1) => {
+  export const trackStage = async (stage, status, data = {}, error = null, sessionId, userId, attemptNumber=1) => {
+    // Dynamically import store to avoid circular dependencies
     const payload = {
       session_id: sessionId,
+      // screening_session_id: screeningSessionId,
       user_id: userId,
       measurement_stage: stage,
       status: status,

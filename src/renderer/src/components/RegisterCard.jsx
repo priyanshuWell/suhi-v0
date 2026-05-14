@@ -11,6 +11,7 @@ import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
+  const screening = useSelector((state) => state.common.screening)
 
   const imagePath = user?.data?.image_path || ""
 
@@ -65,7 +66,24 @@ export default function RegisterCard() {
   const { t } = useTranslation()
   const handleYesClick = () => {
     stopAudio()
-    navigate("/bia/wh")
+
+    // Map backend stage keys to frontend routes
+    const stageRouteMap = {
+      login: '/verified',
+      bia: '/bia/wh',
+      voice_analysis: '/voice',
+      color_blindness: '/colorblindness',
+      divide_attention: '/space-convoy-main',
+      result: '/bia/result',
+    }
+
+    if (screening?.isResumed && screening?.nextStage) {
+      const nextRoute = stageRouteMap[screening.nextStage.stage_key];
+      console.log("Resuming screening, next stage:", screening.nextStage.stage_key, "navigating to:", nextRoute)
+      navigate(nextRoute || "/bia/wh")
+    } else {
+      navigate("/bia/wh")
+    }
   }
 
   const handleNoClick = () => {
@@ -200,18 +218,33 @@ transition-transform duration-300 ease-in-out
 }
 
 // {
-//     "success": true,
-//     "data": {
-//         "buffer_id": "36d051db-99f2-447c-818e-44b0e06c923b",
-//         "status": "COMPLETED",
-//         "student_status": "REGISTERED",
-//         "user_id": "11e24be9-ed9b-4e65-8eeb-51a2561cb1da",
-//         "face_id": "8577d7b5-a227-4402-962b-78f0c11ffce1",
-//         "student_name": "Shivam Tripathi",
-//         "gender": "MALE",
-//         "age": 24,
-//         "video_path": "/var/lib/suhi/.videos/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001",
-//         "image_path": "/var/lib/suhi/.images/11e24be9-ed9b-4e65-8eeb-51a2561cb1da_20260119_110326_KIOSK_001"
+//   "success": true,
+//   "data": {
+//     "buffer_id": "60f3ed9e-2c21-43d1-8363-9a08d9186baa",
+//     "status": "COMPLETED",
+//     "student_status": "REGISTERED",
+//     "user_id": "a158d845-5c4e-42f1-bff5-1c6e66fa2746",
+//     "face_id": "f2107488-5f4a-4095-a5f5-d2a7a4bcbb15",
+//     "student_name": "Ayaan Bajaj",
+//     "gender": "FEMALE",
+//     "age": 7,
+//     "video_path": null,
+//     "image_path": "/var/lib/suhi/.images/a158d845-5c4e-42f1-bff5-1c6e66fa2746_20260512_052503_aabbcc44",
+//     "frames_processed": 1,
+//     "elapsed_seconds": 1.434
+//   },
+//   "error": null,
+//   "screening": {
+//     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
+//     "is_resumed": true,
+//     "resume_count": 1,
+//     "next_stage": {
+//       "stage_key": "bia",
+//       "display_name": "BIA",
+//       "stage_order": 2
 //     },
-//     "error": null
+//     "completed_stages": [
+//       "login"
+//     ]
+//   }
 // }

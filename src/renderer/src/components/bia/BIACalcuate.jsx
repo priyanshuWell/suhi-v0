@@ -22,6 +22,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
   // Base state
@@ -609,7 +610,10 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
       navigate("/voice");
@@ -784,7 +788,10 @@ export default function BIACalculate({ user, onComplete }) {
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
    navigate("/bia/imcomplete");
@@ -817,7 +824,10 @@ export default function BIACalculate({ user, onComplete }) {
       if (resultsRef.current.isShoesContinued) {
         console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
-        await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+        await BIAComplete({ 
+          session_id: storeUser?.data?.buffer_id,
+          screening_session_id: storeUser?.screening?.session_id
+        });
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
         await new Promise((resolve) => { imCompleteResolver.current = resolve; });
@@ -1025,7 +1035,10 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { bia_object: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
 
@@ -1042,7 +1055,10 @@ export default function BIACalculate({ user, onComplete }) {
       // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
-      await BIAComplete({ session_id: storeUser?.data?.buffer_id });
+      await BIAComplete({ 
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });

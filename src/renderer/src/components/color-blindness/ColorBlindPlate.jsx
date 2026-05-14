@@ -14,6 +14,7 @@ import ReplayAudio from "../ReplayAudio";
 
 export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user);
+    const screening = useSelector((state) => state.common.screening);
     const { t } = useTranslation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);  // seeding + starting
@@ -21,13 +22,14 @@ export const ColorBlindPlate = () => {
     const [error, setError] = useState(null);
     const kioskId = getKioskId();
     const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
+    
     useEffect(() => {
         let cancelled = false;
 
         (async () => {
             try {
                 await getColorBlindessPlates();
-                const res = await colorBlindessStart(userId, kioskId);
+                const res = await colorBlindessStart(userId, kioskId, screening?.sessionId);
                 console.log("res start colorblindess", res)
                 if (!res.success) throw new Error(res.error ?? "Start failed");
 

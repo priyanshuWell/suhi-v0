@@ -21,6 +21,7 @@ import CARD_11 from "../../assets/color_blindness/Card_11.png";
 import CARD_12 from "../../assets/color_blindness/Card_12.png";
 import CARD_13 from "../../assets/color_blindness/Card_13.png";
 import CARD_14 from "../../assets/color_blindness/Card_14.png";
+import { useSelector } from "react-redux";
 
 const PLATES = [
     {
@@ -117,8 +118,10 @@ export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
-
+     const storeUser = useSelector((state) => state.common.user);
+    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
+    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", screeningSessionId)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
 
@@ -173,7 +176,7 @@ export const ColorBlindQuiz = () => {
 
             if (nextIndex >= totalPlates) {
                 try {
-                    const result = await colorBlindessComplete(sessionId);
+                    const result = await colorBlindessComplete(sessionId, screeningSessionId);
                     console.log("result colorBlindess", result)
                     if (result.success) {
                         navigate("/bia/result");
