@@ -71,11 +71,11 @@ export const ROUNDS = {
         time: { preparation: 1500, game: 6500, freeze: 7000 },
         difficultyTier: 4,
     },
-    round10: {
-        name: "Round 10",
-        particles: 25, targets: 12, radius: 32,
-        velocity: { min: 3.2, max: 3.8 },
-        time: { preparation: 1500, game: 7000, freeze: 6500 },
-        difficultyTier: 4,
-    },
+    // round10: {
+    //     name: "Round 10",
+    //     particles: 25, targets: 12, radius: 32,
+    //     velocity: { min: 3.2, max: 3.8 },
+    //     time: { preparation: 1500, game: 7000, freeze: 6500 },
+    //     difficultyTier: 4,
+    // },
 };
