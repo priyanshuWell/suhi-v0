@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 
 import bg1 from "../../assets/lightbg.png";
 import bg3 from "../../assets/facecapture-bg.svg";
-import cameraRing from "../../assets/camera-ring.svg";
+import cameraRing from "../../assets/camera-ring.png";
 
 
 import { getCameraSession, openCamerasInBackground } from "../../utils/cameraSession";
