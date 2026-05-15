@@ -1,13 +1,13 @@
 import clsx from "clsx";
 
-export default function BlueGradientButton({ onClick, children, className = "", disabled = false, width }) {
+export default function BlueGradientButton({ onClick, children, className = "", disabled = false, width, height }) {
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       className={clsx(
         width ?? 'w-[clamp(16rem,40vw,31.25rem)]',
-        "h-[clamp(4rem,8vh,6.25rem)]",
+        height ?? "h-[clamp(4rem,8vh,6.25rem)]",
         "flex items-center justify-center",
         "text-center",
         "rounded-[20px]",

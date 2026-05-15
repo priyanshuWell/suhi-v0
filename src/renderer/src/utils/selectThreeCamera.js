@@ -2,6 +2,7 @@ import { getRgbCamera } from "./getRgbCamera";
 
 export async function selectThreeCameras() {
   const devices = await navigator.mediaDevices.enumerateDevices();
+  console.log(devices)
   const cams = devices.filter((d) => d.kind === "videoinput");
   console.log("[CAMERA] All video devices:", cams.map((c) => c.label));
 

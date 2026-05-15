@@ -69,7 +69,8 @@ export async function openCamerasInBackground() {
     });
 
     // :white_check_mark: Fix only CENTER stream (rotate to vertical)
-    const fixedStream = role === "CENTER" ? await rotateStream90(stream) : stream;
+    // const fixedStream = role === "CENTER" ? await rotateStream90(stream) : stream;
+    const fixedStream = stream;
 
     sessions.push({ role, cam, stream: fixedStream });
   }

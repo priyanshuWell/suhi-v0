@@ -153,7 +153,7 @@ export const StartScreen = () => {
             pb-[clamp(6rem,3vh,15rem)]
           "
         >
-          <StartButton onClick={handleStartClick}>{t("common.start")}</StartButton>
+          <StartButton className="" width='w-[clamp(27rem,40vw,31.25rem)]' height='h-[clamp(7rem,8vh,6.25rem)]' onClick={handleStartClick}>{t("common.start")}</StartButton>
 
           <div
             className="
