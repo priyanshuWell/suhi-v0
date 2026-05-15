@@ -115,25 +115,25 @@ function FaceCapture() {
         {/* Frame section */}
         {/* Frame section */}
         <div className="absolute top-13 left-1/2 -translate-x-1/2 z-20">
-          <div className="relative inline-block">
+          <div className="relative inline-block bg-black">
 
             {/* Camera preview — z-10 (neeche) */}
-            <div
+            {/* <div
               className="
         absolute top-[13%] left-1/2 -translate-x-1/2
         w-[83%] h-[81%]
-        rounded-xl overflow-hidden
+        rounded-xl overflow-hidden bg-black
         z-10
       "
             >
-              <video
+               <video
                 ref={videoRef}
                 autoPlay
                 muted
                 playsInline
                 className="w-full h-full object-cover scale-x-[-1]"
-              />
-            </div>
+              /> 
+          </div> */}
 
             {/* SVG Frame — z-20 (upar, camera ko overlap karega) */}
             <img
@@ -162,10 +162,42 @@ function FaceCapture() {
           onRetry={handleErrorClose}
           autoRetryDelay={3000}
         /> */}
-      </div>
+      </div >
 
+      {/* Camera Ring + Preview — ek saath */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30">
-        <img src={cameraRing} alt="camera ring" className="w-[650px] max-w-none h-auto" />
+        <div className="relative inline-block">
+
+          {/* Camera preview — oval ke andar clip */}
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "95%",
+              height: "95%",
+              overflow: "hidden",
+              borderRadius: "50%", // oval crop
+            }}
+          >
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-x-[-1] "
+            />
+          </div>
+
+          {/* Camera ring SVG — upar */}
+          <img
+            src={cameraRing}
+            alt="camera ring"
+            className="relative z-20 w-[650px] max-w-none h-auto"
+          />
+
+        </div>
       </div>
     </>
   );

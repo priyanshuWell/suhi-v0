@@ -8,5 +8,5 @@
 <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
 <feGaussianBlur stdDeviation="2" result="effect1_foregroundBlur_9669_971"/>
 </filter>
-</defs>
+</defs> 
 </svg>
