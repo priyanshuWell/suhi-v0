@@ -69,8 +69,8 @@ export async function openCamerasInBackground() {
     });
 
     // :white_check_mark: Fix only CENTER stream (rotate to vertical)
-    // const fixedStream = role === "CENTER" ? await rotateStream90(stream) : stream;
-    const fixedStream = stream;
+    const fixedStream = role === "CENTER" ? await rotateStream90(stream) : stream;
+    // const fixedStream = stream;
 
     sessions.push({ role, cam, stream: fixedStream });
   }
@@ -115,11 +115,19 @@ async function rotateStream90(stream) {
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // :white_check_mark: rotate 90 degrees to make vertical
-    ctx.translate(canvas.width / 2, canvas.height / 2);
-    ctx.rotate(Math.PI / 2);
+    // // :white_check_mark: rotate 90 degrees to make vertical
+    // ctx.translate(canvas.width / 2, canvas.height / 2);
+    // ctx.rotate(Math.PI / 2);
 
-    ctx.drawImage(video, -w / 2, -h / 2, w, h);
+    // ctx.drawImage(video, -w / 2, -h / 2, w, h);
+    // ctx.restore();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+
+  // rotate 80 degrees
+  ctx.rotate((-180 * Math.PI) / 180);
+
+  // draw video centered
+  ctx.drawImage(video, -w / 2, -h / 2, w, h);
     ctx.restore();
 
     requestAnimationFrame(draw);
