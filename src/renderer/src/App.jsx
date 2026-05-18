@@ -51,7 +51,7 @@ function App() {
 
       {/* Routes WITHOUT the progress bar */}
       {/* <Route path="/" element={<SplashScreen />} /> */}
-      <Route path='/voice' element={<VoiceAnalysis />} />
+      <Route path='/' element={<VoiceAnalysis />} />
 
       {/* All screening routes — get the top progress bar automatically */}
       <Route element={<ScreeningLayout />}>
