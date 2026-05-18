@@ -9,6 +9,7 @@ import { Provider } from 'react-redux'
 import { store } from '../../store/store'
 import { initCameraTracker } from './utils/cameraTracker'
 import KioskScaler from './components/KioskScaler'
+import "./assets/view360.css";
 
 // Initialize global camera tracking
 initCameraTracker();

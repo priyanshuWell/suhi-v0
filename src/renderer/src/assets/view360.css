@@ -1,0 +1,12 @@
+.egjs-view360,
+.view360-container,
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.egjs-view360 {
+    overflow: hidden;
+    position: relative;
+}

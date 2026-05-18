@@ -30,6 +30,7 @@ import SpaceConveyDemo from './components/games/space-convoy/SpaceConveyDemo'
 import { StartCountDown } from './components/games/space-convoy/StartCountDown'
 import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConveyComplete'
 import ScreeningLayout from './components/ScreeningLayout'
+import View360Viewer from './components/voice/View360Viewer'
 
 function App() {
   // useEffect(() => {
