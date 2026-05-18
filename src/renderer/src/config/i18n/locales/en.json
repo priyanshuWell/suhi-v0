@@ -18,10 +18,10 @@
     "number": "Mobile Number"
   },
   "measurement": {
-    "let_measure": "Height and Weight and Measurement",
-    "standStill": "Stand straight and still on the platform, facing forward.",
-    "good_job": "Good Job!",
-    "holdThe_Hands": "Hold the two handles and keep your elbows straight and relaxed.",
+    "let_measure": "Creating your wellness profile",
+    "stand_straight": "Stand Straight",
+    "measuring_body_composition": "Measuring your fat and muscle mass",
+    "holdThe_Hands": "Stand straight and hold rods",
     "weight": "Weight",
     "height": "Height",
     "whcomplete_title": "Good Job!",

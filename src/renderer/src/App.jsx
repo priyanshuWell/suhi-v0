@@ -55,7 +55,7 @@ function App() {
 
       {/* All screening routes — get the top progress bar automatically */}
       <Route element={<ScreeningLayout />}>
-        <Route path="/facecapture" element={<FaceCapture />} />
+        <Route path="/faceCapture" element={<FaceCapture />} />
         <Route path="/confirmation" element={<ConfirmationScreen />} />
         <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path="/login-father" element={<LoginFather />} />
@@ -71,7 +71,6 @@ function App() {
         <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
         <Route path='/divide-attention' element={<DivideAttentionGame />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
-        <Route path='/' element={<FaceCapture />} />
       </Route>
 
     </Routes>

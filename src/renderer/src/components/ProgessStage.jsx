@@ -11,7 +11,7 @@ const steps = [
 export default function ProgressStage({ current }) {
     return (
         <div
-            className="fixed top-0 left-0 right-0 z-9999 flex items-center w-full px-10 py-3"
+            className="fixed top-0 left-0 right-0 z-9999 flex items-center w-full px-10 py-7"
             style={{
                 background: 'linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.45) 70%, transparent 100%)',
                 backdropFilter: 'blur(6px)',

@@ -22,7 +22,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
-  
+
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
   // Base state
@@ -104,13 +104,14 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   const texts = {
+
     wh: {
-      title: t("measurement.let_measure"),
-      description: currentStatus || t("measurement.standStill"),
+      title: t("measurement.stand_straight"),
+      description: t("measurement.let_measure"),
     },
     im: {
-      title: t("measurement.good_job"),
-      description: currentStatus || t("measurement.holdThe_Hands"),
+      title: t("measurement.holdThe_Hands"),
+      description: t("measurement.measuring_body_composition"),
     },
     whcomplete: {
       title: "Good Job!",
@@ -610,7 +611,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ 
+      await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
@@ -788,13 +789,13 @@ export default function BIACalculate({ user, onComplete }) {
     if (attemptCount >= MAX_RETRIES) {
       console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({ 
+      await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
-   navigate("/bia/imcomplete");
+      navigate("/bia/imcomplete");
       return;
     }
 
@@ -824,7 +825,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (resultsRef.current.isShoesContinued) {
         console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
-        await BIAComplete({ 
+        await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
           screening_session_id: storeUser?.screening?.session_id
         });
@@ -954,17 +955,17 @@ export default function BIACalculate({ user, onComplete }) {
         });
         console.log("[BIA DEBUG] Arm BIA payload:", armBiaPayload);
 
-    resultsRef.current.arms50k = {
-      fatPercentage: armBiaPayload.body_fat_percentage ?? "8",
-      waterPercentage: armBiaPayload.moisture_content_kg ?? "57",
-      muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
-      boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
-    };
-    setMeasuredValues((prev) => ({
-      ...prev,
-      arms50k: resultsRef.current.arms50k,
-    }));
-    console.log("measuredValues 50khz", measuredValues);
+        resultsRef.current.arms50k = {
+          fatPercentage: armBiaPayload.body_fat_percentage ?? "8",
+          waterPercentage: armBiaPayload.moisture_content_kg ?? "57",
+          muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
+          boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
+        };
+        setMeasuredValues((prev) => ({
+          ...prev,
+          arms50k: resultsRef.current.arms50k,
+        }));
+        console.log("measuredValues 50khz", measuredValues);
         //  await window.api.sendLegBiaResult(legBiaPayload);
         await trackStage(STAGES.ARM_BIA_50KHZ, STATUS.SUCCESS, { bia_object: armBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       } else {
@@ -1035,7 +1036,7 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { bia_object: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
-      await BIAComplete({ 
+      await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
@@ -1055,7 +1056,7 @@ export default function BIACalculate({ user, onComplete }) {
       // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
-      await BIAComplete({ 
+      await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import bg1 from "../../assets/lightbg.png"
 import biaCompleteAlertSvg from "../../assets/bia/bia_complete_alert.svg"
 import { useParams } from "react-router"
@@ -19,7 +19,196 @@ import impedanceAudio from "../../assets/audio/impedance_en.mp3"
 import ReplayAudio from "../ReplayAudio"
 import ImComplete from "./ImComplete"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
+import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
+import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
+import biaMuscleMassIcon from "../../assets/icons/bia-muscle-mass.svg"
 
+/* ─────────────────────────────────────────────────────────────
+   BIA metric config  –  swap final values with real API data
+───────────────────────────────────────────────────────────── */
+const BIA_METRICS = [
+  {
+    key: "hydration",
+    label: "Hydration",
+    icon: biaHydrationIcon,
+    final: "63.4%",
+    min: 30,
+    max: 80,
+    unit: "%",
+    dec: 1,
+    position: "left-top",   // upper-left of video
+  },
+  {
+    key: "skeletal",
+    label: "Skeletal mass",
+    icon: biaSkeletonIcon,
+    final: "12.8 kg",
+    min: 8,
+    max: 20,
+    unit: " kg",
+    dec: 1,
+    position: "right-top",  // upper-right
+  },
+  {
+    key: "fat",
+    label: "Fat mass",
+    icon: biaFatMassIcon,
+    final: "18.2%",
+    min: 5,
+    max: 40,
+    unit: "%",
+    dec: 1,
+    position: "left-bottom", // lower-left
+  },
+  {
+    key: "muscle",
+    label: "Muscle mass",
+    icon: biaMuscleMassIcon,
+    final: "42.6 kg",
+    min: 20,
+    max: 60,
+    unit: " kg",
+    dec: 1,
+    position: "right-bottom", // lower-right
+  },
+]
+
+/* ─────────────────────────────────────────────────────────────
+   Inline keyframes injected once (avoids Tailwind limitations)
+───────────────────────────────────────────────────────────── */
+const BIA_CARD_STYLES = `
+  @keyframes biaFloatA {
+    0%, 100% { transform: translateY(0px); }
+    50%       { transform: translateY(-12px); }
+  }
+  @keyframes biaFloatB {
+    0%, 100% { transform: translateY(-6px); }
+    50%       { transform: translateY(6px); }
+  }
+  @keyframes biaFloatC {
+    0%, 100% { transform: translateY(5px); }
+    50%       { transform: translateY(-9px); }
+  }
+  @keyframes biaFloatD {
+    0%, 100% { transform: translateY(-3px); }
+    50%       { transform: translateY(10px); }
+  }
+  @keyframes biaShimmer {
+    0%   { left: -100%; }
+    100% { left: 200%; }
+  }
+  @keyframes biaScanLine {
+    0%   { top: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+`
+
+const FLOAT_ANIMATIONS = ["biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD"]
+const FLOAT_DURATIONS = ["3.2s", "2.9s", "3.5s", "3.1s"]
+
+/* ─────────────────────────────────────────────────────────────
+   Card position styles (absolute, around the video)
+───────────────────────────────────────────────────────────── */
+const cardPositionStyle = (position) => {
+  const shared = {
+    position: "absolute",
+    zIndex: 40,
+  }
+  switch (position) {
+    case "left-top": return { ...shared, left: "-4px", top: "15%" }
+    case "right-top": return { ...shared, right: "-4px", top: "18%" }
+    case "left-bottom": return { ...shared, left: "2px", bottom: "37%" }
+    case "right-bottom": return { ...shared, right: "-4px", bottom: "45%" }
+    default: return shared
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Single floating metric card
+───────────────────────────────────────────────────────────── */
+const BiaMetricCard = ({ metric, value, isSettled, index }) => {
+  const isRight = metric.position.startsWith("right")
+
+  const cardStyle = {
+    ...cardPositionStyle(metric.position),
+    background: "rgba(82, 82, 82, 0.13)",
+    border: "1px solid rgba(255, 255, 255, 0.72)",
+    borderRadius: "14px",
+    boxShadow: isSettled
+      ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
+      : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
+    padding: "12px 20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    overflow: "hidden",
+    minWidth: "175px",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
+    animation: `${FLOAT_ANIMATIONS[index]} ${FLOAT_DURATIONS[index]} ease-in-out infinite`,
+    transition: "box-shadow 2.34px 18.716px 0 #9AD9FF;",
+    flexDirection: isRight ? "row-reverse" : "row",
+    fontFamily: "'Anta', sans-serif",
+  }
+
+  const shimmerStyle = {
+    position: "absolute",
+    top: 0,
+    left: "-100%",
+    width: "50%",
+    height: "100%",
+    background:
+      "linear-gradient(90deg, transparent, rgba(154,217,255,0.18), transparent)",
+    animation: isSettled ? "none" : "biaShimmer 1.35s linear infinite",
+    pointerEvents: "none",
+    display: isSettled ? "none" : "block",
+  }
+
+  const valueStyle = {
+    fontSize: "15px",
+    color: isSettled ? "#7affb2" : "#9ad9ff",
+    letterSpacing: "0.04em",
+    fontVariantNumeric: "tabular-nums",
+    minHeight: "20px",
+    transition: "color 0.6s",
+    textAlign: isRight ? "right" : "left",
+  }
+
+  const labelStyle = {
+    fontSize: "20px",
+    color: "#fff",
+    whiteSpace: "nowrap",
+    lineHeight: 1.1,
+    textAlign: isRight ? "right" : "left",
+  }
+
+  return (
+    <div style={cardStyle}>
+      {/* shimmer sweep */}
+      <div style={shimmerStyle} />
+
+      {/* icon */}
+      <span style={{ fontSize: "26px", flexShrink: 0 }}>
+        <img src={metric.icon} alt={metric.label} style={{ width: "26px", height: "26px" }} />
+      </span>
+
+      {/* text */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+        <span style={labelStyle}>{metric.label}</span>
+        <span style={valueStyle}>
+          {value ?? "—"}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Main component
+───────────────────────────────────────────────────────────── */
 export const BIAComponent = ({
   texts,
   total = 28,
@@ -31,51 +220,84 @@ export const BIAComponent = ({
   weightValue = "30 kg",
   onNextClick,
   onImNextClick,
-  arms50k
+  arms50k,
 }) => {
   const { t } = useTranslation()
   const { screenType } = useParams()
   const currentText = texts[screenType]
+
+  /* existing progress state */
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const audioRef = React.useRef(null)
+  const audioRef = useRef(null)
   const activeCount = Math.round((progress / 100) * total)
 
-  // Map screen types to audio base names (without language suffix)
-  const getAudioBaseName = (type) => {
-    const audioMap = {
-      wh: "standstraight",
-      im: "impedance"
+  /* ── new: BIA card states ── */
+  const [biaValues, setBiaValues] = useState({})   // key → display string
+  const [isSettled, setIsSettled] = useState(false) // true when calc done
+  const biaIntervalRef = useRef(null)
+
+  /* ──────────────── random-number scramble ──────────────── */
+  const startScramble = () => {
+    if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+    setIsSettled(false)
+
+    biaIntervalRef.current = setInterval(() => {
+      const next = {}
+      BIA_METRICS.forEach(({ key, min, max, unit, dec }) => {
+        const rand = (Math.random() * (max - min) + min).toFixed(dec)
+        next[key] = rand + unit
+      })
+      //console.log(next)
+      setBiaValues(next)
+    }, 80)
+  }
+
+  const settleValues = () => {
+    if (biaIntervalRef.current) {
+      clearInterval(biaIntervalRef.current)
+      biaIntervalRef.current = null
     }
+    const final = {}
+    BIA_METRICS.forEach(({ key, final: v }) => { final[key] = v })
+    setBiaValues(final)
+    setIsSettled(true)
+  }
+
+  /* start scramble when entering im screen */
+  useEffect(() => {
+    if (screenType === "im") {
+      startScramble()
+    } else {
+      if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+      setIsSettled(false)
+      setBiaValues({})
+    }
+    return () => {
+      if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+    }
+  }, [screenType])
+
+  /* settle when parent signals completion */
+  useEffect(() => {
+    if (isComplete && screenType === "im") {
+      settleValues()
+    }
+  }, [isComplete, screenType])
+
+
+
+  /* ──────────────── audio helpers (unchanged) ──────────────── */
+  const getAudioBaseName = (type) => {
+    const audioMap = { wh: "standstraight", im: "impedance" }
     return audioMap[type] || "standstraight"
   }
 
-  useEffect(() => {
-    if (screenType !== "im") {
-      setProgress(0)
-      return
-    }
-
-    let value = 0
-    const interval = setInterval(() => {
-      value += 1
-      setProgress(value)
-      if (value >= 100) {
-        value = 0
-      }
-    }, 160)
-
-    return () => clearInterval(interval)
-  }, [screenType])
-
-  useEffect(() => {
-    playAudio()
-  }, [screenType])
+  useEffect(() => { playAudio() }, [screenType])
 
   const playAudio = async () => {
     const baseName = getAudioBaseName(screenType)
     const audioPath = await getAudioForCurrentLanguage(baseName)
-
     if (audioPath && audioRef.current) {
       audioRef.current.src = audioPath
       setIsAudioPlaying(true)
@@ -96,25 +318,33 @@ export const BIAComponent = ({
     }
   }
 
-  const handleAudioEnd = () => {
-    setIsAudioPlaying(false)
+  const handleAudioEnd = () => { setIsAudioPlaying(false) }
+
+  const getAudioPath = (type) => {
+    const audioMap = { wh: standstraightAudio, im: impedanceAudio }
+    return audioMap[type] || standstraightAudio
   }
 
-const getAudioPath = (type) => {
-    const audioMap = {
-      wh: standstraightAudio,
-      im: impedanceAudio,
-    };
-    return audioMap[type] || standstraightAudio;
-  };
-  // Show SVGs only on whcomplete screen
   const showWhResults = screenType === "whcomplete"
   const showIMResults = screenType === "imcomplete"
 
+  /* ──────────────── video source ──────────────── */
+  const videoSrc =
+    screenType === "wh" ? bmiWH :
+      screenType === "im" ? biaIm :
+        null
+
   return (
     <>
+      {/* inject keyframes once */}
+      <style>{BIA_CARD_STYLES}</style>
+
       <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-        <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
+        <audio
+          ref={audioRef}
+          onEnded={handleAudioEnd}
+          onPlay={() => setIsAudioPlaying(true)}
+        >
           <source src={getAudioPath(screenType)} type="audio/mpeg" />
           {t("common.audio_not_supported")}
         </audio>
@@ -126,48 +356,36 @@ const getAudioPath = (type) => {
         />
 
         {/* TEXT + PROGRESS */}
-        <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
-          <div className="relative text-center flex flex-col items-center justify-center">
-            <img src={textframe} alt="text-frame" className="absolute top-0" />
-            <p className="text-white text-center portrait:text-[32px] tracking-wider my-6">
-              {currentText.title}
-            </p>
-            <img src={textframe} alt="text-frame" className="absolute top-[7.5rem] rotate-180" />
+        <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
+          <div className="relative flex flex-col items-center">
 
-            <p className="text-white font-medium tracking-tight landscape:text-4xl portrait:text-[36px] mt-[4rem]">
+            {/* Title Frame */}
+            <div className="relative flex items-center justify-center">
+              <img
+                src={textframe}
+                alt="text-frame"
+                className="w-full"
+              />
+
+              <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
+                {currentText.title}
+              </p>
+            </div>
+
+            {/* Bottom Decorative Frame */}
+            <img
+              src={textframe}
+              alt="text-frame"
+              className="rotate-180  mt-10"
+            />
+
+            {/* Description OUTSIDE frame */}
+            <p className="mt-6 text-white font-medium tracking-tight landscape:text-4xl portrait:text-[46px] text-center">
               {currentText.description}
             </p>
 
-            {/* Replay Button */}
-            {/* <ReplayAudio playAudio={playAudio} /> */}
-
-            {/* PROGRESS BAR (ONLY FOR IM) */}
-            {screenType === "im" && (
-              <div className="relative flex items-center justify-center">
-                <div className="absolute w-[456px] h-[320px]">
-                  <img
-                    src={progessbg}
-                    alt="progress-bar-frame"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex flex-col h-[280px] w-[32px] -rotate-90 overflow-y-clip relative z-10">
-                  {Array.from({ length: total }).map((_, i) => {
-                    const isActive = i < activeCount
-                    return (
-                      <div
-                        key={i}
-                        className={`h-10 w-8 mb-1 skew-y-35 last:mb-0 transition-all duration-300 ${isActive ? "bg-[#368CC9]" : "bg-[#0F324D]"
-                          }`}
-                      />
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
-
         {/* SVG Result Frames (whcomplete screen) */}
         {showWhResults && (
           <HeightWeightComplete
@@ -176,43 +394,43 @@ const getAudioPath = (type) => {
             onNextClick={onNextClick}
           />
         )}
-
-        {/* {showIMResults && (
-          <ImComplete onNextClick={onImNextClick} />
-        )} */}
       </div>
 
-      {(() => {
-        const videoSrc = screenType === "wh" ? bmiWH : screenType === "im" ? biaIm : null
-        return videoSrc ? (
-          <div className="absolute inset-0 flex justify-center items-end mb-25 xl:items-center xl:justify-center z-10 pointer-events-none mt-[30rem]">
+      {/* ─── VIDEO + FLOATING BIA CARDS ─── */}
+      {videoSrc && (
+        <div
+          className="absolute inset-0 flex justify-center items-end mb-22 xl:items-center xl:justify-center z-10 pointer-events-none mt-[26rem]"
+          style={{ position: "absolute" }}
+        >
+          {/* wrapper keeps cards relative to the video */}
+          <div style={{ position: "relative", width: "60%", display: "flex", justifyContent: "center" }}>
+            {/* video */}
             <video
               key={videoSrc}
               src={videoSrc}
               autoPlay
               loop
               playsInline
-              className="rounded-4xl object-contain w-1/2 xl:max-w-[70vw] xl:max-h-[70vh]"
+              className="rounded-4xl object-cover w-full "
             />
-          </div>
-        ) : null
-      })()}
 
+            {/* ── floating metric cards (im screen only) ── */}
+            {screenType === "im" &&
+              BIA_METRICS.map((metric, i) => (
+                <BiaMetricCard
+                  key={metric.key}
+                  metric={metric}
+                  value={biaValues[metric.key]}
+                  isSettled={isSettled}
+                  index={i}
+                />
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* imcomplete overlay */}
       {screenType === "imcomplete" && (
-        // <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-        //   <div className="relative w-[80%] max-w-4xl flex justify-center">
-        //     <img
-        //       src={biaCompleteAlertSvg}
-        //       alt="bia-complete"
-        //       className="w-full h-auto"
-        //     />
-        //     <div className="absolute bottom-[20%]">
-        //       <BlueGradientButton onClick={onImNextClick}>
-        //         Next
-        //       </BlueGradientButton>
-        //     </div>
-        //   </div>
-        // </div>
         <ImComplete onNextClick={onImNextClick} arms50k={arms50k} />
       )}
     </>

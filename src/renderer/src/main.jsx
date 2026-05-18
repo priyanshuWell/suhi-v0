@@ -16,11 +16,11 @@ initCameraTracker();
 createRoot(document.getElementById('root')).render(
   // <StrictMode>
   <Provider store={store}>
-    <HashRouter>
+    <BrowserRouter>
       {/* <KioskScaler> */}
       <App />
       {/* </KioskScaler> */}
-    </HashRouter>
+    </BrowserRouter>
   </Provider>
   //  </StrictMode> 
 )

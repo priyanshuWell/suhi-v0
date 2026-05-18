@@ -60,7 +60,7 @@ export default function ScreeningLayout() {
 
   return (
     <>
-      {/* {currentStep !== null && <ProgressStage current={currentStep} />} */}
+      {currentStep !== null && <ProgressStage current={currentStep} />}
       <Outlet />
     </>
   )

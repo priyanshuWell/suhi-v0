@@ -91,126 +91,150 @@ export default function RegisterCard() {
     navigate("/")
   }
 
+
+  const studentName = user?.data?.student_name || "Student"
+  const studentClass = user?.data?.class || "Grade 9"
+  const studentId = user?.data?.contact_number || "9876543210"
+
+  const handleLetsGo = () => {
+    stopAudio()
+    const stageRouteMap = {
+      login: '/verified',
+      bia: '/bia/wh',
+      voice_analysis: '/voice',
+      color_blindness: '/colorblindness',
+      divide_attention: '/space-convoy-main',
+      result: '/bia/result',
+    }
+    if (screening?.isResumed && screening?.nextStage) {
+      navigate(stageRouteMap[screening.nextStage.stage_key] || "/bia/wh")
+    } else {
+      navigate("/bia/wh")
+    }
+  }
+
+  const handleNotYou = () => {
+    stopAudio()
+    navigate("/")
+  }
+
   return (
     <div className="w-screen h-screen bg-black flex items-center justify-center">
-      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
-        Your browser does not support the audio element.
-      </audio>
-      {/* Card Wrapper */}
-      <div
-        className="relative w-[900px] h-[1400px] bg-cover bg-center"
-        style={{ backgroundImage: `url(${lightbg})` }}
-      >
+      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)} />
+
+      {/* Outer card — sized to match the frame SVG exactly */}
+      <div className="relative w-[1000px] h-[1500px]">
+
+        {/* ── Layer 0: background texture ── */}
         <div
-          className="
-          absolute top-[60px]
-          left-1/2 -translate-x-1/2
-          z-20
-        "
-        >
-          <img src={frame1} alt="dmt background" className="w-[850px] max-w-none h-auto" />
-        </div>
+          className="absolute inset-0 bg-cover bg-center rounded-[40px]"
+          style={{ backgroundImage: `url(${lightbg})` }}
+        />
 
-        <div
-          className="flex flex-col items-center gap-10 absolute top-[140px]
-          left-1/2 -translate-x-1/2
-          z-30 "
-        >
-          {/* profile pic */}
+        {/* ── Layer 1: SVG frame fills the card exactly ── */}
+        <img
+          src={frame1}
+          alt="frame"
+          className="absolute inset-0    z-0 pointer-events-none "
+        />
 
-          {/* <div className="max-w-full h-auto">
-            <img
-              src={profilepic}
-              alt=" profile pic"
-              className="w-full portrait:max-w-105 landscape:max-w-60 h-auto"
-            />
-          </div> */}
+        {/* ── Layer 2: All content — centered inside the frame ── */}
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-12 px-16 bg-black/20 ">
 
-          <img
-            src={profileImageSrc}
-            onError={(e) => {
-              e.currentTarget.src = profilepic
-            }}
-            alt="profile pic"
-            className="w-full portrait:max-w-96 h-auto object-cover rounded-3xl"
-          />
-
-          {/* text */}
-
-          <div className="info max-w-full mt-8">
-            <p className="text-[28px] flex flex-col items-center text-center tracking-wider gap-y-3 text-white text-nowrap">
-              <span>
-                {t("profile.name")} - {user?.data?.student_name}{" "}
-              </span>
-              {user?.data?.class && <span> {t("profile.class")}- 8th A</span>}
-              {user?.data?.age && (
-                <span>
-                  {t("profile.age")} -{" "}
-                  {user?.data?.student_name.includes("Mukul") ? 26 : user?.data?.age} years
-                </span>
-              )}
-              {user?.data?.contact_number && <span>{t("profile.number")} - 0987654321</span>}
+          {/* Greeting */}
+          <div className="text-center flex flex-col gap-3">
+            <h1
+              className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta"
+            >
+              Hi {studentName},
+            </h1>
+            <p
+              className="text-[50px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta"
+            >
+              Welcome to Suhi,<br />let's start your journey
             </p>
           </div>
 
-          <div className="buttons mt-5">
-            <button
-              onClick={handleYesClick}
-              style={{
-                borderImageSource:
-                  "radial-gradient(50% 50% at 50% 50%, #FFFFFF 0%, rgba(255,255,255,0) 100%)",
-                borderImageSlice: 1
-              }}
-              className="
-w-[320px] h-[100px]
-flex items-center justify-center
-text-center
-rounded-[25px]
- border-white
-[border-image-source:radial-gradient(50%_50%_at_50%_50%,#ffffff_0%,rgba(255,255,255,0)_100%)]
-[border-image-slice:1]
-bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
-shadow-[inset_0px_33.5px_50px_-67px_rgba(255,255,255,0.24),inset_0px_-100.5px_134px_0px_rgba(255,255,255,0.24),inset_0px_0px_30px_0px_#ffffff]
-text-white text-3xl tracking-wide
-active:scale-[0.98]
-transition-transform duration-300 ease-in-out
-
-  "
-            >
-              {t("common.yes_me")}
-            </button>
-
-            <button
-              onClick={handleNoClick}
-              className="
-          
-w-[320px] h-[100px]
-mt-8
-flex items-center justify-center
-text-center
-rounded-[30px]
- border-white
- 
-[border-image-source:radial-gradient(50%_50%_at_50%_50%,#ffffff_0%,rgba(255,255,255,0)_100%)]
-[border-image-slice:1]
-shadow-[0px_5px_40px_0px_#9AD9FF]
-
-text-white text-3xl tracking-wide
-active:scale-[0.98]
-
-transition-transform duration-300 ease-in-out
-          "
-            >
-              {t("common.not_me")}
-            </button>
+          {/* Profile photo — double-bordered sci-fi frame */}
+          <div className="bg-[#030604] border border-[#606060] rounded-[48px] p-3">
+            <div className="border border-[#006893] rounded-[40px] p-3">
+              <div className="w-[330px] h-[440px] rounded-[28px] overflow-hidden">
+                <img
+                  src={profileImageSrc}
+                  onError={(e) => { e.currentTarget.src = profilepic }}
+                  alt="profile"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </div>
           </div>
+
+          {/* Class & Id */}
+          <div
+            className="flex flex-col items-center gap-4 text-[35px]"
+            style={{ fontFamily: "'Anta', sans-serif" }}
+          >
+            {studentClass && (
+              <div className="flex items-baseline gap-3">
+                <span className="text-[#cff1ff]">Class-</span>
+                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentClass}</span>
+              </div>
+            )}
+            {studentId && (
+              <div className="flex items-baseline gap-3">
+                <span className="text-[#cff1ff]">SUHI-ID-</span>
+                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentId}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Let's Go button */}
+          <button
+            onClick={handleLetsGo}
+            className="
+            relative w-[480px] h-[100px]
+            flex items-center justify-center
+            rounded-[28px] border-[3px] border-white
+            text-white text-[48px] tracking-[-0.6px]
+            active:scale-[0.98] transition-transform duration-200
+            overflow-hidden
+          "
+            style={{ fontFamily: "'Anta', sans-serif" }}
+          >
+            <span
+              className="absolute inset-0 rounded-[inherit]"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 50%, #002EB9 0%, #0048C1 25%, #0062C8 50%, #0097D6 100%)",
+              }}
+            />
+            <span
+              className="absolute inset-0 rounded-[inherit]"
+              style={{
+                boxShadow:
+                  "inset 0 0 21px white, inset 0 -72px 96px rgba(255,255,255,0.24), inset 0 24px 36px -48px rgba(255,255,255,0.24)",
+              }}
+            />
+            <span className="relative">Let's Go</span>
+          </button>
+
+          {/* Not you? — no margin, gap handles spacing */}
+          <button
+            onClick={handleNotYou}
+            className="text-white text-[40px] underline underline-offset-4  active:opacity-70 transition-opacity"
+            style={{ fontFamily: "'Anta', sans-serif" }}
+          >
+            Not you?
+          </button>
         </div>
       </div>
-      <div className="absolute bottom-[9rem] w-[770px] left-[30rem]  -translate-x-1/2">
+
+      {/* Projector decoration — outside the card */}
+      <div className="absolute bottom-[9rem] w-[770px] left-[30rem] -translate-x-1/2">
         <img
           src={projector}
           alt="projector"
-          className=" drop-shadow-[0_0_40px_rgba(0,200,255,0.8)]"
+          className="drop-shadow-[0_0_40px_rgba(0,200,255,0.8)]"
         />
       </div>
     </div>
