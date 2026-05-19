@@ -67,20 +67,10 @@ export default function RegisterCard() {
   const handleYesClick = () => {
     stopAudio()
 
-    // Map backend stage keys to frontend routes
-    const stageRouteMap = {
-      login: '/verified',
-      bia: '/bia/wh',
-      voice_analysis: '/voice',
-      color_blindness: '/colorblindness',
-      divide_attention: '/space-convoy-main',
-      result: '/bia/result',
-    }
-
-    if (screening?.isResumed && screening?.nextStage) {
-      const nextRoute = stageRouteMap[screening.nextStage.stage_key];
-      console.log("Resuming screening, next stage:", screening.nextStage.stage_key, "navigating to:", nextRoute)
-      navigate(nextRoute || "/bia/wh")
+    if (screening?.isResumed) {
+      // Second time — re-verify face before continuing
+      console.log("Resumed session detected, navigating to FaceCapture for re-verification")
+      navigate("/faceCapture")
     } else {
       navigate("/bia/wh")
     }
@@ -98,16 +88,10 @@ export default function RegisterCard() {
 
   const handleLetsGo = () => {
     stopAudio()
-    const stageRouteMap = {
-      login: '/verified',
-      bia: '/bia/wh',
-      voice_analysis: '/voice',
-      color_blindness: '/colorblindness',
-      divide_attention: '/space-convoy-main',
-      result: '/bia/result',
-    }
-    if (screening?.isResumed && screening?.nextStage) {
-      navigate(stageRouteMap[screening.nextStage.stage_key] || "/bia/wh")
+    if (screening?.isResumed) {
+      // Second time — re-verify face before continuing
+      console.log("Resumed session detected, navigating to FaceCapture for re-verification")
+      navigate("/faceCapture")
     } else {
       navigate("/bia/wh")
     }

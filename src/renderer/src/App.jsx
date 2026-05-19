@@ -9,10 +9,8 @@ import RegisterCard from './components/RegisterCard'
 // import FaceScan from './components/FaceScan'
 import ErrorAlert from './components/ErrorAlert'
 import BIAResult from './components/bia/BIAResult'
-import VoiceCapture from './components/voice/VoiceAnalysis'
-import { useEffect } from 'react'
-import { cloudToLocalSync } from './utils/api'
 import VoiceAnalysis from './components/voice/VoiceAnalysis'
+
 import NewDmit from './components/dmit/NewDmit'
 import DMITScreen from './components/dmit/DMITScreen'
 import UserDetailsForm from './components/forms/UserDetailsForm'
@@ -51,9 +49,12 @@ function App() {
     <Routes>
 
       {/* Routes WITHOUT the progress bar */}
-      {/* <Route path="/" element={<SplashScreen />} /> */}
-      <Route path='/' element={<VoiceAnalysis />} />
-
+      <Route path="/" element={<SplashScreen />} />
+      <Route path='/voice' element={<VoiceAnalysis />} />
+      {/* <Route path='/voice' element={<VoiceAnalysis />} /> */}
+      <Route path='/divide-attention' element={<DivideAttentionGame />} />
+      <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
+      <Route path='/bia/result' element={<BIAResult />} />
       {/* All screening routes — get the top progress bar automatically */}
       <Route element={<ScreeningLayout />}>
         <Route path="/faceCapture" element={<FaceCapture />} />
@@ -65,12 +66,11 @@ function App() {
         <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path='/bia/:screenType' element={<BIACalcuate />} />
         <Route path='/screen1' element={<NewDmit />} />
-        <Route path='/bia/result' element={<BIAResult />} />
+        {/* <Route path='/' element={<VoiceAnalysis />} /> */}
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
-        <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
+
         <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
-        <Route path='/divide-attention' element={<DivideAttentionGame />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
       </Route>
 

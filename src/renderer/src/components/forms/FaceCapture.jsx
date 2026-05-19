@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import bg1 from "../../assets/lightbg.png";
 import bg3 from "../../assets/facecapture-bg.svg";
@@ -13,9 +13,19 @@ import { setUser } from "../../features/common/commonSlice";
 
 import ErrorAlert from "../ErrorAlert";
 
+const stageRouteMap = {
+  login: '/verified',
+  bia: '/bia/wh',
+  voice_analysis: '/voice',
+  color_blindness: '/colorblindness',
+  divide_attention: '/space-convoy-main',
+  result: '/bia/result',
+};
+
 function FaceCapture() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const screening = useSelector((state) => state.common.screening);
 
   const videoRef = useRef(null);
   const captureStarted = useRef(false);
@@ -84,7 +94,15 @@ function FaceCapture() {
 
       if (response.student_status === "REGISTERED") {
         dispatch(setUser(response));
-        navigate("/verified");
+
+        // If this is a resumed session, skip the RegisterCard and go straight to next stage
+        if (screening?.isResumed && screening?.nextStage) {
+          const nextRoute = stageRouteMap[screening.nextStage.stage_key] || '/bia/wh';
+          console.log("Resumed session: navigating to next stage:", nextRoute);
+          navigate(nextRoute);
+        } else {
+          navigate("/verified");
+        }
         return;
       }
 

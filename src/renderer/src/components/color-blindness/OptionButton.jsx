@@ -1,10 +1,39 @@
 import BlackGradientButton from "../ui/BlackGradientButton";
 
-export default function OptionButton({ label, onClick, wide = false }) {
+export default function OptionButton({ label, onClick, wide = false, selectedAnswer, correctAnswer, showFeedback }) {
+    const isSelected = selectedAnswer === label;
+
+    // Highlight red only on the button the user wrongly selected
+    const showWrong =
+        showFeedback &&
+        isSelected &&
+        selectedAnswer !== correctAnswer;
+
+    // Always highlight the correct answer green when feedback is shown
+    const showRight =
+        showFeedback &&
+        label === correctAnswer;
+
+    const feedbackStyle = showWrong
+        ? {
+            background: "rgba(251, 0, 0, 0.15)",
+            backdropFilter: "blur(3.576972723007202px)",
+            border: "1px solid rgba(251,0,0,0.35)",
+            boxShadow: "0 0 18px rgba(251,0,0,0.25)",
+        }
+        : showRight
+            ? {
+                background: "rgba(9, 255, 0, 0.15)",
+                backdropFilter: "blur(0.7153945565223694px)",
+                border: "1px solid rgba(9,255,0,0.35)",
+                boxShadow: "0 0 18px rgba(9,255,0,0.25)",
+            }
+            : {};
     return (
         <BlackGradientButton
             onClick={onClick}
             style={{
+                ...feedbackStyle,
                 width: wide ? "clamp(280px, 66vw, 639px)" : "clamp(130px, 32vw, 639px)",
                 height: "clamp(56px, 9vw, 145px)",
             }}
@@ -20,4 +49,6 @@ export default function OptionButton({ label, onClick, wide = false }) {
             </span>
         </BlackGradientButton>
     )
-}   
+}
+
+

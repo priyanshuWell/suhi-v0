@@ -22,7 +22,7 @@ export const ColorBlindPlate = () => {
     const [error, setError] = useState(null);
     const kioskId = getKioskId();
     const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-    
+
     useEffect(() => {
         let cancelled = false;
 
@@ -51,7 +51,7 @@ export const ColorBlindPlate = () => {
     };
 
     return (
-        <div className="flex flex-col gap-36 inset-0 w-screen h-screen overflow-hidden bg-black p-10">
+        <div className="flex flex-col gap-36 inset-0 w-screen h-screen overflow-hidden bg-black  ">
 
             {/* Background */}
             <div
@@ -60,14 +60,14 @@ export const ColorBlindPlate = () => {
             />
 
             {/* Content */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto py-4 px-4 gap-18">
+            <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto pt-20 gap-10">
 
                 {/* Title badge */}
                 <div className="mt-10 z-10 w-[60%]">
                     <div className="relative text-center flex flex-col items-center gap-20">
                         <img src={textframe} alt="text-frame" className="absolute top-0" />
                         <p
-                            className="text-white text-center tracking-wider my-6 font-mono"
+                            className="text-white text-center tracking-wider my-6 font-anta"
                             style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                         >
                             {t("colorBlindness.title", "Color Blindness Test")}
@@ -78,7 +78,7 @@ export const ColorBlindPlate = () => {
 
                 {/* Instructions */}
                 <p
-                    className="text-white text-center font-mono w-[90%] max-w-[1149px]"
+                    className="text-white text-center font-anta w-[90%] max-w-[1149px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
                     {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}

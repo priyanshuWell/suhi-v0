@@ -15,7 +15,7 @@ export function SpaceConvoyText({ onStartDemo }) {
                 <img src={textframe} alt="text-frame" className="absolute bottom-0 rotate-180 w-1/2" />
             </div>
 
-            <h1 className="text-white/90 text-center text-lg leading-tight portrait:text-4xl font-mono max-w-lg">
+            <h1 className="text-white/90 text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
                 {t('spaceConvoy.instruction')}
             </h1>
 

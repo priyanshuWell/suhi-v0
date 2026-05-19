@@ -124,7 +124,7 @@ const SpaceConvoyMain = () => {
 
             {screen === SCREENS.LOADING && (
                 <div className="relative z-10 flex items-center justify-center w-full h-full">
-                    <p className="text-white text-2xl font-mono animate-pulse">Loading...</p>
+                    <p className="text-white text-2xl font-anta animate-pulse">Loading...</p>
                 </div>
             )}
 

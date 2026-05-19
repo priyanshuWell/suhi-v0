@@ -50,27 +50,27 @@ export const ROUNDS = {
         time: { preparation: 1600, game: 5500, freeze: 7500 },
         difficultyTier: 3,
     },
-    round7: {
-        name: "Round 7",
+    FINAL: {
+        name: "Final Round",
         particles: 19, targets: 9, radius: 42,
         velocity: { min: 2.5, max: 3.1 },
         time: { preparation: 1600, game: 6000, freeze: 7500 },
         difficultyTier: 3,
     },
-    round8: {
-        name: "Round 8",
-        particles: 21, targets: 10, radius: 38,
-        velocity: { min: 2.8, max: 3.4 },
-        time: { preparation: 1500, game: 6500, freeze: 7000 },
-        difficultyTier: 3,
-    },
-    round9: {
-        name: "Round 9",
-        particles: 23, targets: 11, radius: 35,
-        velocity: { min: 3.0, max: 3.6 },
-        time: { preparation: 1500, game: 6500, freeze: 7000 },
-        difficultyTier: 4,
-    },
+    // round8: {
+    //     name: "Round 8",
+    //     particles: 21, targets: 10, radius: 38,
+    //     velocity: { min: 2.8, max: 3.4 },
+    //     time: { preparation: 1500, game: 6500, freeze: 7000 },
+    //     difficultyTier: 3,
+    // },
+    // round9: {
+    //     name: "Round 9",
+    //     particles: 23, targets: 11, radius: 35,
+    //     velocity: { min: 3.0, max: 3.6 },
+    //     time: { preparation: 1500, game: 6500, freeze: 7000 },
+    //     difficultyTier: 4,
+    // },
     // round10: {
     //     name: "Round 10",
     //     particles: 25, targets: 12, radius: 32,

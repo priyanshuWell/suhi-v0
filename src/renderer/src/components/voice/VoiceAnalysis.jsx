@@ -308,6 +308,11 @@
 // }
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
+import audioBufferToWav from "audiobuffer-to-wav";
+import { sendVoiceToBackend, runVoice } from "../../utils/api";
+import { getKioskId } from "../../utils/config";
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg";
 import Kinesthetic from "../../assets/voice/kinesthic.jpeg";
 import Logical from "../../assets/voice/logical.jpeg";
@@ -326,6 +331,7 @@ import Nature360 from "../../assets/voice/nature_360.png";
 import View360Viewer from "./View360Viewer";
 import bg1 from "../../assets/lightbg.png";
 
+
 // ─── Image catalogue ─────────────────────────────────────────────────────────
 const IMAGES = [
   { src: Interpersonal, label: "Interpersonal", src360: Interpersonal360 },
@@ -337,13 +343,13 @@ const IMAGES = [
 ];
 
 // ─── Drum constants ───────────────────────────────────────────────────────────
-const ITEM_HEIGHT = 380;
+const ITEM_HEIGHT = 400;
 const DRAG_DAMPING = 0.6;
 const AUTO_SCROLL_MS = 2200;
 const AUTO_SCROLL_RESUME = 1800;
 
 function drumTransform(offset) {
-  const R = 900;
+  const R = 960;
   const theta = 0.42;
   const dist = Math.abs(offset);
   return {
@@ -355,30 +361,20 @@ function drumTransform(offset) {
   };
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
-/**
- * Props
- * ─────
- * handleNext      – called when the session should advance to the next screen
- * handleStart     – called when recording should begin (first drag in viewer)
- * timeLeft        – remaining seconds (managed by parent / VoiceCapture)
- * status          – "idle" | "recording" | "processing" | "success" | "error"
- * showCompleteAlert – passed through from parent (unused here directly)
- */
-export default function VoiceAnalysis({
-  showCompleteAlert,
-  handleNext,
-  handleStart,   // ← parent starts the microphone recorder
-  timeLeft,
-  status,
-}) {
-  // "picking" → user taps a card → "viewing" → user first drags → "recording"
+
+export default function VoiceAnalysis() {
+  // Redux state
+  const user = useSelector((state) => state.common.user);
+  const screeningState = useSelector((state) => state.common.screening);
+
+  // Phase: "picking" | "viewing" | "recording" | "processing"
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [isSnapping, setIsSnapping] = useState(false);
   const [confirmedImage, setConfirmedImage] = useState(null);
   const [voiceBars, setVoiceBars] = useState(Array(9).fill(0));
+  const [status, setStatus] = useState("idle"); // idle | recording | processing | success | error
 
   const dragStartY = useRef(null);
   const dragStartOff = useRef(0);
@@ -389,17 +385,45 @@ export default function VoiceAnalysis({
   const autoScrollRef = useRef(null);
   const resumeTimer = useRef(null);
   const userTouching = useRef(false);
+  const navigate = useNavigate();
+
+  // Recording refs
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const analyserRef = useRef(null);
+  const dataArrayRef = useRef(null);
+  const audioStreamRef = useRef(null);
+  const audioContextRef = useRef(null);
 
   const isRecording = status === "recording";
+
 
   // ── Snap helper ──────────────────────────────────────────────────────────
   const snapToNearest = useCallback((currentOffset, fromIndex) => {
     const snapped = Math.round(currentOffset / ITEM_HEIGHT);
-    const newIndex = Math.max(0, Math.min(IMAGES.length - 1, fromIndex - snapped));
+
+    const newIndex = Math.max(
+      0,
+      Math.min(IMAGES.length - 1, fromIndex - snapped)
+    );
+
+    // Animate remaining offset smoothly
+    const finalOffset =
+      currentOffset - snapped * ITEM_HEIGHT;
+
     setIsSnapping(true);
-    setDragOffset(0);
+
     setSelectedIndex(newIndex);
+    setDragOffset(finalOffset);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setDragOffset(0);
+      });
+    });
+
     setTimeout(() => setIsSnapping(false), 320);
+
     return newIndex;
   }, []);
 
@@ -472,7 +496,7 @@ export default function VoiceAnalysis({
     const vel = velocityRef.current * DRAG_DAMPING;
     if (Math.abs(vel) > 3) startMomentum(vel, dragOffset, selectedIndex);
     else snapToNearest(dragOffset, selectedIndex);
-    resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
+    // resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
   };
 
   // ── Dot nav ──────────────────────────────────────────────────────────────
@@ -487,6 +511,146 @@ export default function VoiceAnalysis({
     resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
   };
 
+  // ── Start microphone recording + real waveform visualization ─────────────
+  const visualizeVoice = useCallback(() => {
+    if (!analyserRef.current || !dataArrayRef.current) return;
+    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+    const barCount = 9;
+    const barWidth = Math.floor(dataArrayRef.current.length / barCount);
+    const newBars = [];
+    for (let i = 0; i < barCount; i++) {
+      let sum = 0;
+      for (let j = i * barWidth; j < (i + 1) * barWidth; j++) sum += dataArrayRef.current[j];
+      newBars.push(Math.min(1, (sum / barWidth) / 255));
+    }
+    setVoiceBars(newBars);
+    animFrameRef.current = requestAnimationFrame(visualizeVoice);
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    if (status === "recording" || status === "processing") return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+
+      // Web Audio API for real waveform visualization
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 256;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      dataArrayRef.current = dataArray;
+
+      // Start visualization
+      animFrameRef.current = requestAnimationFrame(visualizeVoice);
+
+      // MediaRecorder
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mediaRecorder.start();
+      setStatus("recording");
+    } catch (err) {
+      console.error("Microphone permission denied or error:", err);
+      setStatus("error");
+    }
+  }, [status, visualizeVoice]);
+
+  const stopRecordingAndSubmit = useCallback(async () => {
+    // Stop visualization
+    cancelAnimationFrame(animFrameRef.current);
+    setVoiceBars(Array(9).fill(0));
+    // setStatus("processing");
+    // setPhase("processing");
+
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") {
+      // Nothing recorded yet — just navigate forward
+      navigate("/space-convoy-main");
+      return;
+    }
+
+    // Wait for onstop to fire
+    recorder.onstop = async () => {
+      // Stop stream tracks
+      audioStreamRef.current?.getTracks().forEach((t) => t.stop());
+      audioContextRef.current?.close();
+
+      try {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const arrayBuffer = await blob.arrayBuffer();
+
+        // Convert to 16kHz WAV
+        const ctx = new AudioContext({ sampleRate: 16000 });
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        const wavArrayBuffer = audioBufferToWav(audioBuffer);
+        ctx.close();
+
+        const kioskId = getKioskId();
+        const userId = user?.data?.user_id ?? null;
+        const sessionId = user?.data?.buffer_id ?? null;
+        const screeningSessionId = screeningState?.sessionId ?? null;
+
+        const voiceData = {
+          role: "VOICE",
+          timestamp: Date.now(),
+          buffer: new Uint8Array(wavArrayBuffer),
+        };
+
+        const storeResult = await sendVoiceToBackend(voiceData);
+        console.log("[Voice] store result:", storeResult);
+
+        if (storeResult.success) {
+          const runPayload = {
+            shm_path: storeResult.shm_path,
+            kiosk_id: kioskId,
+            user_id: userId,
+            session_id: sessionId,
+            screening_session_id: screeningSessionId,
+          };
+          const runResult = await runVoice(runPayload);
+          console.log("[Voice] run result:", runResult);
+
+          if (runResult.success) {
+            setStatus("success");
+          } else {
+            console.error("[Voice] run failed:", runResult.error);
+            setStatus("error");
+          }
+        } else {
+          console.error("[Voice] store failed:", storeResult.error);
+          setStatus("error");
+        }
+      } catch (err) {
+        console.error("[Voice] API error:", err);
+        setStatus("error");
+      }
+
+      // Navigate to next screen regardless of API outcome
+      navigate("/space-convoy-main");
+    };
+
+    recorder.stop();
+  }, [user, screeningState, navigate]);
+
+  // ── Cleanup on unmount ───────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(animFrameRef.current);
+      cancelAnimationFrame(momentumRAF.current);
+      clearInterval(autoScrollRef.current);
+      clearTimeout(resumeTimer.current);
+      audioStreamRef.current?.getTracks().forEach((t) => t.stop());
+      audioContextRef.current?.close();
+    };
+  }, []);
+
   // ── Card tap → enter viewing phase ──────────────────────────────────────
   const onCenterCardClick = () => {
     clearInterval(autoScrollRef.current);
@@ -499,44 +663,46 @@ export default function VoiceAnalysis({
   // ── First drag inside viewer → kick off recording ────────────────────────
   const onFirstInteract = useCallback(() => {
     setPhase("recording");
-    handleStart?.();   // tell VoiceCapture to open the mic
-  }, [handleStart]);
+    startRecording();
+  }, [startRecording]);
 
-  // ── Timer hits 0 → advance ───────────────────────────────────────────────
+  // ── Timer hits 0 → stop recording and submit ─────────────────────────────
   const onTimerEnd = useCallback(() => {
-    handleNext?.();
-  }, [handleNext]);
+    stopRecordingAndSubmit();
+  }, [stopRecordingAndSubmit]);
 
-  // ── Waveform animation (while recording phase is active) ─────────────────
+
+  // ── Waveform animation only active when real mic data isn't flowing ───────
+  // (real waveform is driven by visualizeVoice via Web Audio API)
+  // This effect is kept as a no-op guard.
   useEffect(() => {
-    if (isRecording && phase === "recording") {
-      const phases = Array(9).fill(null).map(() => Math.random() * Math.PI * 2);
-      const speeds = Array(9).fill(null).map(() => 0.8 + Math.random() * 2.5);
-      let startTime = null;
-
-      const animate = (ts) => {
-        if (!startTime) startTime = ts;
-        const elapsed = (ts - startTime) / 1000;
-        setVoiceBars(
-          phases.map((ph, i) => {
-            const wave =
-              0.4 * Math.sin(elapsed * speeds[i] + ph) +
-              0.3 * Math.sin(elapsed * speeds[i] * 1.7 + ph + 1) +
-              0.3 * Math.random();
-            return Math.max(0, Math.min(1, (wave + 0.5) / 1.3));
-          })
-        );
-        animFrameRef.current = requestAnimationFrame(animate);
-      };
-      animFrameRef.current = requestAnimationFrame(animate);
-    } else {
+    if (!isRecording) {
       cancelAnimationFrame(animFrameRef.current);
-      setVoiceBars(Array(9).fill(0));
     }
-    return () => cancelAnimationFrame(animFrameRef.current);
-  }, [isRecording, phase]);
+  }, [isRecording]);
+
 
   const effectiveSlotOffset = (i) => i - selectedIndex - dragOffset / ITEM_HEIGHT;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PROCESSING phase — simple fullscreen spinner while API runs
+  // ─────────────────────────────────────────────────────────────────────────
+  if (phase === "processing") {
+    return (
+      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center gap-6">
+        <div style={{
+          width: 64, height: 64,
+          border: "5px solid rgba(154,217,255,0.15)",
+          borderTopColor: "rgba(154,217,255,0.9)",
+          borderRadius: "50%",
+          animation: "spin360 0.8s linear infinite",
+        }} />
+        <p style={{ color: "rgba(154,217,255,0.7)", fontFamily: "'Exo 2', sans-serif", letterSpacing: "0.2em", fontSize: 14 }}>
+          ANALYSING VOICE…
+        </p>
+      </div>
+    );
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // VIEWING / RECORDING phase — fullscreen 360° viewer
@@ -565,9 +731,10 @@ export default function VoiceAnalysis({
           height="100vh"
           autoRotate={false}
           showHUD={false}
-          timerSeconds={timeLeft ?? 30}
+          timerSeconds={30}
           onTimerEnd={onTimerEnd}
           onFirstInteract={onFirstInteract}
+          voiceBars={voiceBars}
         />
       </div>
     );
@@ -587,7 +754,7 @@ export default function VoiceAnalysis({
       <div className="relative z-10 w-full h-full flex flex-col items-center">
 
         {/* Header */}
-        <div className="w-full flex flex-col items-center gap-3 pt-8 px-4 shrink-0">
+        <div className="w-full flex flex-col items-center gap-3 pt-8 px-4 shrink-0 mt-20">
           <div className="flex items-center gap-3 w-full max-w-2xl">
             <div className="flex-1 h-px"
               style={{ background: "linear-gradient(90deg, transparent, rgba(154,217,255,0.7))" }} />
@@ -729,7 +896,7 @@ export default function VoiceAnalysis({
                     {isCentered && (
                       <div className="absolute inset-0 flex items-end justify-center pb-14 pointer-events-none">
                         <span
-                          className="text-[#9AD9FF] text-xs md:text-sm tracking-[0.3em] uppercase opacity-80"
+                          className="text-white text-xs md:text-sm tracking-[0.3em] uppercase opacity-80"
                           style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
                         >
                           Tap to explore
@@ -743,28 +910,8 @@ export default function VoiceAnalysis({
           </div>
         </div>
 
-        {/* Footer dots */}
-        <div className="w-full flex flex-col items-center gap-4 pb-6 shrink-0">
-          <div className="flex gap-2 items-center">
-            {IMAGES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => goToIndex(i)}
-                className="rounded-full transition-all duration-300"
-                style={{
-                  width: i === selectedIndex ? 30 : 8,
-                  height: 8,
-                  background: i === selectedIndex
-                    ? "rgba(154,217,255,1)"
-                    : "rgba(154,217,255,0.3)",
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-[#9AD9FF]/40 text-xs md:text-sm tracking-[0.3em] uppercase">
-            Auto-scrolling · drag to explore
-          </p>
-        </div>
+
+
       </div>
     </div>
   );

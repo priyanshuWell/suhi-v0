@@ -22,7 +22,22 @@ import CARD_12 from "../../assets/color_blindness/Card_12.png";
 import CARD_13 from "../../assets/color_blindness/Card_13.png";
 import CARD_14 from "../../assets/color_blindness/Card_14.png";
 import { useSelector } from "react-redux";
-
+const ANSWERS = {
+    1: "12",
+    2: "8",
+    3: "5",
+    4: "29",
+    5: "74",
+    6: "7",
+    7: "45",
+    8: "2",
+    9: "2",
+    10: "16",
+    11: "Line",
+    12: "35",
+    13: "96",
+    14: "Red Line",
+};
 const PLATES = [
     {
         plate_id: 1, image: CARD_1, correctAnswer: "12",
@@ -85,8 +100,8 @@ const PLATES = [
     },
 
     {
-        plate_id: 14, image: CARD_14, correctAnswer: "Two Lines",
-        options: ["Two Lines", "Purple Line", "Red Line", "Three lines", "No lines"]
+        plate_id: 14, image: CARD_14, correctAnswer: "Red Lines",
+        options: ["Two Lines", "Purple Line", "Red Lines", "Three lines", "No lines"]
     },
 ];
 
@@ -96,8 +111,8 @@ const ProgressBar = ({ current, total }) => {
     return (
         <div className="flex flex-col items-start gap-1 w-full">
             <span
-                className="text-white"
-                style={{ fontFamily: "'Noto Sans', sans-serif", fontSize: "clamp(0.7rem, 2vw, 2rem)" }}
+                className="text-white font-anta"
+                style={{ fontSize: "clamp(0.7rem, 2vw, 2rem)" }}
             >
                 Image {current} of {total}
             </span>
@@ -118,12 +133,15 @@ export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
-     const storeUser = useSelector((state) => state.common.user);
+    const storeUser = useSelector((state) => state.common.user);
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
     console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", screeningSessionId)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
+    const [selectedAnswer, setSelectedAnswer] = useState(null);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [isCorrect, setIsCorrect] = useState(false);
 
     const timerRef = useRef(null);
     const plateStartMs = useRef(Date.now());
@@ -136,11 +154,14 @@ export const ColorBlindQuiz = () => {
         setTimeLeft(initialTimer);
         plateStartMs.current = Date.now();
         submittingRef.current = false;
+        setSelectedAnswer(null);
+        setShowFeedback(false);
+        setIsCorrect(false);
     }, [currentIndex]);
 
     // ── 3. Countdown tick ─────────────────────────────────────────────────────
     useEffect(() => {
-       // if (!sessionId) return;
+        // if (!sessionId) return;
         if (timeLeft <= 0) { handleAnswer(null, true); return; }
         timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearTimeout(timerRef.current);
@@ -148,16 +169,24 @@ export const ColorBlindQuiz = () => {
 
     // ── 4. Submit answer ───────────────────────────────────────────────────────
     const handleAnswer = useCallback(
-
-
         async (selectedAnswer, isTimeout = false) => {
-           //if (!sessionId || submittingRef.current) return;
+            if (submittingRef.current) return;
             submittingRef.current = true;
             clearTimeout(timerRef.current);
 
             const responseTimeMs = Date.now() - plateStartMs.current;
             const noResponse = isTimeout ? 1 : 0;
             const answerToSend = isTimeout ? null : selectedAnswer;
+
+            // Show right/wrong feedback for 1.5s
+            setSelectedAnswer(selectedAnswer);
+            setShowFeedback(true);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+
+            // Reset feedback UI immediately so next plate starts clean
+            setShowFeedback(false);
+            setSelectedAnswer(null);
+
             try {
                 await colorBlindessSubmit(
                     sessionId,
@@ -173,17 +202,15 @@ export const ColorBlindQuiz = () => {
             }
 
             const nextIndex = currentIndex + 1;
-
             if (nextIndex >= totalPlates) {
                 try {
                     const result = await colorBlindessComplete(sessionId, screeningSessionId);
-                    console.log("result colorBlindess", result)
+                    console.log("result colorBlindess", result);
                     if (result.success) {
                         navigate("/bia/result");
                     }
                 } catch (err) {
                     console.log(err);
-                   // navigate("/bia/result");
                 } finally {
                     navigate("/bia/result");
                 }
@@ -193,6 +220,8 @@ export const ColorBlindQuiz = () => {
         },
         [sessionId, currentPlate, currentIndex, totalPlates, navigate]
     );
+
+
     const { image, options } = currentPlate;
     const shuffledOptions = useMemo(() => {
         const arr = [...options];
@@ -224,7 +253,7 @@ export const ColorBlindQuiz = () => {
 
                 {/* Question */}
                 <p
-                    className="text-white text-center font-mono w-full max-w-[1149px]"
+                    className="text-white text-center font-anta w-full max-w-[1149px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
                     {t("colorBlindness.question", "Select what you see")}
@@ -253,19 +282,25 @@ export const ColorBlindQuiz = () => {
                     <div className="flex flex-wrap justify-center gap-6">
                         {gridOptions.map((label) => (
                             <OptionButton
-                                key={label}
+                                key={`${currentIndex}-${label}`}
                                 label={label}
                                 onClick={() => handleAnswer(label)}
+                                selectedAnswer={selectedAnswer}
+                                correctAnswer={currentPlate.correctAnswer}
+                                showFeedback={showFeedback}
                             />
                         ))}
                     </div>
 
                     {/* Option E — wide centred (No number / No lines) */}
                     <OptionButton
-                        key={lastOption}
+                        key={`${currentIndex}-${lastOption}`}
                         label={lastOption}
                         onClick={() => handleAnswer(lastOption)}
                         wide
+                        selectedAnswer={selectedAnswer}
+                        correctAnswer={currentPlate.correctAnswer}
+                        showFeedback={showFeedback}
                     />
                 </div>
 
