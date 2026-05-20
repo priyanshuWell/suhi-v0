@@ -5,15 +5,8 @@ import { useParams } from "react-router"
 import progessbg from "../../assets/progress-bg.svg"
 import textframe from "../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
-import bmiWH from "../../assets/bia/bia-hwmeasuring.mp4"
-import biaIm from "../../assets/bia/bia-immeasuring.mp4"
-import biawhComplete from "../../assets/bia/bia-whcomplete.mp4"
-import biaImComplete from "../../assets/bia/bia-imcomplete.mp4"
-import heightResSvg from "../../assets/bia/height_res.svg"
-import weightResSvg from "../../assets/bia/weight_res.svg"
 import BlueGradientButton from "../ui/BlueGradientButton"
-import { Volume2 } from "lucide-react"
-import HeightWeightComplete from "./HeightWeightComplete"
+import HeightWeightDisplay from "./HeightWeightDisplay"
 import standstraightAudio from "../../assets/audio/standstraight_en.mp3"
 import impedanceAudio from "../../assets/audio/impedance_en.mp3"
 import ReplayAudio from "../ReplayAudio"
@@ -23,6 +16,7 @@ import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
 import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
 import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
 import biaMuscleMassIcon from "../../assets/icons/bia-muscle-mass.svg"
+import HeightWeightComplete from "./HeightWeightComplete"
 
 /* ─────────────────────────────────────────────────────────────
    BIA metric config  –  swap final values with real API data
@@ -210,7 +204,7 @@ const BiaMetricCard = ({ metric, value, isSettled, index }) => {
    Main component
 ───────────────────────────────────────────────────────────── */
 export const BIAComponent = ({
-  texts,
+  screenConfig,
   total = 28,
   percent = 50,
   attemptCount = 0,
@@ -221,11 +215,16 @@ export const BIAComponent = ({
   onNextClick,
   onImNextClick,
   arms50k,
+  user
 }) => {
   const { t } = useTranslation()
   const { screenType } = useParams()
-  const currentText = texts[screenType]
-
+  const gender = user?.gender === "female" ? "female" : "male"
+  const currentScreen = screenConfig[screenType]
+  console.log("currentScreen", currentScreen)
+  const title = currentScreen?.title
+  const description = currentScreen?.description
+  const videoSrc = currentScreen?.video?.[gender]
   /* existing progress state */
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
@@ -329,10 +328,10 @@ export const BIAComponent = ({
   const showIMResults = screenType === "imcomplete"
 
   /* ──────────────── video source ──────────────── */
-  const videoSrc =
-    screenType === "wh" ? bmiWH :
-      screenType === "im" ? biaIm :
-        null
+  // const videoSrc =
+  //   screenType === "wh" || screenType === "leg50" || screenType === "whcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? bmiWH_female : bmiWH_male :
+  //     screenType === "im" || screenType === "leg20" || screenType === "imcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? biaIm_female : biaIm_male :
+  //       null
 
   return (
     <>
@@ -368,7 +367,7 @@ export const BIAComponent = ({
               />
 
               <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
-                {currentText.title}
+                {title}
               </p>
             </div>
 
@@ -381,26 +380,18 @@ export const BIAComponent = ({
 
             {/* Description OUTSIDE frame */}
             <p className="mt-6 text-white font-medium tracking-tight landscape:text-4xl portrait:text-[46px] text-center">
-              {currentText.description}
+              {description}
             </p>
 
           </div>
         </div>
-        {/* SVG Result Frames (whcomplete screen) */}
-        {showWhResults && (
-          <HeightWeightComplete
-            heightValue={heightValue}
-            weightValue={weightValue}
-            onNextClick={onNextClick}
-          />
-        )}
       </div>
+
 
       {/* ─── VIDEO + FLOATING BIA CARDS ─── */}
       {videoSrc && (
         <div
-          className="absolute inset-0 flex justify-center items-end mb-22 xl:items-center xl:justify-center z-10 pointer-events-none mt-[26rem]"
-          style={{ position: "absolute" }}
+          className="absolute z-0 inset-0 flex justify-center items-end mb-22 xl:items-center xl:justify-center  pointer-events-none mt-[26rem]"
         >
           {/* wrapper keeps cards relative to the video */}
           <div style={{ position: "relative", width: "60%", display: "flex", justifyContent: "center" }}>
@@ -432,6 +423,23 @@ export const BIAComponent = ({
       {/* imcomplete overlay */}
       {screenType === "imcomplete" && (
         <ImComplete onNextClick={onImNextClick} arms50k={arms50k} />
+      )}
+
+      {/* WH Screen overlay */}
+      {screenType === "wh" && (
+        <HeightWeightDisplay
+          heightValue={heightValue}
+          weightValue={weightValue}
+        />
+      )}
+
+      {/* SVG Result Frames (whcomplete screen) */}
+      {showWhResults && (
+        <HeightWeightComplete
+          heightValue={heightValue}
+          weightValue={weightValue}
+          onNextClick={onNextClick}
+        />
       )}
     </>
   )

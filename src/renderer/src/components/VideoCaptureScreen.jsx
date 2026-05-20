@@ -220,7 +220,7 @@ const VideoCaptureScreen = () => {
         )
 
         await new Promise((r) => setTimeout(r, 500))
-        
+
         // Let RegisterCard handle the actual routing via its handleYesClick,
         // so we just navigate to /verified first
         navigate("/verified")
@@ -323,7 +323,7 @@ const VideoCaptureScreen = () => {
           "
         />
       </div>
-      <div
+      {/* <div
         className="
         // w-full h-full
     absolute 
@@ -347,7 +347,7 @@ const VideoCaptureScreen = () => {
         <h1 className="text-white text-2xl mt-3 font-semibold opacity-75">
           Look at the top Camera
         </h1>
-      </div>
+      </div> */}
 
       {/* Status Indicator
       {!showError && (

@@ -50,8 +50,10 @@ function App() {
 
       {/* Routes WITHOUT the progress bar */}
       <Route path="/" element={<SplashScreen />} />
+      <Route path='/welcome' element={<StartScreen />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
-      {/* <Route path='/voice' element={<VoiceAnalysis />} /> */}
+      <Route path='/capture' element={<VideoCaptureScreen />} />
+      <Route path="/login-suhi" element={<LoginSuhi />} />
       <Route path='/divide-attention' element={<DivideAttentionGame />} />
       <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
       <Route path='/bia/result' element={<BIAResult />} />
@@ -59,11 +61,8 @@ function App() {
       <Route element={<ScreeningLayout />}>
         <Route path="/faceCapture" element={<FaceCapture />} />
         <Route path="/confirmation" element={<ConfirmationScreen />} />
-        <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path="/login-father" element={<LoginFather />} />
         <Route path='/verified' element={<RegisterCard />} />
-        <Route path='/welcome' element={<StartScreen />} />
-        <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path='/bia/:screenType' element={<BIACalcuate />} />
         <Route path='/screen1' element={<NewDmit />} />
         {/* <Route path='/' element={<VoiceAnalysis />} /> */}

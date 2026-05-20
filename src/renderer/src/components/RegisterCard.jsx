@@ -72,7 +72,7 @@ export default function RegisterCard() {
       console.log("Resumed session detected, navigating to FaceCapture for re-verification")
       navigate("/faceCapture")
     } else {
-      navigate("/bia/wh")
+      navigate("/bia/leg50")
     }
   }
 
@@ -93,7 +93,7 @@ export default function RegisterCard() {
       console.log("Resumed session detected, navigating to FaceCapture for re-verification")
       navigate("/faceCapture")
     } else {
-      navigate("/bia/wh")
+      navigate("/bia/leg50")
     }
   }
 
