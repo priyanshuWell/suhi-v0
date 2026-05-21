@@ -728,8 +728,9 @@ export default function BIACalculate({ user, onComplete }) {
         measureWeight(),
         performHeightWithRetry()
       ]);
-
+      await sleep(2500);
       console.log("[BIA DEBUG] Both Weight and Height SUCCESS");
+      settleHeightWeight();
 
       // Track combined Weight and Height
       await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
@@ -1200,8 +1201,8 @@ export default function BIACalculate({ user, onComplete }) {
         screenConfig={screenConfig}
         isComplete={isComplete}
         onVideoEnd={handleVideoEnd}
-        heightValue={measuredValues.height}
-        weightValue={measuredValues.weight}
+        heightValue={displayValues.height}
+        weightValue={displayValues.weight}
         onNextClick={handleWhNextClick}
         onImNextClick={handleImNextClick}
         arms50k={measuredValues.arms50k}

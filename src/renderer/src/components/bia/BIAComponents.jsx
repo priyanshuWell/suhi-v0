@@ -235,7 +235,58 @@ export const BIAComponent = ({
   const [biaValues, setBiaValues] = useState({})   // key → display string
   const [isSettled, setIsSettled] = useState(false) // true when calc done
   const biaIntervalRef = useRef(null)
+  const buildBiaMetrics = (arms50k) => {
+    const body = arms50k?.bodyComposition || {}
 
+    return [
+      {
+        key: "hydration",
+        label: "Hydration",
+        icon: biaHydrationIcon,
+        final: `${body.waterPercentage ?? "--"}%`,
+        min: 30,
+        max: 80,
+        unit: "%",
+        dec: 1,
+        position: "left-top",
+      },
+      {
+        key: "skeletal",
+        label: "Skeletal mass",
+        icon: biaSkeletonIcon,
+        final: `${body.skeletalMuscleMassKg ?? "--"} kg`,
+        min: 8,
+        max: 20,
+        unit: " kg",
+        dec: 1,
+        position: "right-top",
+      },
+      {
+        key: "fat",
+        label: "Fat mass",
+        icon: biaFatMassIcon,
+        final: `${body.fatPercentage ?? "--"}%`,
+        min: 5,
+        max: 40,
+        unit: "%",
+        dec: 1,
+        position: "left-bottom",
+      },
+      {
+        key: "muscle",
+        label: "Muscle mass",
+        icon: biaMuscleMassIcon,
+        final: `${body.muscleMassKg ?? "--"} kg`,
+        min: 20,
+        max: 60,
+        unit: " kg",
+        dec: 1,
+        position: "right-bottom",
+      },
+    ]
+  }
+
+  const biaMetrics = buildBiaMetrics(arms50k)
   /* ──────────────── random-number scramble ──────────────── */
   const startScramble = () => {
     if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
@@ -243,7 +294,7 @@ export const BIAComponent = ({
 
     biaIntervalRef.current = setInterval(() => {
       const next = {}
-      BIA_METRICS.forEach(({ key, min, max, unit, dec }) => {
+      biaMetrics.forEach(({ key, min, max, unit, dec }) => {
         const rand = (Math.random() * (max - min) + min).toFixed(dec)
         next[key] = rand + unit
       })
@@ -258,7 +309,7 @@ export const BIAComponent = ({
       biaIntervalRef.current = null
     }
     const final = {}
-    BIA_METRICS.forEach(({ key, final: v }) => { final[key] = v })
+    biaMetrics.forEach(({ key, final: v }) => { final[key] = v })
     setBiaValues(final)
     setIsSettled(true)
   }
@@ -407,7 +458,7 @@ export const BIAComponent = ({
 
             {/* ── floating metric cards (im screen only) ── */}
             {screenType === "im" &&
-              BIA_METRICS.map((metric, i) => (
+              biaMetrics.map((metric, i) => (
                 <BiaMetricCard
                   key={metric.key}
                   metric={metric}
@@ -421,15 +472,17 @@ export const BIAComponent = ({
       )}
 
       {/* imcomplete overlay */}
-      {screenType === "imcomplete" && (
+      {/* {screenType === "imcomplete" && (
         <ImComplete onNextClick={onImNextClick} arms50k={arms50k} />
-      )}
+      )} */}
 
       {/* WH Screen overlay */}
       {screenType === "wh" && (
         <HeightWeightDisplay
           heightValue={heightValue}
           weightValue={weightValue}
+          isHideNext={true}
+
         />
       )}
 

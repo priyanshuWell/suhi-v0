@@ -88,13 +88,7 @@ export default function RegisterCard() {
 
   const handleLetsGo = () => {
     stopAudio()
-    if (screening?.isResumed) {
-      // Second time — re-verify face before continuing
-      console.log("Resumed session detected, navigating to FaceCapture for re-verification")
-      navigate("/faceCapture")
-    } else {
-      navigate("/bia/leg50")
-    }
+    navigate("/bia/leg50")
   }
 
   const handleNotYou = () => {

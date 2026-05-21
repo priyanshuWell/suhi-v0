@@ -733,14 +733,36 @@ app.on("window-all-closed", () => {
 })
 
 
-function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, identifiers = {}) {
-  const p1 = bodyComposition.package1
-  const p2 = bodyComposition.package2
-  const p3 = bodyComposition.package3
-  const p4 = bodyComposition.package4
-  const p5 = bodyComposition.package5
 
-  // STANDARD adult (18–35 yrs) fallback values
+function convertBIADataToAPIPayload(
+  bodyComposition = {},
+  userInputs = {},
+  impedanceData = {},
+  identifiers = {}
+) {
+  const p1 = bodyComposition.package1 || {}
+  const p2 = bodyComposition.package2 || {}
+  const p3 = bodyComposition.package3 || {}
+  const p4 = bodyComposition.package4 || {}
+  const p5 = bodyComposition.package5 || {}
+
+  const safeAverage = (obj = {}) => {
+    const values = Object.values(obj).filter(v => typeof v === "number")
+
+    if (!values.length) return 0
+
+    return values.reduce((a, b) => a + b, 0) / values.length
+  }
+
+  const safeFatControl = (value, fallback) => {
+    if (typeof value !== "number") return fallback
+
+    // guard against corrupted parser values like 6545.9kg
+    if (Math.abs(value) > 100) return fallback
+
+    return value
+  }
+
   const STD = {
     bodyWeight: 65,
     moisture: 39,
@@ -748,7 +770,7 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, 
     protein: 10.5,
     inorganicSalt: 3.2,
     leanBodyWeight: 52,
-    muscleMass: 48,
+    muscleMass: 1.8,
     boneMass: 3.2,
     skeletalMuscleMass: 29,
     icw: 26,
@@ -796,20 +818,40 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, 
   }
 
   const getBodyType = (typeCode) => {
-    const types = { 0: "THIN", 1: "STANDARD", 2: "MUSCULAR", 3: "OBESE" }
+    const types = {
+      0: "THIN",
+      1: "STANDARD",
+      2: "MUSCULAR",
+      3: "OBESE"
+    }
+
     return types[typeCode] || "STANDARD"
   }
 
   return {
-    height_cm: userInputs?.height || 170,
-    weight_kg: userInputs?.weight || STD.bodyWeight,
+    // identifiers / metadata
+    // summary_id: identifiers.summary_id,
+    // user_id: identifiers.user_id,
+    // session_id: identifiers.session_id,
+    // measurement_date: identifiers.measurement_date,
+    // measurement_timestamp: identifiers.measurement_timestamp,
+
+    // user inputs
+    gender: userInputs?.gender ?? null,
     age_years: userInputs?.age || 29,
 
-    impedance_20khz_ohm: Object.values(impedanceData.impedance20).reduce((a, b) => a + b, 0) / 5,
-    impedance_50khz_ohm: 0,
-    impedance_100khz_ohm: Object.values(impedanceData.impedance100).reduce((a, b) => a + b, 0) / 5,
+    final_height_cm: userInputs?.height || 170,
+    final_weight_kg: userInputs?.weight || STD.bodyWeight,
 
-    // Package 1
+    // impedance
+    impedance_20khz_ohm: safeAverage(impedanceData?.impedance20),
+    impedance_50khz_ohm: 0,
+    impedance_100khz_ohm: safeAverage(impedanceData?.impedance100),
+
+    // =========================
+    // PACKAGE 1
+    // =========================
+
     body_weight_kg: p1.bodyWeight || STD.bodyWeight,
     body_weight_min_kg: p1.bodyWeightStandardMin || 55,
     body_weight_max_kg: p1.bodyWeightStandardMax || 75,
@@ -831,65 +873,242 @@ function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, 
     inorganic_salt_max_kg: p1.inorganicSaltMassStandardMax || 3.6,
 
     lean_body_weight_kg: p1.leanBodyWeight || STD.leanBodyWeight,
-    muscle_mass_kg: p1.muscleMass || STD.muscleMass,
-    bone_mass_kg: p1.boneMass || STD.boneMass,
-    skeletal_muscle_mass_kg: p1.skeletalMuscleMass || STD.skeletalMuscleMass,
+    lean_body_weight_min_kg: p1.leanBodyWeightStandardMin || null,
+    lean_body_weight_max_kg: p1.leanBodyWeightStandardMax || null,
 
-    intracellular_water_kg: p1.intracellularWaterVolume || STD.icw,
-    extracellular_water_kg: p1.extracellularWaterVolume || STD.ecw,
+    muscle_mass_kg: p1.muscleMass || STD.muscleMass,
+    muscle_mass_min_kg: p1.muscleMassStandardMin || null,
+    muscle_mass_max_kg: p1.muscleMassStandardMax || null,
+
+    bone_mass_kg: p1.boneMass || STD.boneMass,
+    bone_mass_min_kg: p1.boneMassStandardMin || null,
+    bone_mass_max_kg: p1.boneMassStandardMax || null,
+
+    skeletal_muscle_mass_kg:
+      p1.skeletalMuscleMass || STD.skeletalMuscleMass,
+    skeletal_muscle_mass_min_kg:
+      p1.skeletalMuscleMassStandardMin || null,
+    skeletal_muscle_mass_max_kg:
+      p1.skeletalMuscleMassStandardMax || null,
+
+    intracellular_water_kg:
+      p1.intracellularWaterVolume || STD.icw,
+    intracellular_water_min_kg:
+      p1.intracellularWaterVolumeMin || null,
+    intracellular_water_max_kg:
+      p1.intracellularWaterVolumeMax || null,
+
+    extracellular_water_kg:
+      p1.extracellularWaterVolume || STD.ecw,
+    extracellular_water_min_kg:
+      p1.extracellularWaterVolumeMin || null,
+    extracellular_water_max_kg:
+      p1.extracellularWaterVolumeMax || null,
 
     body_cell_mass_kg: p1.bodyCellMass || STD.bcm,
-    subcutaneous_fat_mass_kg: p1.subcutaneousFatMass || STD.subcutaneousFat,
+    body_cell_mass_min_kg: p1.bodyCellMassMin || null,
+    body_cell_mass_max_kg: p1.bodyCellMassMax || null,
 
-    // Package 2 (Segmental)
-    right_hand_fat_mass_kg: p2.segmentalFatMass.rightHand || STD.armFat,
-    right_hand_fat_percentage: p2.segmentalFatPercentage.rightHand || STD.segmentalFatPct,
-    right_hand_muscle_mass_kg: p2.segmentalMuscleMass.rightHand || STD.armMuscle,
-    right_hand_muscle_ratio: p2.segmentalMuscleRatio.rightHand || STD.segmentalMuscleRatio,
+    subcutaneous_fat_mass_kg:
+      p1.subcutaneousFatMass || STD.subcutaneousFat,
 
-    left_hand_fat_mass_kg: p2.segmentalFatMass.leftHand || STD.armFat,
-    left_hand_muscle_mass_kg: p2.segmentalMuscleMass.leftHand || STD.armMuscle,
+    // =========================
+    // PACKAGE 2 + 5
+    // =========================
 
-    trunk_fat_mass_kg: p2.segmentalFatMass.trunk || STD.trunkFat,
-    trunk_muscle_mass_kg: p2.segmentalMuscleMass.trunk || STD.trunkMuscle,
+    right_hand_fat_mass_kg:
+      p2.segmentalFatMass?.rightHand || STD.armFat,
+    right_hand_fat_percentage:
+      p2.segmentalFatPercentage?.rightHand ||
+      STD.segmentalFatPct,
+    right_hand_muscle_mass_kg:
+      p2.segmentalMuscleMass?.rightHand ||
+      STD.armMuscle,
+    right_hand_muscle_ratio:
+      p2.segmentalMuscleRatio?.rightHand ||
+      STD.segmentalMuscleRatio,
+    right_hand_fat_standard:
+      p5.segmentalFatStandards?.rightHand ?? null,
+    right_hand_muscle_standard:
+      p5.segmentalMuscleStandards?.rightHand ?? null,
 
-    right_foot_fat_mass_kg: p2.segmentalFatMass.rightFoot || STD.legFat,
-    right_foot_muscle_mass_kg: p2.segmentalMuscleMass.rightFoot || STD.legMuscle,
+    left_hand_fat_mass_kg:
+      p2.segmentalFatMass?.leftHand || STD.armFat,
+    left_hand_fat_percentage:
+      p2.segmentalFatPercentage?.leftHand ||
+      STD.segmentalFatPct,
+    left_hand_muscle_mass_kg:
+      p2.segmentalMuscleMass?.leftHand ||
+      STD.armMuscle,
+    left_hand_muscle_ratio:
+      p2.segmentalMuscleRatio?.leftHand ||
+      STD.segmentalMuscleRatio,
+    left_hand_fat_standard:
+      p5.segmentalFatStandards?.leftHand ?? null,
+    left_hand_muscle_standard:
+      p5.segmentalMuscleStandards?.leftHand ?? null,
 
-    left_foot_fat_mass_kg: p2.segmentalFatMass.leftFoot || STD.legFat,
-    left_foot_muscle_mass_kg: p2.segmentalMuscleMass.leftFoot || STD.legMuscle,
+    trunk_fat_mass_kg:
+      p2.segmentalFatMass?.trunk || STD.trunkFat,
+    trunk_fat_percentage:
+      p2.segmentalFatPercentage?.trunk ||
+      STD.segmentalFatPct,
+    trunk_muscle_mass_kg:
+      p2.segmentalMuscleMass?.trunk ||
+      STD.trunkMuscle,
+    trunk_muscle_ratio:
+      p2.segmentalMuscleRatio?.trunk ||
+      STD.segmentalMuscleRatio,
+    trunk_fat_standard:
+      p5.segmentalFatStandards?.trunk ?? null,
+    trunk_muscle_standard:
+      p5.segmentalMuscleStandards?.trunk ?? null,
 
-    // Package 3
+    right_foot_fat_mass_kg:
+      p2.segmentalFatMass?.rightFoot || STD.legFat,
+    right_foot_fat_percentage:
+      p2.segmentalFatPercentage?.rightFoot ||
+      STD.segmentalFatPct,
+    right_foot_muscle_mass_kg:
+      p2.segmentalMuscleMass?.rightFoot ||
+      STD.legMuscle,
+    right_foot_muscle_ratio:
+      p2.segmentalMuscleRatio?.rightFoot ||
+      STD.segmentalMuscleRatio,
+    right_foot_fat_standard:
+      p5.segmentalFatStandards?.rightFoot ?? null,
+    right_foot_muscle_standard:
+      p5.segmentalMuscleStandards?.rightFoot ?? null,
+
+    left_foot_fat_mass_kg:
+      p2.segmentalFatMass?.leftFoot || STD.legFat,
+    left_foot_fat_percentage:
+      p2.segmentalFatPercentage?.leftFoot ||
+      STD.segmentalFatPct,
+    left_foot_muscle_mass_kg:
+      p2.segmentalMuscleMass?.leftFoot ||
+      STD.legMuscle,
+    left_foot_muscle_ratio:
+      p2.segmentalMuscleRatio?.leftFoot ||
+      STD.segmentalMuscleRatio,
+    left_foot_fat_standard:
+      p5.segmentalFatStandards?.leftFoot ?? null,
+    left_foot_muscle_standard:
+      p5.segmentalMuscleStandards?.leftFoot ?? null,
+
+    // =========================
+    // PACKAGE 3
+    // =========================
+
     body_score: p3.bodyScore || STD.bodyScore,
-    physical_age_years: p3.physicalAge || STD.physicalAge,
+    physical_age_years:
+      p3.physicalAge || STD.physicalAge,
     body_type: getBodyType(p3.bodyType),
-    skeletal_muscle_mass_index: p3.skeletalMuscleMassIndex || STD.smi,
 
-    waist_hip_ratio: p3.waistToHipRatio || STD.whr,
-    visceral_fat_level: p3.visceralFatLevel || STD.visceralFat,
+    skeletal_muscle_mass_index:
+      p3.skeletalMuscleMassIndex || STD.smi,
+
+    waist_hip_ratio:
+      p3.waistToHipRatio || STD.whr,
+    waist_hip_ratio_min:
+      p3.waistToHipRatioStandardMin || null,
+    waist_hip_ratio_max:
+      p3.waistToHipRatioStandardMax || null,
+
+    visceral_fat_level:
+      p3.visceralFatLevel || STD.visceralFat,
+    visceral_fat_level_min:
+      p3.visceralFatLevelStandardMin || null,
+    visceral_fat_level_max:
+      p3.visceralFatLevelStandardMax || null,
+
+    obesity_percentage:
+      p3.obesityPercentage || STD.obesityPct,
+    obesity_percentage_min:
+      p3.obesityPercentageStandardMin || null,
+    obesity_percentage_max:
+      p3.obesityPercentageStandardMax || null,
 
     bmi: p3.bodyMassIndex || STD.bmi,
-    body_fat_percentage: p3.bodyFatPercentage || STD.bodyFatPct,
+    bmi_min:
+      p3.bodyMassIndexStandardMin || null,
+    bmi_max:
+      p3.bodyMassIndexStandardMax || null,
 
-    basal_metabolism_kcal: p3.basalMetabolism || STD.bmr,
-    recommended_intake_kcal: p3.recommendedIntake || STD.recommendedIntake,
+    body_fat_percentage:
+      p3.bodyFatPercentage || STD.bodyFatPct,
+    body_fat_percentage_min:
+      p3.bodyFatPercentageStandardMin || null,
+    body_fat_percentage_max:
+      p3.bodyFatPercentageStandardMax || null,
 
-    ideal_weight_kg: p3.idealWeight || STD.idealWeight,
-    target_weight_kg: p3.targetWeight || STD.targetWeight,
-    weight_control_kg: p3.weightControlAmount || STD.weightControl,
-    muscle_control_kg: p3.muscleControlAmount || STD.muscleControl,
-    fat_control_kg: p3.fatControlAmount || STD.fatControl,
+    basal_metabolism_kcal:
+      p3.basalMetabolism || STD.bmr,
+    basal_metabolism_min_kcal:
+      p3.basalMetabolismStandardMin || null,
+    basal_metabolism_max_kcal:
+      p3.basalMetabolismStandardMax || null,
 
-    // Package 4
-    walk_kcal_per_30min: p4.exerciseConsumption.walk || STD.walk,
-    golf_kcal_per_30min: p4.exerciseConsumption.golf || STD.golf,
-    croquet_kcal_per_30min: p4.exerciseConsumption.croquet || STD.croquet,
-    tennis_cycling_basketball_kcal_per_30min: p4.exerciseConsumption.tennis || STD.tennis,
+    recommended_intake_kcal:
+      p3.recommendedIntake || STD.recommendedIntake,
+
+    ideal_weight_kg:
+      p3.idealWeight || STD.idealWeight,
+
+    target_weight_kg:
+      p3.targetWeight || STD.targetWeight,
+
+    weight_control_kg:
+      p3.weightControlAmount || STD.weightControl,
+
+    muscle_control_kg:
+      p3.muscleControlAmount || STD.muscleControl,
+
+    fat_control_kg:
+      safeFatControl(
+        p3.fatControlAmount,
+        STD.fatControl
+      ),
+
+    subcutaneous_fat_percentage:
+      p3.subcutaneousFatPercentage ||
+      STD.subcutaneousFatPct,
+
+    subcutaneous_fat_percentage_min:
+      p3.subcutaneousFatPercentageStandardMin || null,
+
+    subcutaneous_fat_percentage_max:
+      p3.subcutaneousFatPercentageStandardMax || null,
+
+    // =========================
+    // PACKAGE 4
+    // =========================
+
+    walk_kcal_per_30min:
+      p4.exerciseConsumption?.walk || STD.walk,
+
+    golf_kcal_per_30min:
+      p4.exerciseConsumption?.golf || STD.golf,
+
+    croquet_kcal_per_30min:
+      p4.exerciseConsumption?.croquet || STD.croquet,
+
+    tennis_cycling_basketball_kcal_per_30min:
+      p4.exerciseConsumption?.tennis || STD.tennis,
+
     squash_bouncy_ball_taekwondo_fencing_kcal_per_30min:
-      p4.exerciseConsumption.squash || STD.squash,
-    climb_mountains_kcal_per_30min: p4.exerciseConsumption.mountainClimbing || STD.mountainClimbing,
+      p4.exerciseConsumption?.squash || STD.squash,
+
+    climb_mountains_kcal_per_30min:
+      p4.exerciseConsumption?.mountainClimbing ||
+      STD.mountainClimbing,
+
     swimming_aerobics_jogging_football_skipping_rope_kcal_per_30min:
-      p4.exerciseConsumption.swimming || STD.swimming,
-    badminton_table_tennis_kcal_per_30min: p4.exerciseConsumption.badminton || STD.badminton
+      p4.exerciseConsumption?.swimming ||
+      STD.swimming,
+
+    badminton_table_tennis_kcal_per_30min:
+      p4.exerciseConsumption?.badminton ||
+      STD.badminton
   }
 }
