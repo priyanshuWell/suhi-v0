@@ -837,7 +837,7 @@ function convertBIADataToAPIPayload(
     // measurement_timestamp: identifiers.measurement_timestamp,
 
     // user inputs
-    gender: userInputs?.gender ?? null,
+    gender: userInputs?.gender == "male" ? 1 : 0,
     age_years: userInputs?.age || 29,
 
     final_height_cm: userInputs?.height || 170,
