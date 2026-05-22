@@ -208,7 +208,7 @@ export default function RegisterCard() {
       </div>
 
       {/* Projector decoration — outside the card */}
-      <div className="absolute bottom-[2rem] w-[770px] left-[31rem] -translate-x-1/2">
+      <div className="absolute bottom-[3rem] w-[770px] left-[33rem] -translate-x-1/2">
         <img
           src={projector}
           alt="projector"
