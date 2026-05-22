@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react"
 import bg1 from "../../assets/lightbg.png"
 import biaCompleteAlertSvg from "../../assets/bia/bia_complete_alert.svg"
-import { useParams } from "react-router"
+import { useNavigate, useParams } from "react-router"
 import progessbg from "../../assets/progress-bg.svg"
 import textframe from "../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
@@ -10,7 +10,6 @@ import HeightWeightDisplay from "./HeightWeightDisplay"
 import standstraightAudio from "../../assets/audio/standstraight_en.mp3"
 import impedanceAudio from "../../assets/audio/impedance_en.mp3"
 import ReplayAudio from "../ReplayAudio"
-import ImComplete from "./ImComplete"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
 import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
@@ -218,13 +217,16 @@ export const BIAComponent = ({
   user
 }) => {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const { screenType } = useParams()
-  const gender = user?.gender === "female" ? "female" : "male"
+  const gender = user?.gender?.toLowerCase() === "female" ? "female" : "male"
+  console.log("gender", gender)
   const currentScreen = screenConfig[screenType]
   console.log("currentScreen", currentScreen)
   const title = currentScreen?.title
   const description = currentScreen?.description
   const videoSrc = currentScreen?.video?.[gender]
+  console.log("videoSrc", videoSrc)
   /* existing progress state */
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
@@ -457,6 +459,17 @@ export const BIAComponent = ({
                   index={i}
                 />
               ))}
+
+            {screenType === "imcomplete" &&
+              biaMetrics.map((metric, i) => (
+                <BiaMetricCard
+                  key={metric.key}
+                  metric={metric}
+                  value={biaValues[metric.key]}
+                  isSettled={isSettled}
+                  index={i}
+                />
+              ))}
           </div>
         </div>
       )}
@@ -479,6 +492,14 @@ export const BIAComponent = ({
           weightValue={weightValue}
           onNextClick={onNextClick}
         />
+      )}
+
+      {screenType === "imcomplete" && (
+        <div className="absolute bottom-20 left-[31%]">
+          <BlueGradientButton onClick={() => navigate("/voice")}>
+            Next
+          </BlueGradientButton>
+        </div>
       )}
     </>
   )
