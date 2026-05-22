@@ -50,11 +50,11 @@ export default function BIACalculate({ user, onComplete }) {
     }
   });
   const [displayValues, setDisplayValues] = useState({
-    height: "---",
-    weight: "---",
+    height: null,
+    weight: null,
   });
 
-  const scanIntervalRef = useRef(null);
+
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
@@ -115,27 +115,6 @@ export default function BIACalculate({ user, onComplete }) {
     HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected"
   };
 
-  const startHeightWeightScan = () => {
-    if (scanIntervalRef.current) {
-      clearInterval(scanIntervalRef.current);
-    }
-
-    scanIntervalRef.current = setInterval(() => {
-      setDisplayValues({
-        height: `${Math.floor(Math.random() * 30 + 145)} cm`,
-        weight: `${Math.floor(Math.random() * 35 + 45)} kg`,
-      });
-    }, 90);
-  };
-
-  const settleHeightWeight = () => {
-    clearInterval(scanIntervalRef.current);
-
-    setDisplayValues({
-      height: `${resultsRef.current?.height?.value} cm`,
-      weight: `${resultsRef.current?.weight?.value} kg`,
-    });
-  };
   const screenConfig = {
     leg50: {
       title: t("measurement.stand_straight"),
@@ -723,14 +702,16 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Parallelize Weight and Height measurements
       console.log("[BIA DEBUG] Starting Weight and Height measurements in parallel...");
-      startHeightWeightScan();
       const [weightRes, heightRes] = await Promise.all([
         measureWeight(),
         performHeightWithRetry()
       ]);
-      await sleep(2500);
       console.log("[BIA DEBUG] Both Weight and Height SUCCESS");
-      settleHeightWeight();
+      setDisplayValues({
+        height: resultsRef.current?.height?.value ?? null,
+        weight: resultsRef.current?.weight?.value ?? null,
+      });
+
 
       // Track combined Weight and Height
       await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
@@ -744,10 +725,10 @@ export default function BIACalculate({ user, onComplete }) {
       // Calculate Leg BIA immediately after weight/height
       await calculateAndStoreLegBIA();
 
-      setMeasuredValues({
-        weight: resultsRef.current?.weight?.value ? `${resultsRef.current?.weight?.value} kg` : "-- kg",
-        height: resultsRef.current?.height?.value ? `${resultsRef.current?.height?.value} cm` : "-- cm"
-      });
+      // setMeasuredValues({
+      //   weight: resultsRef.current?.weight?.value ? `${resultsRef.current?.weight?.value} kg` : "-- kg",
+      //   height: resultsRef.current?.height?.value ? `${resultsRef.current?.height?.value} cm` : "-- cm"
+      // });
 
       navigate("/bia/whcomplete");
 
@@ -988,7 +969,9 @@ export default function BIACalculate({ user, onComplete }) {
           waterPercentage: armBiaPayload.moisture_content_kg ?? "57",
           muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
           boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
+          skeletalMuscleMassKg: armBiaPayload.skeletal_muscle_mass_kg ?? "10",
         };
+
         setMeasuredValues((prev) => ({
           ...prev,
           arms50k: resultsRef.current.arms50k,

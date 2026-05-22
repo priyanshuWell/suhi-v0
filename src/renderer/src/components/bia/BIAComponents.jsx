@@ -235,56 +235,49 @@ export const BIAComponent = ({
   const [biaValues, setBiaValues] = useState({})   // key → display string
   const [isSettled, setIsSettled] = useState(false) // true when calc done
   const biaIntervalRef = useRef(null)
-  const buildBiaMetrics = (arms50k) => {
-    const body = arms50k?.bodyComposition || {}
+  const buildBiaMetrics = (arms50k) => [
+    {
+      key: "hydration",
+      label: "Hydration",
+      icon: biaHydrationIcon,
+      final: arms50k?.waterPercentage != null
+        ? `${parseFloat(arms50k.waterPercentage).toFixed(1)}%`
+        : "--",
+      min: 30, max: 80, unit: "%", dec: 1,
+      position: "left-top",
+    },
+    {
+      key: "skeletal",
+      label: "Skeletal mass",
+      icon: biaSkeletonIcon,
+      final: arms50k?.skeletalMuscleMassKg != null
+        ? `${parseFloat(arms50k.skeletalMuscleMassKg).toFixed(1)} kg`
+        : "--",
+      min: 8, max: 20, unit: " kg", dec: 1,
+      position: "right-top",
+    },
+    {
+      key: "fat",
+      label: "Fat mass",
+      icon: biaFatMassIcon,
+      final: arms50k?.fatPercentage != null
+        ? `${parseFloat(arms50k.fatPercentage).toFixed(1)}%`
+        : "--",
+      min: 5, max: 40, unit: "%", dec: 1,
+      position: "left-bottom",
+    },
+    {
+      key: "muscle",
+      label: "Muscle mass",
+      icon: biaMuscleMassIcon,
+      final: arms50k?.muscleMassKg != null
+        ? `${parseFloat(arms50k.muscleMassKg).toFixed(1)} kg`
+        : "--",
+      min: 20, max: 60, unit: " kg", dec: 1,
+      position: "right-bottom",
+    },
+  ]
 
-    return [
-      {
-        key: "hydration",
-        label: "Hydration",
-        icon: biaHydrationIcon,
-        final: `${body.waterPercentage ?? "--"}%`,
-        min: 30,
-        max: 80,
-        unit: "%",
-        dec: 1,
-        position: "left-top",
-      },
-      {
-        key: "skeletal",
-        label: "Skeletal mass",
-        icon: biaSkeletonIcon,
-        final: `${body.skeletalMuscleMassKg ?? "--"} kg`,
-        min: 8,
-        max: 20,
-        unit: " kg",
-        dec: 1,
-        position: "right-top",
-      },
-      {
-        key: "fat",
-        label: "Fat mass",
-        icon: biaFatMassIcon,
-        final: `${body.fatPercentage ?? "--"}%`,
-        min: 5,
-        max: 40,
-        unit: "%",
-        dec: 1,
-        position: "left-bottom",
-      },
-      {
-        key: "muscle",
-        label: "Muscle mass",
-        icon: biaMuscleMassIcon,
-        final: `${body.muscleMassKg ?? "--"} kg`,
-        min: 20,
-        max: 60,
-        unit: " kg",
-        dec: 1,
-        position: "right-bottom",
-      },
-    ]
-  }
 
   const biaMetrics = buildBiaMetrics(arms50k)
   /* ──────────────── random-number scramble ──────────────── */
@@ -317,7 +310,11 @@ export const BIAComponent = ({
   /* start scramble when entering im screen */
   useEffect(() => {
     if (screenType === "im") {
+      // Real values aren't here yet — scramble
       startScramble()
+    } else if (screenType === "imcomplete") {
+      // arms50k is already populated before navigate() was called
+      settleValues()
     } else {
       if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
       setIsSettled(false)
@@ -327,13 +324,6 @@ export const BIAComponent = ({
       if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
     }
   }, [screenType])
-
-  /* settle when parent signals completion */
-  useEffect(() => {
-    if (isComplete && screenType === "im") {
-      settleValues()
-    }
-  }, [isComplete, screenType])
 
 
 
@@ -471,17 +461,13 @@ export const BIAComponent = ({
         </div>
       )}
 
-      {/* imcomplete overlay */}
-      {/* {screenType === "imcomplete" && (
-        <ImComplete onNextClick={onImNextClick} arms50k={arms50k} />
-      )} */}
-
       {/* WH Screen overlay */}
       {screenType === "wh" && (
         <HeightWeightDisplay
           heightValue={heightValue}
           weightValue={weightValue}
           isHideNext={true}
+          isRandomHeightWeight={true}
 
         />
       )}
