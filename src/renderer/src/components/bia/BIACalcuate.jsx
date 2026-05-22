@@ -1017,7 +1017,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Navigate to imComplete FIRST
     console.log("[BIA DEBUG] Navigating to /bia/imcomplete");
-    navigate("/bia/imcomplete");
+    // navigate("/bia/imcomplete");
     console.log("[BIA DEBUG] Calling calculateBIA with params:", {
       height: resultsRef.current.height.value,
       weight: resultsRef.current.weight.value,

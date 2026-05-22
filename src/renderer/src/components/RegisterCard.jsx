@@ -85,7 +85,7 @@ export default function RegisterCard() {
   const studentName = user?.data?.student_name || "Student"
   const studentClass = user?.data?.class || "Grade 9"
   const studentId = user?.data?.contact_number || "9876543210"
-
+  console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
     navigate("/bia/leg50")
@@ -208,7 +208,7 @@ export default function RegisterCard() {
       </div>
 
       {/* Projector decoration — outside the card */}
-      <div className="absolute bottom-[9rem] w-[770px] left-[30rem] -translate-x-1/2">
+      <div className="absolute bottom-[2rem] w-[770px] left-[31rem] -translate-x-1/2">
         <img
           src={projector}
           alt="projector"

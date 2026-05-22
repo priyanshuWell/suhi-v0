@@ -26,29 +26,16 @@ export const IMPEDANCE_ERROR_CODES = {
     nextStep: 'Continue with measurement',
     userMessage: "Oops, couldn't get body composition analysis. Hold on, we will try once again"
   },
-  0x01: {
-    code: 'ELECTRODE',
-    severity: 'ERROR',
-    message: 'Ensure your are holding electrodes properly',
-    description: 'Device detected electrode contact problem',
-    action: 'RETRY',
+  0x01: {     
+    code: 'CHECK_ELECTRODE',
+    severity: 'INFO',
+    message: 'BIA_CHECK_ELECTRODE - Electrode contact detection in progress',
+    description: 'Device is detecting electrode contact, please wait',
+    action: 'WAIT',
     canRetry: false,
-    nextStep: 'Stop measurement and check electrodes',
-    userMessage: 'Please ensure you are barefoot, and holding the hand rails firmly',
-    causes: [
-      'Electrode not properly connected',
-      'Loose electrode contact',
-      'Poor skin contact',
-      'Broken electrode pad'
-    ],
-    solutions: [
-      '1. Inspect all electrodes visually',
-      '2. Reseat each electrode firmly',
-      '3. Clean electrode pads with alcohol',
-      '4. Check for bent pins/connectors',
-      '5. Try replacement electrode pads',
-      '6. Restart measurement'
-    ]
+    nextStep: 'Wait for electrode detection to complete',
+    userMessage: 'Please ensure you are barefoot and holding the hand rails firmly',
+    waitTime: 500
   },
   0x02: {
     code: 'MEASURE',
