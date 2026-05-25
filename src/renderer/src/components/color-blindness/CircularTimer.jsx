@@ -10,7 +10,7 @@ const STROKE = 18; // approx visual thickness
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => {
-    const [progress, setProgress] = useState(0);
+    const [progress, setProgress] = useState(1000);
     const requestRef = useRef();
     const startTimeRef = useRef();
 

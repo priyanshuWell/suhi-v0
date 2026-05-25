@@ -71,7 +71,7 @@ const HeightWeightDisplay = ({
                         className="w-16 h-16"
                     />
                     <div className="flex items-baseline gap-6 text-white whitespace-nowrap">
-                        <span className="text-[90px] leading-[1.1] tracking-wide font-anta">
+                        <span className="text-[70px] leading-[1.1] tracking-wide font-anta">
                             {displayHeight}
                         </span>
                     </div>
@@ -99,7 +99,7 @@ const HeightWeightDisplay = ({
                         className="w-20 h-20"
                     />
                     <div className="flex items-baseline gap-6 text-white whitespace-nowrap">
-                        <span className="text-[90px] leading-[1.1] tracking-wide font-anta">
+                        <span className="text-[70px] leading-[1.1] tracking-wide font-anta">
                             {displayWeight}
                         </span>
                     </div>

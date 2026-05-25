@@ -18,15 +18,16 @@ export default function OptionButton({ label, onClick, wide = false, selectedAns
         ? {
             background: "rgba(251, 0, 0, 0.15)",
             backdropFilter: "blur(3.576972723007202px)",
-            border: "1px solid rgba(251,0,0,0.35)",
+            border: "1px solid #fff",
             boxShadow: "0 0 18px rgba(251,0,0,0.25)",
         }
         : showRight
             ? {
                 background: "rgba(9, 255, 0, 0.15)",
                 backdropFilter: "blur(0.7153945565223694px)",
-                border: "1px solid rgba(9,255,0,0.35)",
+                border: "5px solid #fff",
                 boxShadow: "0 0 18px rgba(9,255,0,0.25)",
+                fill: "rgba(9, 255, 0, 0.15)",
             }
             : {};
     return (

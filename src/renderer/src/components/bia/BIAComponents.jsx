@@ -65,6 +65,39 @@ const BIA_METRICS = [
     dec: 1,
     position: "right-bottom", // lower-right
   },
+  {
+    key: "muscle",
+    label: "Muscle mass",
+    icon: biaMuscleMassIcon,
+    final: "42.6 kg",
+    min: 20,
+    max: 60,
+    unit: " kg",
+    dec: 1,
+    position: "right-bottom", // lower-right
+  },
+  {
+    key: "muscle",
+    label: "Muscle mass",
+    icon: biaMuscleMassIcon,
+    final: "42.6 kg",
+    min: 20,
+    max: 60,
+    unit: " kg",
+    dec: 1,
+    position: "right-bottom", // lower-right
+  },
+  {
+    key: "muscle",
+    label: "Muscle mass",
+    icon: biaMuscleMassIcon,
+    final: "42.6 kg",
+    min: 20,
+    max: 60,
+    unit: " kg",
+    dec: 1,
+    position: "right-bottom", // lower-right
+  },
 ]
 
 /* ─────────────────────────────────────────────────────────────
@@ -97,10 +130,28 @@ const BIA_CARD_STYLES = `
     92%  { opacity: 1; }
     100% { top: 100%; opacity: 0; }
   }
+  @keyframes biaScanLineB {
+    0%   { top: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  @keyframes biaScanLineC {
+    0%   { top: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  @keyframes biaScanLineD {
+    0%   { top: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
 `
 
-const FLOAT_ANIMATIONS = ["biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD"]
-const FLOAT_DURATIONS = ["3.2s", "2.9s", "3.5s", "3.1s"]
+const FLOAT_ANIMATIONS = ["biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD", "biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD"]
+const FLOAT_DURATIONS = ["3.2s", "2.9s", "3.5s", "3.1s", "3.2s", "2.9s", "3.5s", "3.1s"]
 
 /* ─────────────────────────────────────────────────────────────
    Card position styles (absolute, around the video)
@@ -114,7 +165,15 @@ const cardPositionStyle = (position) => {
     case "left-top": return { ...shared, left: "-4px", top: "15%" }
     case "right-top": return { ...shared, right: "-4px", top: "18%" }
     case "left-bottom": return { ...shared, left: "2px", bottom: "37%" }
-    case "right-bottom": return { ...shared, right: "-4px", bottom: "45%" }
+    case "right-bottom": return { ...shared, right: "-20px", bottom: "45%" }
+    case "bottom-left": return { ...shared, right: "0px", bottom: "45%" }
+    case "bottom-right": return { ...shared, right: "0px", bottom: "45%" }
+    case "top-right": return { ...shared, right: "-4px", bottom: "45%" }
+    case "top-left": return { ...shared, left: "20px", bottom: "45%" }
+    case "top-left-2": return { ...shared, left: "30px", top: "30%" }
+    case "top-right-2": return { ...shared, right: "30px", top: "30%" }
+    case "bottom-left-2": return { ...shared, left: "30px", bottom: "30%" }
+    case "bottom-right-2": return { ...shared, right: "30px", bottom: "30%" }
     default: return shared
   }
 }
@@ -122,7 +181,7 @@ const cardPositionStyle = (position) => {
 /* ─────────────────────────────────────────────────────────────
    Single floating metric card
 ───────────────────────────────────────────────────────────── */
-const BiaMetricCard = ({ metric, value, isSettled, index }) => {
+const BiaMetricCard = ({ metric, value, isSettled, index, isInstant }) => {
   const isRight = metric.position.startsWith("right")
 
   const cardStyle = {
@@ -130,7 +189,7 @@ const BiaMetricCard = ({ metric, value, isSettled, index }) => {
     background: "rgba(82, 82, 82, 0.13)",
     border: "1px solid rgba(255, 255, 255, 0.72)",
     borderRadius: "14px",
-    boxShadow: isSettled
+    boxShadow: isSettled || isInstant
       ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
       : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
     padding: "12px 20px",
@@ -138,7 +197,7 @@ const BiaMetricCard = ({ metric, value, isSettled, index }) => {
     alignItems: "center",
     gap: "10px",
     overflow: "hidden",
-    minWidth: "175px",
+    minWidth: "190px",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     animation: `${FLOAT_ANIMATIONS[index]} ${FLOAT_DURATIONS[index]} ease-in-out infinite`,
@@ -245,43 +304,122 @@ export const BIAComponent = ({
       final: arms50k?.waterPercentage != null
         ? `${parseFloat(arms50k.waterPercentage).toFixed(1)}%`
         : "--",
-      min: 30, max: 80, unit: "%", dec: 1,
+      min: 30,
+      max: 80,
+      unit: "%",
+      dec: 1,
       position: "left-top",
+      isInstant: false,
     },
+
     {
-      key: "skeletal",
-      label: "Skeletal mass",
+      key: "skeletalMass",
+      label: "Skeletal Mass",
       icon: biaSkeletonIcon,
       final: arms50k?.skeletalMuscleMassKg != null
         ? `${parseFloat(arms50k.skeletalMuscleMassKg).toFixed(1)} kg`
         : "--",
-      min: 8, max: 20, unit: " kg", dec: 1,
+      min: 8,
+      max: 20,
+      unit: " kg",
+      dec: 1,
       position: "right-top",
+      isInstant: false,
     },
+
     {
-      key: "fat",
-      label: "Fat mass",
+      key: "fatMass",
+      label: "Fat Mass",
       icon: biaFatMassIcon,
       final: arms50k?.fatPercentage != null
         ? `${parseFloat(arms50k.fatPercentage).toFixed(1)}%`
         : "--",
-      min: 5, max: 40, unit: "%", dec: 1,
+      min: 5,
+      max: 40,
+      unit: "%",
+      dec: 1,
       position: "left-bottom",
+      isInstant: false,
     },
+
     {
-      key: "muscle",
-      label: "Muscle mass",
+      key: "muscleMass",
+      label: "Muscle Mass",
       icon: biaMuscleMassIcon,
       final: arms50k?.muscleMassKg != null
         ? `${parseFloat(arms50k.muscleMassKg).toFixed(1)} kg`
         : "--",
-      min: 20, max: 60, unit: " kg", dec: 1,
+      min: 20,
+      max: 60,
+      unit: " kg",
+      dec: 1,
       position: "right-bottom",
+      isInstant: false,
+    },
+
+    {
+      key: "metabolicAge",
+      label: "Metabolic Age",
+      icon: biaMuscleMassIcon,
+      final: arms50k?.metabolicAge != null
+        ? `${arms50k.metabolicAge} yrs`
+        : "--",
+      min: 18,
+      max: 70,
+      unit: " yrs",
+      dec: 0,
+      position: "top-left",
+      isInstant: false,
+    },
+
+    {
+      key: "visceralFat",
+      label: "Visceral Fat",
+      icon: biaFatMassIcon,
+      final: arms50k?.visceralFat != null
+        ? `${arms50k.visceralFat}`
+        : "--",
+      min: 1,
+      max: 30,
+      unit: "",
+      dec: 0,
+      position: "top-right-2",
+      isInstant: false,
+    },
+    {
+      key: "weight",
+      label: "Weight",
+      icon: biaFatMassIcon,
+      final: weightValue != null
+        ? `${weightValue}`
+        : "--",
+      min: 1,
+      max: 30,
+      unit: "kg",
+      dec: 0,
+      position: "bottom-right-2",
+      isInstant: true,
+    },
+    {
+      key: "height",
+      label: "Height",
+      icon: biaFatMassIcon,
+      final: heightValue != null
+        ? `${heightValue}`
+        : "--",
+      min: 1,
+      max: 30,
+      unit: "cm",
+      dec: 0,
+      position: "top-right-1",
+      isInstant: true,
     },
   ]
 
-
-  const biaMetrics = buildBiaMetrics(arms50k)
+  const biaMetrics = React.useMemo(
+    () => buildBiaMetrics(arms50k),
+    [arms50k]
+  )
   /* ──────────────── random-number scramble ──────────────── */
   const startScramble = () => {
     if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
@@ -289,8 +427,28 @@ export const BIAComponent = ({
 
     biaIntervalRef.current = setInterval(() => {
       const next = {}
-      biaMetrics.forEach(({ key, min, max, unit, dec }) => {
-        const rand = (Math.random() * (max - min) + min).toFixed(dec)
+      biaMetrics.forEach((metric) => {
+        const {
+          key,
+          min,
+          max,
+          unit,
+          dec,
+          final,
+          isInstant,
+        } = metric
+
+        // Already known metrics stay fixed
+        if (isInstant) {
+          next[key] = 100
+          return
+        }
+
+        // Scanning metrics animate
+        const rand = (
+          Math.random() * (max - min) + min
+        ).toFixed(dec)
+
         next[key] = rand + unit
       })
       //console.log(next)
@@ -449,7 +607,7 @@ export const BIAComponent = ({
             />
 
             {/* ── floating metric cards (im screen only) ── */}
-            {screenType === "im" &&
+            {["im", "imcomplete"].includes(screenType) &&
               biaMetrics.map((metric, i) => (
                 <BiaMetricCard
                   key={metric.key}
@@ -457,17 +615,7 @@ export const BIAComponent = ({
                   value={biaValues[metric.key]}
                   isSettled={isSettled}
                   index={i}
-                />
-              ))}
-
-            {screenType === "imcomplete" &&
-              biaMetrics.map((metric, i) => (
-                <BiaMetricCard
-                  key={metric.key}
-                  metric={metric}
-                  value={biaValues[metric.key]}
-                  isSettled={isSettled}
-                  index={i}
+                  isInstant={metric.isInstant}
                 />
               ))}
           </div>
