@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
-
+import { sfx } from "../../../utils/soundManager";
 // ── Stimulus sets (3 sets, one per stimulus image)
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_2 from "../../../assets/games/stimulus_2.svg";
@@ -153,7 +153,6 @@ async function loadSvg(path) {
     catch { return null; }
 }
 
-// ─── Spawn (that create ) ────────────────────────────────────────────────────────────────────
 
 function spawn(cfg) {
     const ps = [];
@@ -192,7 +191,7 @@ function spawn(cfg) {
 
 // ─── Physics ──────────────────────────────────────────────────────────────────
 
-function physics(ps, dt, moving) {
+function physics(ps, dt, moving, onCollision = null) {
     const step = dt / 16.667;
     if (moving) {
         for (const p of ps) {
@@ -215,7 +214,8 @@ function physics(ps, dt, moving) {
             if (d < minD && d > 0.001) {
                 const nx = dx / d, ny = dy / d, ov = (minD - d) * 0.5;
                 a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
-                if (moving) {
+                if (moving && onCollision) {
+                    onCollision();
                     const dvx = a.vx - b.vx, dvy = a.vy - b.vy, dot = dvx * nx + dvy * ny;
                     if (dot > 0) {
                         a.vx -= dot * nx; a.vy -= dot * ny; b.vx += dot * nx; b.vy += dot * ny;
@@ -576,6 +576,9 @@ export default function SpaceConvoy() {
             highestRound: 0, totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
         });
         api.trialNumber = 0; api.totalScore = 0;
+        sfx.startAmbient();
+        initRound(0);
+
         initRound(0);
     }, []);
 
@@ -589,6 +592,7 @@ export default function SpaceConvoy() {
             ps: spawn(cfg),
         });
         juice.current.countIn = { active: true, elapsed: 0, duration: 900, roundIdx: idx };
+        sfx.roundStart();
         api.trialNumber += 1;
         if (sessionId) {
             const res = await DivideAttentionTrialStart({ session_id: sessionId, trial_number: api.trialNumber, trial_type: "main", num_targets: cfg.targets, num_distractors: cfg.particles - cfg.targets, total_objects: cfg.particles });
@@ -618,7 +622,8 @@ export default function SpaceConvoy() {
 
         // Always play forward transition regardless of correctness (CHANGE 1)
         initTransitionForward(juice.current.transition = {}, cfg.difficultyTier ?? 1);
-
+        sfx.levelUp();        // ← ADD THIS
+        sfx.duckAmbient();
         if (api.trialId) {
             await DivideAttentionResponseBatch({ trial_id: api.trialId, responses });
             await DivideAttentionTrialComplete(api.trialId);
@@ -638,6 +643,8 @@ export default function SpaceConvoy() {
 
     const endSession = useCallback(async () => {
         G.current.sess = SESS.ENDED;
+        sfx.sessionComplete(); // ← ADD THIS
+        sfx.stopAmbient();
         if (sessionId) await DivideAttentionSessionComplete(sessionId, screeningSessionId);
         setTimeout(() => navigate("/space-convoy-complete", {
             state: { results: G.current.results, totalScore: apiState.current.totalScore }
@@ -676,14 +683,15 @@ export default function SpaceConvoy() {
                         g.revealProgress = Math.min(1, g.phaseElapsed / REVEAL_MS);
                         g.ps.forEach((p) => { if (!p.isTarget) p.opacity = g.revealProgress; });
                         applyVelocityRamp(g.ps, g.revealProgress);
-                        physics(g.ps, dt, true);
+                        physics(g.ps, dt, true, () => sfx.collision());
                         if (g.phaseElapsed >= REVEAL_MS) { g.ph = PHASE.START; g.phaseElapsed = 0; g.ps.forEach((p) => { p.opacity = 1; }); }
                         break;
                     case PHASE.START:
-                        g.phaseElapsed += dt; physics(g.ps, dt, true);
+                        g.phaseElapsed += dt; physics(g.ps, dt, true, () => sfx.collision());
                         if (g.phaseElapsed >= cfg.time.game) {
                             g.ph = PHASE.FREEZE; g.phaseElapsed = 0;
                             g.freezeStartTime = performance.now();
+                            sfx.freeze();
                             g.ps.forEach((p) => { p.vx = 0; p.vy = 0; p.trail = []; });
                         }
                         break;
@@ -790,6 +798,7 @@ export default function SpaceConvoy() {
     }, []);
 
     const handleTap = useCallback((cx, cy) => {
+        sfx.unlock();
         const g = G.current;
         const cfg = ROUNDS_ARR[g.ri];
         if (g.ph !== PHASE.FREEZE || g.submitted) return;
@@ -797,6 +806,7 @@ export default function SpaceConvoy() {
 
         // CHANGE 2: submit button tap
         if (isSubmitTap(x, y)) {
+            sfx.submitTap();
             evaluateRound();
             return;
         }
@@ -807,6 +817,20 @@ export default function SpaceConvoy() {
             if (!p.selected && d2d({ x, y }, p) <= p.radius + 8) {
                 p.selected = true; p.tapX = Math.round(x); p.tapY = Math.round(y);
                 p.responseTimeMs = Math.round(responseTimeMs); p.hitAnimStart = performance.now(); p.hitAnim = 0;
+                sfx.particleTap();
+                if (p.isTarget) {
+                    // sfx.correctHit();
+                    const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
+                    if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
+                    const tc = tierColour(cfg.difficultyTier ?? 1);
+                    spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                    // sfx.burst();
+                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                } else {
+                    sfx.falseAlarm();
+                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);
+                }
+
                 break;
             }
         }
@@ -816,7 +840,14 @@ export default function SpaceConvoy() {
         const g = G.current;
         if (g.ph !== PHASE.FREEZE) return;
         const { x, y } = toCanvasXY(cx, cy);
-        g.ps.forEach((p) => { p.hovered = d2d({ x, y }, p) <= p.radius + 8; });
+        let didHover = false;
+        g.ps.forEach((p) => {
+            const wasHovered = p.hovered;
+            p.hovered = d2d({ x, y }, p) <= p.radius + 8;
+            if (p.hovered && !wasHovered) didHover = true; // only on enter
+        });
+        if (didHover) sfx.hover(); // ← very quiet — disable if annoying
+
     }, [toCanvasXY]);
 
     return (
