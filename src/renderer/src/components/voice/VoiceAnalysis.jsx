@@ -344,19 +344,20 @@ const IMAGES = [
 
 // ─── Drum constants ───────────────────────────────────────────────────────────
 const ITEM_HEIGHT = 400;
-const DRAG_DAMPING = 0.6;
 const AUTO_SCROLL_MS = 2200;
 const AUTO_SCROLL_RESUME = 1800;
-
+const SCROLL_SENSITIVITY = 2.2;
+const SNAP_DISTANCE = 120;
 function drumTransform(offset) {
+  const R = 960;
+  const theta = 0.42;
   const dist = Math.abs(offset);
-
   return {
-    angle: offset * 6, // very subtle tilt
-    ty: offset * 260,  // natural vertical spacing
-    tz: -dist * 80,    // tiny depth only
-    opacity: Math.max(0.35, 1 - dist * 0.18),
-    scale: Math.max(0.9, 1 - dist * 0.04),
+    angle: offset * theta * (180 / Math.PI),
+    ty: Math.sin(offset * theta) * R,
+    tz: (Math.cos(offset * theta) - 1) * R,
+    opacity: Math.max(0, 1 - dist * 0.22),
+    scale: Math.max(0.72, 1 - dist * 0.12),
   };
 }
 
@@ -425,24 +426,6 @@ export default function VoiceAnalysis() {
     return newIndex;
   }, []);
 
-  // ── Momentum ─────────────────────────────────────────────────────────────
-  const startMomentum = useCallback((velocity, currentDragOffset, currentIndex) => {
-    cancelAnimationFrame(momentumRAF.current);
-    let vel = velocity;
-    let off = currentDragOffset;
-    const tick = () => {
-      vel *= 0.86;
-      off += vel;
-      const maxOff = currentIndex * ITEM_HEIGHT;
-      const minOff = -(IMAGES.length - 1 - currentIndex) * ITEM_HEIGHT;
-      off = Math.max(minOff, Math.min(maxOff, off));
-      setDragOffset(off);
-      if (Math.abs(vel) > 1) momentumRAF.current = requestAnimationFrame(tick);
-      else snapToNearest(off, currentIndex);
-    };
-    momentumRAF.current = requestAnimationFrame(tick);
-  }, [snapToNearest]);
-
   // ── Auto-scroll ──────────────────────────────────────────────────────────
   const scheduleAutoScroll = useCallback(() => {
     clearInterval(autoScrollRef.current);
@@ -467,36 +450,70 @@ export default function VoiceAnalysis() {
   }, [phase, scheduleAutoScroll]);
 
   // ── Pointer events (drum wheel) ──────────────────────────────────────────
-  const onPointerDown = (e) => {
-    userTouching.current = true;
-    clearInterval(autoScrollRef.current);
-    clearTimeout(resumeTimer.current);
-    cancelAnimationFrame(momentumRAF.current);
-    dragStartY.current = e.clientY;
-    dragStartOff.current = dragOffset;
-    lastY.current = e.clientY;
-    velocityRef.current = 0;
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onPointerMove = (e) => {
-    if (dragStartY.current === null) return;
-    const dy = (e.clientY - dragStartY.current) * DRAG_DAMPING;
-    velocityRef.current = e.clientY - (lastY.current ?? e.clientY);
-    lastY.current = e.clientY;
-    const maxOff = selectedIndex * ITEM_HEIGHT;
-    const minOff = -(IMAGES.length - 1 - selectedIndex) * ITEM_HEIGHT;
-    setDragOffset(Math.max(minOff, Math.min(maxOff, dragStartOff.current + dy)));
-  };
-  const onPointerUp = () => {
-    if (dragStartY.current === null) return;
-    dragStartY.current = null;
-    userTouching.current = false;
-    const vel = velocityRef.current * DRAG_DAMPING;
-    if (Math.abs(vel) > 3) startMomentum(vel, dragOffset, selectedIndex);
-    else snapToNearest(dragOffset, selectedIndex);
-    // resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
-  };
+const dragCurrent = useRef(0);
 
+const onPointerDown = (e) => {
+  userTouching.current = true;
+
+  clearInterval(autoScrollRef.current);
+
+  dragStartY.current = e.clientY;
+  dragCurrent.current = 0;
+
+  e.currentTarget.setPointerCapture(e.pointerId);
+};
+
+const onPointerMove = (e) => {
+  if (dragStartY.current === null) return;
+
+  const delta =
+    (dragStartY.current - e.clientY) *
+    SCROLL_SENSITIVITY;
+
+  dragCurrent.current = delta;
+
+  // Smooth animation
+  requestAnimationFrame(() => {
+    setDragOffset(delta);
+  });
+};
+
+const onPointerUp = () => {
+  if (dragStartY.current === null) return;
+
+  const delta = dragCurrent.current;
+
+  let step = 0;
+
+  if (delta > SNAP_DISTANCE) {
+    step = 1;
+  } else if (delta < -SNAP_DISTANCE) {
+    step = -1;
+  }
+
+  const next = Math.max(
+    0,
+    Math.min(
+      IMAGES.length - 1,
+      selectedIndex + step
+    )
+  );
+
+  setIsSnapping(true);
+
+  setSelectedIndex(next);
+
+  requestAnimationFrame(() => {
+    setDragOffset(0);
+  });
+
+  setTimeout(() => {
+    setIsSnapping(false);
+  }, 180);
+
+  dragCurrent.current = 0;
+  dragStartY.current = null;
+};
   // ── Dot nav ──────────────────────────────────────────────────────────────
   const goToIndex = (i) => {
     clearInterval(autoScrollRef.current);
@@ -688,7 +705,7 @@ export default function VoiceAnalysis() {
   }, [isRecording]);
 
 
-  const effectiveSlotOffset = (i) => i - selectedIndex - dragOffset / ITEM_HEIGHT;
+  const effectiveSlotOffset = (i) => i - selectedIndex + dragOffset / ITEM_HEIGHT;
 
   // ─────────────────────────────────────────────────────────────────────────
   // PROCESSING phase — simple fullscreen spinner while API runs
@@ -819,7 +836,9 @@ export default function VoiceAnalysis() {
           {/* Drum track */}
           <div
             className="relative w-full h-full"
-            style={{ transformStyle: "preserve-3d" }}
+            style={{ transformStyle: "preserve-3d",   touchAction: "none",
+    userSelect: "none", willChange: "transform",
+  backfaceVisibility: "hidden" }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -842,7 +861,7 @@ export default function VoiceAnalysis() {
                     transform: `translate3d(0, ${ty}px, ${tz}px) rotateX(${-angle}deg) scale(${scale})`,
                     opacity,
                     transition: isSnapping
-                      ? "transform 0.32s cubic-bezier(0.23,1,0.32,1), opacity 0.32s ease"
+                      ? "transform 180ms ease-out, opacity 180ms ease-out, opacity 0.32s ease"
                       : "none",
                     zIndex: Math.round((1 - Math.abs(off)) * 10),
                     cursor: isCentered ? "pointer" : "grab",

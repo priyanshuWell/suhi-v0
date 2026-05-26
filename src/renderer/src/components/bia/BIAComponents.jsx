@@ -207,12 +207,10 @@ const BiaMetricCard = ({ metric, value, isSettled, index, isInstant }) => {
 export const BIAComponent = ({
   screenConfig,
   total = 28,
-  percent = 50,
-  attemptCount = 0,
   isComplete = false,
   onVideoEnd,
-  heightValue = "132 cm",
-  weightValue = "30 kg",
+  heightValue ,
+  weightValue,
   onNextClick,
   onImNextClick,
   arms50k,
@@ -222,7 +220,7 @@ export const BIAComponent = ({
   const navigate = useNavigate()
   const { screenType } = useParams()
   const gender = user?.gender?.toLowerCase() === "female" ? "female" : "male"
-  console.log("gender", gender)
+  console.log("gender bia component", gender)
   const currentScreen = screenConfig[screenType]
   console.log("currentScreen", currentScreen)
   const title = currentScreen?.title
@@ -230,6 +228,7 @@ export const BIAComponent = ({
   const videoSrc = currentScreen?.video?.[gender]
   console.log("videoSrc", videoSrc)
   /* existing progress state */
+  console.log("BIAComponent render", { screenType, videoSrc}, weightValue, heightValue)
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = useRef(null)
@@ -362,7 +361,7 @@ export const BIAComponent = ({
 
   const biaMetrics = React.useMemo(
     () => buildBiaMetrics(arms50k),
-    [arms50k]
+    [arms50k,weightValue, heightValue]
   )
   /* ──────────────── random-number scramble ──────────────── */
   const startScramble = () => {
@@ -395,22 +394,22 @@ export const BIAComponent = ({
 
         next[key] = rand + unit
       })
-      //console.log(next)
-      setBiaValues(next)
+         setBiaValues(next)
     }, 80)
   }
 
-  const settleValues = () => {
-    if (biaIntervalRef.current) {
-      clearInterval(biaIntervalRef.current)
-      biaIntervalRef.current = null
-    }
-    const final = {}
-    biaMetrics.forEach(({ key, final: v }) => { final[key] = v })
-    setBiaValues(final)
-    setIsSettled(true)
-  }
+const settleValues = React.useCallback(() => {
+  clearInterval(biaIntervalRef.current)
+  biaIntervalRef.current = null
 
+  setBiaValues(
+    Object.fromEntries(
+      biaMetrics.map(m => [m.key, m.final])
+    )
+  )
+
+  setIsSettled(true)
+}, [biaMetrics])
   /* start scramble when entering im screen */
   useEffect(() => {
     if (screenType === "im") {
@@ -551,7 +550,19 @@ export const BIAComponent = ({
             />
 
             {/* ── floating metric cards (im screen only) ── */}
-            {["im", "imcomplete"].includes(screenType) &&
+            {screenType === "im" &&
+              biaMetrics.map((metric, i) => (
+                <BiaMetricCard
+                  key={metric.key}
+                  metric={metric}
+                  value={biaValues[metric.key]}
+                  isSettled={isSettled}
+                  index={i}
+                  isInstant={metric.isInstant}
+                />
+              ))}
+
+               {screenType === "imcomplete" && 
               biaMetrics.map((metric, i) => (
                 <BiaMetricCard
                   key={metric.key}

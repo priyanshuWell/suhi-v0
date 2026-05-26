@@ -49,7 +49,7 @@ const HeightWeightDisplay = ({
 
     return (
         <>
-            <div className="fixed overflow-hidden bottom-60 left-7 z-40 flex items-center gap-10 font-anta">
+            <div className="fixed overflow-hidden bottom-60 left-20 z-40 flex items-center gap-10 font-anta">
 
                 {/* Height Card */}
                 <div
