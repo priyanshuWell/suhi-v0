@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+biaimport { useEffect, useRef, useState } from "react"
 import textframe from "../../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
 

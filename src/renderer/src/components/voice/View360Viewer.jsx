@@ -1,7 +1,10 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { PanoViewer } from "@egjs/react-view360";
 import Image from "../../assets/voice/nature_360.png";
-import { useLocation } from "react-router";
+import voiceComplete from "../../assets/voice/voiceComplete.png";
+import BlueGradientButton from "../ui/BlueGradientButton";
+import { useNavigate } from "react-router";
+
 
 /**
  * View360Viewer
@@ -41,6 +44,7 @@ export default function View360Viewer({
     timerSeconds = 30,
     onTimerEnd,
     onFirstInteract,
+    isComplete
 
 }) {
     const viewerRef = useRef(null);
@@ -55,10 +59,10 @@ export default function View360Viewer({
     const [hud, setHud] = useState({ yaw: 0, pitch: 0, fov: 75 });
     const [secondsLeft, setSecondsLeft] = useState(timerSeconds);
     const [hasInteracted, setHasInteracted] = useState(false);
-
     const timerFiredRef = useRef(false);
     const interactFiredRef = useRef(false);
     const timerIntervalRef = useRef(null);
+    const navigate = useNavigate();
 
     // ── Reset on src / duration change ───────────────────────────────────
     useEffect(() => {
@@ -171,6 +175,7 @@ export default function View360Viewer({
         viewerRef.current?.lookAt({ yaw: 0, pitch: 0, fov: 75 }, 1000);
     }, []);
 
+
     // ── Timer arc math ────────────────────────────────────────────────────
     const RING_CX = 201.533;
     const RING_CY = 161.266;
@@ -250,6 +255,23 @@ export default function View360Viewer({
                     <p style={{ margin: "12px 0 0", fontSize: "13px", color: "#aaa" }}>
                         Loading panorama…
                     </p>
+                </div>
+            )}
+
+            {isComplete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+                    <div className="relative  flex justify-center">
+                        <img
+                            src={voiceComplete}
+                            alt="voice-complete"
+                            className="w-full h-auto"
+                        />
+                        <div className="absolute bottom-[20%]">
+                            <BlueGradientButton onClick={onTimerEnd}>
+                                Next
+                            </BlueGradientButton>
+                        </div>
+                    </div>
                 </div>
             )}
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import HeightIcon from '../../assets/bia/scale.svg'
 import WeightIcon from '../../assets/bia/bag.svg'
+import { useNavigate } from "react-router";
 
 const HeightWeightDisplay = ({
     heightCm = null,     // numeric or null
@@ -13,7 +14,7 @@ const HeightWeightDisplay = ({
     const [displayHeight, setDisplayHeight] = useState("---");
     const [displayWeight, setDisplayWeight] = useState("---");
     const intervalRef = useRef(null);
-
+    const navigate = useNavigate();
     useEffect(() => {
         // Always clear any running interval first
         if (intervalRef.current) {
@@ -108,7 +109,7 @@ const HeightWeightDisplay = ({
 
             {!isHideNext && (
                 <div className="absolute bottom-20 left-[31%]">
-                    <BlueGradientButton onClick={onNextClick}>
+                    <BlueGradientButton onClick={() => navigate('/bia/im')}>
                         Next
                     </BlueGradientButton>
                 </div>

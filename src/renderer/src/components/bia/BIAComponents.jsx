@@ -17,89 +17,47 @@ import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
 import biaMuscleMassIcon from "../../assets/icons/bia-muscle-mass.svg"
 import HeightWeightComplete from "./HeightWeightComplete"
 
-/* ─────────────────────────────────────────────────────────────
-   BIA metric config  –  swap final values with real API data
-───────────────────────────────────────────────────────────── */
-const BIA_METRICS = [
-  {
-    key: "hydration",
-    label: "Hydration",
-    icon: biaHydrationIcon,
-    final: "63.4%",
-    min: 30,
-    max: 80,
-    unit: "%",
-    dec: 1,
-    position: "left-top",   // upper-left of video
+const ARC_POSITIONS = {
+  "arc-left-top": {
+    left: "1%",
+    top: "18%",
   },
-  {
-    key: "skeletal",
-    label: "Skeletal mass",
-    icon: biaSkeletonIcon,
-    final: "12.8 kg",
-    min: 8,
-    max: 20,
-    unit: " kg",
-    dec: 1,
-    position: "right-top",  // upper-right
-  },
-  {
-    key: "fat",
-    label: "Fat mass",
-    icon: biaFatMassIcon,
-    final: "18.2%",
-    min: 5,
-    max: 40,
-    unit: "%",
-    dec: 1,
-    position: "left-bottom", // lower-left
-  },
-  {
-    key: "muscle",
-    label: "Muscle mass",
-    icon: biaMuscleMassIcon,
-    final: "42.6 kg",
-    min: 20,
-    max: 60,
-    unit: " kg",
-    dec: 1,
-    position: "right-bottom", // lower-right
-  },
-  {
-    key: "muscle",
-    label: "Muscle mass",
-    icon: biaMuscleMassIcon,
-    final: "42.6 kg",
-    min: 20,
-    max: 60,
-    unit: " kg",
-    dec: 1,
-    position: "right-bottom", // lower-right
-  },
-  {
-    key: "muscle",
-    label: "Muscle mass",
-    icon: biaMuscleMassIcon,
-    final: "42.6 kg",
-    min: 20,
-    max: 60,
-    unit: " kg",
-    dec: 1,
-    position: "right-bottom", // lower-right
-  },
-  {
-    key: "muscle",
-    label: "Muscle mass",
-    icon: biaMuscleMassIcon,
-    final: "42.6 kg",
-    min: 20,
-    max: 60,
-    unit: " kg",
-    dec: 1,
-    position: "right-bottom", // lower-right
-  },
-]
 
+  "arc-left-middle": {
+    left: "0%",
+    top: "38%",
+  },
+
+  "arc-left-bottom": {
+    left: "12%",
+    top: "60%",
+  },
+
+  "arc-right-top": {
+    left: "76%",
+    top: "18%",
+  },
+
+  "arc-right-middle": {
+    left: "80%",
+    top: "43%",
+  },
+
+  "arc-right-bottom": {
+    left: "70%",
+    top: "60%",
+  },
+
+  "arc-center-top": {
+    left: "39%",
+    top: "0%",
+  },
+
+  "arc-center-bottom": {
+    left: "35%",
+    top: "78%",
+  },
+}
 /* ─────────────────────────────────────────────────────────────
    Inline keyframes injected once (avoids Tailwind limitations)
 ───────────────────────────────────────────────────────────── */
@@ -156,28 +114,12 @@ const FLOAT_DURATIONS = ["3.2s", "2.9s", "3.5s", "3.1s", "3.2s", "2.9s", "3.5s",
 /* ─────────────────────────────────────────────────────────────
    Card position styles (absolute, around the video)
 ───────────────────────────────────────────────────────────── */
-const cardPositionStyle = (position) => {
-  const shared = {
-    position: "absolute",
-    zIndex: 40,
-  }
-  switch (position) {
-    case "left-top": return { ...shared, left: "-4px", top: "15%" }
-    case "right-top": return { ...shared, right: "-4px", top: "18%" }
-    case "left-bottom": return { ...shared, left: "2px", bottom: "37%" }
-    case "right-bottom": return { ...shared, right: "-20px", bottom: "45%" }
-    case "bottom-left": return { ...shared, right: "0px", bottom: "45%" }
-    case "bottom-right": return { ...shared, right: "0px", bottom: "45%" }
-    case "top-right": return { ...shared, right: "-4px", bottom: "45%" }
-    case "top-left": return { ...shared, left: "20px", bottom: "45%" }
-    case "top-left-2": return { ...shared, left: "30px", top: "30%" }
-    case "top-right-2": return { ...shared, right: "30px", top: "30%" }
-    case "bottom-left-2": return { ...shared, left: "30px", bottom: "30%" }
-    case "bottom-right-2": return { ...shared, right: "30px", bottom: "30%" }
-    default: return shared
-  }
-}
-
+const cardPositionStyle = (position) => ({
+  position: "absolute",
+  zIndex: 40,
+  transform: "translate(-50%, -50%)",
+  ...ARC_POSITIONS[position],
+})
 /* ─────────────────────────────────────────────────────────────
    Single floating metric card
 ───────────────────────────────────────────────────────────── */
@@ -197,7 +139,8 @@ const BiaMetricCard = ({ metric, value, isSettled, index, isInstant }) => {
     alignItems: "center",
     gap: "10px",
     overflow: "hidden",
-    minWidth: "190px",
+    minWidth: "220px",
+    minHeight: "80px",
     backdropFilter: "blur(8px)",
     WebkitBackdropFilter: "blur(8px)",
     animation: `${FLOAT_ANIMATIONS[index]} ${FLOAT_DURATIONS[index]} ease-in-out infinite`,
@@ -220,7 +163,7 @@ const BiaMetricCard = ({ metric, value, isSettled, index, isInstant }) => {
   }
 
   const valueStyle = {
-    fontSize: "15px",
+    fontSize: "18px",
     color: isSettled ? "#7affb2" : "#9ad9ff",
     letterSpacing: "0.04em",
     fontVariantNumeric: "tabular-nums",
@@ -308,7 +251,7 @@ export const BIAComponent = ({
       max: 80,
       unit: "%",
       dec: 1,
-      position: "left-top",
+      position: "arc-left-top",
       isInstant: false,
     },
 
@@ -323,7 +266,7 @@ export const BIAComponent = ({
       max: 20,
       unit: " kg",
       dec: 1,
-      position: "right-top",
+      position: "arc-left-middle",
       isInstant: false,
     },
 
@@ -338,7 +281,7 @@ export const BIAComponent = ({
       max: 40,
       unit: "%",
       dec: 1,
-      position: "left-bottom",
+      position: "arc-left-bottom",
       isInstant: false,
     },
 
@@ -353,22 +296,22 @@ export const BIAComponent = ({
       max: 60,
       unit: " kg",
       dec: 1,
-      position: "right-bottom",
+      position: "arc-right-top",
       isInstant: false,
     },
 
     {
-      key: "metabolicAge",
-      label: "Metabolic Age",
+      key: "proteinMass",
+      label: "Protein Mass",
       icon: biaMuscleMassIcon,
-      final: arms50k?.metabolicAge != null
-        ? `${arms50k.metabolicAge} yrs`
+      final: arms50k?.proteinMassKg != null
+        ? `${arms50k.proteinMassKg} kg`
         : "--",
       min: 18,
       max: 70,
-      unit: " yrs",
-      dec: 0,
-      position: "top-left",
+      unit: "kg",
+      dec: 1,
+      position: "arc-right-middle",
       isInstant: false,
     },
 
@@ -383,7 +326,7 @@ export const BIAComponent = ({
       max: 30,
       unit: "",
       dec: 0,
-      position: "top-right-2",
+      position: "arc-right-bottom",
       isInstant: false,
     },
     {
@@ -397,7 +340,7 @@ export const BIAComponent = ({
       max: 30,
       unit: "kg",
       dec: 0,
-      position: "bottom-right-2",
+      position: "arc-center-top",
       isInstant: true,
     },
     {
@@ -411,7 +354,8 @@ export const BIAComponent = ({
       max: 30,
       unit: "cm",
       dec: 0,
-      position: "top-right-1",
+      position: "arc-center-bottom",
+
       isInstant: true,
     },
   ]
@@ -440,7 +384,7 @@ export const BIAComponent = ({
 
         // Already known metrics stay fixed
         if (isInstant) {
-          next[key] = 100
+          next[key] = final
           return
         }
 

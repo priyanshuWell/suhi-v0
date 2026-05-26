@@ -49,7 +49,7 @@ function App() {
     <Routes>
 
       {/* Routes WITHOUT the progress bar */}
-      {/* <Route path="/" element={<SplashScreen />} /> */}
+      <Route path="/" element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/voice' element={<VoiceAnalysis />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />

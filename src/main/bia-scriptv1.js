@@ -4349,7 +4349,7 @@ export async function case41_WeightMeasurement() {
         // ══════════════════════════════════════════════════════════
 
         const WEIGHT_ZERO_OFFSET = 0.0 // Set from case 15
-        const CALIBRATION_FACTOR =0.6011 // Set from case 15
+        const CALIBRATION_FACTOR =0.001856 // Set from case 15
         const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR
         const calibratedWeight = calibratedWeightCatty;
         // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;

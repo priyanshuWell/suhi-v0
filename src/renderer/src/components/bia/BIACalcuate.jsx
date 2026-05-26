@@ -42,12 +42,7 @@ export default function BIACalculate({ user, onComplete }) {
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
-    height: "-- cm", weight: "-- kg", arms50k: {
-      fatPercentage: "20",
-      waterPercentage: "55",
-      muscleMassKg: "30",
-      boneMassKg: "3",
-    }
+    height: "-- cm", weight: "-- kg", arms50k: {}
   });
   const [displayValues, setDisplayValues] = useState({
     height: null,
@@ -970,6 +965,8 @@ export default function BIACalculate({ user, onComplete }) {
           muscleMassKg: armBiaPayload.muscle_mass_kg ?? "5",
           boneMassKg: armBiaPayload.bone_mass_kg ?? "2.7",
           skeletalMuscleMassKg: armBiaPayload.skeletal_muscle_mass_kg ?? "10",
+          visceralFat: armBiaPayload.visceral_fat_level ?? "5",
+          proteinMassKg: armBiaPayload.protein_mass_kg ?? "2.7",
         };
 
         setMeasuredValues((prev) => ({
@@ -1186,8 +1183,8 @@ export default function BIACalculate({ user, onComplete }) {
         onVideoEnd={handleVideoEnd}
         heightValue={displayValues.height}
         weightValue={displayValues.weight}
-        onNextClick={handleWhNextClick}
-        onImNextClick={handleImNextClick}
+        // onNextClick={handleWhNextClick}
+        onextClick={handleImNextClick}
         arms50k={measuredValues.arms50k}
         user={storeUser}
       />

@@ -349,18 +349,16 @@ const AUTO_SCROLL_MS = 2200;
 const AUTO_SCROLL_RESUME = 1800;
 
 function drumTransform(offset) {
-  const R = 960;
-  const theta = 0.42;
   const dist = Math.abs(offset);
+
   return {
-    angle: offset * theta * (180 / Math.PI),
-    ty: Math.sin(offset * theta) * R,
-    tz: (Math.cos(offset * theta) - 1) * R,
-    opacity: Math.max(0, 1 - dist * 0.22),
-    scale: Math.max(0.72, 1 - dist * 0.12),
+    angle: offset * 6, // very subtle tilt
+    ty: offset * 260,  // natural vertical spacing
+    tz: -dist * 80,    // tiny depth only
+    opacity: Math.max(0.35, 1 - dist * 0.18),
+    scale: Math.max(0.9, 1 - dist * 0.04),
   };
 }
-
 
 export default function VoiceAnalysis() {
   // Redux state
@@ -394,7 +392,7 @@ export default function VoiceAnalysis() {
   const dataArrayRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioContextRef = useRef(null);
-
+  const [isComplete, setIsComplete] = useState(false);
   const isRecording = status === "recording";
 
 
@@ -433,7 +431,7 @@ export default function VoiceAnalysis() {
     let vel = velocity;
     let off = currentDragOffset;
     const tick = () => {
-      vel *= 0.92;
+      vel *= 0.86;
       off += vel;
       const maxOff = currentIndex * ITEM_HEIGHT;
       const minOff = -(IMAGES.length - 1 - currentIndex) * ITEM_HEIGHT;
@@ -572,7 +570,7 @@ export default function VoiceAnalysis() {
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === "inactive") {
       // Nothing recorded yet — just navigate forward
-      navigate("/space-convoy-main");
+      // navigate("/space-convoy-main");
       return;
     }
 
@@ -668,8 +666,16 @@ export default function VoiceAnalysis() {
 
   // ── Timer hits 0 → stop recording and submit ─────────────────────────────
   const onTimerEnd = useCallback(() => {
+    setPhase("processing");
+
+    // move immediately after small UX delay
+    setTimeout(() => {
+      setIsComplete(true);
+    }, 800);
+
+    // continue upload in background
     stopRecordingAndSubmit();
-  }, [stopRecordingAndSubmit]);
+  }, [stopRecordingAndSubmit, navigate]);
 
 
   // ── Waveform animation only active when real mic data isn't flowing ───────
@@ -735,6 +741,7 @@ export default function VoiceAnalysis() {
           onTimerEnd={onTimerEnd}
           onFirstInteract={onFirstInteract}
           voiceBars={voiceBars}
+          isComplete={isComplete}
         />
       </div>
     );
@@ -832,7 +839,7 @@ export default function VoiceAnalysis() {
                     height: ITEM_HEIGHT,
                     marginTop: -ITEM_HEIGHT / 2,
                     transformOrigin: "center center",
-                    transform: `translateY(${ty}px) translateZ(${tz}px) rotateX(${-angle}deg) scale(${scale})`,
+                    transform: `translate3d(0, ${ty}px, ${tz}px) rotateX(${-angle}deg) scale(${scale})`,
                     opacity,
                     transition: isSnapping
                       ? "transform 0.32s cubic-bezier(0.23,1,0.32,1), opacity 0.32s ease"
