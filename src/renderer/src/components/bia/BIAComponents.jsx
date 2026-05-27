@@ -235,6 +235,8 @@ export const BIAComponent = ({
   const [biaValues, setBiaValues] = useState({})   // key → display string
   const [isSettled, setIsSettled] = useState(false) // true when calc done
   const biaIntervalRef = useRef(null)
+  // Keep a ref to the latest biaMetrics so closures always read fresh data
+  const biaMetricsRef = useRef([])
   const buildBiaMetrics = (arms50k) => [
     {
       key: "hydration",
@@ -357,6 +359,9 @@ export const BIAComponent = ({
   ]
 
   const biaMetrics = buildBiaMetrics(arms50k)
+  // Keep the ref in sync on every render so closures always read fresh data
+  biaMetricsRef.current = biaMetrics
+
   /* ──────────────── random-number scramble ──────────────── */
   const startScramble = () => {
     if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
@@ -364,7 +369,7 @@ export const BIAComponent = ({
 
     biaIntervalRef.current = setInterval(() => {
       const next = {}
-      biaMetrics.forEach((metric) => {
+      biaMetricsRef.current.forEach((metric) => {
         const {
           key,
           min,
@@ -398,17 +403,17 @@ export const BIAComponent = ({
       biaIntervalRef.current = null
     }
     const final = {}
-    biaMetrics.forEach(({ key, final: v }) => { final[key] = v })
+    // Always read from the ref so we get the latest arms50k data
+    biaMetricsRef.current.forEach(({ key, final: v }) => { final[key] = v })
     setBiaValues(final)
     setIsSettled(true)
   }
+
   /* start scramble when entering im screen */
   useEffect(() => {
     if (screenType === "im") {
-      // Real values aren't here yet — scramble
       startScramble()
     } else if (screenType === "imcomplete") {
-      // arms50k is already populated before navigate() was called
       settleValues()
     } else {
       if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
@@ -419,6 +424,15 @@ export const BIAComponent = ({
       if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
     }
   }, [screenType])
+
+  /* Re-settle whenever arms50k data arrives/updates on the imcomplete screen.
+     This handles the race where navigate() fires before setMeasuredValues
+     has propagated the new arms50k prop down to this component. */
+  useEffect(() => {
+    if (screenType === "imcomplete") {
+      settleValues()
+    }
+  }, [arms50k])
 
 
 
