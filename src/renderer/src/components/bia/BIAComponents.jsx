@@ -209,7 +209,7 @@ export const BIAComponent = ({
   total = 28,
   isComplete = false,
   onVideoEnd,
-  heightValue ,
+  heightValue,
   weightValue,
   onNextClick,
   onImNextClick,
@@ -222,13 +222,10 @@ export const BIAComponent = ({
   const gender = user?.gender?.toLowerCase() === "female" ? "female" : "male"
   console.log("gender bia component", gender)
   const currentScreen = screenConfig[screenType]
-  console.log("currentScreen", currentScreen)
   const title = currentScreen?.title
   const description = currentScreen?.description
   const videoSrc = currentScreen?.video?.[gender]
-  console.log("videoSrc", videoSrc)
   /* existing progress state */
-  console.log("BIAComponent render", { screenType, videoSrc}, weightValue, heightValue)
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = useRef(null)
@@ -359,10 +356,7 @@ export const BIAComponent = ({
     },
   ]
 
-  const biaMetrics = React.useMemo(
-    () => buildBiaMetrics(arms50k),
-    [arms50k,weightValue, heightValue]
-  )
+  const biaMetrics = buildBiaMetrics(arms50k)
   /* ──────────────── random-number scramble ──────────────── */
   const startScramble = () => {
     if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
@@ -394,22 +388,20 @@ export const BIAComponent = ({
 
         next[key] = rand + unit
       })
-         setBiaValues(next)
+      setBiaValues(next)
     }, 80)
   }
 
-const settleValues = React.useCallback(() => {
-  clearInterval(biaIntervalRef.current)
-  biaIntervalRef.current = null
-
-  setBiaValues(
-    Object.fromEntries(
-      biaMetrics.map(m => [m.key, m.final])
-    )
-  )
-
-  setIsSettled(true)
-}, [biaMetrics])
+  const settleValues = () => {
+    if (biaIntervalRef.current) {
+      clearInterval(biaIntervalRef.current)
+      biaIntervalRef.current = null
+    }
+    const final = {}
+    biaMetrics.forEach(({ key, final: v }) => { final[key] = v })
+    setBiaValues(final)
+    setIsSettled(true)
+  }
   /* start scramble when entering im screen */
   useEffect(() => {
     if (screenType === "im") {
@@ -562,7 +554,7 @@ const settleValues = React.useCallback(() => {
                 />
               ))}
 
-               {screenType === "imcomplete" && 
+            {screenType === "imcomplete" &&
               biaMetrics.map((metric, i) => (
                 <BiaMetricCard
                   key={metric.key}
