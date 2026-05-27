@@ -46,7 +46,7 @@ export const ColorBlindPlate = () => {
 
     // ── Navigate to quiz, passing sessionId via router state ─────────────────
     const onNext = () => {
-        if (!sessionId) return; // still loading or errored
+        // if (!sessionId) return; // still loading or errored
         navigate("/colorblindness/quiz", { state: { sessionId } });
     };
 
@@ -107,7 +107,7 @@ export const ColorBlindPlate = () => {
                 </div>
 
                 {/* Next button — disabled while session is still being created */}
-                <BlueGradientButton onClick={onNext} disabled={loading || error}>
+                <BlueGradientButton onClick={onNext} >
                     {t("colorBlindness.next", "Next")}
                 </BlueGradientButton>
 

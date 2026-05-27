@@ -128,7 +128,7 @@ const ProgressBar = ({ current, total }) => {
         </div>
     );
 };
-const initialTimer = 8;
+const initialTimer = 1008;
 export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
     const location = useLocation();
@@ -181,7 +181,7 @@ export const ColorBlindQuiz = () => {
             // Show right/wrong feedback for 1.5s
             setSelectedAnswer(selectedAnswer);
             setShowFeedback(true);
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+            await new Promise((resolve) => setTimeout(resolve, 900500));
 
             // Reset feedback UI immediately so next plate starts clean
             setShowFeedback(false);
