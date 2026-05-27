@@ -166,7 +166,6 @@ export default function VoiceAnalysis() {
 
       dragCurrent.current += velocityRef.current;
 
-      // Clamp so it can't fly past first/last item by more than one card
       const maxOffset = (IMAGES.length - 1 - selectedIndexRef.current) * ITEM_HEIGHT;
       const minOffset = -selectedIndexRef.current * ITEM_HEIGHT;
       dragCurrent.current = Math.max(minOffset, Math.min(maxOffset, dragCurrent.current));
@@ -368,8 +367,6 @@ export default function VoiceAnalysis() {
         console.error("[Voice] API error:", err);
         setStatus("error");
       }
-
-      navigate("/space-convoy-main");
     };
 
     recorder.stop();
@@ -402,10 +399,13 @@ export default function VoiceAnalysis() {
   }, [startRecording]);
 
   const onTimerEnd = useCallback(() => {
-    setPhase("processing");
-    setTimeout(() => setIsComplete(true), 800);
+    setIsComplete(true);
     stopRecordingAndSubmit();
   }, [stopRecordingAndSubmit]);
+
+  const onNext = useCallback(() => {
+    navigate("/space-convoy-main");
+  }, [navigate]);
 
   useEffect(() => {
     if (!isRecording) cancelAnimationFrame(animFrameRef.current);
@@ -460,6 +460,7 @@ export default function VoiceAnalysis() {
           onFirstInteract={onFirstInteract}
           voiceBars={voiceBars}
           isComplete={isComplete}
+          onNext={onNext}
         />
       </div>
     );

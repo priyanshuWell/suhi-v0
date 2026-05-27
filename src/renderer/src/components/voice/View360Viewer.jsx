@@ -5,34 +5,11 @@ import voiceComplete from "../../assets/voice/voiceComplete.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import { useNavigate } from "react-router";
 
-
-/**
- * View360Viewer
- *
- * Props
- * ─────
- * src             – panorama image URL
- * width           – CSS width  (default "100%")
- * height          – CSS height (default "100vh")
- * autoRotate      – slowly rotate the camera (default false)
- * showHUD         – show yaw/pitch/fov readout (default false)
- * timerSeconds    – total countdown duration in seconds (default 30)
- * onTimerEnd      – called once when the countdown reaches zero
- * onFirstInteract – called once on the user's first drag/touch
- */
-
 const BAR_WIDTH = 12.1111;
 const BAR_RADIUS = 6.05556;
-
-// 9 bars per side — indices 0-8 = left group, 9-17 = right group.
-// The wave is computed across ALL 18 so it flows left → timer → right.
 const BARS_PER_SIDE = 9;
 const TOTAL_BARS = BARS_PER_SIDE * 2;
-
-// x-positions within each side's SVG viewBox (0 0 255 60)
 const barXPositions = [0, 30.2773, 60.5547, 90.832, 121.109, 151.391, 181.668, 211.945, 242.223];
-
-// Per-bar amplitude scale so the waveform looks natural, not robotic
 const barScales = [0.3, 0.9, 0.25, 1.1, 0.6, 0.4, 0.7, 0.25, 0.9];
 
 export default function View360Viewer({
@@ -44,16 +21,14 @@ export default function View360Viewer({
     timerSeconds = 30,
     onTimerEnd,
     onFirstInteract,
-    isComplete
-
+    isComplete,
+    onNext,           // ← new: called when user clicks "Next" in the modal
 }) {
     const viewerRef = useRef(null);
     const rafRef = useRef(null);
     const wrapperRef = useRef(null);
 
-    // One flat array of 18 intensities — split into left[0..8] / right[9..17] when rendering
     const [voiceBars, setVoiceBars] = useState(Array(TOTAL_BARS).fill(0));
-
     const [isReady, setIsReady] = useState(false);
     const [isError, setIsError] = useState(false);
     const [hud, setHud] = useState({ yaw: 0, pitch: 0, fov: 75 });
@@ -93,20 +68,15 @@ export default function View360Viewer({
         return () => clearInterval(timerIntervalRef.current);
     }, [isReady, hasInteracted, onTimerEnd]);
 
-    // ── Continuous travelling wave — LEFT → RIGHT across all 18 bars ──────
-    //
-    //  • t   increases with time → wave moves left-to-right
-    //  • i   is the global bar index (0 = far-left, 17 = far-right)
-    //  • spacing 0.9 rad between bars gives ~4-5 visible crests at once
-    //
+    // ── Continuous travelling wave ────────────────────────────────────────
     useEffect(() => {
         let frame;
         const animate = () => {
-            const t = Date.now() * 0.008;          // speed knob
+            const t = Date.now() * 0.008;
             setVoiceBars(
                 Array.from({ length: TOTAL_BARS }, (_, i) => {
-                    const phase = t - i * 0.9;     // crest travels left → right
-                    const wave = Math.pow((Math.sin(phase) + 1) / 2, 2.5); // sharpen
+                    const phase = t - i * 0.9;
+                    const wave = Math.pow((Math.sin(phase) + 1) / 2, 2.5);
                     return wave;
                 })
             );
@@ -116,7 +86,7 @@ export default function View360Viewer({
         return () => cancelAnimationFrame(frame);
     }, []);
 
-    // ── First-interaction detection (capture phase, before PanoViewer) ────
+    // ── First-interaction detection ───────────────────────────────────────
     const handleInteract = useCallback(() => {
         if (interactFiredRef.current) return;
         interactFiredRef.current = true;
@@ -175,7 +145,6 @@ export default function View360Viewer({
         viewerRef.current?.lookAt({ yaw: 0, pitch: 0, fov: 75 }, 1000);
     }, []);
 
-
     // ── Timer arc math ────────────────────────────────────────────────────
     const RING_CX = 201.533;
     const RING_CY = 161.266;
@@ -188,11 +157,9 @@ export default function View360Viewer({
     const secs = secondsLeft % 60;
     const mmss = `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
     const isLow = hasInteracted && progress <= 0.2;
+    const timerColor = "#03275A";
 
-    const timerColor = "#03275A"
-
-    // ── Bar renderer (shared by left & right) ─────────────────────────────
-    // `globalOffset` = 0 for left group, BARS_PER_SIDE for right group
+    // ── Bar renderer ─────────────────────────────────────────────────────
     const renderBars = (globalOffset) =>
         barXPositions.map((x, localIdx) => {
             const globalIdx = globalOffset + localIdx;
@@ -203,10 +170,8 @@ export default function View360Viewer({
             return (
                 <rect
                     key={localIdx}
-                    x={x}
-                    y={barY}
-                    width={BAR_WIDTH}
-                    height={barH}
+                    x={x} y={barY}
+                    width={BAR_WIDTH} height={barH}
                     rx={BAR_RADIUS / 2}
                     fill="#fcf9f9"
                     style={{ transition: "height 0.05s linear, y 0.05s linear" }}
@@ -215,8 +180,7 @@ export default function View360Viewer({
         });
 
     const barSvgProps = {
-        width: "260",
-        height: "60",
+        width: "260", height: "60",
         viewBox: "0 0 255 60",
         fill: "none",
         xmlns: "http://www.w3.org/2000/svg",
@@ -236,7 +200,7 @@ export default function View360Viewer({
                 overflow: "hidden",
             }}
         >
-            {/* ── PanoViewer ─────────────────────────────────────────────── */}
+            {/* ── PanoViewer ───────────────────────────────────────────── */}
             <PanoViewer
                 ref={viewerRef}
                 image={src}
@@ -248,7 +212,7 @@ export default function View360Viewer({
                 style={{ width: "100%", height: "100%" }}
             />
 
-            {/* ── Loading overlay ─────────────────────────────────────────── */}
+            {/* ── Loading overlay ─────────────────────────────────────── */}
             {!isReady && !isError && (
                 <div style={styles.overlay}>
                     <div style={styles.spinner} />
@@ -258,16 +222,19 @@ export default function View360Viewer({
                 </div>
             )}
 
+            {/* ── Voice Complete modal ─────────────────────────────────── */}
+            {/*   Shown when timer ends. User must click Next to proceed.  */}
             {isComplete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-                    <div className="relative  flex justify-center">
+                    <div className="relative flex justify-center">
                         <img
                             src={voiceComplete}
                             alt="voice-complete"
                             className="w-full h-auto"
                         />
                         <div className="absolute bottom-[20%]">
-                            <BlueGradientButton onClick={onTimerEnd}>
+                            {/* ↓ onNext navigates — NOT onTimerEnd */}
+                            <BlueGradientButton onClick={onNext}>
                                 Next
                             </BlueGradientButton>
                         </div>
@@ -275,7 +242,7 @@ export default function View360Viewer({
                 </div>
             )}
 
-            {/* ── Error overlay ───────────────────────────────────────────── */}
+            {/* ── Error overlay ────────────────────────────────────────── */}
             {isError && (
                 <div style={styles.overlay}>
                     <span style={{ fontSize: "32px" }}>⚠️</span>
@@ -288,7 +255,7 @@ export default function View360Viewer({
                 </div>
             )}
 
-            {/* ── Drag-to-start nudge ─────────────────────────────────────── */}
+            {/* ── Drag-to-start nudge ──────────────────────────────────── */}
             {isReady && !hasInteracted && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
                     <span className="text-white font-black"
@@ -303,7 +270,7 @@ export default function View360Viewer({
                 </div>
             )}
 
-            {/* ── HUD ────────────────────────────────────────────────────── */}
+            {/* ── HUD ─────────────────────────────────────────────────── */}
             {showHUD && isReady && (
                 <div style={styles.hud}>
                     <HudItem label="YAW" value={`${hud.yaw}°`} />
@@ -314,7 +281,7 @@ export default function View360Viewer({
                 </div>
             )}
 
-            {/* ── Reset button ────────────────────────────────────────────── */}
+            {/* ── Reset button ─────────────────────────────────────────── */}
             {isReady && (
                 <button onClick={handleReset} style={styles.resetBtn}
                     title="Reset view" aria-label="Reset camera to default view">
@@ -327,18 +294,12 @@ export default function View360Viewer({
                 </button>
             )}
 
-            {/* ── Bottom HUD: [left bars] [timer] [right bars] ────────────── */}
-            {/*    All pointer-events:none so drags reach PanoViewer          */}
+            {/* ── Bottom HUD: [left bars] [timer] [right bars] ────────── */}
             <div style={styles.bottomHud}>
-
-                {/* LEFT bars — global indices 0-8 */}
                 <div style={styles.voiceBarWrapper}>
-                    <svg {...barSvgProps}>
-                        {renderBars(0)}
-                    </svg>
+                    <svg {...barSvgProps}>{renderBars(0)}</svg>
                 </div>
 
-                {/* Timer */}
                 <div style={styles.timerWrapper}>
                     <svg
                         width="250" height="250"
@@ -410,19 +371,14 @@ export default function View360Viewer({
                     </svg>
                 </div>
 
-                {/* RIGHT bars — global indices 9-17 (wave continues from left) */}
                 <div style={styles.voiceBarWrapper}>
-                    <svg {...barSvgProps}>
-                        {renderBars(BARS_PER_SIDE)}
-                    </svg>
+                    <svg {...barSvgProps}>{renderBars(BARS_PER_SIDE)}</svg>
                 </div>
-
             </div>
         </div>
     );
 }
 
-/* ── HUD item ────────────────────────────────────────────────────────────── */
 function HudItem({ label, value }) {
     return (
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
@@ -432,7 +388,6 @@ function HudItem({ label, value }) {
     );
 }
 
-/* ── Styles ──────────────────────────────────────────────────────────────── */
 const styles = {
     overlay: {
         position: "absolute", inset: 0,
@@ -447,25 +402,6 @@ const styles = {
         borderTopColor: "#fff",
         borderRadius: "50%",
         animation: "spin360 0.8s linear infinite",
-    },
-    nudge: {
-        position: "absolute",
-        top: "50%", left: "50%",
-        transform: "translate(-50%, -50%)",
-        display: "flex", alignItems: "center", gap: "10px",
-        background: "rgba(0,0,0,0.55)",
-        backdropFilter: "blur(8px)",
-        color: "rgba(154,217,255,0.9)",
-        fontSize: "14px",
-        fontFamily: "'Exo 2', sans-serif",
-        letterSpacing: "0.15em",
-        padding: "12px 24px",
-        borderRadius: "40px",
-        border: "1px solid rgba(154,217,255,0.25)",
-        pointerEvents: "none", zIndex: 15,
-        textTransform: "uppercase",
-        whiteSpace: "nowrap",
-        animation: "nudgePulse 2.2s ease-in-out infinite",
     },
     hud: {
         position: "absolute", bottom: "16px", left: "16px",
@@ -491,7 +427,6 @@ const styles = {
         display: "flex", alignItems: "center", justifyContent: "center",
         gap: "24px",
         zIndex: 22,
-        pointerEvents: "none",   /* entire row is non-interactive */
         touchAction: "none",
     },
     timerWrapper: {
@@ -504,7 +439,6 @@ const styles = {
     },
 };
 
-/* ── Global keyframes ────────────────────────────────────────────────────── */
 if (typeof document !== "undefined" && !document.getElementById("v360-kf")) {
     const s = document.createElement("style");
     s.id = "v360-kf";

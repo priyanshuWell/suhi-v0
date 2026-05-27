@@ -69,7 +69,7 @@ function App() {
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
 
-        <Route path="/" element={<SpaceConvoyMain />} />
+        <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
       </Route>
 
