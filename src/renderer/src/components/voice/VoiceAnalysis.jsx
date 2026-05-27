@@ -1,312 +1,3 @@
-// import React, { useEffect, useState } from "react"
-// import bg1 from "../../assets/lightbg.png"
-
-// import { useLocation, useNavigate } from "react-router"
-// import { useTranslation } from "react-i18next"
-// import { useSelector } from "react-redux"
-// import { getKioskId } from "../../utils/config"
-// import { sendVoiceToBackend, runVoice } from "../../utils/api"
-// import audioBufferToWav from "audiobuffer-to-wav"
-// import VoiceTextScreen from "./VoiceTextScreen"
-// import VoiceImageScreen from "./VoiceImageScreen"
-// import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
-
-// const VoiceCapture = () => {
-//   const navigate = useNavigate()
-//   const location = useLocation()
-//   // Get data from Redux store
-//   const user = useSelector((state) => state.common.user)
-//   const sessionId = useSelector((state) => state.common.sessionId)
-//   const screeningState = useSelector((state) => state.common.screening)
-//   const [timeLeft, setTimeLeft] = useState(30)
-//   const [isActive, setIsActive] = useState(false)
-//   const [tab, setTab] = useState("start")
-//   const [status, setStatus] = useState("idle") // idle, recording, processing, success, error
-//   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-//   const [voiceBars, setVoiceBars] = useState([0, 0, 0, 0, 0, 0, 0, 0, 0]) // Heights for 9 bars
-//   const mediaRecorderRef = React.useRef(null)
-//   const audioRef = React.useRef(null)
-//   const chunksRef = React.useRef([])
-//   const analyserRef = React.useRef(null)
-//   const dataArrayRef = React.useRef(null)
-//   const animationFrameRef = React.useRef(null)
-//   const [processingAngle, setProcessingAngle] = useState(0)
-//   const [showCompleteAlert, setShowCompleteAlert] = useState(false)
-
-//   const { t } = useTranslation()
-
-//   const handleNext = () => {
-//     setShowCompleteAlert(true)
-//   }
-
-//   useEffect(() => {
-//     // Play audio when component mounts
-//     playAudio()
-//   }, [])
-
-//   useEffect(() => {
-//     let interval
-
-//     if (status === "processing") {
-//       interval = setInterval(() => {
-//         setProcessingAngle((prev) => (prev + 6) % 360) // smooth rotation
-//       }, 16) // ~60fps
-//     }
-
-//     return () => clearInterval(interval)
-//   }, [status])
-
-//   useEffect(() => {
-//     let interval = null
-//     if (isActive && timeLeft > 0) {
-//       interval = setInterval(() => {
-//         setTimeLeft((prev) => prev - 1)
-//       }, 1000)
-//     } else if (timeLeft === 0 && isActive) {
-//       clearInterval(interval)
-//       setIsActive(false)
-//       stopRecording()
-//     }
-//     return () => clearInterval(interval)
-//   }, [isActive, timeLeft])
-
-//   const playAudio = async () => {
-//     const audioPath = await getAudioForCurrentLanguage("voice")
-//     if (audioPath && audioRef.current) {
-//       audioRef.current.src = audioPath
-//       setIsAudioPlaying(true)
-//       audioRef.current.play().catch((err) => {
-//         console.log("Audio playback failed:", err)
-//         setIsAudioPlaying(false)
-//       })
-//     } else if (!audioPath) {
-//       console.log("No audio for voice in current language")
-//     }
-//   }
-
-//   const stopAudio = () => {
-//     if (audioRef.current) {
-//       audioRef.current.pause()
-//       audioRef.current.currentTime = 0
-//       setIsAudioPlaying(false)
-//     }
-//   }
-
-//   const handleAudioEnd = () => {
-//     setIsAudioPlaying(false)
-//   }
-
-//   // Visualize voice using Web Audio API
-//   const visualizeVoice = () => {
-//     if (!analyserRef.current || !dataArrayRef.current) return
-
-//     const analyser = analyserRef.current
-//     const dataArray = dataArrayRef.current
-
-//     analyser.getByteFrequencyData(dataArray)
-
-//     // Map frequency data to 9 bars
-//     const barCount = 9
-//     const bufferLength = dataArray.length
-//     const barWidth = Math.floor(bufferLength / barCount)
-
-//     const newBars = []
-//     for (let i = 0; i < barCount; i++) {
-//       let sum = 0
-//       const start = i * barWidth
-//       const end = start + barWidth
-
-//       for (let j = start; j < end; j++) {
-//         sum += dataArray[j]
-//       }
-
-//       const average = sum / barWidth
-//       // Normalize to 0-1 range and smooth it out
-//       const normalized = Math.min(1, average / 255)
-//       newBars.push(normalized)
-//     }
-
-//     setVoiceBars(newBars)
-//     animationFrameRef.current = requestAnimationFrame(visualizeVoice)
-//   }
-
-//   // Cleanup animation on unmount
-//   useEffect(() => {
-//     return () => {
-//       if (animationFrameRef.current) {
-//         cancelAnimationFrame(animationFrameRef.current)
-//       }
-//     }
-//   }, [])
-//   const startRecording = async () => {
-//     setTab("voice")
-//     try {
-//       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-//       console.log("stream", stream)
-
-//       // Set up Web Audio API for visualization
-//       const audioContext = new AudioContext({ sampleRate: 16000 })
-//       // const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-//       const source = audioContext.createMediaStreamSource(stream)
-//       const analyser = audioContext.createAnalyser()
-
-//       analyser.fftSize = 256
-//       const bufferLength = analyser.frequencyBinCount
-//       const dataArray = new Uint8Array(bufferLength)
-
-//       source.connect(analyser)
-//       analyserRef.current = analyser
-//       dataArrayRef.current = dataArray
-
-//       // Start visualization
-//       visualizeVoice()
-
-//       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" })
-//       mediaRecorderRef.current = mediaRecorder
-//       chunksRef.current = []
-
-//       mediaRecorder.ondataavailable = (e) => {
-//         if (e.data.size > 0) {
-//           chunksRef.current.push(e.data)
-//         }
-//       }
-//       console.log("mediaRecorder", mediaRecorder, chunksRef.current)
-//       mediaRecorder.onstop = async () => {
-//         // Stop visualization
-//         if (animationFrameRef.current) {
-//           cancelAnimationFrame(animationFrameRef.current)
-//         }
-//         // Reset bars
-//         setVoiceBars([0, 0, 0, 0, 0, 0, 0, 0, 0])
-
-//         const blob = new Blob(chunksRef.current, { type: "audio/webm" })
-//         const arrayBuffer = await blob.arrayBuffer()
-
-//         // Convert to WAV 16kHz
-//         const audioContext = new AudioContext({ sampleRate: 16000 })
-//         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
-//         const wavArrayBuffer = audioBufferToWav(audioBuffer)
-
-//         // Get data from Redux store and config
-//         const kioskId = getKioskId()
-//         const userId = user?.data?.user_id || "38e075c8-1a49-450a-8bbb-ccd1bd6483fa" // Corrected property path
-//         const sessionId = user?.data?.buffer_id
-//         setStatus("processing")
-//         const request = {
-//           kiosk_id: kioskId,
-//           user_id: userId,
-//           session_id: sessionId,
-//           arrayBuffer: wavArrayBuffer
-//         }
-
-//         console.log("[Voice] Sending voice request with:", { kioskId, userId, sessionId })
-
-//         try {
-//           const voiceData = {
-//             role: "VOICE",
-//             timestamp: Date.now(),
-//             buffer: new Uint8Array(wavArrayBuffer)
-//           }
-
-//           const storeResult = await sendVoiceToBackend(voiceData)
-//           console.log("Store result voice:", storeResult)
-
-//           if (storeResult.success) {
-//             const runPayload = {
-//               shm_path: storeResult.shm_path,
-//               kiosk_id: kioskId,
-//               user_id: userId,
-//               session_id: sessionId,
-//               screening_session_id: screeningState?.sessionId
-//             }
-//             handleNext()
-//             const runResult = await runVoice(runPayload)
-//             console.log("Run result:", runResult)
-
-//             if (runResult.success) {
-//               setStatus("success")
-//               stopAudio()
-//               await new Promise((r) => setTimeout(r, 500))
-//               // navigate("/space-convoy-main");
-//             } else {
-//               setStatus("error")
-//               console.error("Voice run failed:", runResult.error)
-//               handleNext()
-//             }
-//           } else {
-//             setStatus("error")
-//             console.error("Voice storage failed:", storeResult.error)
-//             handleNext()
-//           }
-//         } catch (err) {
-//           setStatus("error")
-//           console.error("API error:", err)
-//           handleNext()
-//         }
-
-//         // Stop all tracks
-//         stream.getTracks().forEach((track) => track.stop())
-//         // Close audio context
-//         audioContext.close()
-//       }
-
-//       mediaRecorder.start()
-//       setIsActive(true)
-//       setStatus("recording")
-//     } catch (err) {
-//       console.error("Microphone permission denied or error:", err)
-//       setStatus("error")
-//     }
-//   }
-
-//   const handleStart = () => {
-//     setTab("voice")
-//     if (status === "recording" || status === "processing") return
-//     setTimeLeft(30)
-//     startRecording()
-//   }
-
-//   const stopRecording = () => {
-//     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-//       mediaRecorderRef.current.stop()
-//     }
-//   }
-
-//   return (
-//     <>
-//       <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
-//         <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
-//           Your browser does not support the audio element.
-//         </audio>
-//         {/* Background */}
-//         <div
-//           className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
-//           style={{ backgroundImage: `url(${bg1})` }}
-//         />
-
-//         {/* Content Container */}
-//         {tab === "start" ? (
-//           <VoiceTextScreen
-//             t={t}
-//             handleStart={handleStart}
-//             audioRef={audioRef}
-//             handleAudioEnd={handleAudioEnd}
-//             isAudioPlaying={isAudioPlaying}
-//             status={status}
-//           // instructionAudio={instructionAudio}
-//           />
-//         ) : (
-//           <VoiceImageScreen
-//             showCompleteAlert={showCompleteAlert}
-//             timeLeft={timeLeft}
-//             status={status}
-//           />
-//         )}
-//       </div>
-//     </>
-//   )
-// }
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
@@ -320,7 +11,6 @@ import Musical from "../../assets/voice/musical.jpeg";
 import Verbal from "../../assets/voice/verbal.jpeg";
 import Nature from "../../assets/voice/nature.jpeg";
 
-// One 360° panorama per image — naming pattern: <label>_360.png
 import Interpersonal360 from "../../assets/voice/intrapersonal_360.png";
 import Kinesthetic360 from "../../assets/voice/kinestic_360.png";
 import Logical360 from "../../assets/voice/logical_360.png";
@@ -331,8 +21,6 @@ import Nature360 from "../../assets/voice/nature_360.png";
 import View360Viewer from "./View360Viewer";
 import bg1 from "../../assets/lightbg.png";
 
-
-// ─── Image catalogue ─────────────────────────────────────────────────────────
 const IMAGES = [
   { src: Interpersonal, label: "Interpersonal", src360: Interpersonal360 },
   { src: Kinesthetic, label: "Kinesthetic", src360: Kinesthetic360 },
@@ -347,7 +35,10 @@ const ITEM_HEIGHT = 400;
 const AUTO_SCROLL_MS = 2200;
 const AUTO_SCROLL_RESUME = 1800;
 const SCROLL_SENSITIVITY = 2.2;
-const SNAP_DISTANCE = 120;
+const SNAP_DISTANCE = 80;   // lowered slightly so snapping is easier to trigger
+const FRICTION = 0.88; // momentum decay per frame (0 = instant stop, 1 = no decay)
+const VELOCITY_THRESHOLD = 0.5; // px/frame below which momentum stops
+
 function drumTransform(offset) {
   const R = 960;
   const theta = 0.42;
@@ -362,79 +53,86 @@ function drumTransform(offset) {
 }
 
 export default function VoiceAnalysis() {
-  // Redux state
   const user = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
 
-  // Phase: "picking" | "viewing" | "recording" | "processing"
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [dragOffset, setDragOffset] = useState(0);
   const [isSnapping, setIsSnapping] = useState(false);
   const [confirmedImage, setConfirmedImage] = useState(null);
   const [voiceBars, setVoiceBars] = useState(Array(9).fill(0));
-  const [status, setStatus] = useState("idle"); // idle | recording | processing | success | error
+  const [status, setStatus] = useState("idle");
+  const [isComplete, setIsComplete] = useState(false);
 
-  const dragStartY = useRef(null);
-  const dragStartOff = useRef(0);
-  const velocityRef = useRef(0);
-  const lastY = useRef(null);
-  const momentumRAF = useRef(null);
-  const animFrameRef = useRef(null);
-  const autoScrollRef = useRef(null);
-  const resumeTimer = useRef(null);
-  const userTouching = useRef(false);
   const navigate = useNavigate();
 
-  // Recording refs
+  // ── Drag / momentum refs ─────────────────────────────────────────────────
+  const dragStartY = useRef(null);
+  const dragCurrent = useRef(0);       // accumulated pixel offset during drag
+  const velocityRef = useRef(0);       // px per frame
+  const lastY = useRef(null);    // previous pointer Y (for velocity calc)
+  const lastTimeRef = useRef(null);    // timestamp of last pointermove
+  const momentumRAF = useRef(null);    // requestAnimationFrame id for momentum loop
+  const userTouching = useRef(false);
+
+  // ── Auto-scroll refs ─────────────────────────────────────────────────────
+  const autoScrollRef = useRef(null);
+  const resumeTimer = useRef(null);
+
+  // ── Misc refs ────────────────────────────────────────────────────────────
+  const animFrameRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioContextRef = useRef(null);
-  const [isComplete, setIsComplete] = useState(false);
+
   const isRecording = status === "recording";
 
+  // ── selectedIndex ref (needed inside momentum RAF closure) ───────────────
+  // We keep a ref in sync so the momentum loop can read the latest value
+  // without being stale.
+  const selectedIndexRef = useRef(selectedIndex);
+  useEffect(() => { selectedIndexRef.current = selectedIndex; }, [selectedIndex]);
 
-  // ── Snap helper ──────────────────────────────────────────────────────────
-  const snapToNearest = useCallback((currentOffset, fromIndex) => {
-    const snapped = Math.round(currentOffset / ITEM_HEIGHT);
-
+  // ────────────────────────────────────────────────────────────────────────
+  // Snap helper — resolves accumulated pixel offset → nearest index
+  // ────────────────────────────────────────────────────────────────────────
+  const snapToNearest = useCallback((currentOffset) => {
+    const steps = Math.round(currentOffset / ITEM_HEIGHT);
+    // sign is flipped: drag DOWN (positive offset) → previous item (lower index)
+    // drag UP (negative offset) → next item (higher index)
     const newIndex = Math.max(
       0,
-      Math.min(IMAGES.length - 1, fromIndex - snapped)
+      Math.min(IMAGES.length - 1, selectedIndexRef.current - steps)
     );
 
-    // Animate remaining offset smoothly
-    const finalOffset =
-      currentOffset - snapped * ITEM_HEIGHT;
-
     setIsSnapping(true);
-
     setSelectedIndex(newIndex);
-    setDragOffset(finalOffset);
+    selectedIndexRef.current = newIndex;
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setDragOffset(0);
-      });
-    });
-
-    setTimeout(() => setIsSnapping(false), 320);
+    dragCurrent.current = 0;
+    requestAnimationFrame(() => setDragOffset(0));
+    setTimeout(() => setIsSnapping(false), 280);
 
     return newIndex;
   }, []);
 
-  // ── Auto-scroll ──────────────────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────────────
+  // Auto-scroll
+  // ────────────────────────────────────────────────────────────────────────
   const scheduleAutoScroll = useCallback(() => {
     clearInterval(autoScrollRef.current);
     autoScrollRef.current = setInterval(() => {
       if (userTouching.current) return;
-      setSelectedIndex(prev => {
+      setSelectedIndex((prev) => {
         const next = (prev + 1) % IMAGES.length;
+        selectedIndexRef.current = next;
         setIsSnapping(true);
         setDragOffset(0);
+        dragCurrent.current = 0;
         setTimeout(() => setIsSnapping(false), 320);
         return next;
       });
@@ -449,84 +147,129 @@ export default function VoiceAnalysis() {
     };
   }, [phase, scheduleAutoScroll]);
 
-  // ── Pointer events (drum wheel) ──────────────────────────────────────────
-const dragCurrent = useRef(0);
+  // ────────────────────────────────────────────────────────────────────────
+  // Momentum loop — runs after pointer up until velocity dies
+  // ────────────────────────────────────────────────────────────────────────
+  const launchMomentum = useCallback(() => {
+    cancelAnimationFrame(momentumRAF.current);
 
-const onPointerDown = (e) => {
-  userTouching.current = true;
+    const tick = () => {
+      velocityRef.current *= FRICTION;
 
-  clearInterval(autoScrollRef.current);
+      if (Math.abs(velocityRef.current) < VELOCITY_THRESHOLD) {
+        // Velocity died — snap to nearest
+        snapToNearest(dragCurrent.current);
+        // Resume auto-scroll after user interaction settles
+        resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
+        return;
+      }
 
-  dragStartY.current = e.clientY;
-  dragCurrent.current = 0;
+      dragCurrent.current += velocityRef.current;
 
-  e.currentTarget.setPointerCapture(e.pointerId);
-};
+      // Clamp so it can't fly past first/last item by more than one card
+      const maxOffset = (IMAGES.length - 1 - selectedIndexRef.current) * ITEM_HEIGHT;
+      const minOffset = -selectedIndexRef.current * ITEM_HEIGHT;
+      dragCurrent.current = Math.max(minOffset, Math.min(maxOffset, dragCurrent.current));
 
-const onPointerMove = (e) => {
-  if (dragStartY.current === null) return;
+      setDragOffset(dragCurrent.current);
+      momentumRAF.current = requestAnimationFrame(tick);
+    };
 
-  const delta =
-    (dragStartY.current - e.clientY) *
-    SCROLL_SENSITIVITY;
+    momentumRAF.current = requestAnimationFrame(tick);
+  }, [snapToNearest, scheduleAutoScroll]);
 
-  dragCurrent.current = delta;
-
-  // Smooth animation
-  requestAnimationFrame(() => {
-    setDragOffset(delta);
-  });
-};
-
-const onPointerUp = () => {
-  if (dragStartY.current === null) return;
-
-  const delta = dragCurrent.current;
-
-  let step = 0;
-
-  if (delta > SNAP_DISTANCE) {
-    step = 1;
-  } else if (delta < -SNAP_DISTANCE) {
-    step = -1;
-  }
-
-  const next = Math.max(
-    0,
-    Math.min(
-      IMAGES.length - 1,
-      selectedIndex + step
-    )
-  );
-
-  setIsSnapping(true);
-
-  setSelectedIndex(next);
-
-  requestAnimationFrame(() => {
-    setDragOffset(0);
-  });
-
-  setTimeout(() => {
-    setIsSnapping(false);
-  }, 180);
-
-  dragCurrent.current = 0;
-  dragStartY.current = null;
-};
-  // ── Dot nav ──────────────────────────────────────────────────────────────
-  const goToIndex = (i) => {
+  // ────────────────────────────────────────────────────────────────────────
+  // Pointer handlers
+  // ────────────────────────────────────────────────────────────────────────
+  const onPointerDown = (e) => {
+    // Kill any in-flight momentum
+    cancelAnimationFrame(momentumRAF.current);
     clearInterval(autoScrollRef.current);
     clearTimeout(resumeTimer.current);
-    cancelAnimationFrame(momentumRAF.current);
+
+    userTouching.current = true;
+    dragStartY.current = e.clientY;
+    lastY.current = e.clientY;
+    lastTimeRef.current = performance.now();
+    velocityRef.current = 0;
+    // dragCurrent is NOT reset here — it carries over from any previous momentum
+    // so the card starts moving from wherever it currently is.
+
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = (e) => {
+    if (dragStartY.current === null) return;
+
+    const now = performance.now();
+    const dt = Math.max(1, now - lastTimeRef.current); // avoid divide-by-zero
+
+    // SIGN: (currentY - lastY) → positive when dragging DOWN → content moves DOWN ✓
+    const dy = e.clientY - lastY.current;
+    velocityRef.current = (dy / dt) * 16 * SCROLL_SENSITIVITY;
+
+    lastY.current = e.clientY;
+    lastTimeRef.current = now;
+
+    // SIGN: (currentY - startY) → positive when dragging DOWN → content moves DOWN ✓
+    const totalDelta = (e.clientY - dragStartY.current) * SCROLL_SENSITIVITY;
+    dragCurrent.current = totalDelta;
+
+    requestAnimationFrame(() => setDragOffset(totalDelta));
+  };
+
+  const onPointerUp = () => {
+    if (dragStartY.current === null) return;
+
+    userTouching.current = false;
+    dragStartY.current = null;
+
+    const delta = dragCurrent.current;
+
+    // If the fling was strong enough → launch momentum
+    if (Math.abs(velocityRef.current) > VELOCITY_THRESHOLD) {
+      launchMomentum();
+      return;
+    }
+
+    // Weak or no velocity — fall back to threshold snap
+    let step = 0;
+    if (delta > SNAP_DISTANCE) step = -1;   // drag DOWN → previous
+    else if (delta < -SNAP_DISTANCE) step = 1;   // drag UP   → next
+
+    const next = Math.max(0, Math.min(IMAGES.length - 1, selectedIndexRef.current + step));
+
     setIsSnapping(true);
-    setDragOffset(0);
-    setSelectedIndex(i);
-    setTimeout(() => setIsSnapping(false), 320);
+    setSelectedIndex(next);
+    selectedIndexRef.current = next;
+    dragCurrent.current = 0;
+    requestAnimationFrame(() => setDragOffset(0));
+    setTimeout(() => setIsSnapping(false), 180);
+
     resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
   };
 
-  // ── Start microphone recording + real waveform visualization ─────────────
+  // ────────────────────────────────────────────────────────────────────────
+  // Dot nav
+  // ────────────────────────────────────────────────────────────────────────
+  const goToIndex = (i) => {
+    cancelAnimationFrame(momentumRAF.current);
+    clearInterval(autoScrollRef.current);
+    clearTimeout(resumeTimer.current);
+
+    setIsSnapping(true);
+    setDragOffset(0);
+    dragCurrent.current = 0;
+    setSelectedIndex(i);
+    selectedIndexRef.current = i;
+    setTimeout(() => setIsSnapping(false), 320);
+
+    resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
+  };
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Recording helpers (unchanged from original)
+  // ────────────────────────────────────────────────────────────────────────
   const visualizeVoice = useCallback(() => {
     if (!analyserRef.current || !dataArrayRef.current) return;
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
@@ -548,7 +291,6 @@ const onPointerUp = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioStreamRef.current = stream;
 
-      // Web Audio API for real waveform visualization
       const audioContext = new AudioContext({ sampleRate: 16000 });
       audioContextRef.current = audioContext;
       const source = audioContext.createMediaStreamSource(stream);
@@ -559,10 +301,8 @@ const onPointerUp = () => {
       analyserRef.current = analyser;
       dataArrayRef.current = dataArray;
 
-      // Start visualization
       animFrameRef.current = requestAnimationFrame(visualizeVoice);
 
-      // MediaRecorder
       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -578,22 +318,13 @@ const onPointerUp = () => {
   }, [status, visualizeVoice]);
 
   const stopRecordingAndSubmit = useCallback(async () => {
-    // Stop visualization
     cancelAnimationFrame(animFrameRef.current);
     setVoiceBars(Array(9).fill(0));
-    // setStatus("processing");
-    // setPhase("processing");
 
     const recorder = mediaRecorderRef.current;
-    if (!recorder || recorder.state === "inactive") {
-      // Nothing recorded yet — just navigate forward
-      // navigate("/space-convoy-main");
-      return;
-    }
+    if (!recorder || recorder.state === "inactive") return;
 
-    // Wait for onstop to fire
     recorder.onstop = async () => {
-      // Stop stream tracks
       audioStreamRef.current?.getTracks().forEach((t) => t.stop());
       audioContextRef.current?.close();
 
@@ -601,7 +332,6 @@ const onPointerUp = () => {
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
         const arrayBuffer = await blob.arrayBuffer();
 
-        // Convert to 16kHz WAV
         const ctx = new AudioContext({ sampleRate: 16000 });
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
         const wavArrayBuffer = audioBufferToWav(audioBuffer);
@@ -619,8 +349,6 @@ const onPointerUp = () => {
         };
 
         const storeResult = await sendVoiceToBackend(voiceData);
-        console.log("[Voice] store result:", storeResult);
-
         if (storeResult.success) {
           const runPayload = {
             shm_path: storeResult.shm_path,
@@ -630,14 +358,8 @@ const onPointerUp = () => {
             screening_session_id: screeningSessionId,
           };
           const runResult = await runVoice(runPayload);
-          console.log("[Voice] run result:", runResult);
-
-          if (runResult.success) {
-            setStatus("success");
-          } else {
-            console.error("[Voice] run failed:", runResult.error);
-            setStatus("error");
-          }
+          setStatus(runResult.success ? "success" : "error");
+          if (!runResult.success) console.error("[Voice] run failed:", runResult.error);
         } else {
           console.error("[Voice] store failed:", storeResult.error);
           setStatus("error");
@@ -647,7 +369,6 @@ const onPointerUp = () => {
         setStatus("error");
       }
 
-      // Navigate to next screen regardless of API outcome
       navigate("/space-convoy-main");
     };
 
@@ -668,48 +389,32 @@ const onPointerUp = () => {
 
   // ── Card tap → enter viewing phase ──────────────────────────────────────
   const onCenterCardClick = () => {
+    cancelAnimationFrame(momentumRAF.current);
     clearInterval(autoScrollRef.current);
     clearTimeout(resumeTimer.current);
     setConfirmedImage(IMAGES[selectedIndex]);
     setPhase("viewing");
-    // Recording does NOT start here — it starts on first drag inside the viewer
   };
 
-  // ── First drag inside viewer → kick off recording ────────────────────────
   const onFirstInteract = useCallback(() => {
     setPhase("recording");
     startRecording();
   }, [startRecording]);
 
-  // ── Timer hits 0 → stop recording and submit ─────────────────────────────
   const onTimerEnd = useCallback(() => {
     setPhase("processing");
-
-    // move immediately after small UX delay
-    setTimeout(() => {
-      setIsComplete(true);
-    }, 800);
-
-    // continue upload in background
+    setTimeout(() => setIsComplete(true), 800);
     stopRecordingAndSubmit();
-  }, [stopRecordingAndSubmit, navigate]);
+  }, [stopRecordingAndSubmit]);
 
-
-  // ── Waveform animation only active when real mic data isn't flowing ───────
-  // (real waveform is driven by visualizeVoice via Web Audio API)
-  // This effect is kept as a no-op guard.
   useEffect(() => {
-    if (!isRecording) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
+    if (!isRecording) cancelAnimationFrame(animFrameRef.current);
   }, [isRecording]);
 
+  const effectiveSlotOffset = (i) =>
+    i - selectedIndex + dragOffset / ITEM_HEIGHT;
 
-  const effectiveSlotOffset = (i) => i - selectedIndex + dragOffset / ITEM_HEIGHT;
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // PROCESSING phase — simple fullscreen spinner while API runs
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Processing phase ────────────────────────────────────────────────────
   if (phase === "processing") {
     return (
       <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center gap-6">
@@ -727,13 +432,10 @@ const onPointerUp = () => {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // VIEWING / RECORDING phase — fullscreen 360° viewer
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Viewing / recording phase ───────────────────────────────────────────
   if ((phase === "viewing" || phase === "recording") && confirmedImage) {
     return (
       <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-        {/* Label badge */}
         <div
           className="absolute top-6 left-1/2 -translate-x-1/2 z-30 px-6 py-2 rounded-full
                      text-white text-sm font-semibold tracking-widest uppercase"
@@ -747,7 +449,6 @@ const onPointerUp = () => {
         >
           {confirmedImage.label}
         </div>
-
         <View360Viewer
           src={confirmedImage.src360}
           width="100%"
@@ -764,12 +465,9 @@ const onPointerUp = () => {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // PICKING phase — drum wheel
-  // ─────────────────────────────────────────────────────────────────────────
+  // ─── Picking phase — drum wheel ──────────────────────────────────────────
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-      {/* Background */}
       <div
         className="absolute inset-0 bg-center bg-cover opacity-50"
         style={{ backgroundImage: `url(${bg1})` }}
@@ -836,9 +534,13 @@ const onPointerUp = () => {
           {/* Drum track */}
           <div
             className="relative w-full h-full"
-            style={{ transformStyle: "preserve-3d",   touchAction: "none",
-    userSelect: "none", willChange: "transform",
-  backfaceVisibility: "hidden" }}
+            style={{
+              transformStyle: "preserve-3d",
+              touchAction: "none",
+              userSelect: "none",
+              willChange: "transform",
+              backfaceVisibility: "hidden",
+            }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
@@ -861,7 +563,7 @@ const onPointerUp = () => {
                     transform: `translate3d(0, ${ty}px, ${tz}px) rotateX(${-angle}deg) scale(${scale})`,
                     opacity,
                     transition: isSnapping
-                      ? "transform 180ms ease-out, opacity 180ms ease-out, opacity 0.32s ease"
+                      ? "transform 180ms ease-out, opacity 180ms ease-out"
                       : "none",
                     zIndex: Math.round((1 - Math.abs(off)) * 10),
                     cursor: isCentered ? "pointer" : "grab",
@@ -935,8 +637,6 @@ const onPointerUp = () => {
             })}
           </div>
         </div>
-
-
 
       </div>
     </div>

@@ -1184,7 +1184,7 @@ export default function BIACalculate({ user, onComplete }) {
         heightValue={displayValues.height}
         weightValue={displayValues.weight}
         // onNextClick={handleWhNextClick}
-        onextClick={handleImNextClick}
+        onNextClick={handleImNextClick}
         arms50k={measuredValues.arms50k}
         user={storeUser}
       />
