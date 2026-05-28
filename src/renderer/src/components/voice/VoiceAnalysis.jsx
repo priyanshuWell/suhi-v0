@@ -57,7 +57,7 @@ export default function VoiceAnalysis() {
   const screeningState = useSelector((state) => state.common.screening);
 
   const [phase, setPhase] = useState("picking");
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedIndex, setSelectedIndex] = useState(Math.floor(IMAGES.length / 2));
   const [dragOffset, setDragOffset] = useState(0);
   const [isSnapping, setIsSnapping] = useState(false);
   const [confirmedImage, setConfirmedImage] = useState(null);

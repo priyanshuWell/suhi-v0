@@ -212,7 +212,7 @@ export const BIAComponent = ({
   heightValue,
   weightValue,
   onNextClick,
-  onImNextClick,
+  onNextVoiceClick,
   arms50k,
   user
 }) => {
@@ -605,7 +605,7 @@ export const BIAComponent = ({
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">
-          <BlueGradientButton onClick={() => navigate("/voice")}>
+          <BlueGradientButton onClick={onNextVoiceClick}>
             Next
           </BlueGradientButton>
         </div>

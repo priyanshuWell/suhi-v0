@@ -109,7 +109,7 @@ const HeightWeightDisplay = ({
 
             {!isHideNext && (
                 <div className="absolute bottom-20 left-[31%]">
-                    <BlueGradientButton onClick={() => navigate('/bia/im')}>
+                    <BlueGradientButton onClick={onNextClick}>
                         Next
                     </BlueGradientButton>
                 </div>
