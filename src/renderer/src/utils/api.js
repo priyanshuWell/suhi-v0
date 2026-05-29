@@ -537,13 +537,14 @@ export const DivideAttentionTrialStart = async (payload) => {
   }
 } 
 
-export const DivideAttentionTrialComplete = async (trial_id) => {
+export const DivideAttentionTrialComplete = async (trial_id,payload) => {
   try {
     const response = await fetch(`${API_BASE_URL}/trials/${trial_id}/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -644,6 +645,30 @@ export const DivideAttentionSessionComplete = async (session_id, screening_sessi
     };
   }
 } 
+
+export const DivideAttentionSessionStart = async (payload) => {
+  /*
+  {
+    "user_id": "...",
+    "session_id": "...",
+    "session_type": "string"
+  }
+  */
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const data = await response.json();
+    console.log("DA session start response:", data);
+    return { success: true, ...data };
+  } catch (error) {
+    console.error("Error starting DA session:", error);
+    return { success: false, error: error.message };
+  }
+};
 
 
 export const BIAComplete = async (result) => {

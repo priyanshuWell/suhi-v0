@@ -23,7 +23,8 @@ import stimulus_error_3 from "../../../assets/games/stimulus_error_3.svg";
 
 import { ROUNDS } from "./rounds";
 import {
-    DivideAttentionTrialStart,
+    DivideAttentionSessionStart,    // called ONCE at session start — sends session_type
+    DivideAttentionTrialStart,      // called PER ROUND — gets trial_id for that round
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
     DivideAttentionSessionComplete,
@@ -43,12 +44,8 @@ const CW = 1014;
 const CH = 1802;
 const PAD = 24;
 
-// HUD_H in canvas units — matches the DOM overlay height so particles never go under it.
-// The canvas is 1802px tall rendered at 100vh. The DOM HUD is ~72px tall on screen.
-// At a 1080px-tall screen: 72 * (1802/1080) ≈ 120. Use 130 for safe padding.
 const HUD_H = 130;
 
-// Submit button dimensions — drawn on canvas during FREEZE
 const SUBMIT_BTN = { w: 420, h: 100, r: 20, bottomPad: 60 };
 
 const ARENA = { l: PAD, t: HUD_H + PAD, r: CW - PAD, b: CH - PAD - SUBMIT_BTN.h - SUBMIT_BTN.bottomPad - 20 };
@@ -252,10 +249,7 @@ function drawTrail(ctx, p, tintColor) {
     }
 }
 
-
 // ─── Submit Button (drawn on canvas) ─────────────────────────────────────────
-// CHANGE 2: Submit button drawn during FREEZE phase.
-// CHANGE 3: inactivity bar drawn inside button showing 6s countdown.
 
 function drawSubmitButton(ctx, g, cfg, globalTime) {
     const tc = tierColour(cfg.difficultyTier ?? 1);
@@ -263,25 +257,21 @@ function drawSubmitButton(ctx, g, cfg, globalTime) {
     const bx = (CW - bw) / 2;
     const by = CH - SUBMIT_BTN.bottomPad - bh;
 
-    // Button background
     ctx.save();
     ctx.fillStyle = "rgba(4,9,26,0.88)";
     ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, br); ctx.fill();
 
-    // Border glow — pulses gently
     const pulse = 0.55 + 0.45 * Math.sin(globalTime * 0.004);
     ctx.strokeStyle = tc.primary + Math.round(pulse * 200).toString(16).padStart(2, "0");
     ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, br); ctx.stroke();
 
-    // Label
     const anySelected = g.ps.some(p => p.selected);
     ctx.font = `bold 44px 'Arial Black', Arial, sans-serif`;
     ctx.textAlign = "center";
     ctx.fillStyle = anySelected ? "#ffffff" : "rgba(255,255,255,0.35)";
     ctx.fillText("Submit", CW / 2, by + bh * 0.62);
 
-    // Small hint if nothing selected yet
     if (!anySelected) {
         ctx.font = "400 26px Arial, sans-serif";
         ctx.fillStyle = "rgba(255,255,255,0.22)";
@@ -303,9 +293,6 @@ function initTransitionForward(trans, tier) {
         return { angle, startR: rnd(40, 160), len: rnd(80, 340), delay: Math.random() * 0.35, width: rnd(0.8, 2.5) };
     });
 }
-
-// CHANGE 1: removed initTransitionRewind — no longer used.
-// We keep only the forward transition for all round completions.
 
 function drawTransition(ctx, trans, bgCanvas) {
     if (!trans || trans.t <= 0) return;
@@ -364,8 +351,6 @@ function drawTransition(ctx, trans, bgCanvas) {
 }
 
 // ─── Bursts ───────────────────────────────────────────────────────────────────
-// CHANGE 4: spawnBurst no longer spawns red bursts for wrong answers.
-// It is only called on correct hits now (see handleTap).
 
 function spawnBurst(pool, x, y, tierPrimary) {
     const count = 16;
@@ -419,7 +404,6 @@ function updateAndDrawPopups(ctx, pool, dt) {
 }
 
 // ─── Screenshake ──────────────────────────────────────────────────────────────
-// CHANGE 4: shake is kept but no longer triggered on FA (see handleTap).
 
 function tickShake(shake, dt) {
     if (shake.remaining <= 0) return;
@@ -465,11 +449,17 @@ function drawCountIn(ctx, ci, tier) {
 //   Correct Rejection (CR) — distractor not selected → +5
 //   Miss (M)     — target not selected               → −5
 //   False Alarm  (FA) — distractor selected          → −5
+//
+// CHANGE: removed points_awarded and speed_bonus from response objects (new API spec)
+// CHANGE: now returns hit/miss/falseAlarm/correctRejection counts directly
 
 function buildResponses(ps, responseWindowMs) {
     const speedThresholdMs = responseWindowMs * 0.5;
     let roundScore = 0;
     const responses = [];
+
+    // counters — used for TrialComplete payload
+    let hits = 0, misses = 0, falseAlarms = 0, correctRejections = 0;
 
     ps.forEach((p, idx) => {
         if (p.selected) {
@@ -478,46 +468,63 @@ function buildResponses(ps, responseWindowMs) {
                 const hasSpeedBonus = p.responseTimeMs !== null && p.responseTimeMs < speedThresholdMs;
                 const points = SCORE.CORRECT_HIT + (hasSpeedBonus ? SCORE.SPEED_BONUS : 0);
                 roundScore += points;
+                hits++;
                 responses.push({
-                    object_index: idx, object_type: "target",
-                    response_time_ms: p.responseTimeMs ?? 0, tap_x: p.tapX ?? 0, tap_y: p.tapY ?? 0,
-                    response_type: "correct_hit", is_correct: true,
-                    points_awarded: points, speed_bonus: hasSpeedBonus,
+                    object_index: idx,
+                    object_type: "target",
+                    response_time_ms: p.responseTimeMs ?? 0,
+                    tap_x: p.tapX ?? 0,
+                    tap_y: p.tapY ?? 0,
+                    response_type: "correct_hit",
+                    is_correct: true,
+                    // points_awarded and speed_bonus removed — not in new API spec
                 });
             } else {
                 // False Alarm
                 roundScore += SCORE.FALSE_ALARM;
+                falseAlarms++;
                 responses.push({
-                    object_index: idx, object_type: "distractor",
-                    response_time_ms: p.responseTimeMs ?? 0, tap_x: p.tapX ?? 0, tap_y: p.tapY ?? 0,
-                    response_type: "false_alarm", is_correct: false,
-                    points_awarded: SCORE.FALSE_ALARM, speed_bonus: false,
+                    object_index: idx,
+                    object_type: "distractor",
+                    response_time_ms: p.responseTimeMs ?? 0,
+                    tap_x: p.tapX ?? 0,
+                    tap_y: p.tapY ?? 0,
+                    response_type: "false_alarm",
+                    is_correct: false,
                 });
             }
         } else {
             if (p.isTarget) {
                 // Miss
                 roundScore += SCORE.MISS;
+                misses++;
                 responses.push({
-                    object_index: idx, object_type: "target",
-                    response_time_ms: null, tap_x: null, tap_y: null,
-                    response_type: "miss", is_correct: false,
-                    points_awarded: SCORE.MISS, speed_bonus: false,
+                    object_index: idx,
+                    object_type: "target",
+                    response_time_ms: null,
+                    tap_x: null,
+                    tap_y: null,
+                    response_type: "miss",
+                    is_correct: false,
                 });
             } else {
                 // Correct Rejection
                 roundScore += SCORE.CORRECT_REJECTION;
+                correctRejections++;
                 responses.push({
-                    object_index: idx, object_type: "distractor",
-                    response_time_ms: null, tap_x: null, tap_y: null,
-                    response_type: "correct_rejection", is_correct: true,
-                    points_awarded: SCORE.CORRECT_REJECTION, speed_bonus: false,
+                    object_index: idx,
+                    object_type: "distractor",
+                    response_time_ms: null,
+                    tap_x: null,
+                    tap_y: null,
+                    response_type: "correct_rejection",
+                    is_correct: true,
                 });
             }
         }
     });
 
-    return { responses, roundScore };
+    return { responses, roundScore, hits, misses, falseAlarms, correctRejections };
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -526,7 +533,12 @@ export default function SpaceConvoy() {
     const navigate = useNavigate();
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
+    const sessionType = location.state?.sessionType ?? "main";  // "practice" | "main"
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
+
+    // CHANGE: pull userId from redux for DivideAttentionSessionStart payload
+    const userId = useSelector((state) => state.auth?.user?.id ?? null);
+
     const cvRef = useRef(null);
     const bgRef = useRef(null);
     const assets = useRef({ stim: [], glow: [], correct: [], error: [], distImgs: [], loaded: false });
@@ -551,7 +563,6 @@ export default function SpaceConvoy() {
     const rafRef = useRef(null);
     const prevTime = useRef(0);
 
-    // DOM HUD state — written every frame, drives the React overlay
     const [hud, setHud] = useState({ ri: 0, totalScore: 0, tierPrimary: TIER_COLOURS[0].primary, tierGlow: TIER_COLOURS[0].glow, roundName: "" });
 
     useEffect(() => { bgRef.current = buildBackground(); }, []);
@@ -562,26 +573,36 @@ export default function SpaceConvoy() {
             const glow = await Promise.all([stimulus_glow_1, stimulus_glow_2, stimulus_glow_3].map(loadSvg));
             const correct = await Promise.all([stimulus_correct_1, stimulus_correct_2, stimulus_correct_3].map(loadSvg));
             const error = await Promise.all([stimulus_error_1, stimulus_error_2, stimulus_error_3].map(loadSvg));
-            // const distImgs = (await Promise.all(DIST_PATHS.map(loadSvg))).filter(Boolean);
-            // assets.current = { stim, glow, correct, error, distImgs, loaded: true };
             assets.current = { stim, glow, correct, error, loaded: true };
             startSession();
         })();
     }, []);
 
-    const startSession = useCallback(() => {
+    // Called once when the game starts.
+    // DivideAttentionSessionStart fires here with session_type ("practice" | "main")
+    // which is passed via location.state from the parent screen.
+    const startSession = useCallback(async () => {
         const g = G.current, api = apiState.current;
         Object.assign(g, {
             sess: SESS.PLAYING, ri: 0, results: [],
             highestRound: 0, totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
         });
         api.trialNumber = 0; api.totalScore = 0;
+
+        if (sessionId) {
+            await DivideAttentionSessionStart({
+                user_id: userId,
+                session_id: sessionId,
+                session_type: sessionType,  // "practice" | "main" from location.state
+            });
+        }
+
         sfx.startAmbient();
         initRound(0);
+    }, [sessionId, userId, sessionType]);
 
-        initRound(0);
-    }, []);
-
+    // Called per round. DivideAttentionTrialStart fires here to get a fresh trial_id.
+    // No session_type here — that belongs to the session, not the trial.
     const initRound = useCallback(async (idx) => {
         const g = G.current, api = apiState.current, cfg = ROUNDS_ARR[idx];
         Object.assign(g, {
@@ -594,56 +615,87 @@ export default function SpaceConvoy() {
         juice.current.countIn = { active: true, elapsed: 0, duration: 900, roundIdx: idx };
         sfx.roundStart();
         api.trialNumber += 1;
+
         if (sessionId) {
-            const res = await DivideAttentionTrialStart({ session_id: sessionId, trial_number: api.trialNumber, trial_type: "main", num_targets: cfg.targets, num_distractors: cfg.particles - cfg.targets, total_objects: cfg.particles });
-            api.trialId = res.success ? (res.data?.trial_id ?? res.data?.id ?? null) : null;
+            const res = await DivideAttentionTrialStart({
+                session_id: sessionId,
+                trial_number: api.trialNumber,
+                num_targets: cfg.targets,
+                num_distractors: cfg.particles - cfg.targets,
+                total_objects: cfg.particles,
+            });
+            // store trial_id for this round — used in ResponseBatch and TrialComplete
+            api.trialId = res.success ? (res.data?.trial_id ?? res.trial_id ?? null) : null;
         }
     }, [sessionId]);
 
-    // CHANGE 1+2: evaluateRound is now only called when the submit button is tapped
-    // or when inactivity timeout fires. failState logic removed entirely.
+    // CHANGE: evaluateRound now:
+    //   1. Destructures hits/misses/falseAlarms/correctRejections from buildResponses
+    //   2. tracking_duration_ms = time from freeze start to submit tap (responseWindowMs)
+    //   3. Passes summary stats as body to DivideAttentionTrialComplete
     const evaluateRound = useCallback(async () => {
         const g = G.current, api = apiState.current, cfg = ROUNDS_ARR[g.ri];
         if (g.submitted) return;
         g.submitted = true;
 
-        // Response window = total time child had from freeze start to submit
+        // tracking_duration_ms: time from when freeze started to when user tapped Submit
         const submitTime = performance.now();
         const responseWindowMs = submitTime - g.freezeStartTime;
 
-        let ok = 0, bad = 0, miss = 0;
-        g.ps.forEach((p) => { if (p.isTarget && p.selected) ok++; else if (!p.isTarget && p.selected) bad++; else if (p.isTarget && !p.selected) miss++; });
-        const { responses, roundScore } = buildResponses(g.ps, responseWindowMs);
+        // buildResponses now returns counts alongside responses
+        const { responses, roundScore, hits, misses, falseAlarms, correctRejections } =
+            buildResponses(g.ps, responseWindowMs);
+
         api.totalScore += roundScore;
-        g.results.push({ round: g.ri + 1, name: cfg.name, targets: cfg.targets, particles: cfg.particles, correct: ok, wrong: bad, missed: miss, score: roundScore });
-        g.totalCorrect += ok; g.totalWrong += bad; g.totalAttempts++;
+        g.results.push({
+            round: g.ri + 1,
+            name: cfg.name,
+            targets: cfg.targets,
+            particles: cfg.particles,
+            correct: hits,
+            wrong: falseAlarms,
+            missed: misses,
+            score: roundScore,
+        });
+        g.totalCorrect += hits;
+        g.totalWrong += falseAlarms;
+        g.totalAttempts++;
         if (g.ri + 1 > g.highestRound) g.highestRound = g.ri + 1;
         g.ph = PHASE.OVER; g.phaseElapsed = 0;
 
-        // Always play forward transition regardless of correctness (CHANGE 1)
         initTransitionForward(juice.current.transition = {}, cfg.difficultyTier ?? 1);
-        sfx.levelUp();        // ← ADD THIS
+        sfx.levelUp();
         sfx.duckAmbient();
+
         if (api.trialId) {
+            // Step 1: send per-particle responses (points_awarded / speed_bonus removed)
             await DivideAttentionResponseBatch({ trial_id: api.trialId, responses });
-            await DivideAttentionTrialComplete(api.trialId);
+
+            // Step 2: complete the trial with summary stats
+            // tracking_duration_ms = freeze start → submit tap (no artificial time window)
+            await DivideAttentionTrialComplete(api.trialId, {
+                tracking_duration_ms: Math.round(responseWindowMs),
+                hits,
+                misses,
+                false_alarms: falseAlarms,
+                correct_rejections: correctRejections,
+            });
         }
 
         setTimeout(() => {
             if (g.sess !== SESS.PLAYING) return;
             juice.current.transition = null;
-            // CHANGE 1: always advance, never go back, never early exit
             if (g.ri + 1 < NUM_ROUNDS) {
                 initRound(g.ri + 1);
             } else {
                 endSession();
             }
         }, OVER_MS);
-    }, []);
+    }, [initRound]);
 
     const endSession = useCallback(async () => {
         G.current.sess = SESS.ENDED;
-        sfx.sessionComplete(); // ← ADD THIS
+        sfx.sessionComplete();
         sfx.stopAmbient();
         if (sessionId) await DivideAttentionSessionComplete(sessionId, screeningSessionId);
         setTimeout(() => navigate("/space-convoy-complete", {
@@ -690,6 +742,7 @@ export default function SpaceConvoy() {
                         g.phaseElapsed += dt; physics(g.ps, dt, true, () => sfx.collision());
                         if (g.phaseElapsed >= cfg.time.game) {
                             g.ph = PHASE.FREEZE; g.phaseElapsed = 0;
+                            // freezeStartTime marks when tracking window begins
                             g.freezeStartTime = performance.now();
                             sfx.freeze();
                             g.ps.forEach((p) => { p.vx = 0; p.vy = 0; p.trail = []; });
@@ -703,7 +756,6 @@ export default function SpaceConvoy() {
             }
             draw(dt);
 
-            // Update DOM HUD
             const _cfg = ROUNDS_ARR[g.ri];
             const _tc = tierColour(_cfg.difficultyTier ?? 1);
             setHud({ ri: g.ri, totalScore: apiState.current.totalScore, tierPrimary: _tc.primary, tierGlow: _tc.glow, roundName: _cfg.name || "" });
@@ -730,9 +782,6 @@ export default function SpaceConvoy() {
         if (bgRef.current) ctx.drawImage(bgRef.current, 0, 0, CW, CH);
         else { ctx.fillStyle = "#04091a"; ctx.fillRect(0, 0, CW, CH); }
 
-        // CHANGE 4: removed urgency red tint during freeze
-
-        // const { stim, glow, distImgs } = a;
         const { stim, glow } = a;
 
         if (g.ph === PHASE.START || g.ph === PHASE.REVEAL) {
@@ -747,11 +796,9 @@ export default function SpaceConvoy() {
             const si = p.stimIdx;
 
             if ((g.ph === PHASE.OVER || g.ph === PHASE.FREEZE) && p.selected) {
-                // Selected — always just glow highlight, no colour feedback
                 const img = glow[si] || stim[si];
                 if (img) drawParticleImg(ctx, img, p, img === glow[si] ? GLOW_SCALE[si] : 1);
             } else if (g.ph === PHASE.PREPARE && p.isTarget) {
-                // Glow pulse during prepare
                 const pulse = 1 + 0.055 * Math.sin(g.globalTime * 0.003 + p.pulsePhase);
                 const img = glow[si] || stim[si];
                 if (img) drawParticleImg(ctx, img, p, (img === glow[si] ? GLOW_SCALE[si] : 1) * pulse);
@@ -775,7 +822,6 @@ export default function SpaceConvoy() {
 
         drawCountIn(ctx, jc.countIn, cfg.difficultyTier ?? 1);
 
-        // Submit button drawn on canvas during FREEZE
         if (g.ph === PHASE.FREEZE && !g.submitted) {
             drawSubmitButton(ctx, g, cfg, g.globalTime);
         }
@@ -789,7 +835,6 @@ export default function SpaceConvoy() {
         return { x: (cx - rect.left) * (CW / rect.width), y: (cy - rect.top) * (CH / rect.height) };
     }, []);
 
-    // CHANGE 2: check if tap lands on submit button
     const isSubmitTap = useCallback((x, y) => {
         const bw = SUBMIT_BTN.w, bh = SUBMIT_BTN.h;
         const bx = (CW - bw) / 2;
@@ -804,13 +849,13 @@ export default function SpaceConvoy() {
         if (g.ph !== PHASE.FREEZE || g.submitted) return;
         const { x, y } = toCanvasXY(cx, cy);
 
-        // CHANGE 2: submit button tap
         if (isSubmitTap(x, y)) {
             sfx.submitTap();
             evaluateRound();
             return;
         }
 
+        // response_time_ms = time from freeze start to this tap
         const responseTimeMs = performance.now() - g.freezeStartTime;
         for (let i = g.ps.length - 1; i >= 0; i--) {
             const p = g.ps[i];
@@ -819,18 +864,15 @@ export default function SpaceConvoy() {
                 p.responseTimeMs = Math.round(responseTimeMs); p.hitAnimStart = performance.now(); p.hitAnim = 0;
                 sfx.particleTap();
                 if (p.isTarget) {
-                    // sfx.correctHit();
                     const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
                     if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
                     const tc = tierColour(cfg.difficultyTier ?? 1);
-                    spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
-                    // sfx.burst();
-                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                    // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                    // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
                 } else {
                     sfx.falseAlarm();
                     spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);
                 }
-
                 break;
             }
         }
@@ -844,10 +886,9 @@ export default function SpaceConvoy() {
         g.ps.forEach((p) => {
             const wasHovered = p.hovered;
             p.hovered = d2d({ x, y }, p) <= p.radius + 8;
-            if (p.hovered && !wasHovered) didHover = true; // only on enter
+            if (p.hovered && !wasHovered) didHover = true;
         });
-        if (didHover) sfx.hover(); // ← very quiet — disable if annoying
-
+        if (didHover) sfx.hover();
     }, [toCanvasXY]);
 
     return (
@@ -870,14 +911,7 @@ export default function SpaceConvoy() {
                     display: "flex", alignItems: "center", justifyContent: "center",
                     padding: "14px 27px 12px",
                     background: "rgba(4,9,26,0.82)",
-                    // borderBottom: `2px solid ${hud.tierGlow}`,
                 }}>
-                    {/* Left: score
-                    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                        <span style={{ fontSize: "clamp(10px,1.3vw,15px)", fontWeight: 500, color: "rgba(255,255,255,0.4)", letterSpacing: "0.08em" }}>SCORE</span>
-                        <span style={{ fontSize: "clamp(18px,2.4vw,34px)", fontWeight: 900, color: hud.tierPrimary, lineHeight: 1 }}>{hud.totalScore}</span>
-                    </div> */}
-
                     {/* Centre: round dots */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "clamp(6px,0.8vw,10px)" }}>
@@ -904,17 +938,8 @@ export default function SpaceConvoy() {
                             })}
                         </div>
                     </div>
-                    {/* 
-                    Right: round label
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
-                        <span style={{ fontSize: "clamp(13px,1.6vw,22px)", fontWeight: 700, color: hud.tierPrimary }}>{`Round ${hud.ri + 1}`}</span>
-                        <span style={{ fontSize: "clamp(10px,1.2vw,16px)", fontWeight: 500, color: "rgba(255,255,255,0.35)" }}>{hud.roundName}</span>
-                    </div> */}
                 </div>
             </div>
-
-            {/* ── Submit button overlay ── */}
-            {/* Rendered in canvas via drawSubmitButton — kept on canvas intentionally */}
         </div>
     );
 }

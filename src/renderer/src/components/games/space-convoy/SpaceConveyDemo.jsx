@@ -11,7 +11,7 @@ import {
     DivideAttentionTrialStart,
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
-} from "../../../utils/api"; // adjust path as needed
+} from "../../../utils/api";
 
 /*
  * ─── DEMO CONFIGURATION ───
@@ -20,9 +20,14 @@ import {
  *   1. SHOW_TARGETS   — "Watch the highlighted asteroids." (targets glow + ripple)
  *   2. ALL_SAME       — "All asteroids now look the same." (distractors fade in, all uniform)
  *   3. MOVING         — "Track them as they move." (movement starts)
- *   4. STOPPED        — "Tap the asteroids you were tracking." (freeze, user taps)
+ *   4. STOPPED        — "Tap the asteroids you were tracking." (freeze, user taps + submit)
  *   5. RESULT         — Show correct/error feedback
  *   6. DONE           — "Great! Let's start." → navigate to game
+ *
+ * SUBMIT LOGIC:
+ *   - Submit button appears on canvas during STOPPED (same style as SpaceConvoy)
+ *   - On submit: if user got >= 1 correct target hit → move to main game immediately
+ *   - Otherwise → existing fail/retry logic
  */
 
 // ─── Canvas / Arena ───
@@ -30,10 +35,8 @@ const CW = 1014;
 const CH = 1802;
 const PAD = 60;
 
-// Square arena centered in the canvas (below the text panel)
 const PANEL_TOP = 100;
-
-const PANEL_H = 260 // ~253px at frameW=934
+const PANEL_H = 260;
 const ARENA_TOP = PANEL_TOP + PANEL_H + 80;
 const ARENA_SIZE = Math.min(CW - PAD * 2, CH - ARENA_TOP - PAD - 100);
 const ARENA_LEFT = (CW - ARENA_SIZE) / 2;
@@ -55,11 +58,14 @@ const DEMO_VEL_MAX = 1.5;
 const STEP_SHOW_TARGETS_MS = 3000;
 const STEP_ALL_SAME_MS = 2000;
 const STEP_MOVING_MS = 4000;
-const STEP_FREEZE_MS = 15000; // generous for demo
+const STEP_FREEZE_MS = 15000;
 const STEP_RESULT_MS = 2000;
 const REVEAL_MS = 800;
 
-// Ripple config (same as game)
+// Submit button — same dimensions/position as SpaceConvoy
+const SUBMIT_BTN = { w: 420, h: 100, r: 20, bottomPad: 60 };
+
+// Ripple config
 const RIPPLE_COUNT = 3;
 const RIPPLE_CYCLE_MS = 2000;
 const RIPPLE_MAX_EXPAND = 1.8;
@@ -69,6 +75,9 @@ const RIPPLE_COLOR = "rgba(255, 255, 255,";
 const GLOW_SCALE = 394 / 194;
 const CORRECT_SCALE = 374 / 194;
 const ERROR_SCALE = 294 / 194;
+
+// Tier colour — teal (matches SpaceConvoy tier 1)
+const TIER_PRIMARY = "#3DB39E";
 
 // Steps
 const STEP = {
@@ -86,7 +95,7 @@ const STEP_MESSAGES = {
     [STEP.ALL_SAME]: "All asteroids now look\nthe same.",
     [STEP.MOVING]: "Follow them as they move.",
     [STEP.STOPPED]: "Now tap on the ones that you were tracking",
-    [STEP.RESULT]: "Great Job. Lets Try one more time", // dynamic
+    [STEP.RESULT]: "Great Job. Lets Try one more time",
     [STEP.DONE]: "Great! Let's start\nthe game.",
 };
 
@@ -151,7 +160,6 @@ function spawnDemo() {
         });
     }
 
-    // Shuffle
     for (let i = ps.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [ps[i], ps[j]] = [ps[j], ps[i]];
@@ -159,7 +167,7 @@ function spawnDemo() {
     return ps;
 }
 
-// ─── Physics (bounded to ARENA) ───
+// ─── Physics ───
 function physics(ps, dt, moving) {
     const step = dt / 16.667;
     if (moving) {
@@ -238,41 +246,54 @@ function drawWaterRipple(ctx, p, time) {
     ctx.fill();
 }
 
-// ─── Draw text inside the frame panel ───
-function drawTextPanel(ctx, frameImg, text, time) {
-    if (!text) return;
+// ─── Submit Button (drawn on canvas during STOPPED) ───────────────────────────
+// Mirrors SpaceConvoy's drawSubmitButton exactly.
+// Shows "Submit" with a pulsing border. Hint text if nothing selected yet.
 
-    // Draw the sci-fi frame SVG
-    const frameW = CW - 80;
-    const frameH = PANEL_H;
-    const frameX = (CW - frameW) / 2;
-    const frameY = PANEL_TOP;
-
-    if (frameImg) {
-        ctx.drawImage(frameImg, frameX, frameY, frameW, frameH);
-    }
-
-    // Draw text centered inside the frame
-    const lines = text.split("\n");
-    const lineHeight = 52;
-    const textX = CW / 2;
-    const textStartY = frameY + frameH / 2 - ((lines.length - 1) * lineHeight) / 2;
+function drawSubmitButton(ctx, ps, globalTime) {
+    const bw = SUBMIT_BTN.w, bh = SUBMIT_BTN.h, br = SUBMIT_BTN.r;
+    const bx = (CW - bw) / 2;
+    const by = CH - SUBMIT_BTN.bottomPad - bh;
 
     ctx.save();
-    ctx.font = "bold 42px 'Courier New', Courier, monospace";
+
+    // Background
+    ctx.fillStyle = "rgba(4,9,26,0.88)";
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, br);
+    ctx.fill();
+
+    // Pulsing border
+    const pulse = 0.55 + 0.45 * Math.sin(globalTime * 0.004);
+    ctx.strokeStyle = TIER_PRIMARY + Math.round(pulse * 200).toString(16).padStart(2, "0");
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, br);
+    ctx.stroke();
+
+    // Label
+    const anySelected = ps.some(p => p.selected);
+    ctx.font = `bold 44px 'Arial Black', Arial, sans-serif`;
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
+    ctx.fillStyle = anySelected ? "#ffffff" : "rgba(255,255,255,0.35)";
+    ctx.fillText("Submit", CW / 2, by + bh * 0.62);
 
-    // Text glow
-    ctx.shadowColor = "rgba(154, 217, 255, 0.6)";
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = "#E8C547"; // golden yellow like in the screenshot
-
-    lines.forEach((line, i) => {
-        ctx.fillText(line, textX, textStartY + i * lineHeight);
-    });
+    // Hint
+    if (!anySelected) {
+        ctx.font = "400 26px Arial, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.22)";
+        ctx.fillText("Tap the targets first", CW / 2, by + bh * 0.85);
+    }
 
     ctx.restore();
+}
+
+// ─── Hit test: is a tap on the submit button? ────────────────────────────────
+function isSubmitTap(x, y) {
+    const bw = SUBMIT_BTN.w, bh = SUBMIT_BTN.h;
+    const bx = (CW - bw) / 2;
+    const by = CH - SUBMIT_BTN.bottomPad - bh;
+    return x >= bx && x <= bx + bw && y >= by && y <= by + bh;
 }
 
 // ════════════════════════════════════════════
@@ -299,12 +320,13 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         failCount: 0,
         freezeStartTime: 0,
         trialStarted: false,
+        submitted: false,       // NEW: guards against double-submit
     });
-    // API state per practice round
+
     const apiRef = useRef({
         trialId: null,
         trialNumber: 0,
-        pendingResponses: [], // taps collected during STOPPED
+        pendingResponses: [],
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
@@ -321,7 +343,6 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
 
             assets.current = { stim, glow, correct, error, frame, bg, loaded: true };
 
-            // Start demo
             const g = G.current;
             g.ps = spawnDemo();
             g.step = STEP.SHOW_TARGETS;
@@ -339,59 +360,89 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         api.pendingResponses = [];
 
         if (!sessionId) return;
+
+        // CHANGE: removed trial_type and tracking_duration_ms — not in new API spec
         const result = await DivideAttentionTrialStart({
             session_id: sessionId,
             trial_number: api.trialNumber,
-            trial_type: "practice",
             num_targets: DEMO_TARGETS,
             num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
             total_objects: DEMO_PARTICLES,
-            tracking_duration_ms: STEP_FREEZE_MS,
         });
         if (result.success) {
-            api.trialId = result.data.trial_id ?? result.data.id ?? null;
+            api.trialId = result.data?.trial_id ?? result.data?.id ?? null;
             console.log("[Demo] Trial started:", api.trialId, "| trial_number:", api.trialNumber);
         } else {
             console.warn("[Demo] Trial start failed, continuing offline");
         }
     }, [sessionId]);
 
-    const finishPracticeTrial = useCallback(async (ps) => {
+    // CHANGE: finishPracticeTrial now accepts submitTimeMs for tracking_duration_ms.
+    // Removed points_awarded and speed_bonus from response objects.
+    // TrialComplete now receives summary stats body.
+    const finishPracticeTrial = useCallback(async (ps, submitTimeMs) => {
         const api = apiRef.current;
         if (!sessionId || !api.trialId) return;
 
-        // Build responses — only tapped particles (correct_hit / false_alarm)
-        const freezeDurationMs = STEP_FREEZE_MS;
+        const freezeDurationMs = submitTimeMs;   // freeze start → submit tap
         const speedThresholdMs = freezeDurationMs * 0.5;
         const responses = [];
+        let hits = 0, misses = 0, falseAlarms = 0, correctRejections = 0;
 
         ps.forEach((p, idx) => {
-            if (!p.selected) return;
-            if (p.isTarget) {
-                const hasSpeedBonus = p.responseTimeMs != null && p.responseTimeMs < speedThresholdMs;
-                responses.push({
-                    object_index: idx,
-                    object_type: "target",
-                    response_time_ms: p.responseTimeMs ?? 0,
-                    tap_x: p.tapX ?? 0,
-                    tap_y: p.tapY ?? 0,
-                    response_type: "correct_hit",
-                    is_correct: true,
-                    points_awarded: 10 + (hasSpeedBonus ? 3 : 0),
-                    speed_bonus: hasSpeedBonus,
-                });
+            if (p.selected) {
+                if (p.isTarget) {
+                    // Correct Hit
+                    hits++;
+                    responses.push({
+                        object_index: idx,
+                        object_type: "target",
+                        response_time_ms: p.responseTimeMs ?? 0,
+                        tap_x: p.tapX ?? 0,
+                        tap_y: p.tapY ?? 0,
+                        response_type: "correct_hit",
+                        is_correct: true,
+                        // points_awarded and speed_bonus removed — not in new API spec
+                    });
+                } else {
+                    // False Alarm
+                    falseAlarms++;
+                    responses.push({
+                        object_index: idx,
+                        object_type: "distractor",
+                        response_time_ms: p.responseTimeMs ?? 0,
+                        tap_x: p.tapX ?? 0,
+                        tap_y: p.tapY ?? 0,
+                        response_type: "false_alarm",
+                        is_correct: false,
+                    });
+                }
             } else {
-                responses.push({
-                    object_index: idx,
-                    object_type: "distractor",
-                    response_time_ms: p.responseTimeMs ?? 0,
-                    tap_x: p.tapX ?? 0,
-                    tap_y: p.tapY ?? 0,
-                    response_type: "false_alarm",
-                    is_correct: false,
-                    points_awarded: -5,
-                    speed_bonus: false,
-                });
+                if (p.isTarget) {
+                    // Miss — target not tapped
+                    misses++;
+                    responses.push({
+                        object_index: idx,
+                        object_type: "target",
+                        response_time_ms: null,
+                        tap_x: null,
+                        tap_y: null,
+                        response_type: "miss",
+                        is_correct: false,
+                    });
+                } else {
+                    // Correct Rejection — distractor not tapped
+                    correctRejections++;
+                    responses.push({
+                        object_index: idx,
+                        object_type: "distractor",
+                        response_time_ms: null,
+                        tap_x: null,
+                        tap_y: null,
+                        response_type: "correct_rejection",
+                        is_correct: true,
+                    });
+                }
             }
         });
 
@@ -403,10 +454,50 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             if (!batchResult.success) console.warn("[Demo] Response batch failed");
         }
 
-        const completeResult = await DivideAttentionTrialComplete(api.trialId);
+        // CHANGE: TrialComplete now sends summary stats as body
+        const completeResult = await DivideAttentionTrialComplete(api.trialId, {
+            tracking_duration_ms: Math.round(freezeDurationMs),
+            hits,
+            misses,
+            false_alarms: falseAlarms,
+            correct_rejections: correctRejections,
+        });
         if (!completeResult.success) console.warn("[Demo] Trial complete failed");
         else console.log("[Demo] Trial complete:", api.trialId);
     }, [sessionId]);
+
+    // ─── Submit handler ───────────────────────────────────────────────────────
+    // Called when user taps the Submit button during STOPPED.
+    // Rule: if >= 1 correct target hit → move to main game immediately.
+    // Otherwise → existing fail/retry logic.
+    const handleSubmit = useCallback(() => {
+        const g = G.current;
+        if (g.step !== STEP.STOPPED || g.submitted) return;
+        g.submitted = true;
+
+        const submitTimeMs = performance.now() - g.freezeStartTime;
+
+        // Send API data
+        finishPracticeTrial(g.ps, submitTimeMs);
+
+        const correctHits = g.ps.filter(p => p.isTarget && p.selected).length;
+        const wrongTaps = g.ps.filter(p => !p.isTarget && p.selected).length;
+        const isPerfect = correctHits === DEMO_TARGETS && wrongTaps === 0;
+
+        // KEY RULE: at least 1 correct hit → go to main game
+        if (correctHits >= 1) {
+            g.step = STEP.DONE;
+            setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
+            setDisplayStep(STEP.DONE);
+            setTimeout(() => onComplete?.(), 1500);
+            return;
+        }
+
+        // 0 correct hits → fail logic (same as before)
+        g.step = STEP.RESULT;
+        g.elapsed = 0;
+        g.resultHandled = false;
+    }, [finishPracticeTrial, onComplete]);
 
     // ─── Game loop ───
     useEffect(() => {
@@ -431,7 +522,6 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                         break;
 
                     case STEP.ALL_SAME:
-                        // Fade in distractors
                         g.revealProgress = Math.min(1, g.elapsed / REVEAL_MS);
                         g.ps.forEach((p) => {
                             if (!p.isTarget) p.opacity = g.revealProgress;
@@ -446,85 +536,57 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                         break;
 
                     case STEP.MOVING:
-                        // All move
                         physics(g.ps, dt, true);
                         if (g.elapsed >= STEP_MOVING_MS) {
                             g.ps.forEach((p) => { p.vx = 0; p.vy = 0; });
                             g.step = STEP.STOPPED;
                             g.elapsed = 0;
                             g.freezeStartTime = performance.now();
-                            g.trialStarted = false; // reset guard for this round
+                            g.submitted = false;    // reset submit guard for new round
+                            g.trialStarted = false;
                             setDisplayMsg(STEP_MESSAGES[STEP.STOPPED]);
                         }
                         break;
 
                     case STEP.STOPPED:
-                        // Call TrialStart exactly once when we enter STOPPED
+                        // Call TrialStart exactly once when entering STOPPED
                         if (!g.trialStarted) {
-                            console.log("Trial started");
                             g.trialStarted = true;
                             startPracticeTrial();
                         }
-                        // Wait for user taps
                         physics(g.ps, dt, false);
-                        if (g.elapsed >= STEP_FREEZE_MS || g.allGuessed) {
-                            g.step = STEP.RESULT;
-                            g.elapsed = 0;
-                            // Send batch + complete for this practice trial
-                            finishPracticeTrial(g.ps);
+                        // Auto-advance removed — user must tap Submit now.
+                        // STEP_FREEZE_MS timeout still acts as a safety fallback.
+                        if (g.elapsed >= STEP_FREEZE_MS && !g.submitted) {
+                            handleSubmit();
                         }
                         break;
 
                     case STEP.RESULT:
+                        // Only reached when correctHits === 0 (submit with nothing correct)
                         if (g.elapsed >= STEP_RESULT_MS && !g.resultHandled) {
                             g.resultHandled = true;
-                            const correctCount = g.ps.filter((p) => p.isTarget && p.selected).length;
-                            const wrongCount = g.ps.filter((p) => !p.isTarget && p.selected).length;
-                            const isPerfect = correctCount === DEMO_TARGETS && wrongCount === 0;
+                            g.failCount += 1;
 
-                            if (isPerfect) {
-                                if (g.practiceRound >= 2) {
-                                    g.step = STEP.DONE;
-                                    setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
-                                    setDisplayStep(STEP.DONE);
-                                    setTimeout(() => onComplete?.(), 1500);
-                                } else {
-                                    g.practiceRound += 1;
-
-                                    setDisplayMsg("Great Job. Lets Try one more time");
-
-                                    setTimeout(() => {
-                                        g.ps = spawnDemo();
-                                        g.allGuessed = false;
-                                        g.revealProgress = 0;
-                                        g.resultHandled = false;
-                                        g.trialStarted = false;
-                                        g.step = STEP.SHOW_TARGETS;
-                                        g.elapsed = 0;
-                                    }, 2000);
-                                }
+                            if (g.failCount >= 3) {
+                                // Max retries — move on anyway
+                                setTimeout(() => {
+                                    navigate("/colorblindness");
+                                }, 2000);
                             } else {
-                                g.failCount += 1;
-                                if (g.failCount >= 3) {
-                                    // Max retries reached — move on
-                                    // setDisplayMsg("No worries! Let's start the game.");
-                                    setTimeout(() => {
-                                        navigate("/colorblindness");
-                                    }, 2000);
-                                } else {
-                                    setDisplayMsg("Make sure you keep the track of the right asteroids. Let's try again.");
-                                    setTimeout(() => {
-                                        g.ps = spawnDemo();
-                                        g.allGuessed = false;
-                                        g.revealProgress = 0;
-                                        g.resultHandled = false;
-                                        g.trialStarted = false;
-                                        g.step = STEP.SHOW_TARGETS;
-                                        g.elapsed = 0;
-                                        setDisplayStep(STEP.SHOW_TARGETS);
-                                        setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
-                                    }, 2000);
-                                }
+                                setDisplayMsg("Make sure you keep track of the right asteroids. Let's try again.");
+                                setTimeout(() => {
+                                    g.ps = spawnDemo();
+                                    g.allGuessed = false;
+                                    g.revealProgress = 0;
+                                    g.resultHandled = false;
+                                    g.trialStarted = false;
+                                    g.submitted = false;
+                                    g.step = STEP.SHOW_TARGETS;
+                                    g.elapsed = 0;
+                                    setDisplayStep(STEP.SHOW_TARGETS);
+                                    setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+                                }, 2000);
                             }
                         }
                         break;
@@ -536,9 +598,9 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         };
         rafRef.current = requestAnimationFrame(loop);
         return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    }, [onComplete]);
+    }, [onComplete, handleSubmit]);
 
-    // ─── Render ───
+    // ─── Draw ───
     const draw = useCallback((time) => {
         const cv = cvRef.current;
         if (!cv) return;
@@ -548,7 +610,6 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
 
         ctx.clearRect(0, 0, CW, CH);
 
-        // Background
         if (a.bg) {
             ctx.drawImage(a.bg, 0, 0, CW, CH);
         } else {
@@ -557,32 +618,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             ctx.fillStyle = gr; ctx.fillRect(0, 0, CW, CH);
         }
 
-        if (g.step === STEP.LOADING) {
-            if (a.bg) {
-                ctx.drawImage(a.bg, 0, 0, CW, CH);
-            } else {
-                const gr = ctx.createLinearGradient(0, 0, 0, CH);
-                gr.addColorStop(0, "#0b1a2e");
-                gr.addColorStop(1, "#080e18");
-                ctx.fillStyle = gr;
-                ctx.fillRect(0, 0, CW, CH);
-            }
-            return;
-        };
-
-        // ─── Text panel ───
-        const msg = STEP_MESSAGES[g.step] || "";
-        let displayMsg = msg;
-        if (g.step === STEP.RESULT) {
-            const correct = g.ps.filter((p) => p.isTarget && p.selected).length;
-            const wrong = g.ps.filter((p) => !p.isTarget && p.selected).length;
-            if (correct === DEMO_TARGETS && wrong === 0) {
-                displayMsg = "Well done!\nYou got them all.";
-            } else {
-                displayMsg = "Not quite!\nTrying again...";
-            }
-        }
-        // drawTextPanel(ctx, a.frame, displayMsg, time);
+        if (g.step === STEP.LOADING) return;
 
         // ─── Particles ───
         g.ps.forEach((p) => {
@@ -592,46 +628,26 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             ctx.save();
             ctx.globalAlpha = p.opacity;
 
-            // Water ripple for SHOW_TARGETS and STOPPED hover
             const showRipple =
                 (g.step === STEP.SHOW_TARGETS && p.isTarget) ||
                 (g.step === STEP.STOPPED && p.hovered && !p.selected);
 
-            if (showRipple) {
-                drawWaterRipple(ctx, p, time || 0);
-            }
+            if (showRipple) drawWaterRipple(ctx, p, time || 0);
 
-            // Image selection
             if (p.selected && (g.step === STEP.STOPPED || g.step === STEP.RESULT || g.step === STEP.DONE)) {
                 if (p.isTarget) {
                     const img = a.correct || a.stim;
-                    if (img && img === a.correct) {
-                        drawParticleImg(ctx, img, p, CORRECT_SCALE);
-                    } else if (img) {
-                        drawParticleImg(ctx, img, p);
-                    }
+                    drawParticleImg(ctx, img, p, img === a.correct ? CORRECT_SCALE : 1);
                 } else {
                     const img = a.error || a.stim;
-                    if (img && img === a.error) {
-                        drawParticleImg(ctx, img, p, ERROR_SCALE);
-                    } else if (img) {
-                        drawParticleImg(ctx, img, p);
-                    }
+                    drawParticleImg(ctx, img, p, img === a.error ? ERROR_SCALE : 1);
                 }
             } else if (g.step === STEP.SHOW_TARGETS && p.isTarget) {
                 const img = a.glow || a.stim;
-                if (img && img === a.glow) {
-                    drawParticleImg(ctx, img, p, GLOW_SCALE);
-                } else if (img) {
-                    drawParticleImg(ctx, img, p);
-                }
+                drawParticleImg(ctx, img, p, img === a.glow ? GLOW_SCALE : 1);
             } else if (g.step === STEP.STOPPED && p.hovered && !p.selected) {
                 const img = a.glow || a.stim;
-                if (img && img === a.glow) {
-                    drawParticleImg(ctx, img, p, GLOW_SCALE);
-                } else if (img) {
-                    drawParticleImg(ctx, img, p);
-                }
+                drawParticleImg(ctx, img, p, img === a.glow ? GLOW_SCALE : 1);
             } else {
                 const img = a.stim;
                 if (img) {
@@ -639,13 +655,18 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                 } else {
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.radius - 1, 0, Math.PI * 2);
-                    ctx.fillStyle = "#3DB39E";
+                    ctx.fillStyle = TIER_PRIMARY;
                     ctx.fill();
                 }
             }
 
             ctx.restore();
         });
+
+        // ─── Submit button — only during STOPPED and not yet submitted ───
+        if (g.step === STEP.STOPPED && !g.submitted) {
+            drawSubmitButton(ctx, g.ps, g.globalTime);
+        }
     }, []);
 
     // ─── Input ───
@@ -659,9 +680,16 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
 
     const handleTap = useCallback((cx, cy) => {
         const g = G.current;
-        if (g.step !== STEP.STOPPED || g.allGuessed) return;
+        if (g.step !== STEP.STOPPED || g.submitted) return;
         const { x, y } = toCanvasXY(cx, cy);
 
+        // Check submit button first
+        if (isSubmitTap(x, y)) {
+            handleSubmit();
+            return;
+        }
+
+        // Particle tap
         const responseTimeMs = Math.round(performance.now() - g.freezeStartTime);
 
         for (let i = g.ps.length - 1; i >= 0; i--) {
@@ -671,12 +699,13 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                 p.tapX = Math.round(x);
                 p.tapY = Math.round(y);
                 p.responseTimeMs = responseTimeMs;
+                // NOTE: allGuessed no longer auto-submits — user must tap Submit
                 const selCount = g.ps.filter((pp) => pp.selected).length;
                 if (selCount >= DEMO_TARGETS) g.allGuessed = true;
                 break;
             }
         }
-    }, [toCanvasXY]);
+    }, [toCanvasXY, handleSubmit]);
 
     const handleMove = useCallback((cx, cy) => {
         const g = G.current;
