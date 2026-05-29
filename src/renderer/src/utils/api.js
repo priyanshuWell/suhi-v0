@@ -456,17 +456,19 @@ export const voiceSaveApi = async (payload) => {
   }
 }
 
-export const DivideAttentionSession = async (userId,sessionType) => {
+export const DivideAttentionSession = async (userId, sessionId, sessionType) => {
 
   /*
 {
   "user_id": "bdabcfad-558f-4d36-9cfd-5deaedfdd629",
+  session_id:"bdabcfad-558f-4d36-9cfd-5deaedfdd629",
   "session_type": "practice"
 }
 
   */
   const payload = {
     user_id:userId,
+    session_id:sessionId,
     session_type:sessionType
   }
   try {
@@ -505,8 +507,7 @@ export const DivideAttentionTrialStart = async (payload) => {
   "trial_type": "practice",
   "num_targets": 2,
   "num_distractors": 2,
-  "total_objects": 4,
-  "tracking_duration_ms": 8000
+  "total_objects": 4
 }
   */
   try {

@@ -19,17 +19,17 @@ import HeightWeightComplete from "./HeightWeightComplete"
 
 const ARC_POSITIONS = {
   "arc-left-top": {
-    left: "1%",
+    left: "-8%",
     top: "18%",
   },
 
   "arc-left-middle": {
-    left: "0%",
-    top: "38%",
+    left: "-10%",
+    top: "44%",
   },
 
   "arc-left-bottom": {
-    left: "12%",
+    left: "-3%",
     top: "60%",
   },
 
@@ -49,13 +49,13 @@ const ARC_POSITIONS = {
   },
 
   "arc-center-top": {
-    left: "39%",
-    top: "0%",
+    left: "34%",
+    top: "-0%",
   },
 
   "arc-center-bottom": {
-    left: "35%",
-    top: "78%",
+    left: "32.4%",
+    top: "80%",
   },
 }
 /* ─────────────────────────────────────────────────────────────
@@ -328,29 +328,30 @@ export const BIAComponent = ({
       isInstant: false,
     },
     {
-      key: "weight",
-      label: "Weight",
+      key: "height",
+      label: "Height",
       icon: biaFatMassIcon,
-      final: weightValue != null
-        ? `${weightValue}`
+      final: heightValue != null
+        ? `${heightValue.toFixed(1)}`
         : "--",
       min: 1,
       max: 30,
-      unit: "kg",
+      unit: "cm",
       dec: 0,
       position: "arc-center-top",
       isInstant: true,
     },
     {
-      key: "height",
-      label: "Height",
+      key: "weight",
+      label: "Weight",
       icon: biaFatMassIcon,
-      final: heightValue != null
-        ? `${heightValue}`
+      final: weightValue != null
+        ? `${weightValue.toFixed(1)}`
+
         : "--",
       min: 1,
       max: 30,
-      unit: "cm",
+      unit: "kg",
       dec: 0,
       position: "arc-center-bottom",
 

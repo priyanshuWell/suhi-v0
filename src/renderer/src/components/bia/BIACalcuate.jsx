@@ -674,6 +674,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
         resultsRef.current.isShoesContinued = true;
         // updatePhaseState('leg', 'skipped');
+        navigate('/bia/wh');
         await runPhase2_WeightHeight();
         return;
       }

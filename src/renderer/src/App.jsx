@@ -61,14 +61,14 @@ function App() {
         <Route path="/faceCapture" element={<FaceCapture />} />
         <Route path="/confirmation" element={<ConfirmationScreen />} />
         <Route path="/login-father" element={<LoginFather />} />
-        <Route path='/' element={<RegisterCard />} />
+        <Route path='/verified' element={<RegisterCard />} />
         <Route path='/bia/:screenType' element={<BIACalcuate />} />
         <Route path='/screen1' element={<NewDmit />} />
  <Route path='/voice' element={<VoiceAnalysis />} />
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
 
-        <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
+        <Route path="/" element={<SpaceConvoyMain />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
       </Route>
 

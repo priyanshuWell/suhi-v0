@@ -13,24 +13,6 @@ import {
     DivideAttentionResponseBatch,
 } from "../../../utils/api";
 
-/*
- * ─── DEMO CONFIGURATION ───
- * A guided walkthrough with 2 targets, 4 total particles.
- * Steps:
- *   1. SHOW_TARGETS   — "Watch the highlighted asteroids." (targets glow + ripple)
- *   2. ALL_SAME       — "All asteroids now look the same." (distractors fade in, all uniform)
- *   3. MOVING         — "Track them as they move." (movement starts)
- *   4. STOPPED        — "Tap the asteroids you were tracking." (freeze, user taps + submit)
- *   5. RESULT         — Show correct/error feedback
- *   6. DONE           — "Great! Let's start." → navigate to game
- *
- * SUBMIT LOGIC:
- *   - Submit button appears on canvas during STOPPED (same style as SpaceConvoy)
- *   - On submit: if user got >= 1 correct target hit → move to main game immediately
- *   - Otherwise → existing fail/retry logic
- */
-
-// ─── Canvas / Arena ───
 const CW = 1014;
 const CH = 1802;
 const PAD = 60;
@@ -368,6 +350,8 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             num_targets: DEMO_TARGETS,
             num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
             total_objects: DEMO_PARTICLES,
+            trial_type: "practice"
+            
         });
         if (result.success) {
             api.trialId = result.data?.trial_id ?? result.data?.id ?? null;
@@ -377,9 +361,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         }
     }, [sessionId]);
 
-    // CHANGE: finishPracticeTrial now accepts submitTimeMs for tracking_duration_ms.
-    // Removed points_awarded and speed_bonus from response objects.
-    // TrialComplete now receives summary stats body.
+
     const finishPracticeTrial = useCallback(async (ps, submitTimeMs) => {
         const api = apiRef.current;
         if (!sessionId || !api.trialId) return;
@@ -397,7 +379,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "target",
-                        response_time_ms: p.responseTimeMs ?? 0,
+                        response_time_ms:0, // p.responseTimeMs 
                         tap_x: p.tapX ?? 0,
                         tap_y: p.tapY ?? 0,
                         response_type: "correct_hit",
@@ -410,7 +392,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "distractor",
-                        response_time_ms: p.responseTimeMs ?? 0,
+                        response_time_ms:0,
                         tap_x: p.tapX ?? 0,
                         tap_y: p.tapY ?? 0,
                         response_type: "false_alarm",
@@ -424,9 +406,9 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "target",
-                        response_time_ms: null,
-                        tap_x: null,
-                        tap_y: null,
+                        response_time_ms: 0,
+                        tap_x: 0,
+                        tap_y: 0,
                         response_type: "miss",
                         is_correct: false,
                     });
@@ -436,16 +418,16 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "distractor",
-                        response_time_ms: null,
-                        tap_x: null,
-                        tap_y: null,
+                        response_time_ms: 0,
+                        tap_x: 0,
+                        tap_y: 0,
                         response_type: "correct_rejection",
                         is_correct: true,
                     });
                 }
             }
         });
-
+console.log(`[Demo] Responses for trial ${responses} ${api.trialId}:`, { hits, misses, falseAlarms, correctRejections, responses });
         if (responses.length > 0) {
             const batchResult = await DivideAttentionResponseBatch({
                 trial_id: api.trialId,
@@ -476,7 +458,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         g.submitted = true;
 
         const submitTimeMs = performance.now() - g.freezeStartTime;
-
+        console.log(`[Demo] Submit tapped after ${submitTimeMs} ms freeze`);
         // Send API data
         finishPracticeTrial(g.ps, submitTimeMs);
 

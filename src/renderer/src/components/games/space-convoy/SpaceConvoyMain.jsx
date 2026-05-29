@@ -24,6 +24,7 @@ import { useNavigate } from 'react-router'
 import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
 import { useSelector } from 'react-redux'
 import { SpaceConvoyComplete } from './SpaceConveyComplete'
+import { store } from '../../../../../store/store'
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.
@@ -92,11 +93,12 @@ const SpaceConvoyMain = () => {
     }
     const handleStartDemo = async () => {
         // TODO: replace with real userId from your auth/Redux store
-        const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
-        const result = await DivideAttentionSession(userId, "practice")
+        const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
+        const sessionId =  storeUser?.screening?.session_id || "41cee210-5f5a-4bb6-bcb6-a5f772dbd174";
+        const result = await DivideAttentionSession(userId,sessionId, "practice")
         if (result.success) {
-            setSessionId(result.data.session_id ?? result.data.id ?? null)
-            console.log("[SpaceConvoy] Session created:", result.data.session_id ?? result.data.id)
+            setSessionId(result.data.game_session_id ??  null)
+            console.log("[SpaceConvoy] Session created:", result.data.game_session_id)
         } else {
             console.warn("[SpaceConvoy] Session create failed, continuing offline")
         }
