@@ -634,7 +634,7 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       // updatePhaseState('leg', 'success');
       await sleep(800);
-      navigate('/bia/leg50')
+      navigate('/bia/wh')
 
       // Success - proceed to Phase 2
       await runPhase2_WeightHeight();

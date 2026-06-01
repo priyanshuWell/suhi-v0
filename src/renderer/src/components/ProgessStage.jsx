@@ -18,7 +18,6 @@ export default function ProgressStage({ current }) {
                 w-full max-w-[1400px]
                 px-3
                  py-3
-                border
                 backdrop-blur-md
             "
             style={{

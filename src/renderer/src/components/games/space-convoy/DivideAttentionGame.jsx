@@ -534,16 +534,15 @@ export default function SpaceConvoy() {
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
     const sessionType = location.state?.sessionType ?? "main";  // "practice" | "main"
-    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
+    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId) ?? "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
 
     // CHANGE: pull userId from redux for DivideAttentionSessionStart payload
-    const userId = useSelector((state) => state.auth?.user?.id ?? null);
+    const userId = useSelector((state) => state.auth?.user?.id ?? "bdabcfad-558f-4d36-9cfd-5deaedfdd629");
 
     const cvRef = useRef(null);
     const bgRef = useRef(null);
     const assets = useRef({ stim: [], glow: [], correct: [], error: [], distImgs: [], loaded: false });
     const apiState = useRef({ trialId: null, trialNumber: 0, totalScore: 0, activeSessionId: null });
-
     const juice = useRef({
         bursts: [], popups: [],
         shake: { x: 0, y: 0, remaining: 0, total: 0, intensity: 0 },
@@ -590,7 +589,7 @@ export default function SpaceConvoy() {
         api.trialNumber = 0; api.totalScore = 0;
 
         if (sessionId) {
-            const sessionRes = await DivideAttentionSession(userId, sessionId, "main");
+            const sessionRes = await DivideAttentionSession(userId, screeningSessionId, "main");
             if (sessionRes.success) {
                 api.activeSessionId = sessionRes.data?.game_session_id ?? sessionId;
                 console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
@@ -627,6 +626,7 @@ export default function SpaceConvoy() {
                 num_targets: cfg.targets,
                 num_distractors: cfg.particles - cfg.targets,
                 total_objects: cfg.particles,
+                trial_type:"main"
             });
             // store trial_id for this round — used in ResponseBatch and TrialComplete
             api.trialId = res.success ? (res.data?.trial_id ?? res.trial_id ?? null) : null;
@@ -872,8 +872,8 @@ export default function SpaceConvoy() {
                     const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
                     if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
                     const tc = tierColour(cfg.difficultyTier ?? 1);
-                    spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
-                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                   // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                   // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
                 } else {
                     sfx.falseAlarm();
                     spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);

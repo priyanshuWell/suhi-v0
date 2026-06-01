@@ -49,7 +49,7 @@ function App() {
     <Routes>
 
       {/* Routes WITHOUT the progress bar */}
-      {/* <Route path="/" element={<SplashScreen />} /> */}
+      <Route path="/" element={<SplashScreen />} />
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path="/login-suhi" element={<LoginSuhi />} />
@@ -68,7 +68,7 @@ function App() {
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
 
-        <Route path="/" element={<SpaceConvoyMain />} />
+        <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
       </Route>
 

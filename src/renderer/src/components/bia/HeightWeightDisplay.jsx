@@ -49,20 +49,31 @@ const HeightWeightDisplay = ({
 
     return (
         <>
-            <div className="fixed overflow-hidden bottom-60 left-20 z-40 flex items-center gap-10 font-anta">
+            <div className="fixed  bottom-60 left-20 z-40 flex items-center gap-10 font-anta">
 
                 {/* Height Card */}
                 <div
-                    className="
-                        flex flex-col items-center justify-center gap-6
-                        px-20 py-7
-                        rounded-[28px]
-                        border border-white
-                        bg-[rgba(82,82,82,0.3)]
-                        shadow-[0px_4px_28px_0px_#9ad9ff]
-                        w-[450px]
-                    "
+                  className="
+    relative
+    flex flex-col items-center justify-center gap-6
+    px-20 py-7
+    rounded-[28px]
+    w-[450px]
+    overflow-hidden
+  "
+  style={{
+    boxShadow: '0px 3.58px 28.62px #9ad9ff',
+    background:
+      'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
+    border: '1.4px solid transparent'
+  }}
                 >
+                      <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
+    <div
+      className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
+      style={{ backdropFilter: 'blur(35px)' }}
+    />
+  </div>
                     <p className="text-white text-[70px] leading-normal m-0 whitespace-nowrap">
                         Height
                     </p>
@@ -80,17 +91,27 @@ const HeightWeightDisplay = ({
 
                 {/* Weight Card */}
                 <div
-                    className="
-                        flex flex-col items-center justify-center gap-6
-                        px-20 py-7
-                        rounded-[28px]
-                        border border-white
-                        bg-[rgba(82,82,82,0.3)]
-                        shadow-[0px_4px_28px_0px_#9ad9ff]
-                        w-[450px]
-                        overflow-hidden
-                    "
+                  className="
+    relative
+    flex flex-col items-center justify-center gap-6
+    px-20 py-7
+    rounded-[28px]
+    w-[450px]
+    overflow-hidden
+  "
+  style={{
+    boxShadow: '0px 3.58px 28.62px #9ad9ff',
+    background:
+      'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
+    border: '1.4px solid transparent'
+  }}
                 >
+                      <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
+    <div
+      className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
+      style={{ backdropFilter: 'blur(35px)' }}
+    />
+  </div>
                     <p className="text-white text-[70px] leading-normal m-0 whitespace-nowrap">
                         Weight
                     </p>
