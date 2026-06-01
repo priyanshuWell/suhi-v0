@@ -23,7 +23,7 @@ import stimulus_error_3 from "../../../assets/games/stimulus_error_3.svg";
 
 import { ROUNDS } from "./rounds";
 import {
-    DivideAttentionSession,         // called ONCE at session start — returns game_session_id
+    DivideAttentionSession,         // called ONCE — creates session, returns active session_id
     DivideAttentionTrialStart,      // called PER ROUND — gets trial_id for that round
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
@@ -532,17 +532,17 @@ function buildResponses(ps, responseWindowMs) {
 export default function SpaceConvoy() {
     const navigate = useNavigate();
     const location = useLocation();
-    // Input session_id from the parent screen — passed to DivideAttentionSession
-    // The returned game_session_id is then used for all trial/session-complete calls.
     const sessionId = location.state?.sessionId ?? null;
     const sessionType = location.state?.sessionType ?? "main";  // "practice" | "main"
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
-    const userId = useSelector((state) => state.common.user?.data?.user_id ?? null);
+
+    // CHANGE: pull userId from redux for DivideAttentionSessionStart payload
+    const userId = useSelector((state) => state.auth?.user?.id ?? null);
 
     const cvRef = useRef(null);
     const bgRef = useRef(null);
     const assets = useRef({ stim: [], glow: [], correct: [], error: [], distImgs: [], loaded: false });
-    const apiState = useRef({ trialId: null, trialNumber: 0, totalScore: 0, gameSessionId: null });
+    const apiState = useRef({ trialId: null, trialNumber: 0, totalScore: 0, activeSessionId: null });
 
     const juice = useRef({
         bursts: [], popups: [],
@@ -567,8 +567,45 @@ export default function SpaceConvoy() {
 
     useEffect(() => { bgRef.current = buildBackground(); }, []);
 
+    useEffect(() => {
+        (async () => {
+            const stim = await Promise.all(STIM_PATHS.map(loadSvg));
+            const glow = await Promise.all([stimulus_glow_1, stimulus_glow_2, stimulus_glow_3].map(loadSvg));
+            const correct = await Promise.all([stimulus_correct_1, stimulus_correct_2, stimulus_correct_3].map(loadSvg));
+            const error = await Promise.all([stimulus_error_1, stimulus_error_2, stimulus_error_3].map(loadSvg));
+            assets.current = { stim, glow, correct, error, loaded: true };
+            startSession();
+        })();
+    }, []);
+
+    // Called once when the game starts.
+    // DivideAttentionSession creates the main session and returns the active session_id.
+    // All trial calls use activeSessionId, not the raw sessionId prop.
+    const startSession = useCallback(async () => {
+        const g = G.current, api = apiState.current;
+        Object.assign(g, {
+            sess: SESS.PLAYING, ri: 0, results: [],
+            highestRound: 0, totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
+        });
+        api.trialNumber = 0; api.totalScore = 0;
+
+        if (sessionId) {
+            const sessionRes = await DivideAttentionSession(userId, sessionId, "main");
+            if (sessionRes.success) {
+                api.activeSessionId = sessionRes.data?.game_session_id ?? sessionId;
+                console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
+            } else {
+                console.warn("[SpaceConvoy] Session creation failed, falling back to prop sessionId");
+                // api.activeSessionId = sessionId;
+            }
+        }
+
+        sfx.startAmbient();
+        initRound(0);
+    }, [sessionId, userId]);
+
     // Called per round. DivideAttentionTrialStart fires here to get a fresh trial_id.
-    // Uses apiState.current.gameSessionId — the game_session_id returned by DivideAttentionSession.
+    // No session_type here — that belongs to the session, not the trial.
     const initRound = useCallback(async (idx) => {
         const g = G.current, api = apiState.current, cfg = ROUNDS_ARR[idx];
         Object.assign(g, {
@@ -582,9 +619,10 @@ export default function SpaceConvoy() {
         sfx.roundStart();
         api.trialNumber += 1;
 
-        if (api.gameSessionId) {
+        const activeSessionId = api.activeSessionId;
+        if (activeSessionId) {
             const res = await DivideAttentionTrialStart({
-                session_id: api.gameSessionId,
+                session_id: activeSessionId,
                 trial_number: api.trialNumber,
                 num_targets: cfg.targets,
                 num_distractors: cfg.particles - cfg.targets,
@@ -592,50 +630,8 @@ export default function SpaceConvoy() {
             });
             // store trial_id for this round — used in ResponseBatch and TrialComplete
             api.trialId = res.success ? (res.data?.trial_id ?? res.trial_id ?? null) : null;
-            console.log("[Game] Trial started:", api.trialId, "| round:", api.trialNumber);
         }
-    }, []);
-
-    // Called once when assets finish loading.
-    // Calls DivideAttentionSession to create the game session and capture game_session_id.
-    // All subsequent trial/session-complete calls use that game_session_id.
-    const startSession = useCallback(async () => {
-        const g = G.current, api = apiState.current;
-        Object.assign(g, {
-            sess: SESS.PLAYING, ri: 0, results: [],
-            highestRound: 0, totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
-        });
-        api.trialNumber = 0; api.totalScore = 0; api.gameSessionId = null;
-
-        if (sessionId) {
-            const res = await DivideAttentionSession(userId, sessionId, sessionType);
-            if (res.success) {
-                api.gameSessionId = res.data?.game_session_id ?? null;
-                console.log("[Game] Session started, game_session_id:", api.gameSessionId);
-            } else {
-                console.warn("[Game] DivideAttentionSession failed, continuing offline");
-            }
-        }
-
-        sfx.startAmbient();
-        initRound(0);
-    }, [initRound, sessionId, userId, sessionType]);
-
-    const startSessionRef = useRef(startSession);
-    useEffect(() => { startSessionRef.current = startSession; }, [startSession]);
-
-    useEffect(() => {
-        (async () => {
-            const stim = await Promise.all(STIM_PATHS.map(loadSvg));
-            const glow = await Promise.all([stimulus_glow_1, stimulus_glow_2, stimulus_glow_3].map(loadSvg));
-            const correct = await Promise.all([stimulus_correct_1, stimulus_correct_2, stimulus_correct_3].map(loadSvg));
-            const error = await Promise.all([stimulus_error_1, stimulus_error_2, stimulus_error_3].map(loadSvg));
-            assets.current = { stim, glow, correct, error, loaded: true };
-            startSessionRef.current();
-        })();
-    }, []);
-
-
+    }, [sessionId]);
 
     // CHANGE: evaluateRound now:
     //   1. Destructures hits/misses/falseAlarms/correctRejections from buildResponses
@@ -702,17 +698,15 @@ export default function SpaceConvoy() {
     }, [initRound]);
 
     const endSession = useCallback(async () => {
-        const api = apiState.current;
         G.current.sess = SESS.ENDED;
         sfx.sessionComplete();
         sfx.stopAmbient();
-        if (api.gameSessionId) {
-            await DivideAttentionSessionComplete(api.gameSessionId, screeningSessionId);
-        }
+        const activeSessionId = apiState.current.activeSessionId ?? sessionId;
+        if (activeSessionId) await DivideAttentionSessionComplete(activeSessionId, screeningSessionId);
         setTimeout(() => navigate("/space-convoy-complete", {
-            state: { results: G.current.results, totalScore: api.totalScore }
+            state: { results: G.current.results, totalScore: apiState.current.totalScore }
         }), 500);
-    }, [navigate, screeningSessionId]);
+    }, [navigate]);
 
     // ─── Game Loop ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -878,8 +872,8 @@ export default function SpaceConvoy() {
                     const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
                     if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
                     const tc = tierColour(cfg.difficultyTier ?? 1);
-                    // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
-                    // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                    spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
                 } else {
                     sfx.falseAlarm();
                     spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);
