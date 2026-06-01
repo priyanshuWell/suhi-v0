@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_glow_1 from "../../../assets/games/stimulus_glow_1.svg";
 import stimulus_correct_1 from "../../../assets/games/stimulus_correct_1.svg";
@@ -8,11 +9,31 @@ import textFrameSvg from "../../../assets/textFrame.svg";
 import divideAttentionBg from "../../../assets/games/divideAttentionbg.png";
 import { StepTextPanel } from "./StepTextPanel";
 import {
+    DivideAttentionSession,
     DivideAttentionTrialStart,
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
+    DivideAttentionSessionComplete,
 } from "../../../utils/api";
 
+/*
+ * ─── DEMO CONFIGURATION ───
+ * A guided walkthrough with 2 targets, 4 total particles.
+ * Steps:
+ *   1. SHOW_TARGETS   — "Watch the highlighted asteroids." (targets glow + ripple)
+ *   2. ALL_SAME       — "All asteroids now look the same." (distractors fade in, all uniform)
+ *   3. MOVING         — "Track them as they move." (movement starts)
+ *   4. STOPPED        — "Tap the asteroids you were tracking." (freeze, user taps + submit)
+ *   5. RESULT         — Show correct/error feedback
+ *   6. DONE           — "Great! Let's start." → navigate to game
+ *
+ * SUBMIT LOGIC:
+ *   - Submit button appears on canvas during STOPPED (same style as SpaceConvoy)
+ *   - On submit: if user got >= 1 correct target hit → move to main game immediately
+ *   - Otherwise → existing fail/retry logic
+ */
+
+// ─── Canvas / Arena ───
 const CW = 1014;
 const CH = 1802;
 const PAD = 60;
@@ -285,6 +306,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const navigate = useNavigate();
+    const userId = useSelector((state) => state.auth?.user?.id ?? null);
     const cvRef = useRef(null);
     const assets = useRef({
         stim: null, glow: null, correct: null, error: null,
@@ -298,17 +320,19 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         allGuessed: false,
         globalTime: 0,
         resultHandled: false,
-        practiceRound: 1,
-        failCount: 0,
+        practiceRound: 1,   // 1 = trial 1, 2 = trial 2
+        failCount: 0,       // resets per trial
+        trial1Passed: false, // true once trial 1 is passed correctly
         freezeStartTime: 0,
         trialStarted: false,
-        submitted: false,       // NEW: guards against double-submit
+        submitted: false,
     });
 
     const apiRef = useRef({
         trialId: null,
         trialNumber: 0,
         pendingResponses: [],
+        activeSessionId: null,  // set after DivideAttentionSession resolves
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
@@ -324,6 +348,20 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             const bg = await loadPng(divideAttentionBg);
 
             assets.current = { stim, glow, correct, error, frame, bg, loaded: true };
+
+            // Call DivideAttentionSession to create the practice session.
+            // The returned session_id (from response) is used for all trials —
+            // NOT the sessionId prop directly.
+            if (sessionId) {
+                const sessionRes = await DivideAttentionSession(userId, sessionId, "practice");
+                if (sessionRes.success) {
+                    apiRef.current.activeSessionId = sessionRes.data?.session_id ?? sessionRes.session_id ?? sessionId;
+                    console.log("[Demo] Practice session created:", apiRef.current.activeSessionId);
+                } else {
+                    console.warn("[Demo] Session creation failed, falling back to prop sessionId");
+                    apiRef.current.activeSessionId = sessionId;
+                }
+            }
 
             const g = G.current;
             g.ps = spawnDemo();
@@ -341,17 +379,16 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         api.trialId = null;
         api.pendingResponses = [];
 
-        if (!sessionId) return;
+        const activeSessionId = apiRef.current.activeSessionId;
+        if (!activeSessionId) return;
 
-        // CHANGE: removed trial_type and tracking_duration_ms — not in new API spec
+        // Uses activeSessionId returned from DivideAttentionSession, not the prop
         const result = await DivideAttentionTrialStart({
-            session_id: sessionId,
+            session_id: activeSessionId,
             trial_number: api.trialNumber,
             num_targets: DEMO_TARGETS,
             num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
             total_objects: DEMO_PARTICLES,
-            trial_type: "practice"
-            
         });
         if (result.success) {
             api.trialId = result.data?.trial_id ?? result.data?.id ?? null;
@@ -361,10 +398,13 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         }
     }, [sessionId]);
 
-
+    // CHANGE: finishPracticeTrial now accepts submitTimeMs for tracking_duration_ms.
+    // Removed points_awarded and speed_bonus from response objects.
+    // TrialComplete now receives summary stats body.
     const finishPracticeTrial = useCallback(async (ps, submitTimeMs) => {
         const api = apiRef.current;
-        if (!sessionId || !api.trialId) return;
+        const activeSessionId = apiRef.current.activeSessionId;
+        if (!activeSessionId || !api.trialId) return;
 
         const freezeDurationMs = submitTimeMs;   // freeze start → submit tap
         const speedThresholdMs = freezeDurationMs * 0.5;
@@ -379,7 +419,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "target",
-                        response_time_ms:0, // p.responseTimeMs 
+                        response_time_ms: p.responseTimeMs ?? 0,
                         tap_x: p.tapX ?? 0,
                         tap_y: p.tapY ?? 0,
                         response_type: "correct_hit",
@@ -392,7 +432,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "distractor",
-                        response_time_ms:0,
+                        response_time_ms: p.responseTimeMs ?? 0,
                         tap_x: p.tapX ?? 0,
                         tap_y: p.tapY ?? 0,
                         response_type: "false_alarm",
@@ -406,9 +446,9 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "target",
-                        response_time_ms: 0,
-                        tap_x: 0,
-                        tap_y: 0,
+                        response_time_ms: null,
+                        tap_x: null,
+                        tap_y: null,
                         response_type: "miss",
                         is_correct: false,
                     });
@@ -418,16 +458,16 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
                     responses.push({
                         object_index: idx,
                         object_type: "distractor",
-                        response_time_ms: 0,
-                        tap_x: 0,
-                        tap_y: 0,
+                        response_time_ms: null,
+                        tap_x: null,
+                        tap_y: null,
                         response_type: "correct_rejection",
                         is_correct: true,
                     });
                 }
             }
         });
-console.log(`[Demo] Responses for trial ${responses} ${api.trialId}:`, { hits, misses, falseAlarms, correctRejections, responses });
+
         if (responses.length > 0) {
             const batchResult = await DivideAttentionResponseBatch({
                 trial_id: api.trialId,
@@ -446,39 +486,67 @@ console.log(`[Demo] Responses for trial ${responses} ${api.trialId}:`, { hits, m
         });
         if (!completeResult.success) console.warn("[Demo] Trial complete failed");
         else console.log("[Demo] Trial complete:", api.trialId);
+
+        // Complete the practice session after every trial
+        // (practice has only 1 active trial at a time, so session completes with the trial)
+        const sessionCompleteResult = await DivideAttentionSessionComplete(activeSessionId, null);
+        if (!sessionCompleteResult.success) console.warn("[Demo] Session complete failed");
+        else console.log("[Demo] Practice session complete:", activeSessionId);
     }, [sessionId]);
 
     // ─── Submit handler ───────────────────────────────────────────────────────
-    // Called when user taps the Submit button during STOPPED.
-    // Rule: if >= 1 correct target hit → move to main game immediately.
-    // Otherwise → existing fail/retry logic.
+    // Option B: need correct on BOTH trials to proceed to main game.
+    //
+    // Trial 1 correct → advance to Trial 2
+    // Trial 1 fail    → retry Trial 1 (failCount tracks retries, max 3 → main game anyway)
+    // Trial 2 correct → go to main game
+    // Trial 2 fail    → retry Trial 2 (failCount tracks retries, max 3 → main game anyway)
+    //
+    // "Correct" = at least 1 correct target hit (correctHits >= 1)
     const handleSubmit = useCallback(() => {
         const g = G.current;
         if (g.step !== STEP.STOPPED || g.submitted) return;
         g.submitted = true;
 
         const submitTimeMs = performance.now() - g.freezeStartTime;
-        console.log(`[Demo] Submit tapped after ${submitTimeMs} ms freeze`);
-        // Send API data
+
+        // Send API data for this trial
         finishPracticeTrial(g.ps, submitTimeMs);
 
         const correctHits = g.ps.filter(p => p.isTarget && p.selected).length;
-        const wrongTaps = g.ps.filter(p => !p.isTarget && p.selected).length;
-        const isPerfect = correctHits === DEMO_TARGETS && wrongTaps === 0;
+        const passed = correctHits >= 1;
 
-        // KEY RULE: at least 1 correct hit → go to main game
-        if (correctHits >= 1) {
-            g.step = STEP.DONE;
-            setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
-            setDisplayStep(STEP.DONE);
-            setTimeout(() => onComplete?.(), 1500);
-            return;
+        if (g.practiceRound === 1) {
+            if (passed) {
+                // Trial 1 passed → show success message, then start Trial 2
+                g.trial1Passed = true;
+                g.failCount = 0;        // reset fail counter for trial 2
+                setDisplayMsg("Great! Now let's try once more.");
+                setDisplayStep(STEP.RESULT);
+                g.step = STEP.RESULT;
+                g.elapsed = 0;
+                g.resultHandled = false;
+            } else {
+                // Trial 1 failed → retry
+                g.step = STEP.RESULT;
+                g.elapsed = 0;
+                g.resultHandled = false;
+            }
+        } else {
+            // Trial 2
+            if (passed) {
+                // Both trials passed → go to main game
+                g.step = STEP.DONE;
+                setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
+                setDisplayStep(STEP.DONE);
+                setTimeout(() => onComplete?.(), 1500);
+            } else {
+                // Trial 2 failed → retry Trial 2
+                g.step = STEP.RESULT;
+                g.elapsed = 0;
+                g.resultHandled = false;
+            }
         }
-
-        // 0 correct hits → fail logic (same as before)
-        g.step = STEP.RESULT;
-        g.elapsed = 0;
-        g.resultHandled = false;
     }, [finishPracticeTrial, onComplete]);
 
     // ─── Game loop ───
@@ -545,18 +613,12 @@ console.log(`[Demo] Responses for trial ${responses} ${api.trialId}:`, { hits, m
                         break;
 
                     case STEP.RESULT:
-                        // Only reached when correctHits === 0 (submit with nothing correct)
                         if (g.elapsed >= STEP_RESULT_MS && !g.resultHandled) {
                             g.resultHandled = true;
-                            g.failCount += 1;
 
-                            if (g.failCount >= 3) {
-                                // Max retries — move on anyway
-                                setTimeout(() => {
-                                    navigate("/colorblindness");
-                                }, 2000);
-                            } else {
-                                setDisplayMsg("Make sure you keep track of the right asteroids. Let's try again.");
+                            if (g.trial1Passed && g.practiceRound === 1) {
+                                // Trial 1 just passed — advance to Trial 2
+                                g.practiceRound = 2;
                                 setTimeout(() => {
                                     g.ps = spawnDemo();
                                     g.allGuessed = false;
@@ -569,6 +631,28 @@ console.log(`[Demo] Responses for trial ${responses} ${api.trialId}:`, { hits, m
                                     setDisplayStep(STEP.SHOW_TARGETS);
                                     setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
                                 }, 2000);
+                            } else {
+                                // Trial 1 or Trial 2 failed — retry or give up
+                                g.failCount += 1;
+                                if (g.failCount >= 3) {
+                                    // Max retries on this trial — move on anyway
+                                    setTimeout(() => onComplete?.(), 2000);
+                                } else {
+                                    const trialNum = g.practiceRound === 1 ? "first" : "second";
+                                    setDisplayMsg(`Keep track of the ${trialNum} set. Let's try again.`);
+                                    setTimeout(() => {
+                                        g.ps = spawnDemo();
+                                        g.allGuessed = false;
+                                        g.revealProgress = 0;
+                                        g.resultHandled = false;
+                                        g.trialStarted = false;
+                                        g.submitted = false;
+                                        g.step = STEP.SHOW_TARGETS;
+                                        g.elapsed = 0;
+                                        setDisplayStep(STEP.SHOW_TARGETS);
+                                        setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+                                    }, 2000);
+                                }
                             }
                         }
                         break;
