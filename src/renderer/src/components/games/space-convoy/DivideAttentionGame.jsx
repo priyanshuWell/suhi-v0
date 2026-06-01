@@ -23,7 +23,7 @@ import stimulus_error_3 from "../../../assets/games/stimulus_error_3.svg";
 
 import { ROUNDS } from "./rounds";
 import {
-    DivideAttentionSessionStart,    // called ONCE at session start — sends session_type
+    DivideAttentionSession,         // called ONCE — creates session, returns active session_id
     DivideAttentionTrialStart,      // called PER ROUND — gets trial_id for that round
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
@@ -542,7 +542,7 @@ export default function SpaceConvoy() {
     const cvRef = useRef(null);
     const bgRef = useRef(null);
     const assets = useRef({ stim: [], glow: [], correct: [], error: [], distImgs: [], loaded: false });
-    const apiState = useRef({ trialId: null, trialNumber: 0, totalScore: 0 });
+    const apiState = useRef({ trialId: null, trialNumber: 0, totalScore: 0, activeSessionId: null });
 
     const juice = useRef({
         bursts: [], popups: [],
@@ -579,8 +579,8 @@ export default function SpaceConvoy() {
     }, []);
 
     // Called once when the game starts.
-    // DivideAttentionSessionStart fires here with session_type ("practice" | "main")
-    // which is passed via location.state from the parent screen.
+    // DivideAttentionSession creates the main session and returns the active session_id.
+    // All trial calls use activeSessionId, not the raw sessionId prop.
     const startSession = useCallback(async () => {
         const g = G.current, api = apiState.current;
         Object.assign(g, {
@@ -590,16 +590,19 @@ export default function SpaceConvoy() {
         api.trialNumber = 0; api.totalScore = 0;
 
         if (sessionId) {
-            await DivideAttentionSessionStart({
-                user_id: userId,
-                session_id: sessionId,
-                session_type: sessionType,  // "practice" | "main" from location.state
-            });
+            const sessionRes = await DivideAttentionSession(userId, sessionId, "main");
+            if (sessionRes.success) {
+                api.activeSessionId = sessionRes.data?.game_session_id ?? sessionId;
+                console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
+            } else {
+                console.warn("[SpaceConvoy] Session creation failed, falling back to prop sessionId");
+                // api.activeSessionId = sessionId;
+            }
         }
 
         sfx.startAmbient();
         initRound(0);
-    }, [sessionId, userId, sessionType]);
+    }, [sessionId, userId]);
 
     // Called per round. DivideAttentionTrialStart fires here to get a fresh trial_id.
     // No session_type here — that belongs to the session, not the trial.
@@ -616,9 +619,10 @@ export default function SpaceConvoy() {
         sfx.roundStart();
         api.trialNumber += 1;
 
-        if (sessionId) {
+        const activeSessionId = api.activeSessionId;
+        if (activeSessionId) {
             const res = await DivideAttentionTrialStart({
-                session_id: sessionId,
+                session_id: activeSessionId,
                 trial_number: api.trialNumber,
                 num_targets: cfg.targets,
                 num_distractors: cfg.particles - cfg.targets,
@@ -697,7 +701,8 @@ export default function SpaceConvoy() {
         G.current.sess = SESS.ENDED;
         sfx.sessionComplete();
         sfx.stopAmbient();
-        if (sessionId) await DivideAttentionSessionComplete(sessionId, screeningSessionId);
+        const activeSessionId = apiState.current.activeSessionId ?? sessionId;
+        if (activeSessionId) await DivideAttentionSessionComplete(activeSessionId, screeningSessionId);
         setTimeout(() => navigate("/space-convoy-complete", {
             state: { results: G.current.results, totalScore: apiState.current.totalScore }
         }), 500);
@@ -867,8 +872,8 @@ export default function SpaceConvoy() {
                     const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
                     if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
                     const tc = tierColour(cfg.difficultyTier ?? 1);
-                    // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
-                    // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                    spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                    spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
                 } else {
                     sfx.falseAlarm();
                     spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);
