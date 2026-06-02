@@ -43,6 +43,8 @@ export default function BIACalculate({ user, onComplete }) {
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
+  // Stores next_stage from BIAComplete API response for use in handleImNextClick
+  const biaNextStageRef = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
     height: "-- cm", weight: "-- kg", arms50k: {}
   });
@@ -439,7 +441,8 @@ export default function BIACalculate({ user, onComplete }) {
       imCompleteResolver.current = null;
     } else {
       setIsComplete(true);
-      const nextRoute = getNextRoute(screening?.nextStage, '/voice');
+      // Use next_stage captured from the BIAComplete API response
+      const nextRoute = getNextRoute(biaNextStageRef.current, '/voice');
       console.log('[BIA] handleImNextClick — navigating to:', nextRoute);
       navigate(nextRoute);
     }
@@ -1051,6 +1054,10 @@ export default function BIACalculate({ user, onComplete }) {
         screening_session_id: storeUser?.screening?.session_id
       });
 
+      // Cache next_stage from BIAComplete for handleImNextClick fallback
+      biaNextStageRef.current = biaCompleteResult?.screening?.next_stage ?? null;
+      console.log('[BIA] BIAComplete next_stage captured:', biaNextStageRef.current);
+
       // Update Redux screening state with new next_stage from API response
       if (biaCompleteResult?.screening) {
         dispatch(setScreening(biaCompleteResult.screening));
@@ -1077,6 +1084,11 @@ export default function BIACalculate({ user, onComplete }) {
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
+
+      // Cache next_stage from BIAComplete (error path) for handleImNextClick fallback
+      biaNextStageRef.current = biaCompleteOnError?.screening?.next_stage ?? null;
+      console.log('[BIA] BIAComplete (error path) next_stage captured:', biaNextStageRef.current);
+
       if (biaCompleteOnError?.screening) {
         dispatch(setScreening(biaCompleteOnError.screening));
       }
