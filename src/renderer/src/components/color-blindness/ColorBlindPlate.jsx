@@ -63,11 +63,11 @@ export const ColorBlindPlate = () => {
             <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto pt-20 gap-10">
 
                 {/* Title badge */}
-                <div className="mt-10 z-10 w-[60%]">
+                <div className="mt-12 z-10 w-[60%]">
                     <div className="relative text-center flex flex-col items-center gap-20">
                         <img src={textframe} alt="text-frame" className="absolute top-0" />
                         <p
-                            className="text-white text-center tracking-wider my-6 font-anta"
+                            className="text-white text-center tracking-wider my-5 font-anta"
                             style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                         >
                             {t("colorBlindness.title", "Color Blindness Test")}
@@ -84,8 +84,6 @@ export const ColorBlindPlate = () => {
                     {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}
                     <br />
                     {t("colorBlindness.instructions_line2", "If you don't see anything just click on Cannot read plate.")}
-                    <br />
-                    {t("colorBlindness.instructions_line3", "There will be 14 plates.")}
                     <br /><br />
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>

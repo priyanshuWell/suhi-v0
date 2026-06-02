@@ -29,7 +29,9 @@ import {
     DivideAttentionResponseBatch,
     DivideAttentionSessionComplete,
 } from "../../../utils/api";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { setScreening } from "../../../features/common/commonSlice";
+import { getNextRoute } from "../../../utils/stageRouter";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -531,12 +533,13 @@ function buildResponses(ps, responseWindowMs) {
 
 export default function SpaceConvoy() {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
     const sessionType = location.state?.sessionType ?? "main";  // "practice" | "main"
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId) ?? "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
 
-    // CHANGE: pull userId from redux for DivideAttentionSessionStart payload
+    // pull userId from redux
     const userId = useSelector((state) => state.auth?.user?.id ?? "bdabcfad-558f-4d36-9cfd-5deaedfdd629");
 
     const cvRef = useRef(null);
@@ -588,20 +591,17 @@ export default function SpaceConvoy() {
         });
         api.trialNumber = 0; api.totalScore = 0;
 
-        if (sessionId) {
-            const sessionRes = await DivideAttentionSession(userId, screeningSessionId, "main");
-            if (sessionRes.success) {
-                api.activeSessionId = sessionRes.data?.game_session_id ?? sessionId;
-                console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
-            } else {
-                console.warn("[SpaceConvoy] Session creation failed, falling back to prop sessionId");
-                // api.activeSessionId = sessionId;
-            }
+        const sessionRes = await DivideAttentionSession(userId, screeningSessionId, "main");
+        if (sessionRes.success) {
+            api.activeSessionId = sessionRes.data?.game_session_id ?? null;
+            console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
+        } else {
+            console.warn("[SpaceConvoy] Session creation failed — activeSessionId not set");
         }
 
         sfx.startAmbient();
         initRound(0);
-    }, [sessionId, userId]);
+    }, [userId, screeningSessionId]);
 
     // Called per round. DivideAttentionTrialStart fires here to get a fresh trial_id.
     // No session_type here — that belongs to the session, not the trial.
@@ -701,12 +701,23 @@ export default function SpaceConvoy() {
         G.current.sess = SESS.ENDED;
         sfx.sessionComplete();
         sfx.stopAmbient();
-        const activeSessionId = apiState.current.activeSessionId ?? sessionId;
-        if (activeSessionId) await DivideAttentionSessionComplete(activeSessionId, screeningSessionId);
+        const activeSessionId = apiState.current.activeSessionId;
+        let nextRoute = '/colorblindness'; // fallback
+        if (activeSessionId) {
+            const completeResult = await DivideAttentionSessionComplete(activeSessionId, screeningSessionId);
+            // Update Redux screening state with next_stage from API response
+            if (completeResult?.screening) {
+                dispatch(setScreening(completeResult.screening));
+                nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
+            }
+            console.log('[DivideAttention] endSession — navigating to:', nextRoute);
+        } else {
+            console.warn('[DivideAttention] No activeSessionId — skipping SessionComplete');
+        }
         setTimeout(() => navigate("/space-convoy-complete", {
-            state: { results: G.current.results, totalScore: apiState.current.totalScore }
+            state: { results: G.current.results, totalScore: apiState.current.totalScore, nextRoute }
         }), 500);
-    }, [navigate]);
+    }, [navigate, dispatch, screeningSessionId]);
 
     // ─── Game Loop ────────────────────────────────────────────────────────────
     useEffect(() => {

@@ -1,22 +1,25 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import audioBufferToWav from "audiobuffer-to-wav";
 import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import { getKioskId } from "../../utils/config";
+import { setScreening } from "../../features/common/commonSlice";
+import { getNextRoute } from "../../utils/stageRouter";
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg";
 import Kinesthetic from "../../assets/voice/kinesthic.jpeg";
 import Logical from "../../assets/voice/logical.jpeg";
 import Musical from "../../assets/voice/musical.jpeg";
 import Verbal from "../../assets/voice/verbal.jpeg";
 import Nature from "../../assets/voice/nature.jpeg";
-
+import textframe from "../../assets/textFrame.png"
 import Interpersonal360 from "../../assets/voice/intrapersonal_360.png";
 import Kinesthetic360 from "../../assets/voice/kinestic_360.png";
 import Logical360 from "../../assets/voice/logical_360.png";
 import Musical360 from "../../assets/voice/musical_360.png";
 import Verbal360 from "../../assets/voice/verbal_360.png";
 import Nature360 from "../../assets/voice/nature_360.png";
+import icon360 from "../../assets/voice/360_icon.png"
 
 import View360Viewer from "./View360Viewer";
 import bg1 from "../../assets/lightbg.png";
@@ -31,7 +34,7 @@ const IMAGES = [
 ];
 
 // ─── Drum constants ───────────────────────────────────────────────────────────
-const ITEM_HEIGHT = 400;
+const ITEM_HEIGHT = 420;
 const AUTO_SCROLL_MS = 2200;
 const AUTO_SCROLL_RESUME = 1800;
 const SCROLL_SENSITIVITY = 2.2;
@@ -55,6 +58,7 @@ function drumTransform(offset) {
 export default function VoiceAnalysis() {
   const user = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
+  const dispatch = useDispatch();
 
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(Math.floor(IMAGES.length / 2));
@@ -357,8 +361,17 @@ export default function VoiceAnalysis() {
             screening_session_id: screeningSessionId,
           };
           const runResult = await runVoice(runPayload);
-          setStatus(runResult.success ? "success" : "error");
-          if (!runResult.success) console.error("[Voice] run failed:", runResult.error);
+
+          if (runResult.success) {
+            // Update Redux with new screening state (next_stage) from voice API response
+            if (runResult.screening) {
+              dispatch(setScreening(runResult.screening));
+            }
+            setStatus("success");
+          } else {
+            console.error("[Voice] run failed:", runResult.error);
+            setStatus("error");
+          }
         } else {
           console.error("[Voice] store failed:", storeResult.error);
           setStatus("error");
@@ -404,8 +417,11 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    navigate("/space-convoy-main");
-  }, [navigate]);
+    // Navigate based on backend's next_stage (updated after voice completes)
+    const nextRoute = getNextRoute(screeningState?.nextStage, '/space-convoy-main');
+    console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
+    navigate(nextRoute);
+  }, [navigate, screeningState]);
 
   useEffect(() => {
     if (!isRecording) cancelAnimationFrame(animFrameRef.current);
@@ -477,29 +493,42 @@ export default function VoiceAnalysis() {
       <div className="relative z-10 w-full h-full flex flex-col items-center">
 
         {/* Header */}
-        <div className="w-full flex flex-col items-center gap-3 pt-8 px-4 shrink-0 mt-20">
-          <div className="flex items-center gap-3 w-full max-w-2xl">
-            <div className="flex-1 h-px"
-              style={{ background: "linear-gradient(90deg, transparent, rgba(154,217,255,0.7))" }} />
-            <span
-              className="text-white text-base md:text-lg font-semibold tracking-[0.3em] whitespace-nowrap"
-              style={{ fontFamily: "'Exo 2', sans-serif", textShadow: "0 0 20px rgba(154,217,255,0.6)" }}
-            >
-              WHAT DO YOU THINK?
-            </span>
-            <div className="flex-1 h-px"
-              style={{ background: "linear-gradient(90deg, rgba(154,217,255,0.7), transparent)" }} />
+        <div className="w-full flex flex-col items-center">
+          <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
+            <div className="relative flex flex-col items-center">
+
+              {/* Title Frame */}
+              <div className="relative flex items-center justify-center">
+                <img
+                  src={textframe}
+                  alt="text-frame"
+                  className="w-full"
+                />
+
+                <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
+                  What you Think?
+                </p>
+              </div>
+
+              {/* Bottom Decorative Frame */}
+              <img
+                src={textframe}
+                alt="text-frame"
+                className="rotate-180  mt-10"
+              />
+            </div>
           </div>
 
-          <p
-            className="text-white text-center text-xl md:text-3xl font-bold leading-snug"
-            style={{ textShadow: "0 0 30px rgba(154,217,255,0.5)" }}
-          >
-            Select a 360° image and describe
-            <br />
-            what's happening as you explore it.
-          </p>
+          <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
+
+          </div>
+
         </div>
+
+        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute  top-[15rem] left-[13rem] ">
+          Select a 360° image and describe what’s happening as you explore it.
+        </div>
+
 
         {/* Drum wheel */}
         <div
@@ -508,9 +537,9 @@ export default function VoiceAnalysis() {
         >
           {/* Center glow band */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20"
+            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20 "
             style={{
-              top: "50%",
+              top: "60%",
               width: "100%", maxWidth: "900px",
               height: ITEM_HEIGHT,
               transform: "translate(-50%, -50%)",
@@ -534,7 +563,7 @@ export default function VoiceAnalysis() {
 
           {/* Drum track */}
           <div
-            className="relative w-full h-full"
+            className="relative w-full h-full mt-96"
             style={{
               transformStyle: "preserve-3d",
               touchAction: "none",
@@ -570,7 +599,7 @@ export default function VoiceAnalysis() {
                     cursor: isCentered ? "pointer" : "grab",
                     pointerEvents: Math.abs(off) > 2.2 ? "none" : "auto",
                   }}
-                  onClick={isCentered ? onCenterCardClick : undefined}
+                // onClick={isCentered ? onCenterCardClick : undefined}
                 >
                   <div
                     className="relative overflow-hidden"
@@ -596,16 +625,16 @@ export default function VoiceAnalysis() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
                     {/* 360° badge */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-                      <span className="text-white font-black"
-                        style={{ fontSize: 26, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>
-                        360°
-                      </span>
-                      <svg width="36" height="16" viewBox="0 0 32 14" fill="none">
-                        <path d="M2 7 Q16 1 30 7 Q16 13 2 7 Z" stroke="white" strokeWidth="1.5" fill="none" />
-                        <path d="M25 4.5 L30 7 L25 9.5" stroke="white" strokeWidth="1.5" fill="none"
-                          strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+
+                        if (isCentered) {
+                          onCenterCardClick();
+                        }
+                      }}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 ">
+                      <img src={icon360} alt="c60-icon" className="w-[100px] h-[100px]" />
                     </div>
 
                     {/* Label */}

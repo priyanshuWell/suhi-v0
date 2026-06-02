@@ -3,13 +3,26 @@ import textframe from "../../../assets/textFrame.png"
 import BlueGradientButton from '../../ui/BlueGradientButton'
 import { useTranslation } from "react-i18next"
 import bg1 from "../../../assets/lightbg.png"
-import { useNavigate } from "react-router"
+import { useNavigate, useLocation } from "react-router"
+import { getNextRoute } from "../../../utils/stageRouter"
+import { useSelector } from "react-redux"
+
 export function SpaceConvoyComplete({ onStartDemo }) {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const location = useLocation()
+    const screening = useSelector((state) => state.common.screening)
+
     const handleNext = () => {
-        navigate('/colorblindness')
+        // Prefer nextRoute passed from DivideAttentionGame via route state,
+        // fall back to Redux screening.nextStage, then default to /colorblindness
+        const nextRoute =
+            location.state?.nextRoute ||
+            getNextRoute(screening?.nextStage, '/colorblindness')
+        console.log('[SpaceConvoyComplete] handleNext — navigating to:', nextRoute)
+        navigate(nextRoute)
     }
+
     return (
         <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black flex flex-col items-center justify-center">
             <div

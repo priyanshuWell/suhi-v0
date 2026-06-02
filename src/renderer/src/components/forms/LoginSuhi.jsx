@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
+import { useDispatch } from 'react-redux'
 import LoginComponent from '../ui/LoginComponent'
 import fingerprintImg from '../../assets/fingerprint.svg'
 import BlueGradientButton from '../ui/BlueGradientButton'
@@ -7,11 +8,14 @@ import BlackGradientButton from '../ui/BlackGradientButton'
 import KeyboardContainer from '../ui/KeyboardContainer'
 import ErrorAlert from '../ErrorAlert'
 import { loginSuhi } from '../../utils/api'
+import { setUser, setScreening } from '../../features/common/commonSlice'
+import { getNextRoute } from '../../utils/stageRouter'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
 
 const LoginSuhi = () => {
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [suhiId, setSuhiId] = useState('')
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -45,21 +49,31 @@ const LoginSuhi = () => {
     setError('')
 
     try {
-      // const fullSuhiId = `DPKS${suhiId}`
       const response = await loginSuhi(suhiId)
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('User not found. Please check your Suhi ID.')
-        }
-        throw new Error('Something went wrong. Please try again.')
+
+      // loginSuhi() returns { success, ...data } — not a raw Response object
+      if (!response.success) {
+        throw new Error(response.error || 'Something went wrong. Please try again.')
       }
 
-      const data = await response.json()
+      // Persist user and screening info to Redux
+      dispatch(setUser(response))
+      if (response.screening) {
+        dispatch(setScreening(response.screening))
+      }
 
       // Reset retry count on success
       retryRef.current = 0
-      // Navigate to next screen, passing user data along
-      // navigate('/login-dob', { state: { user: data, suhiId: fullSuhiId } })
+
+      // If this is a resumed session, navigate directly to the correct next stage
+      if (response.screening?.is_resumed && response.screening?.next_stage) {
+        const nextRoute = getNextRoute(response.screening.next_stage, '/verified')
+        console.log('[LoginSuhi] Resumed session — navigating to:', nextRoute)
+        navigate(nextRoute)
+      } else {
+        // First login → show the user card for confirmation
+        navigate('/verified')
+      }
     } catch (err) {
       if (retryRef.current < 2) {
         setError(err.message || 'Network error. Retrying...')
@@ -67,7 +81,7 @@ const LoginSuhi = () => {
       } else {
         setError('Maximum retries reached. Redirecting...')
         setTimeout(() => {
-          retryRef.current = 0 // Reset for next potential manual login attempt
+          retryRef.current = 0
           navigate('/welcome')
         }, 1500)
       }
@@ -189,7 +203,7 @@ const LoginSuhi = () => {
         }}
         onClose={() => {
           setShowErrorAlert(false)
-          retryRef.current = 0 // Reset if user manually closes
+          retryRef.current = 0
         }}
       />
     </>

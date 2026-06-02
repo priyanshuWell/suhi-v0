@@ -3,6 +3,8 @@ import { PanoViewer } from "@egjs/react-view360";
 import Image from "../../assets/voice/nature_360.png";
 import voiceComplete from "../../assets/voice/voiceComplete.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
+import icon360 from "../../assets/voice/360_icon.png"
+import fingerIcon from "../../assets/voice/finger_icon.svg"
 import { useNavigate } from "react-router";
 
 const BAR_WIDTH = 12.1111;
@@ -257,42 +259,58 @@ export default function View360Viewer({
 
             {/* ── Drag-to-start nudge ──────────────────────────────────── */}
             {isReady && !hasInteracted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1">
-                    <span className="text-white font-black"
-                        style={{ fontSize: 40, textShadow: "0 2px 10px rgba(0,0,0,0.9)" }}>
-                        360°
-                    </span>
-                    <svg width="56" height="16" viewBox="0 0 32 14" fill="none">
-                        <path d="M2 7 Q16 1 30 7 Q16 13 2 7 Z" stroke="white" strokeWidth="1.5" fill="none" />
-                        <path d="M25 4.5 L30 7 L25 9.5" stroke="white" strokeWidth="1.5" fill="none"
-                            strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex flex-col items-center gap-20"
+                >
+                    <img
+                        src={icon360}
+                        alt="360-icon"
+                        className="w-[100px] h-[100px]"
+                    />
+
+                    <p className="text-2xl bg-black/50 rounded-4xl text-white font-medium whitespace-nowrap flex  items-center py-3 px-10">
+                        <img
+                            src={fingerIcon}
+                            alt="finger-icon"
+                            className="w-10 h-10 ml-2"
+                        />
+                        <span>
+                            Tap to rotate
+                        </span>
+                    </p>
                 </div>
-            )}
+
+
+            )
+            }
 
             {/* ── HUD ─────────────────────────────────────────────────── */}
-            {showHUD && isReady && (
-                <div style={styles.hud}>
-                    <HudItem label="YAW" value={`${hud.yaw}°`} />
-                    <div style={styles.hudDivider} />
-                    <HudItem label="PITCH" value={`${hud.pitch}°`} />
-                    <div style={styles.hudDivider} />
-                    <HudItem label="FOV" value={`${hud.fov}°`} />
-                </div>
-            )}
+            {
+                showHUD && isReady && (
+                    <div style={styles.hud}>
+                        <HudItem label="YAW" value={`${hud.yaw}°`} />
+                        <div style={styles.hudDivider} />
+                        <HudItem label="PITCH" value={`${hud.pitch}°`} />
+                        <div style={styles.hudDivider} />
+                        <HudItem label="FOV" value={`${hud.fov}°`} />
+                    </div>
+                )
+            }
 
             {/* ── Reset button ─────────────────────────────────────────── */}
-            {isReady && (
-                <button onClick={handleReset} style={styles.resetBtn}
-                    title="Reset view" aria-label="Reset camera to default view">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" strokeWidth="2"
-                        strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                        <path d="M3 3v5h5" />
-                    </svg>
-                </button>
-            )}
+            {
+                isReady && (
+                    <button onClick={handleReset} style={styles.resetBtn}
+                        title="Reset view" aria-label="Reset camera to default view">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2"
+                            strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                            <path d="M3 3v5h5" />
+                        </svg>
+                    </button>
+                )
+            }
 
             {/* ── Bottom HUD: [left bars] [timer] [right bars] ────────── */}
             <div style={styles.bottomHud}>
@@ -375,7 +393,7 @@ export default function View360Viewer({
                     <svg {...barSvgProps}>{renderBars(BARS_PER_SIDE)}</svg>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 

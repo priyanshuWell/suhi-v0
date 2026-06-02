@@ -10,17 +10,10 @@ import cameraRing from "../../assets/camera-ring.png";
 import { getCameraSession, openCamerasInBackground } from "../../utils/cameraSession";
 import { realtimeCapture } from "../../utils/api";
 import { setUser } from "../../features/common/commonSlice";
+import { getNextRoute } from "../../utils/stageRouter";
 
 import ErrorAlert from "../ErrorAlert";
 
-const stageRouteMap = {
-  login: '/verified',
-  bia: '/bia/wh',
-  voice_analysis: '/voice',
-  color_blindness: '/colorblindness',
-  divide_attention: '/space-convoy-main',
-  result: '/bia/result',
-};
 
 function FaceCapture() {
   const navigate = useNavigate();
@@ -97,8 +90,8 @@ function FaceCapture() {
 
         // If this is a resumed session, skip the RegisterCard and go straight to next stage
         if (screening?.isResumed && screening?.nextStage) {
-          const nextRoute = stageRouteMap[screening.nextStage.stage_key] || '/bia/wh';
-          console.log("Resumed session: navigating to next stage:", nextRoute);
+          const nextRoute = getNextRoute(screening.nextStage, '/bia/leg50');
+          console.log("[FaceCapture] Resumed session: navigating to next stage:", nextRoute);
           navigate(nextRoute);
         } else {
           navigate("/verified");

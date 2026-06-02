@@ -5,6 +5,9 @@ import bg1 from "../../assets/lightbg.png";
 import { CircularTimer } from "./CircularTimer";
 import OptionButton from "./OptionButton";
 import { colorBlindessSubmit, colorBlindessComplete } from "../../utils/api";
+import { useSelector, useDispatch } from "react-redux";
+import { setScreening } from "../../features/common/commonSlice";
+import { getNextRoute } from "../../utils/stageRouter";
 
 // ─── Static plate imports ─────────────────────────────────────────────────────
 import CARD_1 from "../../assets/color_blindness/Card_1.png";
@@ -21,7 +24,6 @@ import CARD_11 from "../../assets/color_blindness/Card_11.png";
 import CARD_12 from "../../assets/color_blindness/Card_12.png";
 import CARD_13 from "../../assets/color_blindness/Card_13.png";
 import CARD_14 from "../../assets/color_blindness/Card_14.png";
-import { useSelector } from "react-redux";
 const ANSWERS = {
     1: "12",
     2: "8",
@@ -133,6 +135,7 @@ export const ColorBlindQuiz = () => {
     const { t } = useTranslation();
     const location = useLocation();
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
@@ -207,12 +210,19 @@ export const ColorBlindQuiz = () => {
                     const result = await colorBlindessComplete(sessionId, screeningSessionId);
                     console.log("result colorBlindess", result);
                     if (result.success) {
-                        navigate("/bia/result");
+                        // Update Redux with new next_stage from API response
+                        if (result.screening) {
+                            dispatch(setScreening(result.screening));
+                        }
+                        const nextRoute = getNextRoute(result?.screening?.next_stage, '/bia/result');
+                        console.log('[ColorBlindQuiz] colorBlindessComplete — navigating to:', nextRoute);
+                        navigate(nextRoute);
+                        return;
                     }
                 } catch (err) {
                     console.log(err);
                 } finally {
-                    navigate("/bia/result");
+                    navigate('/bia/result');
                 }
             } else {
                 setCurrentIndex(nextIndex);

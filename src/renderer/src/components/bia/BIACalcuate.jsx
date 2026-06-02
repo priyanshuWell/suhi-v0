@@ -5,10 +5,11 @@ import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId } from "../../features/common/commonSlice";
+import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId, setScreening } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
 import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
+import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
 import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
@@ -28,6 +29,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  const screening = useSelector((state) => state.common.screening);
 
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
@@ -121,7 +123,7 @@ export default function BIACalculate({ user, onComplete }) {
     },
     wh: {
       title: t("measurement.stand_straight"),
-      description: "Measuring your height and weight",
+      description: t("measurement.weight_height_measurement"),
 
       video: {
         female: bmiWH_female,
@@ -130,26 +132,24 @@ export default function BIACalculate({ user, onComplete }) {
     },
 
     im: {
-      title: t("measurement.holdThe_Hands"),
-      description: "Measuring your body compositions",
-
+      title: t("measurement.stand_straight"),
+      description: t("measurement.impedance_measurement"),
       video: {
         female: biaIm_female,
         male: biaIm_male,
       },
     },
     whcomplete: {
-      title: "Scan Completed",
-      description: "Here are the results!",
-
+      title: t("measurement.scan_done"),
+      description: t("measurement.weight_height_completed"),
       video: {
         female: bmiWH_female,
         male: bmiWH_male,
       },
     },
     imcomplete: {
-      title: "Scan Completed",
-      description: "Here are the results!",
+      title: t("measurement.scan_done"),
+      description: t("measurement.impedance_complete"),
       video: {
         female: biaIm_female,
         male: biaIm_male,
@@ -439,7 +439,9 @@ export default function BIACalculate({ user, onComplete }) {
       imCompleteResolver.current = null;
     } else {
       setIsComplete(true);
-      navigate("/voice");
+      const nextRoute = getNextRoute(screening?.nextStage, '/voice');
+      console.log('[BIA] handleImNextClick — navigating to:', nextRoute);
+      navigate(nextRoute);
     }
   };
 
@@ -1039,41 +1041,52 @@ export default function BIACalculate({ user, onComplete }) {
       dispatch(setBiaResult(bia));
 
       console.log("[BIA DEBUG] Results saved to Redux store");
-      // updatePhaseState('calculation', 'success');
       console.log("[BIA DEBUG] ========== BIA FLOW COMPLETE ==========");
       navigate("/bia/imcomplete");
       await trackStage(STAGES.BIA_COMPLETE, STATUS.SUCCESS, { bia_object: bia?.finalBia }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log("[BIA DEBUG] ========== trackStage BIA FLOW COMPLETE ==========");
 
-      await BIAComplete({
+      const biaCompleteResult = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
+
+      // Update Redux screening state with new next_stage from API response
+      if (biaCompleteResult?.screening) {
+        dispatch(setScreening(biaCompleteResult.screening));
+      }
+
       console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
       await stopAndSend(); // Upload full BIA recording
 
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
-      navigate("/voice");
+      // Navigate to next stage based on backend response
+      const nextRoute = getNextRoute(biaCompleteResult?.screening?.next_stage, '/voice');
+      console.log('[BIA] runCalculateAndComplete SUCCESS — navigating to:', nextRoute);
+      navigate(nextRoute);
 
     } catch (calcError) {
       console.error("[BIA DEBUG] Calculation error:", calcError.message);
-      // updatePhaseState('calculation', 'failed', calcError.message);
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, "FINAL BIA CALCULATION FAILED", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
       // Even if the final BIA calculation fails, we still show /bia/imcomplete
-      // because we are not collecting everything — do NOT navigate away.
       console.log("[BIA DEBUG] Final BIA failed but staying on /bia/imcomplete");
       navigate("/bia/imcomplete");
-      await BIAComplete({
+      const biaCompleteOnError = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
+      if (biaCompleteOnError?.screening) {
+        dispatch(setScreening(biaCompleteOnError.screening));
+      }
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
-      navigate("/voice");
+      const errorFallbackRoute = getNextRoute(biaCompleteOnError?.screening?.next_stage, '/voice');
+      console.log('[BIA] runCalculateAndComplete ERROR — navigating to:', errorFallbackRoute);
+      navigate(errorFallbackRoute);
     }
   };
 

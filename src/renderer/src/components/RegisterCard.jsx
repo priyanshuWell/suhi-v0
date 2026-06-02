@@ -8,6 +8,7 @@ import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { getNextRoute } from "../utils/stageRouter"
 
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
@@ -64,22 +65,7 @@ export default function RegisterCard() {
   console.log("users", user)
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const handleYesClick = () => {
-    stopAudio()
 
-    if (screening?.isResumed) {
-      // Second time — re-verify face before continuing
-      console.log("Resumed session detected, navigating to FaceCapture for re-verification")
-      navigate("/faceCapture")
-    } else {
-      navigate("/bia/leg50")
-    }
-  }
-
-  const handleNoClick = () => {
-    stopAudio()
-    navigate("/")
-  }
 
 
   const studentName = user?.data?.student_name || "Student"
@@ -88,7 +74,10 @@ export default function RegisterCard() {
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
-    navigate("/bia/leg50")
+    // Use the next_stage from the backend (stored in Redux during login)
+    const nextRoute = getNextRoute(screening?.nextStage, '/bia/leg50')
+    console.log('[RegisterCard] navigating to next stage:', nextRoute)
+    navigate(nextRoute)
   }
 
   const handleNotYou = () => {

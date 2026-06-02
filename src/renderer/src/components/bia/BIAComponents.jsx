@@ -219,7 +219,7 @@ export const BIAComponent = ({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { screenType } = useParams()
-  const gender = user?.gender?.toLowerCase() === "female" ? "female" : "male"
+  const gender = user?.data?.gender?.toLowerCase() === "female" ? "female" : "male"
   console.log("gender bia component", gender)
   const currentScreen = screenConfig[screenType]
   const title = currentScreen?.title

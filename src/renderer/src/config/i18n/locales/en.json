@@ -18,16 +18,14 @@
     "number": "Mobile Number"
   },
   "measurement": {
-    "let_measure": "Creating your wellness profile",
+    "let_measure": "Stand tall and stay still. Your body scan is starting",
     "stand_straight": "Stand Straight",
+    "scan_done": "Scan Completed!",
+    "weight_height_measurement": "Stay still. We're measuring your height and weight",
     "measuring_body_composition": "Measuring your fat and muscle mass",
-    "holdThe_Hands": "Stand straight and hold rods",
-    "weight": "Weight",
-    "height": "Height",
-    "whcomplete_title": "Good Job!",
-    "whcomplete_desc": "Weight and Height Measurement Completed!",
-    "imcomplete_title": "Good Job!",
-    "imcomplete_desc": "Body Composition Analysis Complete!"
+    "weight_height_completed": "Done! Your height and weight have been recorded",
+    "impedance_measurement": "Hold both handles firmly until the scan is complete",
+    "impedance_complete":"Great job! Here are your results"
   },
   "videoCapture": {
     "instruction": "Look at the top Camera",
@@ -41,7 +39,6 @@
     "title": "Color Blindness Test",
     "instructions_line1": "You have to click the number/shape for each image.",
     "instructions_line2": "If you don't see anything just click on Cannot read plate.",
-    "instructions_line3": "There will be 14 plates.",
     "instructions_example": "Example: This Number is 6. Click on next button to start!",
     "plateAlt": "Example color blindness plate",
     "next": "Next"
