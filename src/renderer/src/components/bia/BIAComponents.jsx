@@ -332,7 +332,7 @@ export const BIAComponent = ({
       label: "Height",
       icon: biaFatMassIcon,
       final: heightValue != null
-        ? `${heightValue.toFixed(1)}`
+        ? `${heightValue.toFixed(1)} cm`
         : "--",
       min: 1,
       max: 30,
@@ -346,7 +346,7 @@ export const BIAComponent = ({
       label: "Weight",
       icon: biaFatMassIcon,
       final: weightValue != null
-        ? `${weightValue.toFixed(1)}`
+        ? `${weightValue.toFixed(1)} kg`
 
         : "--",
       min: 1,

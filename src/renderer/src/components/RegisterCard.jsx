@@ -83,8 +83,8 @@ export default function RegisterCard() {
 
 
   const studentName = user?.data?.student_name || "Student"
-  const studentClass = user?.data?.class || "Grade 9"
-  const studentId = user?.data?.contact_number || "9876543210"
+  const studentAge = user?.data?.age || "15"
+  const studentId = user?.data?.suhi_id || "SUHI_12345"
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
@@ -127,7 +127,7 @@ export default function RegisterCard() {
               Hi {studentName},
             </h1>
             <p
-              className="text-[50px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta"
+              className="text-[40px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta"
             >
               Welcome to Suhi,<br />let's start your journey
             </p>
@@ -152,10 +152,10 @@ export default function RegisterCard() {
             className="flex flex-col items-center gap-4 text-[35px]"
             style={{ fontFamily: "'Anta', sans-serif" }}
           >
-            {studentClass && (
+            {studentAge && (
               <div className="flex items-baseline gap-3">
-                <span className="text-[#cff1ff]">Class-</span>
-                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentClass}</span>
+                <span className="text-[#cff1ff]">Age-</span>
+                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentAge}</span>
               </div>
             )}
             {studentId && (
@@ -199,7 +199,7 @@ export default function RegisterCard() {
           {/* Not you? — no margin, gap handles spacing */}
           <button
             onClick={handleNotYou}
-            className="text-white text-[40px] underline underline-offset-4  active:opacity-70 transition-opacity"
+            className="text-white text-[40px] underline pt-28 underline-offset-4  active:opacity-70 transition-opacity"
             style={{ fontFamily: "'Anta', sans-serif" }}
           >
             Not you?
