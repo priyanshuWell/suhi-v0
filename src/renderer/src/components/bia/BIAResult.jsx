@@ -406,12 +406,12 @@ const BIAResult = () => {
 
   const learningItems = [
     {
-      label: 'Attention',
+      label: 'Divided Attention',
       value: formatLabel(apiReport?.attention?.level, 'Medium'),
       valueClassName: 'text-[#2CEF94]',
     },
     {
-      label: 'Memory',
+      label: 'Cognitive Flexibility',
       value: formatLabel(apiReport?.memory?.level, 'Beginner'),
       valueClassName: 'text-[#2CEF94]',
     },
@@ -509,7 +509,7 @@ const BIAResult = () => {
               <div className="w-full flex flex-col gap-6">
                 {/* Mind Card */}
                 {renderInsightCard({
-                  title: "Mind",
+                  title: "Persona",
                   icon: <MindIcon />,
                   titleClassName: "text-[#29ABE2]",
                   cardClassName:
@@ -521,7 +521,7 @@ const BIAResult = () => {
 
                 {/* Brain Card */}
                 {renderInsightCard({
-                  title: "Brain",
+                  title: "Mind",
                   icon: <BrainIconS />,
                   titleClassName: "text-[#2CEF94]",
                   cardClassName:

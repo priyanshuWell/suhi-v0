@@ -474,12 +474,8 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         });
         if (!completeResult.success) console.warn("[Demo] Trial complete failed");
         else console.log("[Demo] Trial complete:", api.trialId);
-
-        // Complete the practice session after every trial
-        // (practice has only 1 active trial at a time, so session completes with the trial)
-        const sessionCompleteResult = await DivideAttentionSessionComplete(activeSessionId);
-        if (!sessionCompleteResult.success) console.warn("[Demo] Session complete failed");
-        else console.log("[Demo] Practice session complete:", activeSessionId);
+        // NOTE: DivideAttentionSessionComplete is intentionally NOT called here.
+        // It is only called in handleSubmit after the final (Trial 2) submission.
     }, [activeSessionId]);
 
     // ─── Submit handler ───────────────────────────────────────────────────────
@@ -491,24 +487,24 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
     // Trial 2 fail    → retry Trial 2 (failCount tracks retries, max 3 → main game anyway)
     //
     // "Correct" = at least 1 correct target hit (correctHits >= 1)
-    const handleSubmit = useCallback(() => {
+    const handleSubmit = useCallback(async () => {
         const g = G.current;
         if (g.step !== STEP.STOPPED || g.submitted) return;
         g.submitted = true;
 
         const submitTimeMs = performance.now() - g.freezeStartTime;
 
-        // Send API data for this trial
-        finishPracticeTrial(g.ps, submitTimeMs);
-
         const correctHits = g.ps.filter(p => p.isTarget && p.selected).length;
         const passed = correctHits >= 1;
 
         if (g.practiceRound === 1) {
+            // Fire-and-forget for Trial 1 — session NOT completed yet
+            finishPracticeTrial(g.ps, submitTimeMs);
+
             if (passed) {
                 // Trial 1 passed → show success message, then start Trial 2
                 g.trial1Passed = true;
-                g.failCount = 0;        // reset fail counter for trial 2
+                g.failCount = 0;
                 setDisplayMsg("Great! Now let's try once more.");
                 setDisplayStep(STEP.RESULT);
                 g.step = STEP.RESULT;
@@ -521,7 +517,14 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 g.resultHandled = false;
             }
         } else {
-            // Trial 2
+            // Trial 2 — AWAIT trial finish before completing the session
+            // so the backend's float aggregation sees fully committed trial data.
+            await finishPracticeTrial(g.ps, submitTimeMs);
+
+            const r = await DivideAttentionSessionComplete(activeSessionId);
+            if (!r.success) console.warn("[Demo] Session complete failed");
+            else console.log("[Demo] Practice session complete:", activeSessionId);
+
             if (passed) {
                 // Both trials passed → go to main game
                 g.step = STEP.DONE;
@@ -535,7 +538,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 g.resultHandled = false;
             }
         }
-    }, [finishPracticeTrial, onComplete]);
+    }, [finishPracticeTrial, onComplete, activeSessionId]);
 
     // ─── Game loop ───
     useEffect(() => {
