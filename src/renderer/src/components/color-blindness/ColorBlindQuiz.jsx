@@ -207,7 +207,7 @@ export const ColorBlindQuiz = () => {
             const nextIndex = currentIndex + 1;
             if (nextIndex >= totalPlates) {
                 try {
-                    const result = await colorBlindessComplete(sessionId, screeningSessionId);
+                    const result = await colorBlindessComplete(sessionId, storeUser?.screening?.session_id);
                     console.log("result colorBlindess", result);
                     if (result.success) {
                         // Update Redux with new next_stage from API response

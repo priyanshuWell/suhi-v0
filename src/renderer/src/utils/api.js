@@ -223,7 +223,7 @@ export async function colorBlindessStart(userId, kiosk_id, screeningSessionId = 
   }
 }
 
-export async function colorBlindessComplete(sessionId= '56af196c-9914-453f-8761-2e0176f6f3db', screeningSessionId = null){
+export async function colorBlindessComplete(sessionId=null, screeningSessionId = null){
   try {
     const payload ={
     screening_session_id: screeningSessionId,

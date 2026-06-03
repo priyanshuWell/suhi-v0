@@ -6,6 +6,7 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import icon360 from "../../assets/voice/360_icon.png"
 import fingerIcon from "../../assets/voice/finger_icon.svg"
 import { useNavigate } from "react-router";
+import { Loader } from "lucide-react";
 
 const BAR_WIDTH = 12.1111;
 const BAR_RADIUS = 6.05556;
@@ -24,7 +25,8 @@ export default function View360Viewer({
     onTimerEnd,
     onFirstInteract,
     isComplete,
-    onNext,           // ← new: called when user clicks "Next" in the modal
+    onNext,   
+    loading        // ← new: called when user clicks "Next" in the modal
 }) {
     const viewerRef = useRef(null);
     const rafRef = useRef(null);
@@ -237,7 +239,7 @@ export default function View360Viewer({
                         <div className="absolute bottom-[20%]">
                             {/* ↓ onNext navigates — NOT onTimerEnd */}
                             <BlueGradientButton onClick={onNext}>
-                                Next
+                                   {loading ? <Loader className="w-4 h-4 animate-spin"/>: "Next"}
                             </BlueGradientButton>
                         </div>
                     </div>

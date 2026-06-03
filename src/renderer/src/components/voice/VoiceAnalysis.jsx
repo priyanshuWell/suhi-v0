@@ -92,7 +92,7 @@ export default function VoiceAnalysis() {
   const dataArrayRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioContextRef = useRef(null);
-
+const [loading, setLoading] = useState(false);
   const isRecording = status === "recording";
 
   // ── selectedIndex ref (needed inside momentum RAF closure) ───────────────
@@ -363,6 +363,7 @@ export default function VoiceAnalysis() {
           const runResult = await runVoice(runPayload);
 
           if (runResult.success) {
+            setLoading(true);
             // Update Redux with new screening state (next_stage) from voice API response
             if (runResult.screening) {
               dispatch(setScreening(runResult.screening));
@@ -477,6 +478,7 @@ export default function VoiceAnalysis() {
           voiceBars={voiceBars}
           isComplete={isComplete}
           onNext={onNext}
+          loading={loading}
         />
       </div>
     );
@@ -525,7 +527,7 @@ export default function VoiceAnalysis() {
 
         </div>
 
-        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute  top-[15rem] left-[13rem] ">
+        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute  top-[15rem] left-[16rem] ">
           Select a 360° image and describe what’s happening as you explore it.
         </div>
 
