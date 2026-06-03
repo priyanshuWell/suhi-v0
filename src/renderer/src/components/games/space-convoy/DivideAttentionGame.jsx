@@ -704,12 +704,12 @@ export default function SpaceConvoy() {
         const activeSessionId = apiState.current.activeSessionId;
         let nextRoute = '/colorblindness'; // fallback
         if (activeSessionId) {
-            const completeResult = await DivideAttentionSessionComplete(activeSessionId, screeningSessionId);
+            const completeResult = await DivideAttentionSessionComplete(activeSessionId);
             // Update Redux screening state with next_stage from API response
-            if (completeResult?.screening) {
-                dispatch(setScreening(completeResult.screening));
-                nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
-            }
+            // if (completeResult?.screening) {
+            //     dispatch(setScreening(completeResult.screening));
+            //     nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
+            // }
             console.log('[DivideAttention] endSession — navigating to:', nextRoute);
         } else {
             console.warn('[DivideAttention] No activeSessionId — skipping SessionComplete');
@@ -717,7 +717,7 @@ export default function SpaceConvoy() {
         setTimeout(() => navigate("/space-convoy-complete", {
             state: { results: G.current.results, totalScore: apiState.current.totalScore, nextRoute }
         }), 500);
-    }, [navigate, dispatch, screeningSessionId]);
+    }, [navigate, dispatch]);
 
     // ─── Game Loop ────────────────────────────────────────────────────────────
     useEffect(() => {

@@ -51,7 +51,7 @@ const SCREENS = {
 const SpaceConvoyMain = () => {
     const { t } = useTranslation()
     const [screen, setScreen] = useState(SCREENS.LOADING)
-    const [sessionId, setSessionId] = useState(null)
+    const activeSessionId = useRef(null)
     const assetsRef = useRef(null)
     const navigate = useNavigate();
     const storeUser = useSelector((state) => state.common.user);
@@ -91,14 +91,15 @@ const SpaceConvoyMain = () => {
     const handleMoveToComplete = () => {
         setScreen(SCREENS.COMPLETE)
     }
-    const handleStartDemo = async () => {
+    const handleStartDemo =  async () => {
         // TODO: replace with real userId from your auth/Redux store
         const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-        const sessionId =  storeUser?.screening?.session_id || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
-        const result = await DivideAttentionSession(userId,sessionId, "practice")
+        const screeningSessionId =  storeUser?.screening?.session_id || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
+        const result = await DivideAttentionSession(userId,screeningSessionId, "practice")
         if (result.success) {
-            setSessionId(result.data.game_session_id ??  null)
-            console.log("[SpaceConvoy] Session created:", result.data.game_session_id)
+            activeSessionId.current = result?.data?.game_session_id;
+            // setSessionId(result.data.game_session_id ??  null)
+            console.log("[SpaceConvoy] Session created:", result.data.game_session_id,activeSessionId)
         } else {
             console.warn("[SpaceConvoy] Session create failed, continuing offline")
         }
@@ -107,7 +108,7 @@ const SpaceConvoyMain = () => {
     const handleDemoComplete = () => setScreen(SCREENS.COUNTDOWN)
     const handleCountdownComplete = () => {
         setScreen(SCREENS.GAME)
-        navigate('/divide-attention', { state: { sessionId } })
+        navigate('/divide-attention', {state:activeSessionId})
     }
 
     // Use lightbg for instruction/countdown, divideAttentionBg for demo/game
@@ -135,7 +136,7 @@ const SpaceConvoyMain = () => {
             )}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} sessionId={sessionId} onComplete={handleDemoComplete} />
+                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={activeSessionId.current}  onComplete={handleDemoComplete} />
             )}
 
             {screen === SCREENS.COUNTDOWN && (

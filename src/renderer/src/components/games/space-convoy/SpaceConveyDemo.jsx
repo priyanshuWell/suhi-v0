@@ -302,7 +302,7 @@ function isSubmitTap(x, y) {
 // ════════════════════════════════════════════
 //  DEMO COMPONENT
 // ════════════════════════════════════════════
-export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToComplete }) {
+export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMoveToComplete }) {
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const navigate = useNavigate();
@@ -312,6 +312,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         stim: null, glow: null, correct: null, error: null,
         frame: null, bg: null, loaded: false,
     });
+    console.log("active",activeSessionId)
     const G = useRef({
         step: STEP.LOADING,
         ps: [],
@@ -332,7 +333,7 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         trialId: null,
         trialNumber: 0,
         pendingResponses: [],
-        activeSessionId: null,  // set after DivideAttentionSession resolves
+        
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
@@ -348,20 +349,6 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             const bg = await loadPng(divideAttentionBg);
 
             assets.current = { stim, glow, correct, error, frame, bg, loaded: true };
-
-            // Call DivideAttentionSession to create the practice session.
-            // The returned session_id (from response) is used for all trials —
-            // NOT the sessionId prop directly.
-            if (sessionId) {
-                const sessionRes = await DivideAttentionSession(userId, sessionId, "practice");
-                if (sessionRes.success) {
-                    apiRef.current.activeSessionId = sessionRes.data?.session_id ?? sessionRes.session_id ?? sessionId;
-                    console.log("[Demo] Practice session created:", apiRef.current.activeSessionId);
-                } else {
-                    console.warn("[Demo] Session creation failed, falling back to prop sessionId");
-                    apiRef.current.activeSessionId = sessionId;
-                }
-            }
 
             const g = G.current;
             g.ps = spawnDemo();
@@ -379,8 +366,8 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
         api.trialId = null;
         api.pendingResponses = [];
 
-        const activeSessionId = apiRef.current.activeSessionId;
-        if (!activeSessionId) return;
+        // const activeSessionId = apiRef.current.activeSessionId;
+        //if (!activeSessionId) return;
 
         // Uses activeSessionId returned from DivideAttentionSession, not the prop
         const result = await DivideAttentionTrialStart({
@@ -389,21 +376,22 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
             num_targets: DEMO_TARGETS,
             num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
             total_objects: DEMO_PARTICLES,
+            trial_type: "practice",
         });
         if (result.success) {
-            api.trialId = result.data?.trial_id ?? result.data?.id ?? null;
+            api.trialId = result.data?.trial_id;
             console.log("[Demo] Trial started:", api.trialId, "| trial_number:", api.trialNumber);
         } else {
             console.warn("[Demo] Trial start failed, continuing offline");
         }
-    }, [sessionId]);
+    }, [activeSessionId]);
 
     // CHANGE: finishPracticeTrial now accepts submitTimeMs for tracking_duration_ms.
     // Removed points_awarded and speed_bonus from response objects.
     // TrialComplete now receives summary stats body.
     const finishPracticeTrial = useCallback(async (ps, submitTimeMs) => {
         const api = apiRef.current;
-        const activeSessionId = apiRef.current.activeSessionId;
+        // const activeSessionId = apiRef.current.activeSessionId;
         if (!activeSessionId || !api.trialId) return;
 
         const freezeDurationMs = submitTimeMs;   // freeze start → submit tap
@@ -489,10 +477,10 @@ export default function SpaceConveyDemo({ sessionId, onComplete, handleMoveToCom
 
         // Complete the practice session after every trial
         // (practice has only 1 active trial at a time, so session completes with the trial)
-        const sessionCompleteResult = await DivideAttentionSessionComplete(activeSessionId, null);
+        const sessionCompleteResult = await DivideAttentionSessionComplete(activeSessionId);
         if (!sessionCompleteResult.success) console.warn("[Demo] Session complete failed");
         else console.log("[Demo] Practice session complete:", activeSessionId);
-    }, [sessionId]);
+    }, [activeSessionId]);
 
     // ─── Submit handler ───────────────────────────────────────────────────────
     // Option B: need correct on BOTH trials to proceed to main game.

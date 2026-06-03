@@ -621,7 +621,7 @@ export const DivideAttentionSessionComplete = async (session_id, screening_sessi
 }
   */
   try {
-    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete?screening_session_id=${screening_session_id}`, {
+    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
