@@ -16,6 +16,10 @@ const isMdmKioskMode = process.argv.includes("--kiosk-mode") ||
   process.argv.includes("--mdm-kiosk") ||
   process.env.MDM_KIOSK_MODE === "1"
 
+if (isMdmKioskMode) {
+  console.log("[MAIN] *** KIOSK MODE ACTIVE ***")
+}
+
 // ─── Unity Game process handle ───────────────────────────────────────────────
 let unityProcess = null
 
@@ -618,13 +622,36 @@ function createWindow() {
 
   mainWindow.on("ready-to-show", () => {
     if (isMdmKioskMode) {
-      mainWindow.setKiosk(true)
       mainWindow.setFullScreen(true)
+      mainWindow.setKiosk(true)
       mainWindow.setAlwaysOnTop(true, "screen-saver")
+      mainWindow.setClosable(false)
+      mainWindow.setMinimizable(false)
     }
     mainWindow.show()
     if (isMdmKioskMode) mainWindow.focus()
   })
+
+  if (isMdmKioskMode) {
+    mainWindow.on("close", (e) => {
+      e.preventDefault()
+      console.log("[MAIN] Kiosk mode: window close blocked")
+    })
+
+    mainWindow.webContents.on("before-input-event", (event, input) => {
+      const blocked =
+        (input.key === "F4" && input.alt) ||
+        (input.key === "F11") ||
+        (input.key === "Escape") ||
+        (input.key === "w" && (input.control || input.meta)) ||
+        (input.key === "q" && (input.control || input.meta)) ||
+        (input.key === "F5") ||
+        (input.key === "r" && (input.control || input.meta))
+      if (blocked) {
+        event.preventDefault()
+      }
+    })
+  }
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
@@ -738,10 +765,23 @@ app.whenReady().then(() => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
+  if (isMdmKioskMode) {
+    console.log("[MAIN] Kiosk mode: ignoring window-all-closed")
+    return
+  }
   if (process.platform !== "darwin") {
     app.quit()
   }
 })
+
+if (isMdmKioskMode) {
+  app.on("before-quit", (e) => {
+    if (!process.env._MDM_KIOSK_ALLOW_QUIT) {
+      e.preventDefault()
+      console.log("[MAIN] Kiosk mode: quit blocked (kill process to force exit)")
+    }
+  })
+}
 
 
 function convertBIADataToAPIPayload(bodyComposition, userInputs, impedanceData, identifiers = {}) {
