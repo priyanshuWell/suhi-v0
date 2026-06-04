@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
@@ -9,7 +9,7 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
-import ReplayAudio from "../ReplayAudio";
+import instructionAudio from "../../assets/audio/colorblindness_instruction_en.mp3";
 
 
 export const ColorBlindPlate = () => {
@@ -22,6 +22,47 @@ export const ColorBlindPlate = () => {
     const [error, setError] = useState(null);
     const kioskId = getKioskId();
     const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
+
+    // ── Instruction audio ─────────────────────────────────────────────────────
+    const audioRef = useRef(null);
+    const [audioDone, setAudioDone] = useState(false);
+    const [isPlaying, setIsPlaying] = useState(false);
+
+    useEffect(() => {
+        const audio = new Audio(instructionAudio);
+        audioRef.current = audio;
+
+        const handleEnded = () => { setAudioDone(true); setIsPlaying(false); };
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener("ended", handleEnded);
+        audio.addEventListener("play", handlePlay);
+        audio.addEventListener("pause", handlePause);
+
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch((err) => {
+                console.warn("[ColorBlindPlate] Autoplay prevented:", err.message);
+                setIsPlaying(false);
+            });
+        }
+
+        return () => {
+            audio.removeEventListener("ended", handleEnded);
+            audio.removeEventListener("play", handlePlay);
+            audio.removeEventListener("pause", handlePause);
+            audio.pause();
+            audio.src = "";
+        };
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleReplay = () => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.currentTime = 0;
+        audio.play().catch((err) => console.warn("[ColorBlindPlate] Replay failed:", err.message));
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -92,12 +133,16 @@ export const ColorBlindPlate = () => {
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>
 
-                {/* <ReplayAudio playAudio={() => {
-                    if (audioRef.current) {
-                        audioRef.current.currentTime = 0;
-                        audioRef.current.play();
-                    }
-                }} /> */}
+                {/* Audio replay button */}
+                <button
+                    onClick={handleReplay}
+                    className="flex items-center gap-3 px-6 py-3 rounded-full border border-white/30 bg-white/10 text-white/80 hover:bg-white/20 hover:text-white transition-all duration-300"
+                >
+                    <Volume2 size={24} className={isPlaying ? "animate-pulse text-blue-300" : ""} />
+                    <span className="text-lg tracking-wide">
+                        {isPlaying ? t('audio.playing', 'Playing…') : t('audio.replay', 'Replay Instructions')}
+                    </span>
+                </button>
 
                 {/* Example plate */}
                 <div className="relative overflow-hidden rounded-3xl w-[70%] max-w-[1018px] flex items-center justify-center p-6">
@@ -108,10 +153,17 @@ export const ColorBlindPlate = () => {
                     />
                 </div>
 
-                {/* Next button — disabled while session is still being created */}
-                <BlueGradientButton onClick={onNext} >
-                    {t("colorBlindness.next", "Next")}
-                </BlueGradientButton>
+                {/* Next button — locked until instruction audio completes */}
+                <div className="flex flex-col items-center gap-2">
+                    <BlueGradientButton onClick={onNext} disabled={!audioDone}>
+                        {t("colorBlindness.next", "Next")}
+                    </BlueGradientButton>
+                    {!audioDone && (
+                        <p className="text-white/50 text-sm tracking-wide mt-1">
+                            {t('audio.listenFirst', 'Please listen to the instructions first')}
+                        </p>
+                    )}
+                </div>
 
             </div>
         </div>

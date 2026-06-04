@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
+import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav";
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_glow_1 from "../../../assets/games/stimulus_glow_1.svg";
 import stimulus_correct_1 from "../../../assets/games/stimulus_correct_1.svg";
@@ -337,9 +338,16 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
+    const bgAudioRef = useRef(null);  // dedicated looping background music element
 
     // ─── Load assets ───
     useEffect(() => {
+        // Set up looping background music
+        const audio = new Audio(gameBgMusic);
+        audio.loop = true;
+        audio.volume = 0.5;
+        bgAudioRef.current = audio;
+
         (async () => {
             const stim = await loadSvg(stimulus_1);
             const glow = await loadSvg(stimulus_glow_1);
@@ -356,7 +364,18 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
             g.elapsed = 0;
             setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
             setDisplayStep(STEP.SHOW_TARGETS);
+
+            // Start music (may require user gesture in browser; works immediately in Electron)
+            audio.play().catch(() => {
+                // Autoplay blocked — will start on first tap instead
+                G.current._bgPending = true;
+            });
         })();
+
+        return () => {
+            audio.pause();
+            audio.src = "";
+        };
     }, []);
 
     // ─── Trial API helpers ───
@@ -530,6 +549,8 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 g.step = STEP.DONE;
                 setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
                 setDisplayStep(STEP.DONE);
+                // Stop background music when demo completes
+                if (bgAudioRef.current) { bgAudioRef.current.pause(); bgAudioRef.current.currentTime = 0; }
                 setTimeout(() => onComplete?.(), 1500);
             } else {
                 // Trial 2 failed → retry Trial 2
@@ -627,6 +648,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                                 g.failCount += 1;
                                 if (g.failCount >= 3) {
                                     // Max retries on this trial — move on anyway
+                                    if (bgAudioRef.current) { bgAudioRef.current.pause(); bgAudioRef.current.currentTime = 0; }
                                     setTimeout(() => onComplete?.(), 2000);
                                 } else {
                                     const trialNum = g.practiceRound === 1 ? "first" : "second";
@@ -737,6 +759,11 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
 
     const handleTap = useCallback((cx, cy) => {
         const g = G.current;
+        // Resume background music on first tap (handles autoplay policy)
+        if (g._bgPending && bgAudioRef.current) {
+            bgAudioRef.current.play().catch(() => {});
+            g._bgPending = false;
+        }
         if (g.step !== STEP.STOPPED || g.submitted) return;
         const { x, y } = toCanvasXY(cx, cy);
 

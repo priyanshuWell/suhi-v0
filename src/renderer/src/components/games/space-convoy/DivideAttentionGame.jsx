@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { sfx } from "../../../utils/soundManager";
+import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav";
 // ── Stimulus sets (3 sets, one per stimulus image)
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_2 from "../../../assets/games/stimulus_2.svg";
@@ -564,12 +565,19 @@ export default function SpaceConvoy() {
 
     const rafRef = useRef(null);
     const prevTime = useRef(0);
+    const bgAudioRef = useRef(null);  // dedicated looping background music
 
     const [hud, setHud] = useState({ ri: 0, totalScore: 0, tierPrimary: TIER_COLOURS[0].primary, tierGlow: TIER_COLOURS[0].glow, roundName: "" });
 
     useEffect(() => { bgRef.current = buildBackground(); }, []);
 
     useEffect(() => {
+        // Set up looping background music
+        const audio = new Audio(gameBgMusic);
+        audio.loop = true;
+        audio.volume = 0.5;
+        bgAudioRef.current = audio;
+
         (async () => {
             const stim = await Promise.all(STIM_PATHS.map(loadSvg));
             const glow = await Promise.all([stimulus_glow_1, stimulus_glow_2, stimulus_glow_3].map(loadSvg));
@@ -578,6 +586,11 @@ export default function SpaceConvoy() {
             assets.current = { stim, glow, correct, error, loaded: true };
             startSession();
         })();
+
+        return () => {
+            audio.pause();
+            audio.src = "";
+        };
     }, []);
 
     // Called once when the game starts.
@@ -600,6 +613,12 @@ export default function SpaceConvoy() {
         }
 
         sfx.startAmbient();
+        // Start background music
+        if (bgAudioRef.current) {
+            bgAudioRef.current.play().catch(() => {
+                G.current._bgPending = true;
+            });
+        }
         initRound(0);
     }, [userId, screeningSessionId]);
 
@@ -701,6 +720,8 @@ export default function SpaceConvoy() {
         G.current.sess = SESS.ENDED;
         sfx.sessionComplete();
         sfx.stopAmbient();
+        // Stop background music
+        if (bgAudioRef.current) { bgAudioRef.current.pause(); bgAudioRef.current.currentTime = 0; }
         const activeSessionId = apiState.current.activeSessionId;
         let nextRoute; // fallback
         if (activeSessionId) {
@@ -860,7 +881,12 @@ export default function SpaceConvoy() {
 
     const handleTap = useCallback((cx, cy) => {
         sfx.unlock();
+        // Resume background music on first tap if autoplay was blocked
         const g = G.current;
+        if (g._bgPending && bgAudioRef.current) {
+            bgAudioRef.current.play().catch(() => {});
+            g._bgPending = false;
+        }
         const cfg = ROUNDS_ARR[g.ri];
         if (g.ph !== PHASE.FREEZE || g.submitted) return;
         const { x, y } = toCanvasXY(cx, cy);

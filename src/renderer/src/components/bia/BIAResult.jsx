@@ -298,7 +298,7 @@ const BIAResult = () => {
 
       const res = await axios.post("http://localhost:8000/report/", {
         user_id: userId,
-        session_id: sessionId,
+        session_id: storeUser?.screening?.session_id,
         screening_session_id: storeUser?.screening?.session_id
       });
 

@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import { useBackgroundAudio } from './hooks/useBackgroundAudio'
 import SplashScreen from './components/SplashScreen'
 import Versions from './components/Versions'
 import { StartScreen } from './components/StartScreen'
@@ -31,6 +32,8 @@ import ScreeningLayout from './components/ScreeningLayout'
 import View360Viewer from './components/voice/View360Viewer'
 
 function App() {
+  // Play looping background music on all routes except voice & game sections
+  useBackgroundAudio()
   // useEffect(() => {
   //   const doSync = async () => {
   //     try {
@@ -64,7 +67,7 @@ function App() {
         <Route path='/verified' element={<RegisterCard />} />
         <Route path='/bia/:screenType' element={<BIACalcuate />} />
         <Route path='/screen1' element={<NewDmit />} />
- <Route path='/voice' element={<VoiceAnalysis />} />
+        <Route path='/voice' element={<VoiceAnalysis />} />
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
 

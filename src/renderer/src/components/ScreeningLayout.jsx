@@ -1,10 +1,12 @@
 import { Outlet, useLocation } from 'react-router'
+import { useSelector } from 'react-redux'
 import ProgressStage from './ProgessStage'
 
 
 /**
- * Maps route prefixes → progress bar step (1–5).
- * Ordered longest-first so more specific paths win (e.g. /bia/result before /bia).
+ * Fallback: Maps route prefixes → progress bar step (1–5).
+ * Used only when Redux screening state is not yet available.
+ * Ordered longest-first so more specific paths win.
  */
 const ROUTE_TO_STEP = [
   // Step 1 — Face Scan
@@ -18,13 +20,22 @@ const ROUTE_TO_STEP = [
   { prefix: '/divide-attention', step: 4 }
 ]
 
-// No excluded routes — all children of ScreeningLayout get the bar.
-// Voice is outside the layout route entirely.
+/**
+ * Maps backend stage_key → progress bar step number.
+ * Matches the static steps array in ProgressStage.
+ */
+const STAGE_KEY_TO_STEP = {
+  login:            1,
+  bia:              2,
+  voice_analysis:   3,
+  divide_attention: 4,
+  congitive:        5,  // backend typo kept as-is
+  color_blindness:  5,
+  result:           6,
+}
 
-function getStep(pathname) {
-  // Sort by prefix length descending so the most specific match wins
+function getStepFromRoute(pathname) {
   const sorted = [...ROUTE_TO_STEP].sort((a, b) => b.prefix.length - a.prefix.length)
-
   for (const { prefix, step } of sorted) {
     if (pathname === prefix || pathname.startsWith(prefix + '/') || pathname.startsWith(prefix)) {
       return step
@@ -35,8 +46,16 @@ function getStep(pathname) {
 
 export default function ScreeningLayout() {
   const { pathname } = useLocation()
+  const screening = useSelector((state) => state.common.screening)
 
-  const currentStep = getStep(pathname)
+  // Primary: use stage_order from backend's next_stage (most accurate)
+  // next_stage describes where the user is GOING — so we show that step as active.
+  const stepFromRedux = screening?.nextStage
+    ? STAGE_KEY_TO_STEP[screening.nextStage.stage_key] ?? null
+    : null
+
+  // Fallback to route-based detection when Redux isn't populated yet
+  const currentStep = stepFromRedux ?? getStepFromRoute(pathname)
 
   return (
     <>

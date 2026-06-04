@@ -128,7 +128,7 @@ export const StartScreen = () => {
           <video
             src={video1}
             autoPlay
-            //muted
+            muted
             loop
             playsInline
             className="

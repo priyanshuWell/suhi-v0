@@ -8,7 +8,10 @@ import { useTranslation } from "react-i18next"
 import BlueGradientButton from "../ui/BlueGradientButton"
 import HeightWeightDisplay from "./HeightWeightDisplay"
 import standstraightAudio from "../../assets/audio/standstraight_en.mp3"
+import wh_completeAudio from "../../assets/audio/wh_complete_en.mp3"
+import wh_measuringAudio from "../../assets/audio/wh_measuring_en.mp3"
 import impedanceAudio from "../../assets/audio/impedance_en.mp3"
+import im_completeAudio from "../../assets/audio/im_complete_en.mp3"
 import ReplayAudio from "../ReplayAudio"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
@@ -229,7 +232,23 @@ export const BIAComponent = ({
   const [progress, setProgress] = useState(0)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = useRef(null)
+  const videoRef = useRef(null)
   const activeCount = Math.round((progress / 100) * total)
+
+  /* Stop video on complete screens, resume on active screens */
+  const COMPLETE_SCREENS = ["whcomplete", "imcomplete"]
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    if (COMPLETE_SCREENS.includes(screenType)) {
+      video.pause()
+    } else {
+      // Only play if the video is paused (avoid DOMException on already-playing)
+      if (video.paused) {
+        video.play().catch((err) => console.log("Video play failed:", err))
+      }
+    }
+  }, [screenType])
 
   /* ── new: BIA card states ── */
   const [biaValues, setBiaValues] = useState({})   // key → display string
@@ -471,7 +490,7 @@ export const BIAComponent = ({
   const handleAudioEnd = () => { setIsAudioPlaying(false) }
 
   const getAudioPath = (type) => {
-    const audioMap = { wh: standstraightAudio, im: impedanceAudio }
+    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, im: impedanceAudio, imcomplete: im_completeAudio }
     return audioMap[type] || standstraightAudio
   }
 
@@ -548,6 +567,7 @@ export const BIAComponent = ({
           <div style={{ position: "relative", width: "60%", display: "flex", justifyContent: "center" }}>
             {/* video */}
             <video
+              ref={videoRef}
               key={videoSrc}
               src={videoSrc}
               autoPlay

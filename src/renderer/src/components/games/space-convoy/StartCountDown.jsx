@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import textframe from "../../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
 
-import countdownVoice from "../../../assets/audio/space_convoy/countdown.mp3"
+import countdownVoice from "../../../assets/audio/space_convoy/countdown.wav"
 
 export function StartCountDown({ onComplete }) {
     const { t } = useTranslation()

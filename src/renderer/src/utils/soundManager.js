@@ -16,29 +16,29 @@
  */
 
 // import roundStartSfx      from "../assets/sounds/forceField_000.ogg";
-// import freezeSfx          from "../assets/sounds/forceField_003.ogg";
-import particleTapSfx     from "../assets/audio/space_convoy/laserSmall_000.ogg";   // correct hit + false alarm — same sound
-import collisionSfx       from "../assets/audio/space_convoy/laserSmall_001.ogg";   // particle-to-particle collision
+import freezeSfx          from "../assets/audio/space_convoy/space_convoy_freeze.wav";
+import particleTapSfx     from "../assets/audio/space_convoy/laserSmall_000.wav";   // correct hit + false alarm — same sound
+// import collisionSfx       from "../assets/audio/space_convoy/laserSmall_001.ogg";   // particle-to-particle collision
 // import speedBonusSfx      from "../assets/sounds/laserRetro_001.ogg";
-import submitSfx          from "../assets/audio/space_convoy/mixkit-video-game-treasure-2066.wav";
+import submitSfx          from "../assets/audio/space_convoy/Submit_Button_Tap.wav";
 // import burstSfx           from "../assets/sounds/explosionCrunch_000.ogg";
 // import levelUpSfx         from "../assets/sounds/laserLarge_002.ogg";
 // import sessionCompleteSfx from "../assets/sounds/laserLarge_004.ogg";
 // import hoverSfx           from "../assets/sounds/computerNoise_000.ogg";
-// import ambientLoopSfx     from "../assets/sounds/spaceEngineLarge_000.ogg";
+import ambientLoopSfx     from "../assets/audio/space_convoy/game_background.wav";
 
 const SOUND_FILES = {
     // round_start:      roundStartSfx,
-    // freeze:           freezeSfx,
+    freeze:           freezeSfx,
     particle_tap:     particleTapSfx,
-    collision:        collisionSfx,
+    // collision:        collisionSfx,
     // speed_bonus:      speedBonusSfx,
     submit:           submitSfx,
     // burst:            burstSfx,
     // level_up:         levelUpSfx,
     // session_complete: sessionCompleteSfx,
     // hover:            hoverSfx,
-    // ambient_loop:     ambientLoopSfx,
+    ambient_loop:     ambientLoopSfx,
 };
 
 const SOUND_VOLUMES = {
@@ -52,7 +52,7 @@ const SOUND_VOLUMES = {
     level_up:         0.75,
     session_complete: 0.80,
     hover:            0.15,
-    ambient_loop:     0.12,
+    ambient_loop:     60
 };
 
 // ─── Synth Fallbacks ──────────────────────────────────────────────────────────

@@ -18,14 +18,14 @@
     "number": "Mobile Number"
   },
   "measurement": {
-    "let_measure": "Stand tall and stay still. Your body scan is starting",
+    "let_measure": "Your body scan is starting",
     "stand_straight": "Stand Straight",
     "scan_done": "Scan Completed!",
-    "weight_height_measurement": "Stay still. We're measuring your height and weight",
+    "weight_height_measurement": "We're measuring your height and weight",
     "measuring_body_composition": "Measuring your fat and muscle mass",
-    "weight_height_completed": "Done! Your height and weight have been recorded",
+    "weight_height_completed": "Your height and weight have been recorded",
     "impedance_measurement": "Hold both handles firmly until the scan is complete",
-    "impedance_complete":"Great job! Here are your results"
+    "impedance_complete":"Here are your results"
   },
   "videoCapture": {
     "instruction": "Look at the top Camera",
