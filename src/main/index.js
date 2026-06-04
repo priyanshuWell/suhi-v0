@@ -781,6 +781,12 @@ if (isMdmKioskMode) {
       console.log("[MAIN] Kiosk mode: quit blocked (kill process to force exit)")
     }
   })
+
+  process.on("SIGTERM", () => {
+    console.log("[MAIN] Kiosk mode: received SIGTERM from MDM, exiting cleanly")
+    process.env._MDM_KIOSK_ALLOW_QUIT = "1"
+    app.quit()
+  })
 }
 
 
