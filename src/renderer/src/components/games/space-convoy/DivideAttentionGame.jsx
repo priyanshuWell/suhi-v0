@@ -537,11 +537,12 @@ export default function SpaceConvoy() {
     const dispatch = useDispatch();
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
-    const sessionType = location.state?.sessionType ?? "main";  // "practice" | "main"
-    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId) ?? "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
-
+    const sessionType = location.state?.sessionType ?? "main"; 
+    const storeUser = useSelector((state) => state.common.user);  // "practice" | "main"
+    const screeningSessionId = storeUser?.screening?.session_id;
+    const userId = storeUser?.data?.user_id;
     // pull userId from redux
-    const userId = useSelector((state) => state.auth?.user?.id ?? "bdabcfad-558f-4d36-9cfd-5deaedfdd629");
+    //const userId = useSelector((state) => state.auth?.user?.id);
 
     const cvRef = useRef(null);
     const bgRef = useRef(null);
