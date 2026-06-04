@@ -121,6 +121,33 @@ export async function loginSuhi(suhi_id) {
   }
 }
 
+export async function getStudentBySuhi(suhi_id) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/students/${suhi_id}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      ...data
+    };
+  } catch (error) {
+    console.error("Error fetching student by suhi id:", error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+}
+
 export async function runVoice(payload) {
  try {
 

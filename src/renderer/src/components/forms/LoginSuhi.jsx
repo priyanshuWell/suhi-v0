@@ -3,15 +3,16 @@ import { useNavigate } from 'react-router'
 import { useDispatch } from 'react-redux'
 import LoginComponent from '../ui/LoginComponent'
 import fingerprintImg from '../../assets/fingerprint.svg'
+import profilePicFallback from '../../assets/profile-pic.png'
 import BlueGradientButton from '../ui/BlueGradientButton'
 import BlackGradientButton from '../ui/BlackGradientButton'
 import KeyboardContainer from '../ui/KeyboardContainer'
 import ErrorAlert from '../ErrorAlert'
-import { loginSuhi } from '../../utils/api'
+import { loginSuhi, getStudentBySuhi } from '../../utils/api'
 import { setUser, setScreening } from '../../features/common/commonSlice'
 import { getNextRoute } from '../../utils/stageRouter'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ''
+const MAX_RETRIES = 2
 
 const LoginSuhi = () => {
   const navigate = useNavigate()
@@ -21,9 +22,48 @@ const LoginSuhi = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showErrorAlert, setShowErrorAlert] = useState(false)
+  const [studentPhoto, setStudentPhoto] = useState(null)
+  const [photoLoading, setPhotoLoading] = useState(false)
   const retryRef = useRef(0)
+  const photoDebounceRef = useRef(null)
 
   const isButtonDisabled = !suhiId.trim() || loading
+
+  // Debounced photo fetch whenever suhiId changes
+  useEffect(() => {
+    if (!suhiId.trim()) {
+      setStudentPhoto(null)
+      return
+    }
+
+    // Debounce: wait 600ms after last keystroke before fetching
+    if (photoDebounceRef.current) clearTimeout(photoDebounceRef.current)
+    photoDebounceRef.current = setTimeout(async () => {
+      setPhotoLoading(true)
+      try {
+        const res = await getStudentBySuhi(suhiId.trim())
+        if (res.success && res.image_path) {
+          // Build the image URL from image_path (same pattern as RegisterCard)
+          const folderName = res.image_path.substring(res.image_path.lastIndexOf('/') + 1)
+          setStudentPhoto(
+            folderName
+              ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+              : null
+          )
+        } else {
+          setStudentPhoto(null)
+        }
+      } catch {
+        setStudentPhoto(null)
+      } finally {
+        setPhotoLoading(false)
+      }
+    }, 600)
+
+    return () => {
+      if (photoDebounceRef.current) clearTimeout(photoDebounceRef.current)
+    }
+  }, [suhiId])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -51,7 +91,6 @@ const LoginSuhi = () => {
     try {
       const response = await loginSuhi(suhiId)
 
-      // loginSuhi() returns { success, ...data } — not a raw Response object
       if (!response.success) {
         throw new Error(response.error || 'Something went wrong. Please try again.')
       }
@@ -75,13 +114,17 @@ const LoginSuhi = () => {
         navigate('/verified')
       }
     } catch (err) {
-      if (retryRef.current < 2) {
-        setError(err.message || 'Network error. Retrying...')
+      const attempt = retryRef.current + 1
+      if (attempt < MAX_RETRIES) {
+        // First failure — show error alert and allow retry
+        retryRef.current = attempt
+        setError(err.message || 'Suhi ID not found. Please try again.')
         setShowErrorAlert(true)
       } else {
-        setError('Maximum retries reached. Redirecting...')
+        // Second failure — redirect to welcome
+        retryRef.current = 0
+        setError('Suhi ID not found. Redirecting to welcome...')
         setTimeout(() => {
-          retryRef.current = 0
           navigate('/welcome')
         }, 1500)
       }
@@ -130,6 +173,69 @@ const LoginSuhi = () => {
               </p>
             )}
           </div>
+
+          {/* ── Student Photo ── */}
+          {suhiId.trim().length > 0 && (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="relative rounded-[24px] overflow-hidden"
+                style={{
+                  width: 120,
+                  height: 120,
+                  background: 'linear-gradient(135deg, #003366 0%, #006693 100%)',
+                  border: '2px solid rgba(0,168,255,0.6)',
+                  boxShadow: '0 0 18px rgba(0,168,255,0.35)',
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                {photoLoading ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <svg
+                      className="animate-spin h-8 w-8 text-cyan-300"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
+                      <path d="M12 2a10 10 0 019.8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                ) : (
+                  <img
+                    src={studentPhoto || profilePicFallback}
+                    alt="Student"
+                    onError={(e) => { e.currentTarget.src = profilePicFallback }}
+                    className="w-full h-full object-cover"
+                    style={{
+                      opacity: studentPhoto ? 1 : 0.5,
+                      filter: studentPhoto ? 'none' : 'grayscale(80%)',
+                      transition: 'opacity 0.4s ease, filter 0.4s ease',
+                    }}
+                  />
+                )}
+
+                {/* Sci-fi corner accents */}
+                <div
+                  className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-300 rounded-tl-lg pointer-events-none"
+                />
+                <div
+                  className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-300 rounded-tr-lg pointer-events-none"
+                />
+                <div
+                  className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-300 rounded-bl-lg pointer-events-none"
+                />
+                <div
+                  className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-300 rounded-br-lg pointer-events-none"
+                />
+              </div>
+
+              {/* Retry indicator */}
+              {retryRef.current > 0 && (
+                <p className="text-yellow-400 text-xs tracking-wide">
+                  Attempt {retryRef.current} / {MAX_RETRIES}
+                </p>
+              )}
+            </div>
+          )}
 
           <p className="text-center text-white text-4xl">Or</p>
           <p className="text-center text-white text-2xl">
@@ -198,7 +304,6 @@ const LoginSuhi = () => {
         description={error}
         onRetry={() => {
           setShowErrorAlert(false)
-          retryRef.current += 1
           handleNext()
         }}
         onClose={() => {
