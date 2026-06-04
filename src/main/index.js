@@ -12,6 +12,9 @@ import { spawn } from "child_process"
 const loudness = require("loudness")
 
 let mainWindow = null
+const isMdmKioskMode = process.argv.includes("--kiosk-mode") ||
+  process.argv.includes("--mdm-kiosk") ||
+  process.env.MDM_KIOSK_MODE === "1"
 
 // ─── Unity Game process handle ───────────────────────────────────────────────
 let unityProcess = null
@@ -602,8 +605,10 @@ function createWindow() {
      width: 1080,
     height: 1920,
     show: false,
-    autoHideMenuBar: false,
-    fullscreen:false,
+    autoHideMenuBar: isMdmKioskMode,
+    fullscreen: isMdmKioskMode,
+    kiosk: isMdmKioskMode,
+    frame: !isMdmKioskMode,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
@@ -612,7 +617,13 @@ function createWindow() {
   })
 
   mainWindow.on("ready-to-show", () => {
+    if (isMdmKioskMode) {
+      mainWindow.setKiosk(true)
+      mainWindow.setFullScreen(true)
+      mainWindow.setAlwaysOnTop(true, "screen-saver")
+    }
     mainWindow.show()
+    if (isMdmKioskMode) mainWindow.focus()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
