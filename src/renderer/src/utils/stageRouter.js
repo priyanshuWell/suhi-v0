@@ -18,6 +18,7 @@ export const STAGE_ROUTE_MAP = {
   voice_analysis: '/voice',
   color_blindness: '/colorblindness',
   result: '/bia/result',
+  login: '/welcome'
 };
 
 /**
@@ -39,7 +40,7 @@ export const STAGE_ROUTE_MAP = {
  *   const route = getNextRoute(screening?.nextStage);
  *   navigate(route);
  */
-export function getNextRoute(nextStage, fallback = '/bia/leg50') {
+export function getNextRoute(nextStage, fallback = '/welcome') {
   const key = typeof nextStage === 'string'
     ? nextStage
     : nextStage?.stage_key;

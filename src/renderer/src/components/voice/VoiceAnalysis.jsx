@@ -92,7 +92,7 @@ export default function VoiceAnalysis() {
   const dataArrayRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioContextRef = useRef(null);
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const isRecording = status === "recording";
 
   // ── selectedIndex ref (needed inside momentum RAF closure) ───────────────
@@ -324,6 +324,9 @@ const [loading, setLoading] = useState(false);
     cancelAnimationFrame(animFrameRef.current);
     setVoiceBars(Array(9).fill(0));
 
+    // Mark as loading immediately — Next button stays disabled until API responds
+    setLoading(true);
+
     const recorder = mediaRecorderRef.current;
     if (!recorder || recorder.state === "inactive") return;
 
@@ -363,23 +366,27 @@ const [loading, setLoading] = useState(false);
           const runResult = await runVoice(runPayload);
 
           if (runResult.success) {
-            setLoading(true);
             // Update Redux with new screening state (next_stage) from voice API response
             if (runResult.screening) {
               dispatch(setScreening(runResult.screening));
             }
             setStatus("success");
+            // API responded successfully — unlock the Next button
+            setLoading(false);
           } else {
             console.error("[Voice] run failed:", runResult.error);
             setStatus("error");
+            setLoading(false);
           }
         } else {
           console.error("[Voice] store failed:", storeResult.error);
           setStatus("error");
+          setLoading(false);
         }
       } catch (err) {
         console.error("[Voice] API error:", err);
         setStatus("error");
+        setLoading(false);
       }
     };
 
@@ -419,7 +426,7 @@ const [loading, setLoading] = useState(false);
 
   const onNext = useCallback(() => {
     // Navigate based on backend's next_stage (updated after voice completes)
-    const nextRoute = getNextRoute(screeningState?.nextStage, '/space-convoy-main');
+    const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
   }, [navigate, screeningState]);

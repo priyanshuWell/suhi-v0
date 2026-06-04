@@ -25,7 +25,7 @@ export default function View360Viewer({
     onTimerEnd,
     onFirstInteract,
     isComplete,
-    onNext,   
+    onNext,
     loading        // ← new: called when user clicks "Next" in the modal
 }) {
     const viewerRef = useRef(null);
@@ -237,9 +237,16 @@ export default function View360Viewer({
                             className="w-full h-auto"
                         />
                         <div className="absolute bottom-[20%]">
-                            {/* ↓ onNext navigates — NOT onTimerEnd */}
-                            <BlueGradientButton onClick={onNext}>
-                                   {loading ? <Loader className="w-4 h-4 animate-spin"/>: "Next"}
+                            {/* ↓ onNext navigates — only enabled after API response */}
+                            <BlueGradientButton
+                                onClick={!loading ? onNext : undefined}
+                                style={{
+                                    opacity: loading ? 0.6 : 1,
+                                    pointerEvents: loading ? "none" : "auto",
+                                    cursor: loading ? "not-allowed" : "pointer",
+                                }}
+                            >
+                                {loading ? <Loader className="w-6 h-6 animate-spin" /> : "Next"}
                             </BlueGradientButton>
                         </div>
                     </div>

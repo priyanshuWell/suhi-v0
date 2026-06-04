@@ -81,9 +81,13 @@ export const ColorBlindPlate = () => {
                     className="text-white text-center font-anta w-[90%] max-w-[1149px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
-                    {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}
+                    {/* {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}
                     <br />
                     {t("colorBlindness.instructions_line2", "If you don't see anything just click on Cannot read plate.")}
+                    <br /><br />
+                    {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")} */}
+
+                    {t("Look at each picture carefully and choose the number or shape you see.")}
                     <br /><br />
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>

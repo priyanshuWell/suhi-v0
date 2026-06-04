@@ -626,7 +626,7 @@ export default function SpaceConvoy() {
                 num_targets: cfg.targets,
                 num_distractors: cfg.particles - cfg.targets,
                 total_objects: cfg.particles,
-                trial_type:"main"
+                trial_type: "main"
             });
             // store trial_id for this round — used in ResponseBatch and TrialComplete
             api.trialId = res.success ? (res.data?.trial_id ?? res.trial_id ?? null) : null;
@@ -702,14 +702,14 @@ export default function SpaceConvoy() {
         sfx.sessionComplete();
         sfx.stopAmbient();
         const activeSessionId = apiState.current.activeSessionId;
-        let nextRoute = '/colorblindness'; // fallback
+        let nextRoute; // fallback
         if (activeSessionId) {
             const completeResult = await DivideAttentionSessionComplete(activeSessionId);
             // Update Redux screening state with next_stage from API response
-            // if (completeResult?.screening) {
-            //     dispatch(setScreening(completeResult.screening));
-            //     nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
-            // }
+            if (completeResult?.screening) {
+                dispatch(setScreening(completeResult.screening));
+                nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
+            }
             console.log('[DivideAttention] endSession — navigating to:', nextRoute);
         } else {
             console.warn('[DivideAttention] No activeSessionId — skipping SessionComplete');
@@ -883,8 +883,8 @@ export default function SpaceConvoy() {
                     const speedThreshold = (performance.now() - g.freezeStartTime) * 0.5;
                     if (p.responseTimeMs < speedThreshold) sfx.speedBonus();
                     const tc = tierColour(cfg.difficultyTier ?? 1);
-                   // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
-                   // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
+                    // spawnBurst(juice.current.bursts, p.x, p.y, tc.primary);
+                    // spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.CORRECT_HIT, tc.primary);
                 } else {
                     sfx.falseAlarm();
                     spawnPopup(juice.current.popups, p.x, p.y - p.radius - 20, SCORE.FALSE_ALARM, null);

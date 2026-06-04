@@ -318,7 +318,16 @@ export default function BIACalculate({ user, onComplete }) {
       await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
       console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
       await saveBuffer("height_port_error");
-      navigate('/voice');
+      const heightErrorComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
+      if (heightErrorComplete?.screening) {
+        dispatch(setScreening(heightErrorComplete.screening));
+      }
+      const heightErrorRoute = getNextRoute(heightErrorComplete?.screening?.next_stage, '/voice');
+      console.log('[BIA] handleHeightError — navigating to:', heightErrorRoute);
+      navigate(heightErrorRoute);
 
       // Track attempt for height (continuous polling)
       if (payload.attempt) {
@@ -613,16 +622,21 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
+      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting via next_stage`);
       // updatePhaseState('leg', 'failed', 'Max retries exhausted');
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({
+      const legMaxRetryComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
+      if (legMaxRetryComplete?.screening) {
+        dispatch(setScreening(legMaxRetryComplete.screening));
+      }
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
-      navigate("/voice");
+      const legMaxRetryRoute = getNextRoute(legMaxRetryComplete?.screening?.next_stage, '/voice');
+      console.log('[BIA] runPhase1 leg max retry — navigating to:', legMaxRetryRoute);
+      navigate(legMaxRetryRoute);
       return;
     }
 
@@ -835,15 +849,23 @@ export default function BIACalculate({ user, onComplete }) {
       if (resultsRef.current.isShoesContinued) {
         console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
         navigate("/bia/imcomplete");
-        await BIAComplete({
+        const shoesCompleteResult = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
           screening_session_id: storeUser?.screening?.session_id
         });
+        // Cache next_stage from BIAComplete for the shoes path
+        biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
+        console.log('[BIA] Shoes path BIAComplete next_stage captured:', biaNextStageRef.current);
+        if (shoesCompleteResult?.screening) {
+          dispatch(setScreening(shoesCompleteResult.screening));
+        }
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
         await new Promise((resolve) => { imCompleteResolver.current = resolve; });
         setIsComplete(true);
-        navigate("/voice");
+        const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/voice');
+        console.log('[BIA] runPhase3 shoes path — navigating to:', shoesNextRoute);
+        navigate(shoesNextRoute);
         return;
       }
       // Impedance 20kHz
