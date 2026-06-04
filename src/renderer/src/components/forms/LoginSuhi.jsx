@@ -29,41 +29,7 @@ const LoginSuhi = () => {
 
   const isButtonDisabled = !suhiId.trim() || loading
 
-  // Debounced photo fetch whenever suhiId changes
-  useEffect(() => {
-    if (!suhiId.trim()) {
-      setStudentPhoto(null)
-      return
-    }
 
-    // Debounce: wait 600ms after last keystroke before fetching
-    if (photoDebounceRef.current) clearTimeout(photoDebounceRef.current)
-    photoDebounceRef.current = setTimeout(async () => {
-      setPhotoLoading(true)
-      try {
-        const res = await getStudentBySuhi(suhiId.trim())
-        if (res.success && res.image_path) {
-          // Build the image URL from image_path (same pattern as RegisterCard)
-          const folderName = res.image_path.substring(res.image_path.lastIndexOf('/') + 1)
-          setStudentPhoto(
-            folderName
-              ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-              : null
-          )
-        } else {
-          setStudentPhoto(null)
-        }
-      } catch {
-        setStudentPhoto(null)
-      } finally {
-        setPhotoLoading(false)
-      }
-    }, 600)
-
-    return () => {
-      if (photoDebounceRef.current) clearTimeout(photoDebounceRef.current)
-    }
-  }, [suhiId])
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -83,56 +49,54 @@ const LoginSuhi = () => {
   }, [suhiId, loading])
 
   const handleNext = async () => {
-    if (!suhiId.trim()) return
+  if (!suhiId.trim()) return
 
-    setLoading(true)
-    setError('')
+  setLoading(true)
+  setError('')
 
-    try {
-      const response = await loginSuhi(suhiId)
+  try {
+    // Verify student only when Next is clicked
+    const response = await getStudentBySuhi(suhiId.trim())
 
-      if (!response.success) {
-        throw new Error(response.error || 'Something went wrong. Please try again.')
-      }
-
-      // Persist user and screening info to Redux
-      dispatch(setUser(response))
-      if (response.screening) {
-        dispatch(setScreening(response.screening))
-      }
-
-      // Reset retry count on success
-      retryRef.current = 0
-
-      // If this is a resumed session, navigate directly to the correct next stage
-      if (response.screening?.is_resumed && response.screening?.next_stage) {
-        const nextRoute = getNextRoute(response.screening.next_stage, '/verified')
-        console.log('[LoginSuhi] Resumed session — navigating to:', nextRoute)
-        navigate(nextRoute)
-      } else {
-        // First login → show the user card for confirmation
-        navigate('/verified')
-      }
-    } catch (err) {
-      const attempt = retryRef.current + 1
-      if (attempt < MAX_RETRIES) {
-        // First failure — show error alert and allow retry
-        retryRef.current = attempt
-        setError(err.message || 'Suhi ID not found. Please try again.')
-        setShowErrorAlert(true)
-      } else {
-        // Second failure — redirect to welcome
-        retryRef.current = 0
-        setError('Suhi ID not found. Redirecting to welcome...')
-        setTimeout(() => {
-          navigate('/welcome')
-        }, 1500)
-      }
-    } finally {
-      setLoading(false)
+    if (!response.success || !response.data) {
+      throw new Error('Student not found')
     }
-  }
 
+    // Save student data
+    dispatch(
+      setUser({
+        success: true,
+        data: response.data
+      })
+    )
+
+    // Save screening if API returns it
+    if (response.screening) {
+      dispatch(setScreening(response.screening))
+    }
+
+    retryRef.current = 0
+
+    // Go to RegisterCard
+    navigate('/verified')
+  } catch (err) {
+    const attempt = retryRef.current + 1
+
+    if (attempt < MAX_RETRIES) {
+      retryRef.current = attempt
+      setError(err.message || 'Student not found')
+      setShowErrorAlert(true)
+    } else {
+      retryRef.current = 0
+      setError('Student not found. Redirecting...')
+      setTimeout(() => {
+        navigate('/welcome')
+      }, 1500)
+    }
+  } finally {
+    setLoading(false)
+  }
+}
   return (
     <>
       <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[600px]">
@@ -151,13 +115,14 @@ const LoginSuhi = () => {
               <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
             </div>
             <div className="relative min-h-[50px] text-3xl flex items-center">
-              <p className="absolute left-2 text-white">DPKS</p>
-              <div className="border-t-2 border-white w-10 mt-2 h-12 rotate-90 absolute left-12" />
+              {/* <p className="absolute left-2 text-white">DPKS</p> */}
+              {/* <div className="border-t-2 border-white w-10 mt-2 h-12 rotate-90 absolute left-12" /> */}
               <input
                 type="text"
                 value={suhiId}
+                autoCapitalize="characters"
                 readOnly
-                className="w-full bg-transparent border-none outline-none text-white pl-28 caret-transparent"
+                className="w-full bg-transparent border-none outline-none text-white  caret-transparent"
                 onFocus={() => {
                   setKeyboardVisible(true)
                   setError('')
@@ -175,7 +140,7 @@ const LoginSuhi = () => {
           </div>
 
           {/* ── Student Photo ── */}
-          {suhiId.trim().length > 0 && (
+          {/* {suhiId.trim().length > 0 && (
             <div className="flex flex-col items-center gap-2">
               <div
                 className="relative rounded-[24px] overflow-hidden"
@@ -213,7 +178,6 @@ const LoginSuhi = () => {
                   />
                 )}
 
-                {/* Sci-fi corner accents */}
                 <div
                   className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-300 rounded-tl-lg pointer-events-none"
                 />
@@ -228,28 +192,27 @@ const LoginSuhi = () => {
                 />
               </div>
 
-              {/* Retry indicator */}
               {retryRef.current > 0 && (
                 <p className="text-yellow-400 text-xs tracking-wide">
                   Attempt {retryRef.current} / {MAX_RETRIES}
                 </p>
               )}
             </div>
-          )}
+          )} */}
 
-          <p className="text-center text-white text-4xl">Or</p>
+          {/* <p className="text-center text-white text-4xl">Or</p>
           <p className="text-center text-white text-2xl">
             Place your thumb on the fingerprint scanner below the screen.
-          </p>
+          </p> */}
 
-          <div className="fingerprint flex flex-col justify-center items-center">
+          {/* <div className="fingerprint flex flex-col justify-center items-center">
             <button
               onClick={() => navigate('/fingerprint')}
               className="border border-white cursor-pointer rounded-3xl p-6 w-[100px]"
             >
               <img src={fingerprintImg} alt="finger-print" />
             </button>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -304,7 +267,7 @@ const LoginSuhi = () => {
         description={error}
         onRetry={() => {
           setShowErrorAlert(false)
-          handleNext()
+          // handleNext()
         }}
         onClose={() => {
           setShowErrorAlert(false)
