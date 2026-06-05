@@ -58,6 +58,7 @@ const api = {
   launchUnityGame: () => ipcRenderer.invoke('launch-unity-game'),
   stopUnityGame: () => ipcRenderer.invoke('stop-unity-game'),
   onUnityGameExit: (callback) => unityGameExitChannel.subscribe(callback),
+  speakWelcome: (name) => ipcRenderer.invoke('speak-welcome', name),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

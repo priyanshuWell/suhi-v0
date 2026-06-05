@@ -88,6 +88,10 @@ function FaceCapture() {
       if (response.student_status === "REGISTERED") {
         dispatch(setUser(response));
 
+        // Speak welcome message via espeak-ng (main process)
+        const childName = response?.data?.first_name || 'friend';
+        window.api.speakWelcome(childName);
+
         // If this is a resumed session, skip the RegisterCard and go straight to next stage
         if (screening?.isResumed && screening?.nextStage) {
           const nextRoute = getNextRoute(screening.nextStage, '/bia/leg50');

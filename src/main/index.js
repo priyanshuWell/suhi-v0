@@ -8,7 +8,7 @@ import fs from "fs"
 import crypto from "crypto"
 import axios from "axios"
 import express from "express"
-import { spawn } from "child_process"
+import { spawn, exec, execSync } from "child_process"
 const loudness = require("loudness")
 
 let mainWindow = null
@@ -632,6 +632,33 @@ function createWindow() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
+// ─── espeak-ng: auto-install if not present ───────────────────────────────────
+function ensureEspeakNg() {
+  try {
+    execSync('which espeak-ng', { stdio: 'ignore' })
+    console.log('[MAIN] espeak-ng already installed')
+  } catch {
+    console.log('[MAIN] espeak-ng not found, installing...')
+    try {
+      execSync('sudo apt-get install -y espeak-ng', { stdio: 'inherit' })
+      console.log('[MAIN] espeak-ng installed successfully')
+    } catch (err) {
+      console.error('[MAIN] Failed to install espeak-ng:', err.message)
+    }
+  }
+}
+
+ensureEspeakNg()
+
+// IPC: speak welcome message with child's name
+ipcMain.handle('speak-welcome', (_event, name) => {
+  const safeName = String(name).replace(/[^a-zA-Z0-9 ]/g, '') // sanitize
+  const text = `Welcome to Suhi, ${safeName}`
+  exec(`espeak-ng -v en-in -s 130 -p 60 "${text}"`, (err) => {
+    if (err) console.error('[MAIN] espeak-ng error:', err.message)
+  })
+})
+
 app.whenReady().then(() => {
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron")
