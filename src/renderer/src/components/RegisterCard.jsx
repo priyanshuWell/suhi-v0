@@ -70,7 +70,7 @@ export default function RegisterCard() {
 
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
-  const studentId = user?.data?.suhi_id || "SUHI_12345"
+  const studentId = user?.suhi_id || "SUHI_12345"
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()

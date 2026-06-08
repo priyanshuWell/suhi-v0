@@ -458,7 +458,13 @@ export const BIAComponent = ({
 
   /* ──────────────── audio helpers (unchanged) ──────────────── */
   const getAudioBaseName = (type) => {
-    const audioMap = { wh: "standstraight", im: "impedance" }
+    const audioMap = {
+      wh: "wh_measuring",
+      whcomplete: "wh_complete",
+      im: "impedance",
+      imcomplete: "im_complete",
+      leg50: "standstraight"
+    }
     return audioMap[type] || "standstraight"
   }
 
@@ -466,7 +472,11 @@ export const BIAComponent = ({
 
   const playAudio = async () => {
     const baseName = getAudioBaseName(screenType)
-    const audioPath = await getAudioForCurrentLanguage(baseName)
+    let audioPath = await getAudioForCurrentLanguage(baseName)
+    if (!audioPath) {
+      console.log(`No audio found for ${baseName} in current language, using fallback`)
+      audioPath = getAudioPath(screenType)
+    }
     if (audioPath && audioRef.current) {
       audioRef.current.src = audioPath
       setIsAudioPlaying(true)
@@ -474,8 +484,6 @@ export const BIAComponent = ({
         console.log("Audio playback failed:", err)
         setIsAudioPlaying(false)
       })
-    } else if (!audioPath) {
-      console.log(`No audio found for ${baseName} in current language`)
     }
   }
 
@@ -572,6 +580,7 @@ export const BIAComponent = ({
               src={videoSrc}
               autoPlay
               loop
+              muted
               playsInline
               className="rounded-4xl object-cover w-full "
             />

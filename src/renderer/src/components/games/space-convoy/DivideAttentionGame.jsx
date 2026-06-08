@@ -576,7 +576,7 @@ export default function SpaceConvoy() {
         // Set up looping background music
         const audio = new Audio(gameBgMusic);
         audio.loop = true;
-        audio.volume = 0.5;
+        audio.volume = 0.15;
         bgAudioRef.current = audio;
 
         (async () => {
@@ -951,10 +951,13 @@ export default function SpaceConvoy() {
                 pointerEvents: "none",
             }}>
                 <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "14px 27px 12px",
                     background: "rgba(4,9,26,0.82)",
                 }}>
+                    {/* Left spacer — mirrors skip button width so dots stay centred */}
+                    <div style={{ minWidth: 70 }} />
+
                     {/* Centre: round dots */}
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "clamp(6px,0.8vw,10px)" }}>
@@ -981,6 +984,45 @@ export default function SpaceConvoy() {
                             })}
                         </div>
                     </div>
+
+                    {/* Right: Skip button */}
+                    <button
+                        id="space-convoy-skip-btn"
+                        onClick={endSession}
+                        style={{
+                            pointerEvents: "auto",
+                            display: "flex", alignItems: "center", gap: 5,
+                            padding: "6px 14px",
+                            background: "rgba(255,255,255,0.07)",
+                            border: "1.5px solid rgba(255,255,255,0.18)",
+                            borderRadius: 20,
+                            color: "rgba(255,255,255,0.70)",
+                            fontSize: "clamp(11px,1.1vw,14px)",
+                            fontFamily: "'Arial', sans-serif",
+                            fontWeight: 500,
+                            letterSpacing: "0.04em",
+                            cursor: "pointer",
+                            transition: "background 0.2s, border-color 0.2s, color 0.2s",
+                            minWidth: 70,
+                            justifyContent: "center",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.14)";
+                            e.currentTarget.style.borderColor = "rgba(255,255,255,0.38)";
+                            e.currentTarget.style.color = "#fff";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+                            e.currentTarget.style.borderColor = "rgba(255,255,255,0.18)";
+                            e.currentTarget.style.color = "rgba(255,255,255,0.70)";
+                        }}
+                    >
+                        Skip
+                        {/* forward chevron */}
+                        <svg width="11" height="11" viewBox="0 0 10 10" fill="none" style={{ marginLeft: 2 }}>
+                            <polyline points="3,1.5 7.5,5 3,8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>

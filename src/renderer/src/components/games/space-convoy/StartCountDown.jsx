@@ -15,6 +15,7 @@ export function StartCountDown({ onComplete }) {
     useEffect(() => {
         // create audio once
         audioRef.current = new Audio(countdownVoice)
+        audioRef.current.volume = 0.4
 
         // play once at start
         audioRef.current.play().catch((err) => {

@@ -345,7 +345,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         // Set up looping background music
         const audio = new Audio(gameBgMusic);
         audio.loop = true;
-        audio.volume = 0.5;
+        audio.volume = 0.15;
         bgAudioRef.current = audio;
 
         (async () => {

@@ -42,17 +42,17 @@ const SOUND_FILES = {
 };
 
 const SOUND_VOLUMES = {
-    round_start:      0.55,
-    freeze:           0.70,
-    particle_tap:     0.55,   // same volume for hit and false alarm
-    collision:        0.25,   // quiet — fires many times per second, don't overpower
-    speed_bonus:      0.50,
-    submit:           0.80,
-    burst:            0.45,
-    level_up:         0.75,
-    session_complete: 0.80,
-    hover:            0.15,
-    ambient_loop:     60
+    round_start:      0.35,
+    freeze:           0.40,
+    particle_tap:     0.30,   // same volume for hit and false alarm
+    collision:        0.12,   // quiet — fires many times per second, don't overpower
+    speed_bonus:      0.30,
+    submit:           0.45,
+    burst:            0.25,
+    level_up:         0.40,
+    session_complete: 0.45,
+    hover:            0.08,
+    ambient_loop:     0.20
 };
 
 // ─── Synth Fallbacks ──────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export class SoundManager {
         this._ambientGain       = null;
         this._synthAmbientNodes = null;
         this._muted             = false;
-        this._volume            = 0.85;
+        this._volume            = 0.45;
 
         // Throttle for collision sound — prevent 60fps spam
         // Only one collision sound allowed every 80ms
