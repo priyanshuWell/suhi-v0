@@ -14,7 +14,6 @@ const STAGE_KEY_TO_STEP = {
     bia: 2,
     voice_analysis: 5,
     divide_attention: 3,
-    congitive: 4,
     color_blindness: 4,
     result: 6,
 }
@@ -23,7 +22,8 @@ export default function ProgressStage({ current }) {
     const user = useSelector((state) => state.common.user)
 
     // Determine current active step number
-    const nextStageKey = user?.screening?.nextStage?.stage_key
+    const screening = user?.screening
+    const nextStageKey = screening?.nextStage?.stage_key
     const activeStepNum = nextStageKey ? (STAGE_KEY_TO_STEP[nextStageKey] ?? current) : current
 
     return (
@@ -53,8 +53,8 @@ export default function ProgressStage({ current }) {
                 if (nextStageKey) {
                     // Check if this step is done
                     const isStepInCompleted = s.key
-                        ? screening.completedStages?.includes(s.key)
-                        : s.keys?.some(k => screening.completedStages?.includes(k))
+                        ? screening?.completed_stages?.includes(s.key)
+                        : s.keys?.some(k => screening?.completed_stages?.includes(k))
 
                     isDone = isStepInCompleted || (s.id < activeStepNum)
 
