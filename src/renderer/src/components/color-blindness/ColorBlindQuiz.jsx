@@ -110,13 +110,14 @@ const PLATES = [
 // ─── Progress Bar ─────────────────────────────────────────────────────────────
 const ProgressBar = ({ current, total }) => {
     const pct = Math.min((current / total) * 100, 100);
+    const { t } = useTranslation();
     return (
         <div className="flex flex-col items-start gap-1 w-full">
             <span
                 className="text-white font-anta"
                 style={{ fontSize: "clamp(0.7rem, 2vw, 2rem)" }}
             >
-                Image {current} of {total}
+                {t("colorBlindness.progress", { current, total })}
             </span>
             <div className="w-full overflow-hidden"
                 style={{ height: "clamp(6px, 1.3vw, 21px)", background: "#e0e0e0", borderRadius: "169.6px" }}

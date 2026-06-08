@@ -37,11 +37,22 @@
   },
   "colorBlindness": {
     "title": "Color Blindness Test",
-    "instructions_line1": "You have to click the number/shape for each image.",
-    "instructions_line2": "If you don't see anything just click on Cannot read plate.",
+    "instruction": "Look at each picture carefully and choose the number or shape you see.",
     "instructions_example": "Example: This Number is 6. Click on next button to start!",
     "plateAlt": "Example color blindness plate",
-    "next": "Next"
+    "next": "Next",
+    "progress": "Image {{current}} of {{total}}",
+    "question": "Select what you see",
+    "options": {
+      "no_number": "No number",
+      "line": "Line",
+      "red_line": "Red Line",
+      "two_lines": "Two Lines",
+      "purple_line": "Purple Line",
+      "red_lines": "Red Lines",
+      "three_lines": "Three lines",
+      "no_lines": "No lines"
+    }
   },
   "dmit": {
     "hand_labels": {
@@ -76,6 +87,22 @@
       "processing": "processing",
       "success": "success",
       "error": "error"
+    },
+    "analysing": "ANALYSING VOICE…",
+    "what_you_think": "What you Think?",
+    "select_instruction": "Select a 360° image and describe what’s happening as you explore it.",
+    "tap_to_explore": "Tap to explore",
+    "loading_panorama": "Loading panorama…",
+    "failed_load_pano": "Failed to load panorama image.",
+    "check_image_path": "Check the image path or URL.",
+    "tap_to_rotate": "Tap to rotate",
+    "labels": {
+      "interpersonal": "Interpersonal",
+      "kinesthetic": "Kinesthetic",
+      "logical": "Logical",
+      "musical": "Musical",
+      "verbal": "Verbal",
+      "nature": "Nature"
     }
   },
   "spaceConvoy": {
@@ -107,5 +134,17 @@
   "error": {
     "no_result": "Failed to load result data",
     "redirecting": "Redirecting to home..."
+  },
+  "loginSuhi": {
+    "title": "Log in using your ID or fingerprint",
+    "id_label": "Suhi ID",
+    "verifying": "Verifying...",
+    "login_failed": "Login Failed",
+    "student_not_found": "Student not found. Redirecting..."
+  },
+  "audio": {
+    "playing": "Playing…",
+    "replay": "Replay Instructions",
+    "listenFirst": "Please listen to the instructions first"
   }
 }

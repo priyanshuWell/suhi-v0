@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useSelector, useDispatch } from "react-redux";
+import { useTranslation } from "react-i18next";
 import audioBufferToWav from "audiobuffer-to-wav";
 import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import { getKioskId } from "../../utils/config";
@@ -25,12 +26,12 @@ import View360Viewer from "./View360Viewer";
 import bg1 from "../../assets/lightbg.png";
 
 const IMAGES = [
-  { src: Interpersonal, label: "Interpersonal", src360: Interpersonal360 },
-  { src: Kinesthetic, label: "Kinesthetic", src360: Kinesthetic360 },
-  { src: Logical, label: "Logical", src360: Logical360 },
-  { src: Musical, label: "Musical", src360: Musical360 },
-  { src: Verbal, label: "Verbal", src360: Verbal360 },
-  { src: Nature, label: "Nature", src360: Nature360 },
+  { src: Interpersonal, labelKey: "voice.labels.interpersonal", src360: Interpersonal360 },
+  { src: Kinesthetic, labelKey: "voice.labels.kinesthetic", src360: Kinesthetic360 },
+  { src: Logical, labelKey: "voice.labels.logical", src360: Logical360 },
+  { src: Musical, labelKey: "voice.labels.musical", src360: Musical360 },
+  { src: Verbal, labelKey: "voice.labels.verbal", src360: Verbal360 },
+  { src: Nature, labelKey: "voice.labels.nature", src360: Nature360 },
 ];
 
 // ─── Drum constants ───────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ export default function VoiceAnalysis() {
   const user = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
   const dispatch = useDispatch();
+  const { t } = useTranslation();
 
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(Math.floor(IMAGES.length / 2));
@@ -450,7 +452,7 @@ export default function VoiceAnalysis() {
           animation: "spin360 0.8s linear infinite",
         }} />
         <p style={{ color: "rgba(154,217,255,0.7)", fontFamily: "'Exo 2', sans-serif", letterSpacing: "0.2em", fontSize: 14 }}>
-          ANALYSING VOICE…
+          {t("voice.analysing")}
         </p>
       </div>
     );
@@ -471,7 +473,7 @@ export default function VoiceAnalysis() {
             pointerEvents: "none",
           }}
         >
-          {confirmedImage.label}
+          {t(confirmedImage.labelKey)}
         </div>
         <View360Viewer
           src={confirmedImage.src360}
@@ -515,7 +517,7 @@ export default function VoiceAnalysis() {
                 />
 
                 <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
-                  What you Think?
+                  {t("voice.what_you_think")}
                 </p>
               </div>
 
@@ -535,7 +537,7 @@ export default function VoiceAnalysis() {
         </div>
 
         <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute  top-[15rem] left-[16rem] ">
-          Select a 360° image and describe what’s happening as you explore it.
+          {t("voice.select_instruction")}
         </div>
 
 
@@ -626,7 +628,7 @@ export default function VoiceAnalysis() {
                     }}
                   >
                     <img
-                      src={img.src} alt={img.label} draggable={false}
+                      src={img.src} alt={t(img.labelKey)} draggable={false}
                       className="w-full h-full object-cover"
                       style={{ userSelect: "none", pointerEvents: "none" }}
                     />
@@ -656,7 +658,7 @@ export default function VoiceAnalysis() {
                         border: "1px solid rgba(255,255,255,0.12)",
                       }}
                     >
-                      {img.label}
+                      {t(img.labelKey)}
                     </div>
 
                     {/* Tap hint */}
@@ -666,7 +668,7 @@ export default function VoiceAnalysis() {
                           className="text-white text-xs md:text-sm tracking-[0.3em] uppercase opacity-80"
                           style={{ textShadow: "0 1px 4px rgba(0,0,0,0.9)" }}
                         >
-                          Tap to explore
+                          {t("voice.tap_to_explore")}
                         </span>
                       </div>
                     )}

@@ -12,9 +12,11 @@ import { BIAMeasurementStage } from "../utils/api"
 import { trackStage } from "../utils/config"
 import ErrorAlert from "./ErrorAlert"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { useTranslation } from "react-i18next"
 const USE_DUMMY_FPT = false
 const VideoCaptureScreen = () => {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [isVerify, setIsVerify] = useState(false)
   const [phase, setPhase] = useState("")
   const [status, setStatus] = useState("Initializing...")
@@ -310,7 +312,7 @@ const VideoCaptureScreen = () => {
         <video
           src={video2}
           autoPlay
-          // muted
+          muted
           loop
           playsInline
           className="
@@ -365,13 +367,13 @@ const VideoCaptureScreen = () => {
 
       {/* Error Alert Component */}
       <ErrorAlert
-        title={status.includes("not registered") ? "face Not Registered" : "Face Not Recognized"}
+        title={status.includes("not registered") ? t("videoCapture.error_unregistered_title") : t("videoCapture.error_unrecognized_title")}
         description={
           status.includes("not registered")
-            ? "User is not registered in the system.\nRedirecting to manual login..."
+            ? t("videoCapture.error_unregistered_desc")
             : attemptCount < MAX_ATTEMPTS
-              ? `No face detected OR Multiple faces detected.\nRetrying......`
-              : "Maximum attempts reached\nReturning to login screen..."
+              ? t("videoCapture.error_unrecognized_retry_desc")
+              : t("videoCapture.error_unrecognized_max_desc")
         }
         visible={showError}
         onClose={handleErrorClose}

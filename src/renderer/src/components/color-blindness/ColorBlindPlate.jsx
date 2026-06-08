@@ -128,7 +128,7 @@ export const ColorBlindPlate = () => {
                     <br /><br />
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")} */}
 
-                    {t("Look at each picture carefully and choose the number or shape you see.")}
+                    {t("colorBlindness.instruction")}
                     <br /><br />
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>

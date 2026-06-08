@@ -3,9 +3,9 @@ import { Fragment } from "react"
 const steps = [
     { id: 1, label: 'Face Scan' },
     { id: 2, label: 'Body Scan' },
-    { id: 3, label: 'Voice Scan' },
-    { id: 4, label: 'Cognitive Games' },
-    { id: 5, label: 'Vision Test' },
+    { id: 3, label: 'Cognitive Games' },
+    { id: 4, label: 'Vision Test' },
+    { id: 5, label: 'Voice Scan' },
 ]
 
 export default function ProgressStage({ current }) {

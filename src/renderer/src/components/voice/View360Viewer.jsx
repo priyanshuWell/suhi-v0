@@ -7,6 +7,7 @@ import icon360 from "../../assets/voice/360_icon.png"
 import fingerIcon from "../../assets/voice/finger_icon.svg"
 import { useNavigate } from "react-router";
 import { Loader } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const BAR_WIDTH = 12.1111;
 const BAR_RADIUS = 6.05556;
@@ -31,6 +32,7 @@ export default function View360Viewer({
     const viewerRef = useRef(null);
     const rafRef = useRef(null);
     const wrapperRef = useRef(null);
+    const { t } = useTranslation();
 
     const [voiceBars, setVoiceBars] = useState(Array(TOTAL_BARS).fill(0));
     const [isReady, setIsReady] = useState(false);
@@ -221,7 +223,7 @@ export default function View360Viewer({
                 <div style={styles.overlay}>
                     <div style={styles.spinner} />
                     <p style={{ margin: "12px 0 0", fontSize: "13px", color: "#aaa" }}>
-                        Loading panorama…
+                        {t("voice.loading_panorama")}
                     </p>
                 </div>
             )}
@@ -246,7 +248,7 @@ export default function View360Viewer({
                                     cursor: loading ? "not-allowed" : "pointer",
                                 }}
                             >
-                                {loading ? <Loader className="w-6 h-6 animate-spin" /> : "Next"}
+                                {loading ? <Loader className="w-6 h-6 animate-spin" /> : t("common.next")}
                             </BlueGradientButton>
                         </div>
                     </div>
@@ -258,10 +260,10 @@ export default function View360Viewer({
                 <div style={styles.overlay}>
                     <span style={{ fontSize: "32px" }}>⚠️</span>
                     <p style={{ margin: "8px 0 0", fontSize: "14px", color: "#f88" }}>
-                        Failed to load panorama image.
+                        {t("voice.failed_load_pano")}
                     </p>
                     <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#666" }}>
-                        Check the image path or URL.
+                        {t("voice.check_image_path")}
                     </p>
                 </div>
             )}
@@ -284,7 +286,7 @@ export default function View360Viewer({
                             className="w-10 h-10 ml-2"
                         />
                         <span>
-                            Tap to rotate
+                            {t("voice.tap_to_rotate")}
                         </span>
                     </p>
                 </div>
