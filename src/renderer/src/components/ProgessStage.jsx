@@ -4,18 +4,18 @@ import { useSelector } from "react-redux"
 const steps = [
     { id: 1, key: 'login', label: 'Face Scan' },
     { id: 2, key: 'bia', label: 'Body Scan' },
-    { id: 3, key: 'voice_analysis', label: 'Voice Scan' },
-    { id: 4, key: 'divide_attention', label: 'Cognitive Games' },
-    { id: 5, keys: ['color_blindness'], label: 'Vision Test' },
+    { id: 3, key: 'divide_attention', label: 'Cognitive Games' },
+    { id: 4, keys: ['color_blindness'], label: 'Vision Test' },
+        { id: 5, key: 'voice_analysis', label: 'Voice Scan' },
 ]
 
 const STAGE_KEY_TO_STEP = {
     login: 1,
     bia: 2,
-    voice_analysis: 3,
-    divide_attention: 4,
-    congitive: 5,
-    color_blindness: 5,
+    voice_analysis: 5,
+    divide_attention: 3,
+    congitive: 4,
+    color_blindness: 4,
     result: 6,
 }
 

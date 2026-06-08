@@ -95,7 +95,7 @@
     "loading_panorama": "Loading panorama…",
     "failed_load_pano": "Failed to load panorama image.",
     "check_image_path": "Check the image path or URL.",
-    "tap_to_rotate": "Tap to rotate",
+    "tap_to_rotate": "Tap to rotate & start describing",
     "labels": {
       "interpersonal": "Interpersonal",
       "kinesthetic": "Kinesthetic",
