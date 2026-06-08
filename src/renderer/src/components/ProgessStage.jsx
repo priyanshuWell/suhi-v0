@@ -1,14 +1,31 @@
 import { Fragment } from "react"
+import { useSelector } from "react-redux"
 
 const steps = [
-    { id: 1, label: 'Face Scan' },
-    { id: 2, label: 'Body Scan' },
-    { id: 3, label: 'Cognitive Games' },
-    { id: 4, label: 'Vision Test' },
-    { id: 5, label: 'Voice Scan' },
+    { id: 1, key: 'login', label: 'Face Scan' },
+    { id: 2, key: 'bia', label: 'Body Scan' },
+    { id: 3, key: 'voice_analysis', label: 'Voice Scan' },
+    { id: 4, key: 'divide_attention', label: 'Cognitive Games' },
+    { id: 5, keys: ['color_blindness'], label: 'Vision Test' },
 ]
 
+const STAGE_KEY_TO_STEP = {
+    login: 1,
+    bia: 2,
+    voice_analysis: 3,
+    divide_attention: 4,
+    congitive: 5,
+    color_blindness: 5,
+    result: 6,
+}
+
 export default function ProgressStage({ current }) {
+    const user = useSelector((state) => state.common.user)
+
+    // Determine current active step number
+    const nextStageKey = user?.screening?.nextStage?.stage_key
+    const activeStepNum = nextStageKey ? (STAGE_KEY_TO_STEP[nextStageKey] ?? current) : current
+
     return (
         <div
             className="
@@ -23,15 +40,32 @@ export default function ProgressStage({ current }) {
             style={{
                 background: "rgba(82, 82, 82, 0.13)",
                 boxShadow:
-                    current >= steps.length
+                    activeStepNum >= steps.length
                         ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
                         : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
                 WebkitBackdropFilter: "blur(6px)",
             }}
         >
             {steps.map((s, i) => {
-                const isDone = s.id < current
-                const isActive = s.id === current
+                let isDone = false
+                let isActive = false
+
+                if (nextStageKey) {
+                    // Check if this step is done
+                    const isStepInCompleted = s.key
+                        ? screening.completedStages?.includes(s.key)
+                        : s.keys?.some(k => screening.completedStages?.includes(k))
+
+                    isDone = isStepInCompleted || (s.id < activeStepNum)
+
+                    // Check if this step is active
+                    isActive = s.key
+                        ? nextStageKey === s.key
+                        : s.keys?.includes(nextStageKey)
+                } else {
+                    isDone = s.id < current
+                    isActive = s.id === current
+                }
 
                 const circleClass =
                     isDone || isActive

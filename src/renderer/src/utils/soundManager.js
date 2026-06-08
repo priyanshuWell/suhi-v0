@@ -38,7 +38,7 @@ const SOUND_FILES = {
     // level_up:         levelUpSfx,
     // session_complete: sessionCompleteSfx,
     // hover:            hoverSfx,
-    ambient_loop:     ambientLoopSfx,
+    // ambient_loop:     ambientLoopSfx,
 };
 
 const SOUND_VOLUMES = {

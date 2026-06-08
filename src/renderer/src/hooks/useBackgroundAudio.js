@@ -5,8 +5,7 @@ import suhiBgAudio from '../assets/audio/suhi_background.wav'
 
 const EXCLUDED_ROUTES = [
   '/voice',
-  '/divide-attention',
-  '/space-convoy-main',
+  
 ]
 
 
