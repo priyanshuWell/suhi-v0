@@ -7,6 +7,8 @@ import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import { getKioskId } from "../../utils/config";
 import { setScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
+import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
+import ReplayAudio from "../ReplayAudio";
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg";
 import Kinesthetic from "../../assets/voice/kinesthic.jpeg";
 import Logical from "../../assets/voice/logical.jpeg";
@@ -96,6 +98,41 @@ export default function VoiceAnalysis() {
   const audioContextRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const isRecording = status === "recording";
+
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const instructionAudioRef = useRef(null);
+
+  const playInstructionAudio = useCallback(async () => {
+    if (instructionAudioRef.current) {
+      instructionAudioRef.current.pause();
+      instructionAudioRef.current.currentTime = 0;
+    }
+    const audioPath = await getAudioForCurrentLanguage("voice_instruction");
+    if (audioPath && instructionAudioRef.current) {
+      instructionAudioRef.current.src = audioPath;
+      setIsAudioPlaying(true);
+      instructionAudioRef.current.play().catch((err) => {
+        console.log("Instruction audio playback failed:", err);
+        setIsAudioPlaying(false);
+      });
+    }
+  }, []);
+
+  const stopInstructionAudio = useCallback(() => {
+    if (instructionAudioRef.current) {
+      instructionAudioRef.current.pause();
+      instructionAudioRef.current.currentTime = 0;
+      setIsAudioPlaying(false);
+    }
+  }, []);
+
+  const handleInstructionAudioEnd = useCallback(() => {
+    setIsAudioPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    playInstructionAudio();
+  }, [playInstructionAudio]);
 
   // ── selectedIndex ref (needed inside momentum RAF closure) ───────────────
   // We keep a ref in sync so the momentum loop can read the latest value
@@ -348,7 +385,7 @@ export default function VoiceAnalysis() {
         const kioskId = getKioskId();
         const userId = user?.data?.user_id ?? null;
         const sessionId = user?.data?.buffer_id ?? null;
-        const screeningSessionId =  user?.screening?.session_id ?? null;
+        const screeningSessionId = user?.screening?.session_id ?? null;
 
         const voiceData = {
           role: "VOICE",
@@ -404,6 +441,9 @@ export default function VoiceAnalysis() {
       clearTimeout(resumeTimer.current);
       audioStreamRef.current?.getTracks().forEach((t) => t.stop());
       audioContextRef.current?.close();
+      if (instructionAudioRef.current) {
+        instructionAudioRef.current.pause();
+      }
     };
   }, []);
 
@@ -412,6 +452,7 @@ export default function VoiceAnalysis() {
     cancelAnimationFrame(momentumRAF.current);
     clearInterval(autoScrollRef.current);
     clearTimeout(resumeTimer.current);
+    stopInstructionAudio();
     setConfirmedImage(IMAGES[selectedIndex]);
     setPhase("viewing");
   };
@@ -496,6 +537,11 @@ export default function VoiceAnalysis() {
   // ─── Picking phase — drum wheel ──────────────────────────────────────────
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+      <audio
+        ref={instructionAudioRef}
+        onEnded={handleInstructionAudioEnd}
+        onPlay={() => setIsAudioPlaying(true)}
+      />
       <div
         className="absolute inset-0 bg-center bg-cover opacity-50"
         style={{ backgroundImage: `url(${bg1})` }}
@@ -536,8 +582,9 @@ export default function VoiceAnalysis() {
 
         </div>
 
-        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute  top-[15rem] left-[16rem] ">
-          {t("voice.select_instruction")}
+        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[15rem] left-[16rem] flex items-center gap-6">
+          <span>{t("voice.select_instruction")}</span>
+          {/* <ReplayAudio playAudio={playInstructionAudio} /> */}
         </div>
 
 
