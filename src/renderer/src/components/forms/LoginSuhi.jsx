@@ -59,16 +59,23 @@ const LoginSuhi = () => {
     try {
       // Verify student only when Next is clicked
       const response = await getStudentBySuhi(suhiId.trim())
+      const normalizedUser = {
+        ...response.data,
+        suhi_id:
+          response.suhi_id ||
+          response.data?.suhi_id ||
+          suhiId.trim()
+      }
 
       if (!response.success || !response.data) {
-        throw new Error('Student not found')
+        throw new Error('Student is not available. Please check your SUHI ID')
       }
 
       // Save student data
       dispatch(
         setUser({
           success: true,
-          data: response.data
+          data: normalizedUser
         })
       )
 

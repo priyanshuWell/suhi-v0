@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import bg1 from "../../assets/lightbg.png";
 import textframe from "../../assets/textFrame.png";
-import InitialColorBlindImage from "../../assets/inital_colorB_image.png";
+import InitialColorBlindImage from "../../assets/color_blindness/sample.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
 import { useSelector } from "react-redux";

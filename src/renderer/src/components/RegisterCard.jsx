@@ -10,6 +10,28 @@ import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { getNextRoute } from "../utils/stageRouter"
 
+
+const buildProfileImage = (imagePath) => {
+  if (!imagePath) return profilepic
+
+  if (imagePath.includes(".user_images")) {
+    const parts = imagePath.split("/")
+    const userId = parts[parts.length - 2]
+
+    return `http://127.0.0.1:5174/images/${userId}/latest.jpg`
+  }
+
+  if (imagePath.includes(".images")) {
+    const folderName =
+      imagePath.substring(
+        imagePath.lastIndexOf("/") + 1
+      )
+
+    return `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+  }
+
+  return profilepic
+}
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
@@ -25,15 +47,12 @@ export default function RegisterCard() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = React.useRef(null)
 
-  const profileImageSrc =
-    folderName && folderName.length > 0
-      ? `http://127.0.0.1:5174/images/${folderName}/original.jpg`
-      : profilepic
+  const profileImageSrc = buildProfileImage(user?.data?.image_path)
 
   console.log("profileImageSrc:", profileImageSrc)
   useEffect(() => {
     // Play audio when component mounts
-    playAudio()
+    playAudio();
   }, [])
 
   const playAudio = async () => {
@@ -49,7 +68,6 @@ export default function RegisterCard() {
       console.log("No audio for confirm_user in current language")
     }
   }
-
   const stopAudio = () => {
     if (audioRef.current) {
       audioRef.current.pause()

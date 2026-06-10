@@ -139,16 +139,18 @@ ipcMain.handle("disconnect-heightPort", async () => {
 const startImageServer = () => {
   const app = express()
 
-  // ✅ Your images folder
+  // FPT realtime images: /var/lib/suhi/.images/<folder>/original.jpg
   const IMAGE_DIR = "/var/lib/suhi/.images"
-
-  // Serve folder
   app.use("/images", express.static(IMAGE_DIR))
+
+  // LoginSuhi images: /var/lib/suhi/.user_images/<uuid>/latest.jpg
+  const USER_IMAGE_DIR = "/var/lib/suhi/.user_images"
+  app.use("/user_images", express.static(USER_IMAGE_DIR))
 
   const PORT = 5174
 
   app.listen(PORT, "127.0.0.1", () => {
-    console.log(`✅ Image server running: http://127.0.0.1:${PORT}/images`)
+    console.log(`✅ Image server running: http://127.0.0.1:${PORT}/images and /user_images`)
   })
 }
 

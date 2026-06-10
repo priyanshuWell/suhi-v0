@@ -255,10 +255,10 @@ export const ColorBlindQuiz = () => {
             />
 
             {/* Content */}
-            <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto py-4 px-4 gap-18">
+            <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto py-4 px-4 gap-8">
 
                 {/* Progress bar */}
-                <div className="w-full max-w-[665px] mt-10">
+                <div className="w-full max-w-[665px] mt-6">
                     <ProgressBar current={currentIndex + 1} total={totalPlates} />
                 </div>
 
@@ -278,11 +278,11 @@ export const ColorBlindQuiz = () => {
                 />
 
                 {/* Plate image */}
-                <div className="bg-transparent rounded-3xl p-6 w-[70%] max-w-[1018px] flex items-center justify-center shadow-2xl">
+                <div className="bg-transparent rounded-3xl p-4 w-[800px] h-[800px] max-w-full aspect-square flex items-center justify-center shadow-2xl">
                     <img
                         src={image}
                         alt={t("colorBlindness.plateAlt", "Color blindness plate")}
-                        className="w-full h-auto object-cover rounded-2xl"
+                        className="w-full h-full object-contain rounded-2xl"
                     />
                 </div>
 
