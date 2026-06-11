@@ -2,35 +2,17 @@ import { Fragment } from "react";
 import { useSelector } from "react-redux";
 
 const steps = [
-    { id: 1, key: "login", label: "Face Scan" },
-    { id: 2, key: "bia", label: "Body Scan" },
-    { id: 3, key: "divide_attention", label: "Cognitive Games" },
-    { id: 4, key: "color_blindness", label: "Vision Test" },
-    { id: 5, key: "voice_analysis", label: "Voice Scan" },
+    { id: 1, key: "login",            label: "Face Scan" },
+    { id: 2, key: "bia",              label: "Body Scan" },
+    { id: 3, key: "divide_attention", label: "Cognitive Game" },
+    { id: 4, key: "color_blindness",  label: "Vision Test" },
+    { id: 5, key: "voice_analysis",   label: "Voice Scan" },
 ];
-
-const STAGE_KEY_TO_STEP = {
-    login: 1,
-    bia: 2,
-    divide_attention: 3,
-    color_blindness: 4,
-    voice_analysis: 5,
-    result: 6,
-};
 
 export default function ProgressStage({ current = 1 }) {
     const user = useSelector((state) => state.common.user);
-
-    const screening = user?.screening;
-
-    // Support both nextStage and next_stage
-    const nextStageKey =
-        screening?.nextStage?.stage_key ||
-        screening?.next_stage?.stage_key;
-
-    const activeStepNum = nextStageKey
-        ? STAGE_KEY_TO_STEP[nextStageKey] ?? current
-        : current;
+    const completedStages = user?.screening?.completed_stages || [];
+    const activeStepNum = current;
 
     return (
         <div
@@ -52,16 +34,11 @@ export default function ProgressStage({ current = 1 }) {
             }}
         >
             {steps.map((step, index) => {
-                const completedStages = screening?.completed_stages || [];
-
                 const isDone =
                     completedStages.includes(step.key) ||
                     step.id < activeStepNum;
 
-                const isActive =
-                    nextStageKey
-                        ? nextStageKey === step.key
-                        : step.id === current;
+                const isActive = step.id === activeStepNum;
 
                 const circleClass =
                     isDone || isActive

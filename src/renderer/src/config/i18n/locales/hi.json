@@ -9,9 +9,14 @@
     "here_are_results": "यहां आपके परिणाम हैं",
     "go_to_homepage": "मुखपृष्ठ प्र जाएं",
     "audio_not_supported": "आपका ब्राउज़र ऑडियो तत्व का समर्थन नहीं करता है।",
-    "replay": "ऑडियो फिर से चलाएं"
+    "replay": "ऑडियो फिर से चलाएं",
+    "let_go": "चलो शुरू करें",
+    "hi": "नमस्ते"
+
   },
   "profile": {
+    "welcome_suhi": "सुही में आपका स्वागत है",
+    "let_start_your_journey": "आपकी यात्रा शुरू करते हैं",
     "name": "नाम",
     "class": "कक्षा",
     "age": "आयु",
@@ -26,8 +31,8 @@
     "weight_height_completed": "हो गया! लंबाई और वज़न दर्ज कर लिया गया है।",
     "impedance_measurement": "स्कैन पूरा होने तक दोनों हैंडल मज़बूती से पकड़े रहें।",
     "impedance_complete": "शाबाश! ये रहे आपके नतीजे।",
-    "weight": "वज़न",
-    "height": "ऊंचाई"
+    "weight": "वज़न",
+    "height": "लंबाई"
   },
   "colorBlindness": {
     "title": "वर्णांधता परीक्षण",

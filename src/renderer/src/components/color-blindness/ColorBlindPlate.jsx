@@ -9,13 +9,13 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
-import instructionAudio from "../../assets/audio/colorblindness_instruction_en.mp3";
+import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
 
 
 export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user);
     const screening = useSelector((state) => state.common.screening);
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);  // seeding + starting
     const [sessionId, setSessionId] = useState(null);
@@ -29,33 +29,51 @@ export const ColorBlindPlate = () => {
     const [isPlaying, setIsPlaying] = useState(false);
 
     useEffect(() => {
-        const audio = new Audio(instructionAudio);
-        audioRef.current = audio;
+        let audio = null;
+        let cancelled = false;
 
-        const handleEnded = () => { setAudioDone(true); setIsPlaying(false); };
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
+        const handleEnded = () => { if (!cancelled) { setAudioDone(true); setIsPlaying(false); } };
+        const handlePlay = () => { if (!cancelled) setIsPlaying(true); };
+        const handlePause = () => { if (!cancelled) setIsPlaying(false); };
 
-        audio.addEventListener("ended", handleEnded);
-        audio.addEventListener("play", handlePlay);
-        audio.addEventListener("pause", handlePause);
+        const loadAndPlay = async () => {
+            // Dynamically pick the correct language file
+            const src = await getAudioForCurrentLanguage("colorblindness_instruction");
+            if (cancelled || !src) {
+                console.warn("[ColorBlindPlate] No audio found for language:", i18n.language);
+                return;
+            }
 
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-            playPromise.catch((err) => {
-                console.warn("[ColorBlindPlate] Autoplay prevented:", err.message);
-                setIsPlaying(false);
-            });
-        }
+            audio = new Audio(src);
+            audioRef.current = audio;
+
+            audio.addEventListener("ended", handleEnded);
+            audio.addEventListener("play", handlePlay);
+            audio.addEventListener("pause", handlePause);
+
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.catch((err) => {
+                    console.warn("[ColorBlindPlate] Autoplay prevented:", err.message);
+                    if (!cancelled) setIsPlaying(false);
+                });
+            }
+        };
+
+        loadAndPlay();
 
         return () => {
-            audio.removeEventListener("ended", handleEnded);
-            audio.removeEventListener("play", handlePlay);
-            audio.removeEventListener("pause", handlePause);
-            audio.pause();
-            audio.src = "";
+            cancelled = true;
+            if (audio) {
+                audio.removeEventListener("ended", handleEnded);
+                audio.removeEventListener("play", handlePlay);
+                audio.removeEventListener("pause", handlePause);
+                audio.pause();
+                audio.src = "";
+            }
+            audioRef.current = null;
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [i18n.language]); // re-run whenever the language changes
 
     const handleReplay = () => {
         const audio = audioRef.current;

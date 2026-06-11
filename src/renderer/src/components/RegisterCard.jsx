@@ -18,7 +18,7 @@ const buildProfileImage = (imagePath) => {
     const parts = imagePath.split("/")
     const userId = parts[parts.length - 2]
 
-    return `http://127.0.0.1:5174/images/${userId}/latest.jpg`
+    return `http://127.0.0.1:5174/user_images/${userId}/latest.jpg`
   }
 
   if (imagePath.includes(".images")) {
@@ -88,7 +88,7 @@ export default function RegisterCard() {
 
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
-  const studentId = user?.suhi_id || "SUHI_12345"
+  const studentClass = user?.data?.class || "II-A"
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
@@ -131,12 +131,12 @@ export default function RegisterCard() {
             <h1
               className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta"
             >
-              Hi {studentName},
+              {t("common.hi")}  ,{studentName}
             </h1>
             <p
               className="text-[40px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta"
             >
-              Welcome to Suhi,<br />let's start your journey
+              {t("profile.welcome_suhi")}<br />{t("profile.let_start_your_journey")}
             </p>
           </div>
 
@@ -161,14 +161,14 @@ export default function RegisterCard() {
           >
             {studentAge && (
               <div className="flex items-baseline gap-3">
-                <span className="text-[#cff1ff]">Age-</span>
+                <span className="text-[#cff1ff]">{t("profile.age")}-</span>
                 <span className="text-white drop-shadow-[0_4px_4px_black]">{studentAge}</span>
               </div>
             )}
-            {studentId && (
+            {studentClass && (
               <div className="flex items-baseline gap-3">
-                <span className="text-[#cff1ff]">SUHI-ID-</span>
-                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentId}</span>
+                <span className="text-[#cff1ff]">{t("profile.class")}-</span>
+                <span className="text-white drop-shadow-[0_4px_4px_black]">{studentClass}</span>
               </div>
             )}
           </div>
@@ -200,7 +200,7 @@ export default function RegisterCard() {
                   "inset 0 0 21px white, inset 0 -72px 96px rgba(255,255,255,0.24), inset 0 24px 36px -48px rgba(255,255,255,0.24)",
               }}
             />
-            <span className="relative">Let's Go</span>
+            <span className="relative">{t("common.let_go")}</span>
           </button>
 
           {/* Not you? — no margin, gap handles spacing */}
@@ -209,7 +209,7 @@ export default function RegisterCard() {
             className="text-white text-[40px] underline pt-28 underline-offset-4  active:opacity-70 transition-opacity"
             style={{ fontFamily: "'Anta', sans-serif" }}
           >
-            Not you?
+            {t("common.not_me")}
           </button>
         </div>
       </div>

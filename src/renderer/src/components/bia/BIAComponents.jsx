@@ -18,6 +18,10 @@ import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
 import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
 import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
 import biaMuscleMassIcon from "../../assets/icons/bia-muscle-mass.svg"
+import heightIcon from '../../assets/bia/scale.svg'
+import weightIcon from '../../assets/bia/bag.svg'
+import visceralFatIcon from '../../assets/bia/visceral_fat.svg'
+import proteinMassIcon from '../../assets/bia/protein_mass.svg'
 import HeightWeightComplete from "./HeightWeightComplete"
 
 const ARC_POSITIONS = {
@@ -320,7 +324,7 @@ export const BIAComponent = ({
     {
       key: "proteinMass",
       label: "Protein Mass",
-      icon: biaMuscleMassIcon,
+      icon: proteinMassIcon,
       final: arms50k?.proteinMassKg != null
         ? `${arms50k.proteinMassKg} kg`
         : "--",
@@ -335,7 +339,7 @@ export const BIAComponent = ({
     {
       key: "visceralFat",
       label: "Visceral Fat",
-      icon: biaFatMassIcon,
+      icon: visceralFatIcon,
       final: arms50k?.visceralFat != null
         ? `${arms50k.visceralFat}`
         : "--",
@@ -349,7 +353,7 @@ export const BIAComponent = ({
     {
       key: "height",
       label: "Height",
-      icon: biaFatMassIcon,
+      icon: heightIcon,
       final: heightValue != null
         ? `${heightValue.toFixed(1)} cm`
         : "--",
@@ -363,7 +367,7 @@ export const BIAComponent = ({
     {
       key: "weight",
       label: "Weight",
-      icon: biaFatMassIcon,
+      icon: weightIcon,
       final: weightValue != null
         ? `${weightValue.toFixed(1)} kg`
 
@@ -636,7 +640,7 @@ export const BIAComponent = ({
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">
           <BlueGradientButton onClick={onNextVoiceClick}>
-            Next
+            {t("common.next")}
           </BlueGradientButton>
         </div>
       )}

@@ -38,12 +38,12 @@ const IMAGES = [
 
 // ─── Drum constants ───────────────────────────────────────────────────────────
 const ITEM_HEIGHT = 420;
-const AUTO_SCROLL_MS = 2200;
+const AUTO_SCROLL_MS = 100000;
 const AUTO_SCROLL_RESUME = 1800;
 const SCROLL_SENSITIVITY = 2.2;
-const SNAP_DISTANCE = 80;   // lowered slightly so snapping is easier to trigger
-const FRICTION = 0.88; // momentum decay per frame (0 = instant stop, 1 = no decay)
-const VELOCITY_THRESHOLD = 0.5; // px/frame below which momentum stops
+const SNAP_DISTANCE = 80;
+const FRICTION = 0.88;
+const VELOCITY_THRESHOLD = 0.5;
 
 function drumTransform(offset) {
   const R = 960;
@@ -56,6 +56,17 @@ function drumTransform(offset) {
     opacity: Math.max(0, 1 - dist * 0.22),
     scale: Math.max(0.72, 1 - dist * 0.12),
   };
+}
+
+// FIX (Issue 2): Helper to compute the allowed dragCurrent bounds
+// based on current selectedIndex so we never accumulate runaway offsets
+// at index 0 or the last index.
+function clampDragOffset(offset, selectedIndex) {
+  // drag DOWN (positive) moves toward lower indices, capped at selectedIndex items
+  const maxOffset = selectedIndex * ITEM_HEIGHT;
+  // drag UP (negative) moves toward higher indices, capped at remaining items
+  const minOffset = -(IMAGES.length - 1 - selectedIndex) * ITEM_HEIGHT;
+  return Math.max(minOffset, Math.min(maxOffset, offset));
 }
 
 export default function VoiceAnalysis() {
@@ -77,11 +88,11 @@ export default function VoiceAnalysis() {
 
   // ── Drag / momentum refs ─────────────────────────────────────────────────
   const dragStartY = useRef(null);
-  const dragCurrent = useRef(0);       // accumulated pixel offset during drag
-  const velocityRef = useRef(0);       // px per frame
-  const lastY = useRef(null);    // previous pointer Y (for velocity calc)
-  const lastTimeRef = useRef(null);    // timestamp of last pointermove
-  const momentumRAF = useRef(null);    // requestAnimationFrame id for momentum loop
+  const dragCurrent = useRef(0);
+  const velocityRef = useRef(0);
+  const lastY = useRef(null);
+  const lastTimeRef = useRef(null);
+  const momentumRAF = useRef(null);
   const userTouching = useRef(false);
 
   // ── Auto-scroll refs ─────────────────────────────────────────────────────
@@ -134,19 +145,14 @@ export default function VoiceAnalysis() {
     playInstructionAudio();
   }, [playInstructionAudio]);
 
-  // ── selectedIndex ref (needed inside momentum RAF closure) ───────────────
-  // We keep a ref in sync so the momentum loop can read the latest value
-  // without being stale.
   const selectedIndexRef = useRef(selectedIndex);
   useEffect(() => { selectedIndexRef.current = selectedIndex; }, [selectedIndex]);
 
   // ────────────────────────────────────────────────────────────────────────
-  // Snap helper — resolves accumulated pixel offset → nearest index
+  // Snap helper
   // ────────────────────────────────────────────────────────────────────────
   const snapToNearest = useCallback((currentOffset) => {
     const steps = Math.round(currentOffset / ITEM_HEIGHT);
-    // sign is flipped: drag DOWN (positive offset) → previous item (lower index)
-    // drag UP (negative offset) → next item (higher index)
     const newIndex = Math.max(
       0,
       Math.min(IMAGES.length - 1, selectedIndexRef.current - steps)
@@ -191,7 +197,7 @@ export default function VoiceAnalysis() {
   }, [phase, scheduleAutoScroll]);
 
   // ────────────────────────────────────────────────────────────────────────
-  // Momentum loop — runs after pointer up until velocity dies
+  // Momentum loop
   // ────────────────────────────────────────────────────────────────────────
   const launchMomentum = useCallback(() => {
     cancelAnimationFrame(momentumRAF.current);
@@ -200,18 +206,15 @@ export default function VoiceAnalysis() {
       velocityRef.current *= FRICTION;
 
       if (Math.abs(velocityRef.current) < VELOCITY_THRESHOLD) {
-        // Velocity died — snap to nearest
         snapToNearest(dragCurrent.current);
-        // Resume auto-scroll after user interaction settles
         resumeTimer.current = setTimeout(scheduleAutoScroll, AUTO_SCROLL_RESUME);
         return;
       }
 
       dragCurrent.current += velocityRef.current;
 
-      const maxOffset = (IMAGES.length - 1 - selectedIndexRef.current) * ITEM_HEIGHT;
-      const minOffset = -selectedIndexRef.current * ITEM_HEIGHT;
-      dragCurrent.current = Math.max(minOffset, Math.min(maxOffset, dragCurrent.current));
+      // FIX (Issue 2): use clampDragOffset here too so momentum respects boundaries
+      dragCurrent.current = clampDragOffset(dragCurrent.current, selectedIndexRef.current);
 
       setDragOffset(dragCurrent.current);
       momentumRAF.current = requestAnimationFrame(tick);
@@ -224,7 +227,6 @@ export default function VoiceAnalysis() {
   // Pointer handlers
   // ────────────────────────────────────────────────────────────────────────
   const onPointerDown = (e) => {
-    // Kill any in-flight momentum
     cancelAnimationFrame(momentumRAF.current);
     clearInterval(autoScrollRef.current);
     clearTimeout(resumeTimer.current);
@@ -234,8 +236,6 @@ export default function VoiceAnalysis() {
     lastY.current = e.clientY;
     lastTimeRef.current = performance.now();
     velocityRef.current = 0;
-    // dragCurrent is NOT reset here — it carries over from any previous momentum
-    // so the card starts moving from wherever it currently is.
 
     e.currentTarget.setPointerCapture(e.pointerId);
   };
@@ -244,20 +244,23 @@ export default function VoiceAnalysis() {
     if (dragStartY.current === null) return;
 
     const now = performance.now();
-    const dt = Math.max(1, now - lastTimeRef.current); // avoid divide-by-zero
+    const dt = Math.max(1, now - lastTimeRef.current);
 
-    // SIGN: (currentY - lastY) → positive when dragging DOWN → content moves DOWN ✓
     const dy = e.clientY - lastY.current;
     velocityRef.current = (dy / dt) * 16 * SCROLL_SENSITIVITY;
 
     lastY.current = e.clientY;
     lastTimeRef.current = now;
 
-    // SIGN: (currentY - startY) → positive when dragging DOWN → content moves DOWN ✓
     const totalDelta = (e.clientY - dragStartY.current) * SCROLL_SENSITIVITY;
-    dragCurrent.current = totalDelta;
 
-    requestAnimationFrame(() => setDragOffset(totalDelta));
+    // FIX (Issue 2): Clamp the drag so it can't accumulate beyond the list bounds.
+    // Without this, dragging past index 0 or last index builds up a huge offset
+    // that causes the wheel to snap back and feel "stuck" on release.
+    const clamped = clampDragOffset(totalDelta, selectedIndexRef.current);
+    dragCurrent.current = clamped;
+
+    requestAnimationFrame(() => setDragOffset(clamped));
   };
 
   const onPointerUp = () => {
@@ -268,16 +271,14 @@ export default function VoiceAnalysis() {
 
     const delta = dragCurrent.current;
 
-    // If the fling was strong enough → launch momentum
     if (Math.abs(velocityRef.current) > VELOCITY_THRESHOLD) {
       launchMomentum();
       return;
     }
 
-    // Weak or no velocity — fall back to threshold snap
     let step = 0;
-    if (delta > SNAP_DISTANCE) step = -1;   // drag DOWN → previous
-    else if (delta < -SNAP_DISTANCE) step = 1;   // drag UP   → next
+    if (delta > SNAP_DISTANCE) step = -1;
+    else if (delta < -SNAP_DISTANCE) step = 1;
 
     const next = Math.max(0, Math.min(IMAGES.length - 1, selectedIndexRef.current + step));
 
@@ -292,7 +293,7 @@ export default function VoiceAnalysis() {
   };
 
   // ────────────────────────────────────────────────────────────────────────
-  // Dot nav
+  // Dot nav + non-center card nav
   // ────────────────────────────────────────────────────────────────────────
   const goToIndex = (i) => {
     cancelAnimationFrame(momentumRAF.current);
@@ -310,7 +311,7 @@ export default function VoiceAnalysis() {
   };
 
   // ────────────────────────────────────────────────────────────────────────
-  // Recording helpers (unchanged from original)
+  // Recording helpers
   // ────────────────────────────────────────────────────────────────────────
   const visualizeVoice = useCallback(() => {
     if (!analyserRef.current || !dataArrayRef.current) return;
@@ -362,8 +363,6 @@ export default function VoiceAnalysis() {
   const stopRecordingAndSubmit = useCallback(async () => {
     cancelAnimationFrame(animFrameRef.current);
     setVoiceBars(Array(9).fill(0));
-
-    // Mark as loading immediately — Next button stays disabled until API responds
     setLoading(true);
 
     const recorder = mediaRecorderRef.current;
@@ -405,12 +404,10 @@ export default function VoiceAnalysis() {
           const runResult = await runVoice(runPayload);
 
           if (runResult.success) {
-            // Update Redux with new screening state (next_stage) from voice API response
             if (runResult.screening) {
               dispatch(setScreening(runResult.screening));
             }
             setStatus("success");
-            // API responded successfully — unlock the Next button
             setLoading(false);
           } else {
             console.error("[Voice] run failed:", runResult.error);
@@ -447,7 +444,7 @@ export default function VoiceAnalysis() {
     };
   }, []);
 
-  // ── Card tap → enter viewing phase ──────────────────────────────────────
+  // ── Card tap handlers ────────────────────────────────────────────────────
   const onCenterCardClick = () => {
     cancelAnimationFrame(momentumRAF.current);
     clearInterval(autoScrollRef.current);
@@ -468,7 +465,6 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    // Navigate based on backend's next_stage (updated after voice completes)
     const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
@@ -553,40 +549,28 @@ export default function VoiceAnalysis() {
         <div className="w-full flex flex-col items-center">
           <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
             <div className="relative flex flex-col items-center">
-
-              {/* Title Frame */}
               <div className="relative flex items-center justify-center">
                 <img
                   src={textframe}
                   alt="text-frame"
                   className="w-full"
                 />
-
                 <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
                   {t("voice.what_you_think")}
                 </p>
               </div>
-
-              {/* Bottom Decorative Frame */}
               <img
                 src={textframe}
                 alt="text-frame"
-                className="rotate-180  mt-10"
+                className="rotate-180 mt-10"
               />
             </div>
           </div>
-
-          <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
-
-          </div>
-
         </div>
 
         <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[15rem] left-[16rem] flex items-center gap-6">
           <span>{t("voice.select_instruction")}</span>
-          {/* <ReplayAudio playAudio={playInstructionAudio} /> */}
         </div>
-
 
         {/* Drum wheel */}
         <div
@@ -595,7 +579,7 @@ export default function VoiceAnalysis() {
         >
           {/* Center glow band */}
           <div
-            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20 "
+            className="absolute left-1/2 -translate-x-1/2 pointer-events-none z-20"
             style={{
               top: "60%",
               width: "100%", maxWidth: "900px",
@@ -639,6 +623,11 @@ export default function VoiceAnalysis() {
               const { angle, ty, tz, opacity, scale } = drumTransform(off);
               const isCentered = Math.abs(dragOffset) < 10 && i === selectedIndex;
 
+              // FIX (Issue 1): Determine if this card is adjacent (visible but not center).
+              // We treat cards within ±2 slots as clickable so the partially-visible
+              // top/bottom cards respond to taps and scroll the wheel to them.
+              const isAdjacent = !isCentered && Math.abs(off) <= 2.2;
+
               return (
                 <div
                   key={i}
@@ -654,10 +643,10 @@ export default function VoiceAnalysis() {
                       ? "transform 180ms ease-out, opacity 180ms ease-out"
                       : "none",
                     zIndex: Math.round((1 - Math.abs(off)) * 10),
-                    cursor: isCentered ? "pointer" : "grab",
+                    // FIX (Issue 1): adjacent cards get pointer cursor so user knows they're tappable
+                    cursor: isCentered ? "pointer" : isAdjacent ? "pointer" : "grab",
                     pointerEvents: Math.abs(off) > 2.2 ? "none" : "auto",
                   }}
-                // onClick={isCentered ? onCenterCardClick : undefined}
                 >
                   <div
                     className="relative overflow-hidden"
@@ -682,18 +671,43 @@ export default function VoiceAnalysis() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                    {/* 360° badge */}
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-
-                        if (isCentered) {
+                    {/* 360° badge — only on center card */}
+                    {isCentered && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
                           onCenterCardClick();
-                        }
-                      }}
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 ">
-                      <img src={icon360} alt="c60-icon" className="w-[100px] h-[100px]" />
-                    </div>
+                        }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
+                      >
+                        <img src={icon360} alt="360-icon" className="w-[100px] h-[100px]" />
+                      </div>
+                    )}
+
+                    {/* FIX (Issue 1): Adjacent card overlay — tapping scrolls wheel to that card */}
+                    {isAdjacent && (
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          goToIndex(i);
+                        }}
+                        className="absolute inset-0 flex items-center justify-center"
+                        style={{ zIndex: 5 }}
+                      >
+                        {/* Subtle "tap to select" hint — directional arrow */}
+                        <div
+                          className="px-4 py-2 rounded-full text-white text-xs tracking-widest uppercase"
+                          style={{
+                            background: "rgba(0,0,0,0.45)",
+                            backdropFilter: "blur(6px)",
+                            border: "1px solid rgba(154,217,255,0.25)",
+                            opacity: 0.85,
+                          }}
+                        >
+                          {off < 0 ? "▼ " : "▲ "}{t("voice.tap_to_explore")}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Label */}
                     <div
@@ -708,7 +722,7 @@ export default function VoiceAnalysis() {
                       {t(img.labelKey)}
                     </div>
 
-                    {/* Tap hint */}
+                    {/* Tap hint on center card */}
                     {isCentered && (
                       <div className="absolute inset-0 flex items-end justify-center pb-14 pointer-events-none">
                         <span

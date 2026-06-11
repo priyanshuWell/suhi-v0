@@ -1,4 +1,4 @@
-import React, { useState, useEffect ,useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import settingbg from '../assets/setting-bg.svg'
 import soundIcon from '../assets/sound-btn.png'
@@ -16,11 +16,9 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
   useEffect(() => {
     const track = trackRef.current
     if (!track) return
-
     const observer = new ResizeObserver(([entry]) => {
       setTrackWidth(entry.contentRect.width)
     })
-
     observer.observe(track)
     return () => observer.disconnect()
   }, [])
@@ -29,28 +27,26 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
     (clientX) => {
       const track = trackRef.current
       if (!track) return
-
       const rect = track.getBoundingClientRect()
       const x = Math.max(0, Math.min(clientX - rect.left, rect.width))
       const newValue = Math.round(min + (x / rect.width) * (max - min))
-
       onChange?.(newValue)
     },
     [min, max, onChange]
   )
 
-  // ✅ Attach global listeners for smooth touch drag
+  // Global pointer/touch move & up — needed for dragging outside the element
   useEffect(() => {
     const handleMove = (e) => {
       if (!isDragging.current) return
-      updateValue(e.clientX || (e.touches && e.touches[0].clientX))
+      // PointerEvent has clientX directly; TouchEvent needs touches[0]
+      const clientX = e.clientX ?? e.touches?.[0]?.clientX
+      if (clientX != null) updateValue(clientX)
+      e.preventDefault?.() // prevent scroll while dragging
     }
+    const handleUp = () => { isDragging.current = false }
 
-    const handleUp = () => {
-      isDragging.current = false
-    }
-
-    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointermove', handleMove, { passive: false })
     window.addEventListener('pointerup', handleUp)
     window.addEventListener('touchmove', handleMove, { passive: false })
     window.addEventListener('touchend', handleUp)
@@ -64,49 +60,57 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
   }, [updateValue])
 
   const handlePointerDown = (e) => {
+    e.preventDefault()
     isDragging.current = true
+    // setPointerCapture keeps the pointer locked to this element even if
+    // the finger moves outside — critical for fast swipes on touch screens
+    e.currentTarget.setPointerCapture(e.pointerId)
+    // clientX works for both mouse and touch pointer events
     updateValue(e.clientX)
   }
 
-  // ✅ Fixed calculations
+  // Derived layout values
+  const GRABBER = 40   // px — large finger-friendly knob
   const fillWidth = (percent / 100) * trackWidth
-
-  const grabberSize = 15
-  const grabberLeft = Math.max(
-    0,
-    Math.min(fillWidth - grabberSize / 2, trackWidth - grabberSize)
-  )
+  const grabberLeft = Math.max(0, Math.min(fillWidth - GRABBER / 2, trackWidth - GRABBER))
 
   return (
     <div
       ref={trackRef}
-      className="relative cursor-pointer select-none w-[200px]"
+      className="relative cursor-pointer select-none w-full"
       style={{
-        height: '24px',
-        touchAction: 'none', // ✅ critical for touch
+        height: '48px',           // taller hit-area for fingers
+        touchAction: 'none',      // prevent browser scroll hijack
         WebkitUserSelect: 'none',
         filter: 'drop-shadow(0px 7px 36px rgba(154, 217, 255, 0.5))',
       }}
       onPointerDown={handlePointerDown}
     >
-      {/* Base track */}
-      <div className="absolute inset-0 rounded-[24px] bg-[#01060a]" />
+      {/* Base track — vertically centred */}
+      <div className="absolute left-0 right-0 rounded-[24px] bg-[#01060a]"
+        style={{ top: '50%', transform: 'translateY(-50%)', height: '20px' }} />
 
       {/* Fill */}
-      <div className="absolute inset-0 rounded-[24px] overflow-hidden">
+      <div className="absolute left-0 right-0 rounded-[24px] overflow-hidden"
+        style={{ top: '50%', transform: 'translateY(-50%)', height: '20px' }}>
         <div
           className="h-full rounded-[34px]"
-          style={{
-            width: `${fillWidth}px`,
-            backgroundColor: '#9ad9ff',
-          }}
+          style={{ width: `${fillWidth}px`, backgroundColor: '#9ad9ff' }}
         />
       </div>
 
-      {/* Grabber */}
+      {/* Grabber — large circle for easy touch */}
       <div
-        className="absolute top-[4px] w-[15px] h-[15px] rounded-full pointer-events-none z-10 bg-[#010508]"
-        style={{ left: `${grabberLeft}px` }}
+        className="absolute rounded-full pointer-events-none z-10"
+        style={{
+          width: `${GRABBER}px`,
+          height: `${GRABBER}px`,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          left: `${grabberLeft}px`,
+          background: 'radial-gradient(circle at 40% 35%, #b0e8ff 0%, #000 40%, #0a4060 100%)',
+          boxShadow: '0 0 10px rgba(154,217,255,0.8), 0 2px 6px rgba(0,0,0,0.5)',
+        }}
       />
     </div>
   )

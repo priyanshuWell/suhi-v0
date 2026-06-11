@@ -17,22 +17,7 @@ import {
     DivideAttentionSessionComplete,
 } from "../../../utils/api";
 
-/*
- * ─── DEMO CONFIGURATION ───
- * A guided walkthrough with 2 targets, 4 total particles.
- * Steps:
- *   1. SHOW_TARGETS   — "Watch the highlighted asteroids." (targets glow + ripple)
- *   2. ALL_SAME       — "All asteroids now look the same." (distractors fade in, all uniform)
- *   3. MOVING         — "Track them as they move." (movement starts)
- *   4. STOPPED        — "Tap the asteroids you were tracking." (freeze, user taps + submit)
- *   5. RESULT         — Show correct/error feedback
- *   6. DONE           — "Great! Let's start." → navigate to game
- *
- * SUBMIT LOGIC:
- *   - Submit button appears on canvas during STOPPED (same style as SpaceConvoy)
- *   - On submit: if user got >= 1 correct target hit → move to main game immediately
- *   - Otherwise → existing fail/retry logic
- */
+
 
 // ─── Canvas / Arena ───
 const CW = 1014;
@@ -313,7 +298,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         stim: null, glow: null, correct: null, error: null,
         frame: null, bg: null, loaded: false,
     });
-    console.log("active",activeSessionId)
+    console.log("active", activeSessionId)
     const G = useRef({
         step: STEP.LOADING,
         ps: [],
@@ -334,7 +319,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         trialId: null,
         trialNumber: 0,
         pendingResponses: [],
-        
+
     });
     const rafRef = useRef(null);
     const prevTime = useRef(0);
@@ -761,7 +746,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         const g = G.current;
         // Resume background music on first tap (handles autoplay policy)
         if (g._bgPending && bgAudioRef.current) {
-            bgAudioRef.current.play().catch(() => {});
+            bgAudioRef.current.play().catch(() => { });
             g._bgPending = false;
         }
         if (g.step !== STEP.STOPPED || g.submitted) return;

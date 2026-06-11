@@ -3,6 +3,7 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import HeightIcon from '../../assets/bia/scale.svg'
 import WeightIcon from '../../assets/bia/bag.svg'
 import { useNavigate } from "react-router";
+import { useTranslation } from "react-i18next";
 
 const HeightWeightDisplay = ({
     heightCm = null,     // numeric or null
@@ -15,6 +16,7 @@ const HeightWeightDisplay = ({
     const [displayWeight, setDisplayWeight] = useState("---");
     const intervalRef = useRef(null);
     const navigate = useNavigate();
+    const { t } = useTranslation()
     useEffect(() => {
         // Always clear any running interval first
         if (intervalRef.current) {
@@ -53,7 +55,7 @@ const HeightWeightDisplay = ({
 
                 {/* Height Card */}
                 <div
-                  className="
+                    className="
     relative
     flex flex-col items-center justify-center gap-6
     px-20 py-7
@@ -61,21 +63,21 @@ const HeightWeightDisplay = ({
     w-[450px]
     overflow-hidden
   "
-  style={{
-    boxShadow: '0px 3.58px 28.62px #9ad9ff',
-    background:
-      'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
-    border: '1.4px solid transparent'
-  }}
+                    style={{
+                        boxShadow: '0px 3.58px 28.62px #9ad9ff',
+                        background:
+                            'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
+                        border: '1.4px solid transparent'
+                    }}
                 >
-                      <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
-    <div
-      className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
-      style={{ backdropFilter: 'blur(35px)' }}
-    />
-  </div>
+                    <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
+                        <div
+                            className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
+                            style={{ backdropFilter: 'blur(35px)' }}
+                        />
+                    </div>
                     <p className="text-white text-[70px] leading-normal m-0 whitespace-nowrap">
-                        Height
+                        {t("measurement.height")}
                     </p>
                     <img
                         src={HeightIcon}
@@ -91,7 +93,7 @@ const HeightWeightDisplay = ({
 
                 {/* Weight Card */}
                 <div
-                  className="
+                    className="
     relative
     flex flex-col items-center justify-center gap-6
     px-20 py-7
@@ -99,21 +101,21 @@ const HeightWeightDisplay = ({
     w-[450px]
     overflow-hidden
   "
-  style={{
-    boxShadow: '0px 3.58px 28.62px #9ad9ff',
-    background:
-      'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
-    border: '1.4px solid transparent'
-  }}
+                    style={{
+                        boxShadow: '0px 3.58px 28.62px #9ad9ff',
+                        background:
+                            'rgba(82,82,82,0.3) padding-box, linear-gradient(135.77deg, rgba(255,255,255,0.1), rgba(255,255,255,0)) border-box',
+                        border: '1.4px solid transparent'
+                    }}
                 >
-                      <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
-    <div
-      className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
-      style={{ backdropFilter: 'blur(35px)' }}
-    />
-  </div>
+                    <div className="absolute inset-0 blur-[5.72px] pointer-events-none">
+                        <div
+                            className="absolute inset-0 rounded-[28px] bg-white/[0.01]"
+                            style={{ backdropFilter: 'blur(35px)' }}
+                        />
+                    </div>
                     <p className="text-white text-[70px] leading-normal m-0 whitespace-nowrap">
-                        Weight
+                        {t("measurement.weight")}
                     </p>
                     <img
                         src={WeightIcon}
@@ -131,7 +133,7 @@ const HeightWeightDisplay = ({
             {!isHideNext && (
                 <div className="absolute bottom-20 left-[31%]">
                     <BlueGradientButton onClick={onNextClick}>
-                        Next
+                        {t("common.next")}
                     </BlueGradientButton>
                 </div>
             )}

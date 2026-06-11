@@ -9,15 +9,19 @@ import ProgressStage from './ProgessStage'
  * Ordered longest-first so more specific paths win.
  */
 const ROUTE_TO_STEP = [
-  // Step 1 — Face Scan
+  // Step 1 — Login / Face Scan
   { prefix: '/verified', step: 1 },
+  // Step 2 — Body Scan (BIA)
   { prefix: '/bia', step: 2 },
-  { prefix: '/voice', step: 3 },
-  { prefix: '/space-convoy-complete', step: 4 },
-  { prefix: '/colorblindness/quiz', step: 5 },
-  { prefix: '/colorblindness', step: 5 },
-  { prefix: '/space-convoy-main', step: 4 },
-  { prefix: '/divide-attention', step: 4 }
+  // Step 3 — Cognitive Game
+  { prefix: '/space-convoy-complete', step: 3 },
+  { prefix: '/space-convoy-main', step: 3 },
+  { prefix: '/divide-attention', step: 3 },
+  // Step 4 — Vision
+  { prefix: '/colorblindness/quiz', step: 4 },
+  { prefix: '/colorblindness', step: 4 },
+  // Step 5 — Voice
+  { prefix: '/voice', step: 5 },
 ]
 
 /**
@@ -25,13 +29,12 @@ const ROUTE_TO_STEP = [
  * Matches the static steps array in ProgressStage.
  */
 const STAGE_KEY_TO_STEP = {
-  login:            1,
-  bia:              2,
-  voice_analysis:   3,
-  divide_attention: 4,
-  congitive:        5,  // backend typo kept as-is
-  color_blindness:  5,
-  result:           6,
+  login: 1,
+  bia: 2,
+  divide_attention: 3,
+  color_blindness: 4,
+  voice_analysis: 5,
+  result: 6,
 }
 
 function getStepFromRoute(pathname) {

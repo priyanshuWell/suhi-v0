@@ -660,10 +660,19 @@ export default function BIACalculate({ user, onComplete }) {
 
     } catch (legError) {
       if (attemptCount >= MAX_RETRIES) {
-        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
+        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting via next_stage`);
         await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
         // updatePhaseState('leg', 'failed', 'Max retries exhausted');
-        navigate("/voice");
+        const legCatchComplete = await BIAComplete({
+          session_id: storeUser?.data?.buffer_id,
+          screening_session_id: storeUser?.screening?.session_id
+        });
+        if (legCatchComplete?.screening) {
+          dispatch(setScreening(legCatchComplete.screening));
+        }
+        const legCatchRoute = getNextRoute(legCatchComplete?.screening?.next_stage, '/voice');
+        console.log('[BIA] runPhase1 catch max retry — navigating to:', legCatchRoute);
+        navigate(legCatchRoute);
         return;
       }
       console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
@@ -770,7 +779,16 @@ export default function BIACalculate({ user, onComplete }) {
         await saveBuffer("weight_error");
       }
 
-      navigate("/voice");
+      const phase2FailComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
+      if (phase2FailComplete?.screening) {
+        dispatch(setScreening(phase2FailComplete.screening));
+      }
+      const phase2FailRoute = getNextRoute(phase2FailComplete?.screening?.next_stage, '/voice');
+      console.log('[BIA] runPhase2 catch — navigating to:', phase2FailRoute);
+      navigate(phase2FailRoute);
     }
   };
 
@@ -1140,7 +1158,16 @@ export default function BIACalculate({ user, onComplete }) {
       portValidation.errors.forEach(err => console.error("[BIA DEBUG]", err));
       logPortConfiguration();
       await showError("Ports are not connected. Please check device connections.", 3000);
-      navigate("/voice");
+      const portFailComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: storeUser?.screening?.session_id
+      });
+      if (portFailComplete?.screening) {
+        dispatch(setScreening(portFailComplete.screening));
+      }
+      const portFailRoute = getNextRoute(portFailComplete?.screening?.next_stage, '/voice');
+      console.log('[BIA] runFlow port validation failed — navigating to:', portFailRoute);
+      navigate(portFailRoute);
       return;
     }
 
