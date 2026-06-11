@@ -58,7 +58,7 @@ export default function OptionButton({ label, onClick, wide = false, selectedAns
             }}
         >
             <span
-                className="font-mono text-white whitespace-nowrap tracking-tight rounded-2xl"
+                className="font-anta text-white whitespace-nowrap tracking-tight rounded-2xl"
                 style={{
                     fontSize: "clamp(1rem, 3.8vw, 3.75rem)",
                     // letterSpacing: "-0.06em",

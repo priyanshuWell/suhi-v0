@@ -12,6 +12,7 @@ import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
 import { releaseAllResources } from '../../utils/cleanup'
 import { BrainIconS, MindIcon } from '../../assets'
+import BlackGradientButton from '../ui/BlackGradientButton';
 
 /*
   ─────────────────────────────────────────────────────────────
@@ -341,7 +342,7 @@ const BIAResult = () => {
           transformOrigin: 'top left',
           transform: `scale(0.818) translateX(162px)`,
           // Prevent any internal scroll
-          overflow: 'hidden',
+          // overflow: 'hidden',
           flexShrink: 0,
         }}
       >
@@ -444,10 +445,10 @@ const BIAResult = () => {
                     title: 'Persona',
                     icon: <MindIcon style={{ width: '100%', height: '100%' }} />,
                     titleClassName: 'text-[#29ABE2]',
-                    cardClassName: 'bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)]',
+                    cardClassName: 'bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_48%,rgba(41,171,226,0.1)_70%)]',
                     items: feelingsItems,
                     separatorClassName: 'bg-[#29ABE2]',
-                    borderColor: '#29ABE2',
+                    borderColor: 'rgb(41 171 226 / 57%)',
                   })}
 
                   {/* BRAIN card */}
@@ -458,14 +459,14 @@ const BIAResult = () => {
                     cardClassName: 'bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)]',
                     items: learningItems,
                     separatorClassName: 'bg-[#2CEF94]',
-                    borderColor: '#2CEF94',
+                    borderColor: 'rgb(44 239 148 / 55%)',
                   })}
 
                   {/* BODY card */}
                   <div
                     className="w-full rounded-[10px]"
                     style={{
-                      border: '0.5px solid #FF9D5C',
+                      border: '0.5px solid rgb(255 157 92 / 52%)',
                       background: 'linear-gradient(180deg, rgba(255,157,92,0.05) 0%, rgba(255,157,92,0.2) 100%)',
                       padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
                     }}
@@ -586,7 +587,7 @@ const BIAResult = () => {
                   <div
                     className="w-full rounded-[10px]"
                     style={{
-                      border: '0.5px solid #FFE15C',
+                      border: '0.5px solid rgb(255 225 92 / 47%)',
                       background: 'linear-gradient(180deg, rgba(255,225,92,0.05) 0%, rgba(255,225,92,0.2) 100%)',
                       padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
                     }}
@@ -602,7 +603,7 @@ const BIAResult = () => {
                         <img src={Eye_Icon} alt="eye icon" className="w-full h-full object-contain" />
                       </span>
                       <h3
-                        className="leading-none tracking-[0.04em] text-[#FFE15C] whitespace-nowrap"
+                        className="leading-none tracking-[0.04em]  whitespace-nowrap"
                         style={{ fontFamily: FONT, fontSize: S.titleSize }}
                       >
                         Color Blindness -
@@ -637,55 +638,27 @@ const BIAResult = () => {
               )}
 
               {/* CTA Button */}
-              <button
+              <BlackGradientButton
                 onClick={() => {
                   releaseAllResources()
                   navigate('/welcome')
                 }}
                 style={{
-                  backgroundBlendMode: 'plus-darker',
-                  boxShadow: '0px 3.57697px 28.6158px #9AD9FF',
+                  width: "400px",
+                  height: "clamp(90px, 9vw, 145px)",
+
                 }}
-                className="
-                  relative
-                  mt-4
-                  mb-4
-                  flex items-center justify-center
-                  text-center
-
-                  rounded-[24px]
-                  px-[4rem]
-                  py-[1.2rem]
-
-                  text-white
-                  text-3xl
-                  tracking-wide
-
-                  bg-[#0b0f14]/70
-                  mix-blend-plus-darker
-
-                  drop-shadow-[0_0_25px_rgba(6,182,212,0.6)]
-                  shadow-[0_0_40px_rgba(0,200,255,0.45)]
-                  shadow-[inset_0_0_12px_rgba(255,255,255,0.08)]
-
-                  border border-white/10
-
-                  before:content-['']
-                  before:absolute
-                  before:inset-0
-                  before:rounded-[24px]
-                  before:bg-gradient-to-b
-                  before:from-white/12
-                  before:via-white/4
-                  before:to-transparent
-                  before:pointer-events-none
-
-                  active:scale-[0.98]
-                  transition-transform duration-300 ease-in-out
-                "
               >
-                {t('bia_result.go_to_homepage')}
-              </button>
+                <span
+                  className="font-anta text-white whitespace-nowrap tracking-tight rounded-2xl"
+                  style={{
+                    fontSize: "clamp(1rem, 3.8vw, 3.75rem)",
+                    // letterSpacing: "-0.06em",
+                  }}
+                >
+                  {t('bia_result.go_to_homepage')}
+                </span>
+              </BlackGradientButton>
 
             </div>
           </div>
