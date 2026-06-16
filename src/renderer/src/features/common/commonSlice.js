@@ -13,6 +13,7 @@ const initialState = {
     nextStage: null,
     completedStages: [],
   },
+  candidates: [],
 
   // example shared states
   videoBase64: null,
@@ -90,6 +91,10 @@ const commonSlice = createSlice({
         state.height.fptHeight = action.payload;
       }
     },
+
+    setCandidates: (state, action) => {
+  state.candidates = action.payload
+},
 
     setFptWeight: (state, action) => {
       if (typeof state.weight !== "object" || state.weight === null) {
@@ -177,7 +182,8 @@ export const {
   resetCommonState,
   setBmiResult,
   setSessionId,
-  setScreening
+  setScreening,
+  setCandidates
 } = commonSlice.actions;
 
 export default commonSlice.reducer;
