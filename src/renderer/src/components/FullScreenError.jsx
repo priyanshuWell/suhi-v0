@@ -3,152 +3,179 @@ import React, { useEffect, useRef, useState } from "react"
 /**
  * FullscreenError
  *
- * Used for face-not-detected cases where we need a prominent,
- * full-screen blocker instead of the small ErrorAlert overlay.
+ * Behaviour:
+ *  - showRetry = true  → show "Try again" button (no auto-redirect countdown running)
+ *                        + a separate "Going to X in 5s" Netflix-fill button that
+ *                        auto-redirects if the user ignores the retry button
+ *  - showRetry = false → last attempt or no-retry case:
+ *                        show error prominently + Netflix-fill button auto-redirects
+ *
+ * The Netflix-fill button always counts down. On showRetry screens the user can
+ * tap "Try again" to cancel the countdown and retry instead.
  *
  * Props:
- *   title            {string}   - Main error heading
- *   description      {string}   - Body text explaining what to do
- *   redirectTo       {string}   - Route to navigate to after countdown (handled by parent)
- *   redirectLabel    {string}   - Human-readable label shown in countdown ("Going to home")
- *   autoRedirectDelay{number}   - ms before auto-redirect fires (default 5000)
- *   showRetry        {boolean}  - Whether to show a "Try again" button
- *   onRetry          {function} - Called when retry button is tapped
- *   onRedirect       {function} - Called when countdown reaches 0 (parent navigates)
+ *   title              {string}    Main error heading
+ *   description        {string}    Body copy — shown on LAST attempt only
+ *   showDescription    {boolean}   Parent controls whether description is visible
+ *   redirectLabel      {string}    Label inside Netflix button e.g. "Going to home"
+ *   autoRedirectDelay  {number}    ms for the fill animation + auto-redirect (default 5000)
+ *   showRetry          {boolean}   Show the "Try again" button
+ *   onRetry            {function}  Called when retry is tapped (cancels redirect)
+ *   onRedirect         {function}  Called when fill completes (parent navigates)
  */
 const FullscreenError = ({
     title,
     description,
+    showDescription = false,
     redirectLabel = "Going to home",
     autoRedirectDelay = 5000,
     showRetry = false,
     onRetry,
     onRedirect,
 }) => {
-    const totalSeconds = Math.round(autoRedirectDelay / 1000)
-    const [secondsLeft, setSecondsLeft] = useState(totalSeconds)
-    const intervalRef = useRef(null)
+    const [filling, setFilling] = useState(false)
+    const [redirectCancelled, setRedirectCancelled] = useState(false)
     const redirectFiredRef = useRef(false)
+    const timeoutRef = useRef(null)
 
+    // Start fill animation shortly after mount so CSS transition picks it up
     useEffect(() => {
-        // Countdown tick
-        intervalRef.current = setInterval(() => {
-            setSecondsLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(intervalRef.current)
-                    if (!redirectFiredRef.current) {
-                        redirectFiredRef.current = true
-                        onRedirect?.()
-                    }
-                    return 0
-                }
-                return prev - 1
-            })
-        }, 1000)
+        const startDelay = setTimeout(() => setFilling(true), 80)
+        return () => clearTimeout(startDelay)
+    }, [])
 
-        return () => clearInterval(intervalRef.current)
-    }, [onRedirect])
+    // Fire redirect when fill completes
+    useEffect(() => {
+        if (redirectCancelled) return
+
+        timeoutRef.current = setTimeout(() => {
+            if (!redirectFiredRef.current && !redirectCancelled) {
+                redirectFiredRef.current = true
+                onRedirect?.()
+            }
+        }, autoRedirectDelay + 80) // slight offset to match CSS transition end
+
+        return () => clearTimeout(timeoutRef.current)
+    }, [autoRedirectDelay, onRedirect, redirectCancelled])
 
     const handleRetry = () => {
-        clearInterval(intervalRef.current)
+        // Cancel the pending redirect
+        clearTimeout(timeoutRef.current)
+        setRedirectCancelled(true)
+        setFilling(false)
         onRetry?.()
     }
 
-    // Progress: 1 → 0 over the countdown
-    const progress = secondsLeft / totalSeconds
+    const fillDurationSec = autoRedirectDelay / 1000
 
     return (
-        <div
-            className="
-        fixed inset-0 z-50
-        flex flex-col items-center justify-center
-        bg-black/85
-        backdrop-blur-sm
-        px-8
-      "
-        >
-            {/* Icon */}
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-8">
+
+            {/* Warning icon */}
             <div className="mb-8">
-                <svg
-                    viewBox="0 0 80 80"
-                    className="w-20 h-20"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                >
-                    {/* Circular progress ring */}
-                    <circle cx="40" cy="40" r="36" stroke="#ffffff18" strokeWidth="4" />
-                    <circle
-                        cx="40"
-                        cy="40"
-                        r="36"
-                        stroke="#ef4444"
-                        strokeWidth="4"
-                        strokeLinecap="round"
-                        strokeDasharray={`${2 * Math.PI * 36}`}
-                        strokeDashoffset={`${2 * Math.PI * 36 * (1 - progress)}`}
-                        transform="rotate(-90 40 40)"
-                        style={{ transition: "stroke-dashoffset 1s linear" }}
-                    />
-                    {/* Warning icon center */}
+                <svg viewBox="0 0 72 72" className="w-16 h-16" fill="none">
+                    <circle cx="36" cy="36" r="34" stroke="#ef444440" strokeWidth="2" />
                     <path
-                        d="M40 26v16M40 50v2"
+                        d="M36 20v20M36 46v3"
                         stroke="#ef4444"
                         strokeWidth="3.5"
                         strokeLinecap="round"
                     />
+                    <circle cx="36" cy="36" r="34" stroke="#ef4444" strokeWidth="2" strokeDasharray="6 4" />
                 </svg>
             </div>
 
-            {/* Title */}
-            <h1
-                className="
-          text-white text-4xl font-semibold
-          text-center leading-tight
-          mb-4
-          max-w-xl
-        "
-            >
+            {/* Title — always visible */}
+            <h1 className="text-white text-4xl font-semibold text-center leading-tight mb-4 max-w-xl">
                 {title}
             </h1>
 
-            {/* Description */}
-            <p
-                className="
-          text-white/70 text-xl
-          text-center leading-relaxed
-          max-w-lg
-          mb-12
-        "
-            >
-                {description}
-            </p>
+            {/* Description — only on last attempt */}
+            {showDescription && description && (
+                <p className="text-white/65 text-xl text-center leading-relaxed max-w-lg mb-10 animate-fadeIn">
+                    {description}
+                </p>
+            )}
 
-            {/* Retry button — only shown when re-attempt is available */}
+            {/* Spacer when no description */}
+            {!showDescription && <div className="mb-10" />}
+
+            {/* Try again button — only when retries remain */}
             {showRetry && onRetry && (
                 <button
                     onClick={handleRetry}
                     className="
-            mb-8
-            px-10 py-4
-            rounded-2xl
-            bg-white text-black
-            text-xl font-semibold
-            active:scale-95
-            transition-transform
+            mb-6 px-12 py-4 rounded-2xl
+            border-2 border-white/80
+            text-white text-xl font-semibold
+            active:scale-95 transition-transform duration-150
+            hover:bg-white/10
           "
                 >
                     Try again
                 </button>
             )}
 
-            {/* Countdown label */}
-            <div className="flex items-center gap-3 text-white/50 text-base">
-                <span className="tabular-nums text-white/80 text-lg font-medium">
-                    {secondsLeft}s
-                </span>
-                <span>—</span>
-                <span>{redirectLabel}</span>
+            {/* Netflix-style fill button */}
+            <div
+                className="
+          relative overflow-hidden
+          rounded-2xl
+          w-[clamp(16rem,36vw,26rem)]
+          h-14
+          mt-2
+          cursor-default
+          select-none
+        "
+            >
+                {/* Track (dark background) */}
+                <div className="absolute inset-0 bg-white/10 rounded-2xl" />
+
+                {/* Fill layer */}
+                <div
+                    className="absolute inset-0 rounded-2xl bg-white/25 origin-left"
+                    style={{
+                        transform: filling ? "scaleX(1)" : "scaleX(0)",
+                        transition: filling
+                            ? `transform ${fillDurationSec}s linear`
+                            : "none",
+                    }}
+                />
+
+                {/* Label */}
+                <div className="absolute inset-0 flex items-center justify-center gap-2 px-4">
+                    <span className="text-white/80 text-base font-medium tracking-wide truncate">
+                        {redirectLabel}
+                    </span>
+                    {/* Animated dots */}
+                    <span className="flex gap-[3px] items-center mt-0.5">
+                        {[0, 1, 2].map((i) => (
+                            <span
+                                key={i}
+                                className="w-1 h-1 rounded-full bg-white/60"
+                                style={{
+                                    animation: "dotBounce 1.2s infinite",
+                                    animationDelay: `${i * 0.2}s`,
+                                }}
+                            />
+                        ))}
+                    </span>
+                </div>
             </div>
+
+            <style>{`
+        @keyframes dotBounce {
+          0%, 80%, 100% { opacity: 0.3; transform: translateY(0); }
+          40% { opacity: 1; transform: translateY(-3px); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease forwards;
+        }
+      `}</style>
         </div>
     )
 }
