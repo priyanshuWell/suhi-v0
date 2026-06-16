@@ -29,7 +29,6 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
-  const screening = useSelector((state) => state.common.screening);
 
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
@@ -957,7 +956,7 @@ export default function BIACalculate({ user, onComplete }) {
           payload: legBia?.data?.parsed,
           sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
-          gender: storeUser?.data?.gender.toLowerCase() === "male" ? 1 : 0,
+          gender: storeUser?.data?.gender?.toLowerCase() === "male" ? 1 : 0,
           heightCm: resultsRef.current.height.value,
           ageYears: storeUser?.data?.age,
           weightKg: resultsRef.current.weight.value
@@ -998,7 +997,7 @@ export default function BIACalculate({ user, onComplete }) {
           payload: armBia?.data?.parsed,
           sessionId: storeUser?.data?.buffer_id,
           userId: storeUser?.data?.user_id,
-          gender: storeUser?.data?.gender.toLowerCase() === "male" ? 1 : 0,
+          gender: storeUser?.data?.gender?.toLowerCase() === "male" ? 1 : 0,
           heightCm: resultsRef.current.height.value,
           ageYears: storeUser?.data?.age,
           weightKg: resultsRef.current.weight.value
@@ -1061,7 +1060,7 @@ export default function BIACalculate({ user, onComplete }) {
         height: resultsRef.current.height.value,
         weight: resultsRef.current.weight.value,
         age: storeUser?.data?.age ?? 23,
-        gender: storeUser?.data?.gender.toLowerCase() ?? "male",
+        gender: storeUser?.data?.gender?.toLowerCase() ?? "male",
         impedance20: resultsRef.current.impedance.k20.segments,
         impedance100: resultsRef.current.impedance.k100.segments
       });
