@@ -313,19 +313,74 @@ export default function VoiceAnalysis() {
   // ────────────────────────────────────────────────────────────────────────
   // Recording helpers
   // ────────────────────────────────────────────────────────────────────────
+  const smoothRef = useRef(
+    Array(9).fill(0)
+  );
+
   const visualizeVoice = useCallback(() => {
-    if (!analyserRef.current || !dataArrayRef.current) return;
-    analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-    const barCount = 9;
-    const barWidth = Math.floor(dataArrayRef.current.length / barCount);
-    const newBars = [];
-    for (let i = 0; i < barCount; i++) {
-      let sum = 0;
-      for (let j = i * barWidth; j < (i + 1) * barWidth; j++) sum += dataArrayRef.current[j];
-      newBars.push(Math.min(1, (sum / barWidth) / 255));
+    if (!analyserRef.current) return;
+
+    const analyser = analyserRef.current;
+
+    // ✅ FIX: getByteTimeDomainData fills frequencyBinCount (=fftSize/2) samples,
+    //    NOT fftSize — using fftSize left the second half zeroed, halving the RMS.
+    const buffer = new Uint8Array(
+      analyser.frequencyBinCount
+    );
+
+    analyser.getByteTimeDomainData(
+      buffer
+    );
+
+    let sumSquares = 0;
+
+    for (let i = 0; i < buffer.length; i++) {
+      const sample = (buffer[i] - 128) / 128;
+
+      sumSquares += sample * sample;
     }
-    setVoiceBars(newBars);
-    animFrameRef.current = requestAnimationFrame(visualizeVoice);
+
+    const rms = Math.sqrt(
+      sumSquares / buffer.length
+    );
+
+    const energy = Math.min(
+      rms * 6,
+      1
+    );
+
+    const nextBars = smoothRef.current.map(
+      (_, i) => {
+        const distance =
+          Math.abs(i - 4);
+
+        const weight =
+          1 - distance * 0.12;
+
+        const random =
+          0.85 + Math.random() * 0.3;
+
+        return Math.min(
+          energy * weight * random,
+          1
+        );
+      }
+    );
+
+    const smoothed = nextBars.map(
+      (v, i) =>
+        smoothRef.current[i] * 0.75 +
+        v * 0.25
+    );
+
+    smoothRef.current = smoothed;
+
+    setVoiceBars(smoothed);
+
+    animFrameRef.current =
+      requestAnimationFrame(
+        visualizeVoice
+      );
   }, []);
 
   const startRecording = useCallback(async () => {
@@ -338,7 +393,10 @@ export default function VoiceAnalysis() {
       audioContextRef.current = audioContext;
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
+      // ✅ FIX: match WaveForm.jsx — larger fftSize gives more samples → richer RMS
+      analyser.fftSize = 2048;
+      // ✅ FIX: built-in temporal smoothing (same as WaveForm.jsx) prevents jitter
+      analyser.smoothingTimeConstant = 0.85;
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       source.connect(analyser);
       analyserRef.current = analyser;
@@ -452,6 +510,11 @@ export default function VoiceAnalysis() {
     stopInstructionAudio();
     setConfirmedImage(IMAGES[selectedIndex]);
     setPhase("viewing");
+    // ✅ FIX: start mic immediately so voice bars are live from the first frame.
+    //    Previously recording only started after the user interacted with the
+    //    panorama (onFirstInteract), meaning bars stayed flat until then.
+    //    startRecording() has its own guard against double-starts.
+    startRecording();
   };
 
   const onFirstInteract = useCallback(() => {
@@ -470,9 +533,10 @@ export default function VoiceAnalysis() {
     navigate(nextRoute);
   }, [navigate, screeningState]);
 
-  useEffect(() => {
-    if (!isRecording) cancelAnimationFrame(animFrameRef.current);
-  }, [isRecording]);
+  // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
+  //    It fired on every initial render (isRecording starts false) and could race
+  //    against a freshly-launched visualizeVoice loop. Cleanup is already handled
+  //    correctly in stopRecordingAndSubmit and the unmount effect.
 
   const effectiveSlotOffset = (i) =>
     i - selectedIndex + dragOffset / ITEM_HEIGHT;

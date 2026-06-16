@@ -25,6 +25,7 @@ export default function View360Viewer({
     timerSeconds = 30,
     onTimerEnd,
     onFirstInteract,
+    voiceBars: voiceBarsProp,
     isComplete,
     onNext,
     loading        // ← new: called when user clicks "Next" in the modal
@@ -34,7 +35,13 @@ export default function View360Viewer({
     const wrapperRef = useRef(null);
     const { t } = useTranslation();
 
-    const [voiceBars, setVoiceBars] = useState(Array(TOTAL_BARS).fill(0));
+    // Use prop-driven bars (real mic data) – fall back to flat when no data.
+    // Parent supplies 9 bars; mirror them so both sides react to the mic.
+    const halfBars = voiceBarsProp ?? Array(BARS_PER_SIDE).fill(0);
+    const voiceBars = [
+        ...halfBars,                       // left side  (indices 0-8)
+        ...[...halfBars].reverse(),        // right side (indices 9-17, mirrored)
+    ];
     const [isReady, setIsReady] = useState(false);
     const [isError, setIsError] = useState(false);
     const [hud, setHud] = useState({ yaw: 0, pitch: 0, fov: 75 });
@@ -74,23 +81,10 @@ export default function View360Viewer({
         return () => clearInterval(timerIntervalRef.current);
     }, [isReady, hasInteracted, onTimerEnd]);
 
-    // ── Continuous travelling wave ────────────────────────────────────────
-    useEffect(() => {
-        let frame;
-        const animate = () => {
-            const t = Date.now() * 0.008;
-            setVoiceBars(
-                Array.from({ length: TOTAL_BARS }, (_, i) => {
-                    const phase = t - i * 0.9;
-                    const wave = Math.pow((Math.sin(phase) + 1) / 2, 2.5);
-                    return wave;
-                })
-            );
-            frame = requestAnimationFrame(animate);
-        };
-        animate();
-        return () => cancelAnimationFrame(frame);
-    }, []);
+    // ── No internal wave animation — bars are driven entirely by the
+    //    voiceBars prop (real microphone analyser data from VoiceAnalysis).
+    //    When the user is not speaking / not recording, the prop will be
+    //    Array(TOTAL_BARS).fill(0) so bars stay flat.
 
     // ── First-interaction detection ───────────────────────────────────────
     const handleInteract = useCallback(() => {
@@ -165,13 +159,12 @@ export default function View360Viewer({
     const isLow = hasInteracted && progress <= 0.2;
     const timerColor = "#03275A";
 
-    // ── Bar renderer ─────────────────────────────────────────────────────
     const renderBars = (globalOffset) =>
         barXPositions.map((x, localIdx) => {
             const globalIdx = globalOffset + localIdx;
             const intensity = voiceBars[globalIdx] ?? 0;
             const scale = barScales[localIdx];
-            const barH = 6 + 48 * scale * intensity;
+            const barH = 8 + 110 * scale * intensity;
             const barY = 30 - barH / 2;
             return (
                 <rect

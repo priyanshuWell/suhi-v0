@@ -64,7 +64,13 @@ const LoginSuhi = () => {
         suhi_id:
           response.suhi_id ||
           response.data?.suhi_id ||
-          suhiId.trim()
+          suhiId.trim(),
+        class_section: response.data?.class_section,
+        gender: response.data?.gender,
+        student_name: response.data?.student_name,
+
+
+
       }
 
       if (!response.success || !response.data) {
@@ -75,13 +81,14 @@ const LoginSuhi = () => {
       dispatch(
         setUser({
           success: true,
-          data: normalizedUser
+          data: normalizedUser,
+          screening: response.data?.screening
         })
       )
 
       // Save screening if API returns it
-      if (response.screening) {
-        dispatch(setScreening(response.screening))
+      if (response.data?.screening) {
+        dispatch(setScreening(response.data?.screening))
       }
 
       retryRef.current = 0

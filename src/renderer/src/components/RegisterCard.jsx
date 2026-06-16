@@ -88,7 +88,7 @@ export default function RegisterCard() {
 
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
-  const studentClass = user?.data?.class || "II-A"
+  const studentClass = user?.data?.class_section || "II-A"
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
@@ -243,6 +243,7 @@ export default function RegisterCard() {
 //     "elapsed_seconds": 1.434
 //   },
 //   "error": null,
+//    "suhi_id":null,
 //   "screening": {
 //     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
 //     "is_resumed": true,
