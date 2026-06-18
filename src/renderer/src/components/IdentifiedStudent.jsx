@@ -110,14 +110,14 @@ const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
                 </svg>
             ) : isRecording ? (
                 /* Countdown number */
-                <span className="text-red-400 text-lg font-semibold tabular-nums leading-none">
+                <span className="text-white text-lg font-semibold tabular-nums leading-none">
                     {secondsLeft ?? RECORD_DURATION_S}
                 </span>
             ) : (
                 /* Mic icon */
                 <svg
                     viewBox="0 0 24 24"
-                    className={`w-6 h-6 transition-colors ${isError ? "text-yellow-400" : "text-white/80"}`}
+                    className={`w-6 h-6 transition-colors ${isError ? "text-white" : "text-white/80"}`}
                     fill="currentColor"
                 >
                     <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 15.93A8.001 8.001 0 0 1 4 11H2a10 10 0 0 0 9 9.95V23h2v-2.05A10 10 0 0 0 22 11h-2a8.001 8.001 0 0 1-7 5.93z" />
