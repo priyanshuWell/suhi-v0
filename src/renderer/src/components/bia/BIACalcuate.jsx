@@ -212,6 +212,12 @@ export default function BIACalculate({ user, onComplete }) {
 
       // Show ERROR/WARNING messages in ErrorAlert ONLY ONCE after threshold
       if (payload.severity === "ERROR" || payload.severity === "WARNING") {
+        // Capture the leg error code so runPhase2_LegCheck can detect ELECTRODE errors
+        if (payload.source === 'LEG' && payload.code) {
+          lastLegErrorCodeRef.current = payload.code;
+          console.log("[BIA DEBUG] lastLegErrorCodeRef set from handleStatus:", payload.code);
+        }
+
         if (payload.userMessage) {
           // Check if we should show this error based on attempt threshold
           let shouldShow = false;
@@ -258,84 +264,84 @@ export default function BIACalculate({ user, onComplete }) {
     };
 
     // ARM ERROR: Check if user is holding electrodes
-    const handleArmError = (payload) => {
-      console.error("[BIA DEBUG] ARM ERROR received from main:", payload);
-      console.error(`[BIA DEBUG] Arm attempt: ${payload.attempt}, code: ${payload.code}`);
+    // const handleArmError = (payload) => {
+    //   console.error("[BIA DEBUG] ARM ERROR received from main:", payload);
+    //   console.error(`[BIA DEBUG] Arm attempt: ${payload.attempt}, code: ${payload.code}`);
 
-      // Track attempt
-      if (payload.attempt) {
-        attemptTracking.current.arm = payload.attempt;
-      }
+    //   // Track attempt
+    //   if (payload.attempt) {
+    //     attemptTracking.current.arm = payload.attempt;
+    //   }
 
-      // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
-      if (payload.attempt >= ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
-        if (payload.code === 'ELECTRODE') {
-          console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
-          errorTriggered.current.arm = true;
+    //   // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
+    //   if (payload.attempt >= ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
+    //     if (payload.code === 'ELECTRODE') {
+    //       console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
+    //       errorTriggered.current.arm = true;
 
-          // Show error immediately
-          (async () => {
-            console.log("[BIA DEBUG] Showing arm electrode error");
-            await showError(ERROR_MESSAGES.armImpedance, 5000);
-          })();
-        }
-      }
-    };
+    //       // Show error immediately
+    //       (async () => {
+    //         console.log("[BIA DEBUG] Showing arm electrode error");
+    //         await showError(ERROR_MESSAGES.armImpedance, 5000);
+    //       })();
+    //     }
+    //   }
+    // };
 
-    // WEIGHT ERROR
-    const handleWeightError = (payload) => {
-      console.error("[BIA DEBUG] WEIGHT ERROR received from main:", payload);
-    };
+    // // WEIGHT ERROR
+    // const handleWeightError = (payload) => {
+    //   console.error("[BIA DEBUG] WEIGHT ERROR received from main:", payload);
+    // };
 
-    // HEIGHT ERROR
-    const handleHeightError = async (payload) => {
-      console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
-      await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
-      console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
-      await saveBuffer("height_port_error");
-      const heightErrorComplete = await BIAComplete({
-        session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
-      });
-      if (heightErrorComplete?.screening) {
-        dispatch(setScreening(heightErrorComplete.screening));
-      }
-      const heightErrorRoute = getNextRoute(heightErrorComplete?.screening?.next_stage, '/voice');
-      console.log('[BIA] handleHeightError — navigating to:', heightErrorRoute);
-      navigate(heightErrorRoute);
+    // // HEIGHT ERROR
+    // const handleHeightError = async (payload) => {
+    //   console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
+    //   await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
+    //   console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
+    //   await saveBuffer("height_port_error");
+    //   const heightErrorComplete = await BIAComplete({
+    //     session_id: storeUser?.data?.buffer_id,
+    //     screening_session_id: storeUser?.screening?.session_id
+    //   });
+    //   if (heightErrorComplete?.screening) {
+    //     dispatch(setScreening(heightErrorComplete.screening));
+    //   }
+    //   const heightErrorRoute = getNextRoute(heightErrorComplete?.screening?.next_stage, '/voice');
+    //   console.log('[BIA] handleHeightError — navigating to:', heightErrorRoute);
+    //   navigate(heightErrorRoute);
 
-      // Track attempt for height (continuous polling)
-      if (payload.attempt) {
-        attemptTracking.current.height = payload.attempt;
-      }
-    };
+    //   // Track attempt for height (continuous polling)
+    //   if (payload.attempt) {
+    //     attemptTracking.current.height = payload.attempt;
+    //   }
+    // };
 
-    // IMPEDANCE ERROR (20kHz / 100kHz)
-    const handleImpedanceError = (payload) => {
-      console.error("[BIA DEBUG] IMPEDANCE ERROR received from main:", payload);
-      console.error(`[BIA DEBUG] Impedance attempt: ${payload.attempt}, frequency: ${payload.frequency}`);
+    // // IMPEDANCE ERROR (20kHz / 100kHz)
+    // const handleImpedanceError = (payload) => {
+    //   console.error("[BIA DEBUG] IMPEDANCE ERROR received from main:", payload);
+    //   console.error(`[BIA DEBUG] Impedance attempt: ${payload.attempt}, frequency: ${payload.frequency}`);
 
-      // Track attempts
-      if (payload.attempt) {
-        if (payload.frequency === 20) {
-          attemptTracking.current.impedance20 = payload.attempt;
-        } else if (payload.frequency === 100) {
-          attemptTracking.current.impedance100 = payload.attempt;
-        }
-      }
-    };
+    //   // Track attempts
+    //   if (payload.attempt) {
+    //     if (payload.frequency === 20) {
+    //       attemptTracking.current.impedance20 = payload.attempt;
+    //     } else if (payload.frequency === 100) {
+    //       attemptTracking.current.impedance100 = payload.attempt;
+    //     }
+    //   }
+    // };
 
     // Subscribe to events
     const unsubs = [
-      window.api?.onLegError?.(handleLegError),
+      // window.api?.onLegError?.(handleLegError),
       window.api?.onLegStatus?.(handleStatus),
-      window.api?.onArmError?.(handleArmError),
+      // window.api?.onArmError?.(handleArmError),
       window.api?.onArmStatus?.(handleStatus),
-      window.api?.onWeightError?.(handleWeightError),
+      // window.api?.onWeightError?.(handleWeightError),
       window.api?.onWeightStatus?.(handleStatus),
-      window.api?.onHeightError?.(handleHeightError),
+      // window.api?.onHeightError?.(handleHeightError),
       window.api?.onHeightStatus?.(handleStatus),
-      window.api?.onImpedanceError?.(handleImpedanceError),
+      // window.api?.onImpedanceError?.(handleImpedanceError),
       window.api?.onImpedanceStatus?.(handleStatus),
       // 4-electrode BIA calculation results
       window.api?.onLegCalcResult?.((payload) => {
@@ -624,7 +630,7 @@ export default function BIACalculate({ user, onComplete }) {
         // Disconnect ports before navigating away
         console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
         await Promise.allSettled([
-          window.api.disconnectBiaPort(),
+          // window.api.disconnectBiaPort(),
           window.api.disconnectHeightPort(),
         ]);
         const whSkipComplete = await BIAComplete({
@@ -653,7 +659,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Disconnect BIA + height ports — W+H done, no longer needed
     console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting BIA + height ports before Phase 2");
     await Promise.allSettled([
-      window.api.disconnectBiaPort(),
+      // window.api.disconnectBiaPort(),
       window.api.disconnectHeightPort(),
     ]);
 
