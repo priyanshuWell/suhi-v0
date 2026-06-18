@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch, useSelector } from "react-redux"
 import { setUser, setScreening } from "../features/common/commonSlice"
@@ -9,10 +9,8 @@ import FullscreenError from "./FullScreenError"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Steps config
-// ─────────────────────────────────────────────────────────────────────────────
 const STEPS = ["name", "grade", "section"]
+const RECORD_DURATION_S = 5
 
 const STEP_CONFIG = {
     name: {
@@ -42,58 +40,86 @@ const STEP_CONFIG = {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MicButton
+// MicButton — shows SVG countdown ring while recording, fully disabled during
+//             PROCESSING so user can't tap again mid-transcribe
 // ─────────────────────────────────────────────────────────────────────────────
-const MicButton = ({ voiceState, onClick, disabled }) => {
+const RING_R = 24          // radius of countdown ring
+const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R
+
+const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
     const isRecording = voiceState === VOICE_STATE.RECORDING
     const isProcessing = voiceState === VOICE_STATE.PROCESSING
     const isError = voiceState === VOICE_STATE.ERROR
+    const isDisabled = disabled || isRecording || isProcessing
+
+    // Progress: 1 (full) → 0 (empty) as secondsLeft goes 5 → 0
+    const progress = isRecording && secondsLeft != null
+        ? secondsLeft / RECORD_DURATION_S
+        : 1
+
+    const strokeOffset = RING_CIRCUMFERENCE * (1 - progress)
 
     return (
         <button
             onClick={onClick}
-            disabled={disabled || isProcessing}
-            aria-label={isRecording ? "Stop recording" : "Start voice input"}
+            disabled={isDisabled}
+            aria-label="Start voice input"
             className={`
         relative flex-shrink-0 flex items-center justify-center
         w-14 h-14 rounded-full
         border-2 transition-all duration-300
-        active:scale-95
-        ${isRecording
-                    ? "border-red-400 bg-red-500/20"
-                    : isError
-                        ? "border-yellow-400 bg-yellow-500/10"
-                        : "border-white/30 bg-white/10 hover:border-white/60 hover:bg-white/15"
-                }
-        ${disabled || isProcessing ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+        ${isRecording ? "border-red-500/40 bg-red-500/10"
+                    : isError ? "border-yellow-400 bg-yellow-500/10"
+                        : isDisabled ? "border-white/20 bg-white/5"
+                            : "border-white/30 bg-white/10 hover:border-white/60 hover:bg-white/15 active:scale-95 cursor-pointer"}
       `}
         >
-            {/* Pulse rings when recording */}
+            {/* SVG countdown ring — only visible while recording */}
             {isRecording && (
-                <>
-                    <span className="absolute inset-0 rounded-full border-2 border-red-400/50 animate-ping" />
-                    <span
-                        className="absolute inset-[-8px] rounded-full border border-red-400/20 animate-ping"
-                        style={{ animationDelay: "0.25s" }}
+                <svg
+                    className="absolute inset-0 w-full h-full -rotate-90"
+                    viewBox="0 0 56 56"
+                >
+                    {/* Track */}
+                    <circle
+                        cx="28" cy="28" r={RING_R}
+                        stroke="rgba(239,68,68,0.2)"
+                        strokeWidth="3"
+                        fill="none"
                     />
-                </>
+                    {/* Progress arc */}
+                    <circle
+                        cx="28" cy="28" r={RING_R}
+                        stroke="#ef4444"
+                        strokeWidth="3"
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeDasharray={RING_CIRCUMFERENCE}
+                        strokeDashoffset={strokeOffset}
+                        style={{ transition: "stroke-dashoffset 1s linear" }}
+                    />
+                </svg>
             )}
 
             {/* Icon */}
             {isProcessing ? (
-                <svg className="animate-spin w-5 h-5 text-white/60" viewBox="0 0 24 24" fill="none">
+                /* Spinner */
+                <svg className="animate-spin w-5 h-5 text-white/50" viewBox="0 0 24 24" fill="none">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
                     <path d="M12 2a10 10 0 019.8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                 </svg>
             ) : isRecording ? (
-                /* Stop square */
-                <svg viewBox="0 0 24 24" className="w-5 h-5 text-red-400" fill="currentColor">
-                    <rect x="5" y="5" width="14" height="14" rx="2" />
-                </svg>
+                /* Countdown number */
+                <span className="text-red-400 text-lg font-semibold tabular-nums leading-none">
+                    {secondsLeft ?? RECORD_DURATION_S}
+                </span>
             ) : (
-                /* Mic */
-                <svg viewBox="0 0 24 24" className={`w-6 h-6 transition-colors ${isError ? "text-yellow-400" : "text-white/80"
-                    }`} fill="currentColor">
+                /* Mic icon */
+                <svg
+                    viewBox="0 0 24 24"
+                    className={`w-6 h-6 transition-colors ${isError ? "text-yellow-400" : "text-white/80"}`}
+                    fill="currentColor"
+                >
                     <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm-1 15.93A8.001 8.001 0 0 1 4 11H2a10 10 0 0 0 9 9.95V23h2v-2.05A10 10 0 0 0 22 11h-2a8.001 8.001 0 0 1-7 5.93z" />
                 </svg>
             )}
@@ -102,24 +128,21 @@ const MicButton = ({ voiceState, onClick, disabled }) => {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VoiceStatusLabel — sits below the input underline
+// VoiceStatusLabel
 // ─────────────────────────────────────────────────────────────────────────────
-const VoiceStatusLabel = ({ voiceState, errorMsg }) => {
+const VoiceStatusLabel = ({ voiceState, voiceError, secondsLeft }) => {
     const map = {
-        [VOICE_STATE.RECORDING]: { text: "Recording… tap mic to stop", color: "text-red-400" },
+        [VOICE_STATE.RECORDING]: { text: `Recording… ${secondsLeft ?? RECORD_DURATION_S}s`, color: "text-red-400" },
         [VOICE_STATE.PROCESSING]: { text: "Transcribing…", color: "text-white/50" },
-        [VOICE_STATE.ERROR]: {
-            text: errorMsg || "Couldn't process audio. Please try again.",
-            color: "text-yellow-400",
-        },
+        [VOICE_STATE.ERROR]: { text: voiceError || "Couldn't process audio. Try again.", color: "text-yellow-400" },
     }
 
-    const config = map[voiceState]
-    if (!config) return null
+    const cfg = map[voiceState]
+    if (!cfg) return null
 
     return (
-        <p className={`text-sm mt-2 text-center ${config.color}`}>
-            {config.text}
+        <p className={`text-sm mt-2 text-center ${cfg.color}`}>
+            {cfg.text}
         </p>
     )
 }
@@ -148,24 +171,19 @@ const IdentifyStudent = () => {
     const currentStep = STEPS[stepIndex]
     const config = STEP_CONFIG[currentStep]
 
-    // ── Voice recorder hook ─────────────────────────────────────────────────
-    const { voiceState, voiceError, toggleRecording, forceStop } = useVoiceRecorder({
+    const { voiceState, voiceError, secondsLeft, startRecording, forceStop } = useVoiceRecorder({
         apiUrl: "/api/voice/transcribe",
-        recordDuration: 5000,
         onTranscript: (text) => {
-            console.log("[IDENTIFY] Transcript received:", text)
+            console.log("[IDENTIFY] Transcript:", text)
             setInputValue(text)
             setError("")
         },
-        onError: (msg) => {
-            console.warn("[IDENTIFY] Voice error:", msg)
-        },
+        onError: (msg) => console.warn("[IDENTIFY] Voice error:", msg),
     })
 
-    // Guard: no candidates → back to welcome
+    // Guard: no candidates
     useEffect(() => {
         if (!candidates || candidates.length === 0) {
-            console.warn("[IDENTIFY] No candidates in store, redirecting to welcome")
             navigate("/welcome")
         }
     }, [])
@@ -173,17 +191,12 @@ const IdentifyStudent = () => {
     // Cleanup on unmount
     useEffect(() => () => forceStop(), [])
 
-    // Stop recording when keyboard opens
+    // Keyboard open → stop recording
     useEffect(() => {
-        if (
-            keyboardVisible &&
-            (voiceState === VOICE_STATE.RECORDING || voiceState === VOICE_STATE.PROCESSING)
-        ) {
-            forceStop()
-        }
+        if (keyboardVisible) forceStop()
     }, [keyboardVisible])
 
-    // Reset input + voice when step changes
+    // Step change → reset
     useEffect(() => {
         setInputValue("")
         setError("")
@@ -213,34 +226,29 @@ const IdentifyStudent = () => {
         }
 
         if (matches.length === 1 || stepIndex === STEPS.length - 1) {
-            const confirmed = matches[0]
-            dispatch(setUser({ success: true, data: confirmed }))
+            dispatch(setUser({ success: true, data: matches[0] }))
             dispatch(setScreening(null))
             navigate("/verified")
             return
         }
 
-        // More steps needed — narrow and advance
         setFilteredCandidates(matches)
         retryRef.current = 0
         setStepIndex((prev) => prev + 1)
         setLoading(false)
     }
 
-    const isButtonDisabled =
-        !inputValue.trim() ||
-        loading ||
-        voiceState === VOICE_STATE.RECORDING ||
-        voiceState === VOICE_STATE.PROCESSING
+    const isRecordingOrProcessing =
+        voiceState === VOICE_STATE.RECORDING || voiceState === VOICE_STATE.PROCESSING
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Render
-    // ─────────────────────────────────────────────────────────────────────────
+    const isButtonDisabled =
+        !inputValue.trim() || loading || isRecordingOrProcessing
+
     return (
         <>
             <LoginComponent />
 
-            {/* Title + step indicator */}
+            {/* Title + step dots */}
             <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[600px]">
                 <p className="text-5xl text-center font-light leading-snug text-white">
                     {config.label}
@@ -249,10 +257,8 @@ const IdentifyStudent = () => {
                     {STEPS.map((s, i) => (
                         <div
                             key={s}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${i === stepIndex
-                                ? "w-8 bg-white"
-                                : i < stepIndex
-                                    ? "w-4 bg-white/60"
+                            className={`h-1.5 rounded-full transition-all duration-300 ${i === stepIndex ? "w-8 bg-white"
+                                : i < stepIndex ? "w-4 bg-white/60"
                                     : "w-4 bg-white/20"
                                 }`}
                         />
@@ -260,17 +266,15 @@ const IdentifyStudent = () => {
                 </div>
             </div>
 
-            {/* Input row */}
+            {/* Input + mic */}
             <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px]">
                 <div className="w-full flex flex-col gap-10">
                     <div>
-                        {/* Field label */}
                         <div className="leading-[28px] relative text-white text-xl tracking-wide mb-1">
                             {config.label}{" "}
                             <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
                         </div>
 
-                        {/* Input + mic side by side */}
                         <div className="relative min-h-[50px] text-3xl flex items-center gap-3">
                             <input
                                 type="text"
@@ -287,19 +291,24 @@ const IdentifyStudent = () => {
                                     setError("")
                                 }}
                             />
+
                             <MicButton
                                 voiceState={voiceState}
-                                onClick={toggleRecording}
+                                secondsLeft={secondsLeft}
+                                onClick={startRecording}
                                 disabled={keyboardVisible}
                             />
                         </div>
 
-                        {/* Underline */}
                         <div className="border-t-2 border-white w-full mt-2" />
 
-                        {/* Status area — one message at a time, priority: voice > error > hint */}
+                        {/* Status: voice > error > candidates hint */}
                         {voiceState !== VOICE_STATE.IDLE ? (
-                            <VoiceStatusLabel voiceState={voiceState} errorMsg={voiceError} />
+                            <VoiceStatusLabel
+                                voiceState={voiceState}
+                                voiceError={voiceError}
+                                secondsLeft={secondsLeft}
+                            />
                         ) : error ? (
                             <p className="text-red-400 text-sm mt-2 text-center animate-pulse">
                                 {error}
@@ -313,7 +322,7 @@ const IdentifyStudent = () => {
                 </div>
             </div>
 
-            {/* Next / Confirm button — disabled while recording or processing */}
+            {/* Next / Confirm */}
             <div className="fixed top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2">
                 <BlueGradientButton
                     disabled={isButtonDisabled}
@@ -338,26 +347,17 @@ const IdentifyStudent = () => {
                 </BlueGradientButton>
             </div>
 
-            {/* On-screen keyboard */}
+            {/* Keyboard */}
             {keyboardVisible && (
                 <KeyboardContainer
-                    onKeyPress={(k) => {
-                        setInputValue((v) => v + k)
-                        setError("")
-                    }}
-                    onBackspace={() => {
-                        setInputValue((v) => v.slice(0, -1))
-                        setError("")
-                    }}
-                    onSubmit={() => {
-                        setKeyboardVisible(false)
-                        handleNext()
-                    }}
+                    onKeyPress={(k) => { setInputValue((v) => v + k); setError("") }}
+                    onBackspace={() => { setInputValue((v) => v.slice(0, -1)); setError("") }}
+                    onSubmit={() => { setKeyboardVisible(false); handleNext() }}
                     onClose={() => setKeyboardVisible(false)}
                 />
             )}
 
-            {/* Fullscreen error — no match after max retries */}
+            {/* Fullscreen error */}
             {noMatchError && (
                 <FullscreenError
                     title="Student not found"
@@ -366,10 +366,7 @@ const IdentifyStudent = () => {
                     redirectLabel="Going to home"
                     autoRedirectDelay={5000}
                     showRetry={false}
-                    onRedirect={() => {
-                        setNoMatchError(false)
-                        navigate("/welcome")
-                    }}
+                    onRedirect={() => { setNoMatchError(false); navigate("/welcome") }}
                 />
             )}
         </>
