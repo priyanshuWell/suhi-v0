@@ -12,7 +12,7 @@ import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
-import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
+import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPortPath } from "../../utils/portConfig";
 import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
@@ -459,8 +459,21 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
     console.log('[MEASUREMENT] Connecting to height port:');
-    await window.api.connectHeightPort(ports[1]?.path);
-    const res = await window.api.startHeightMeasurement();
+    await window.api.connectHeightPort(getHeightPortPath(ports));
+
+    // Race the IPC call against the configured timeout (VITE_HEIGHT_MEASUREMENT_TIMEOUT = 10s).
+    // If no height data arrives within 10 s the promise rejects, which causes heightOk=false
+    // in attemptWH() — Phase 1's retry logic then shows "stand straight" and retries once.
+    // After 2 consecutive timeouts Phase 1 skips BIA entirely.
+    const res = await Promise.race([
+      window.api.startHeightMeasurement(),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Height measurement timed out after " + MEASUREMENT_TIMEOUTS.height + "ms")),
+          MEASUREMENT_TIMEOUTS.height
+        )
+      ),
+    ]);
     console.log("[BIA DEBUG] Height result:", res);
 
     if (!res?.height) {
@@ -595,7 +608,7 @@ export default function BIACalculate({ user, onComplete }) {
       const msg = !weightOk ? ERROR_MESSAGES.weight : ERROR_MESSAGES.height;
       console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk} — showing error, retrying in 10s`);
       setErrorState({ title: msg, canRetry: false });
-      await sleep(10000);
+      await sleep(3000);
       setErrorState(null);
 
       // --- Attempt 2 (auto retry) ---
@@ -608,6 +621,12 @@ export default function BIACalculate({ user, onComplete }) {
         await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
         console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
         await saveBuffer('wh_skip');
+        // Disconnect ports before navigating away
+        console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
+        await Promise.allSettled([
+          window.api.disconnectBiaPort(),
+          window.api.disconnectHeightPort(),
+        ]);
         const whSkipComplete = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
           screening_session_id: storeUser?.screening?.session_id,
@@ -630,6 +649,13 @@ export default function BIACalculate({ user, onComplete }) {
       weight_kg: resultsRef.current?.weight?.value,
       height_cm: resultsRef.current?.height?.value,
     }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+
+    // Disconnect BIA + height ports — W+H done, no longer needed
+    console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting BIA + height ports before Phase 2");
+    await Promise.allSettled([
+      window.api.disconnectBiaPort(),
+      window.api.disconnectHeightPort(),
+    ]);
 
     await runPhase2_LegCheck();
   };
@@ -1124,7 +1150,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Connect BIA port
       console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
-      await window.api.connectBiaPort(ports[0]?.path);
+      await window.api.connectBiaPort(getBiaPortPath(ports));
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 
