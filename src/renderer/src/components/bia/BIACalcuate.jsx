@@ -24,6 +24,7 @@ import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
 import { CircleAlert, FileWarning } from "lucide-react";
+import AreYouThereModal from "../ui/AreYouThereModal";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -38,8 +39,12 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
-  const barefootCTAResolver = useRef(null);
+  // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
+  const [shoesCtaStep, setShoesCtaStep] = useState(null);
+  const shoesCtaResolverRef = useRef(null);   // resolves 'shoes' | 'barefoot_success' | 'barefoot_fail'
+  const ctaTimerRef = useRef(null);            // active CTA countdown timer
+  const lastLegErrorCodeRef = useRef(null);   // 'ELECTRODE' or other, from main process
+  const shoesCtaHandlersRef = useRef({});     // live callbacks for the CTA modals
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
   // Stores next_stage from BIAComplete API response for use in handleImNextClick
@@ -241,43 +246,14 @@ export default function BIACalculate({ user, onComplete }) {
       }
     };
 
-    // LEG ERROR: Check if user is on platform (barefoot contact issue)
+    // LEG ERROR: Store error code for use in Phase 2 logic
     const handleLegError = (payload) => {
       console.error("[BIA DEBUG] LEG ERROR received from main:", payload);
       console.error(`[BIA DEBUG] Leg attempt: ${payload.attempt}, code: ${payload.code}`);
-
-      // Track attempt
+      // Store the error code so runPhase2_LegCheck can distinguish electrode vs hardware error
+      lastLegErrorCodeRef.current = payload.code ?? null;
       if (payload.attempt) {
         attemptTracking.current.leg = payload.attempt;
-      }
-
-      // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
-      if (payload.attempt >= ATTEMPT_THRESHOLDS.leg && !errorTriggered.current.leg) {
-        if (payload.code === 'ELECTRODE') {
-          console.error(`[BIA DEBUG] ⚠️ Leg ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
-          errorTriggered.current.leg = true;
-
-          // Check weight to determine appropriate error message
-          (async () => {
-            try {
-              const weightResult = await window.api.startWeightMeasurement();
-              console.log("[BIA DEBUG] Weight check for leg error:", weightResult);
-
-              if (weightResult?.weight && Number(weightResult.weight) > 1) {
-                // User IS on platform but leg impedance failed → barefoot issue
-                console.log(`[BIA DEBUG] Weight detected: ${weightResult.weight}kg - showing barefoot error`);
-                await showError(ERROR_MESSAGES.legImpedance_hasWeight, 5000);
-              } else {
-                // User NOT on platform
-                console.log("[BIA DEBUG] No weight detected - showing platform error");
-                await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
-              }
-            } catch (weightCheckError) {
-              console.error("[BIA DEBUG] Weight check failed:", weightCheckError.message);
-              await showError(ERROR_MESSAGES.legImpedance_noWeight, 5000);
-            }
-          })();
-        }
       }
     };
 
@@ -456,26 +432,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
-  const measurePreliminaryWeight = async () => {
-    console.log("[BIA DEBUG] Starting weight measurement...");
-    // setCurrentStatus("Measuring your weight, please stand still!");
-    const res = await window.api.startWeightMeasurement();
-    console.log("[BIA DEBUG] Weight result:", res);
-
-    // if (!res?.weight) {
-    //   console.error("[BIA DEBUG] Weight measurement failed - no weight data");
-    //   throw new Error("Weight failed");
-    // }
-    storePreliminaryMeasurements(dispatch, res.weight, null);
-
-    resultsRef.current.preWeight = {
-      value: Number(res.weight),
-      unit: "kg"
-    };
-    // console.log(`[BIA DEBUG] Weight stored: ${res.weight} kg`);
-    // dispatch(setWeight(resultsRef.current.preWeight?.value));
-    return res;
-  };
+  // measurePreliminaryWeight removed — W+H is now Phase 1, no pre-weight check needed
 
   const measureWeight = async () => {
     console.log("[BIA DEBUG] Starting weight measurement...");
@@ -611,209 +568,184 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   /* =======================
-     PHASE 1: LEG IMPEDANCE CHECK
-     - If leg fails, check weight to determine error
+     PHASE 1: WEIGHT + HEIGHT
+     - Parallel measurement, one automatic 10s-timeout retry.
+     - No user button — fully automatic.
+     - Double failure → skip BIA entirely.
   ======================= */
-  const runPhase1_LegCheck = async (attemptCount = 0) => {
-    console.log("[BIA DEBUG] ========== PHASE 1: LEG CHECK ==========");
-    console.log(`[BIA DEBUG] Phase 1 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
-    setCurrentPhase('leg');
+  const runPhase1_WeightHeight = async () => {
+    console.log("[BIA DEBUG] ========== PHASE 1: WEIGHT + HEIGHT ==========");
+    setCurrentPhase('wh');
+    navigate('/bia/wh');
 
-    // Check if we've exhausted retries BEFORE attempting
-    if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 1 EXHAUSTED all ${MAX_RETRIES} retries - redirecting via next_stage`);
-      // updatePhaseState('leg', 'failed', 'Max retries exhausted');
-      // showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      const legMaxRetryComplete = await BIAComplete({
-        session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
-      });
-      if (legMaxRetryComplete?.screening) {
-        dispatch(setScreening(legMaxRetryComplete.screening));
-      }
-      console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
-      await saveBuffer("leg_max_retry");
-      const legMaxRetryRoute = getNextRoute(legMaxRetryComplete?.screening?.next_stage, '/voice');
-      console.log('[BIA] runPhase1 leg max retry — navigating to:', legMaxRetryRoute);
-      navigate(legMaxRetryRoute);
-      return;
-    }
+    // Run W+H in parallel; returns settled status without throwing.
+    const attemptWH = async () => {
+      const [wRes, hRes] = await Promise.allSettled([
+        measureWeight(),
+        measureHeight(),
+      ]);
+      return { weightOk: wRes.status === 'fulfilled', heightOk: hRes.status === 'fulfilled' };
+    };
 
-    // Reset attempt tracking and error flags for leg
-    attemptTracking.current.leg = 0;
-    errorTriggered.current.leg = false;
-    console.log("[BIA DEBUG] Reset leg attempt tracking and error flag");
+    // --- Attempt 1 ---
+    console.log("[BIA DEBUG] Phase 1 — Attempt 1: W+H parallel");
+    let { weightOk, heightOk } = await attemptWH();
 
-    try {
-      // updatePhaseState('leg', 'in_progress');
-      await measureLegImpedance();
+    if (!weightOk || !heightOk) {
+      const msg = !weightOk ? ERROR_MESSAGES.weight : ERROR_MESSAGES.height;
+      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk} — showing error, retrying in 10s`);
+      setErrorState({ title: msg, canRetry: false });
+      await sleep(10000);
+      setErrorState(null);
 
-      console.log("[BIA DEBUG] Phase 1 SUCCESS - Leg impedance measured");
-      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      // updatePhaseState('leg', 'success');
-      await sleep(800);
-      navigate('/bia/wh')
+      // --- Attempt 2 (auto retry) ---
+      console.log("[BIA DEBUG] Phase 1 — Attempt 2 (auto-retry): W+H parallel");
+      ({ weightOk, heightOk } = await attemptWH());
 
-      // Success - proceed to Phase 2
-      await runPhase2_WeightHeight();
-
-    } catch (legError) {
-      if (attemptCount >= MAX_RETRIES) {
-        console.error(`[BIA DEBUG] Priyanshu Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting via next_stage`);
-        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, "Barefoot contact not detected", null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-        // updatePhaseState('leg', 'failed', 'Max retries exhausted');
-        const legCatchComplete = await BIAComplete({
+      if (!weightOk || !heightOk) {
+        // Double fail — skip BIA
+        console.error(`[BIA DEBUG] Phase 1 DOUBLE FAIL — W:${weightOk} H:${heightOk} — skipping BIA`);
+        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
+        await saveBuffer('wh_skip');
+        const whSkipComplete = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.session_id
+          screening_session_id: storeUser?.screening?.session_id,
         });
-        if (legCatchComplete?.screening) {
-          dispatch(setScreening(legCatchComplete.screening));
-        }
-        const legCatchRoute = getNextRoute(legCatchComplete?.screening?.next_stage, '/voice');
-        console.log('[BIA] runPhase1 catch max retry — navigating to:', legCatchRoute);
-        navigate(legCatchRoute);
+        if (whSkipComplete?.screening) dispatch(setScreening(whSkipComplete.screening));
+        const whSkipRoute = getNextRoute(whSkipComplete?.screening?.next_stage, '/voice');
+        console.log('[BIA] Phase 1 W+H skip — navigating to:', whSkipRoute);
+        navigate(whSkipRoute);
         return;
       }
-      console.error("[BIA DEBUG] Phase 1 FAILED - Leg impedance error:", legError.message);
-
-      // Check if user is on platform by trying weight measurement
-      console.log("[BIA DEBUG] Checking if user is on platform via weight...");
-      try {
-        const weightResult = await measurePreliminaryWeight();
-        console.log("[BIA DEBUG] Weight check result:", weightResult);
-        if (weightResult.success) {
-          await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.SUCCESS, { weight_kg: resultsRef.current.preWeight.value }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-        } else {
-          await trackStage(STAGES.PRE_WEIGHT_LEG, STATUS.ERROR, {}, "leg and pre weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-        }
-      } catch (weightCheckError) {
-        console.error("[BIA DEBUG] Weight check also failed:", weightCheckError.message);
-      }
-
-      // Show blocking CTA modal and wait for user choice
-      let choice = "retry";
-      if (attemptCount === 0) {
-        choice = await showBarefootCTA();
-      }
-
-      if (choice === "skip") {
-        // User chose to continue with shoes - skip leg phase, go to Phase 2
-        console.log("[BIA DEBUG] User chose 'Continue with Shoes' - skipping leg, going to Phase 2");
-        resultsRef.current.isShoesContinued = true;
-        // updatePhaseState('leg', 'skipped');
-        navigate('/bia/wh');
-        await runPhase2_WeightHeight();
-        return;
-      }
-
-      // User chose to remove shoes - retry leg from scratch
-      console.log(`[BIA DEBUG] User chose 'Remove the Shoe' - retrying Phase 1 (attempt ${attemptCount + 1})...`);
-      await sleep(500);
-      await runPhase1_LegCheck(attemptCount + 1);
     }
+
+    // --- Both W+H succeeded ---
+    console.log("[BIA DEBUG] Phase 1 SUCCESS — W+H both measured");
+    setDisplayValues({
+      height: resultsRef.current?.height?.value ?? null,
+      weight: resultsRef.current?.weight?.value ?? null,
+    });
+    await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
+      weight_kg: resultsRef.current?.weight?.value,
+      height_cm: resultsRef.current?.height?.value,
+    }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+
+    await runPhase2_LegCheck();
   };
+
 
   /* =======================
-     PHASE 2: WEIGHT & HEIGHT
-     - After leg success, measure weight and height in parallel
-     - If weight fails or height retries exhausted, go back to screen 1
+     PHASE 2: LEG 50KHZ
+     - Runs after W+H. All outcomes land at /bia/whcomplete.
+     - User clicks "Next" → Phase 3 starts.
   ======================= */
-  const runPhase2_WeightHeight = async () => {
-    console.log("[BIA DEBUG] ========== PHASE 2: WEIGHT & HEIGHT ==========");
-    setCurrentPhase('wh');
 
-    try {
-      // Parallelize Weight and Height measurements
-      console.log("[BIA DEBUG] Starting Weight and Height measurements in parallel...");
-      const [weightRes, heightRes] = await Promise.all([
-        measureWeight(),
-        performHeightWithRetry()
-      ]);
-      console.log("[BIA DEBUG] Both Weight and Height SUCCESS");
-      setDisplayValues({
-        height: resultsRef.current?.height?.value ?? null,
-        weight: resultsRef.current?.weight?.value ?? null,
-      });
-
-
-      // Track combined Weight and Height
-      await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
-        weight_kg: resultsRef.current?.weight?.value,
-        height_cm: resultsRef?.current?.height?.value
-      }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-
-      // Both weight and height success - show whComplete
-      console.log("[BIA DEBUG] Phase 2 COMPLETE - navigating to /bia/whcomplete");
-
-      // Calculate Leg BIA immediately after weight/height
-      await calculateAndStoreLegBIA();
-
-      // setMeasuredValues({
-      //   weight: resultsRef.current?.weight?.value ? `${resultsRef.current?.weight?.value} kg` : "-- kg",
-      //   height: resultsRef.current?.height?.value ? `${resultsRef.current?.height?.value} cm` : "-- cm"
-      // });
-
-      navigate("/bia/whcomplete");
-
-      await new Promise((resolve) => {
-        whCompleteResolver.current = resolve;
-      });
-
-      // Proceed to Phase 3
-      await runPhase3_Impedance();
-
-    } catch (phase2Error) {
-      console.error("[BIA DEBUG] Phase 2 FAILED:", phase2Error.message);
-
-      if (phase2Error.message === "HEIGHT_MAX_RETRY_EXHAUSTED") {
-        await showError(ERROR_MESSAGES.height, 3000);
-        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main height measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-        console.log("[BIA REC] ⏏️  Phase 2 — height max retries exhausted → saveBuffer('height_max_retry')");
-        await saveBuffer("height_max_retry");
-      } else {
-        // Assume failure was weight-related or other
-        await showError(ERROR_MESSAGES.weight, 3000);
-        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, "main weight measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-        console.log("[BIA REC] ⏏️  Phase 2 — weight or generic error → saveBuffer('weight_error')");
-        await saveBuffer("weight_error");
-      }
-
-      const phase2FailComplete = await BIAComplete({
-        session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
-      });
-      if (phase2FailComplete?.screening) {
-        dispatch(setScreening(phase2FailComplete.screening));
-      }
-      const phase2FailRoute = getNextRoute(phase2FailComplete?.screening?.next_stage, '/voice');
-      console.log('[BIA] runPhase2 catch — navigating to:', phase2FailRoute);
-      navigate(phase2FailRoute);
-    }
+  const clearCtaTimer = () => {
+    if (ctaTimerRef.current) { clearTimeout(ctaTimerRef.current); ctaTimerRef.current = null; }
+  };
+  const startCtaTimer = (ms, cb) => { clearCtaTimer(); ctaTimerRef.current = setTimeout(cb, ms); };
+  const resolveShoesCta = (outcome) => {
+    clearCtaTimer();
+    setShoesCtaStep(null);
+    lastLegErrorCodeRef.current = null;
+    shoesCtaResolverRef.current?.(outcome);
+    shoesCtaResolverRef.current = null;
   };
 
-  const performHeightWithRetry = async (attemptCount = 0) => {
-    console.log(`[BIA DEBUG] Height measurement attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
+  /**
+   * Promise-based shoes CTA tree (A → B/D → C → B2).
+   * Resolves with 'shoes' | 'barefoot_success' | 'barefoot_fail'.
+   */
+  const runShoesCtaTree = () =>
+    new Promise((resolve) => {
+      shoesCtaResolverRef.current = resolve;
 
-    // Check if we've exhausted retries
-    if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Height EXHAUSTED all ${MAX_RETRIES} retries`);
-      throw new Error("HEIGHT_MAX_RETRY_EXHAUSTED");
-    }
+      const showCtaA = () => {
+        setShoesCtaStep('ctaA');
+        startCtaTimer(10000, () => showCtaD());
+      };
 
-    // Reset height attempt tracking
-    attemptTracking.current.height = 0;
-    errorTriggered.current.height = false;
+      const showCtaB_1st = () => {
+        setShoesCtaStep('ctaB_1st');
+        startCtaTimer(30000, () => showCtaC());
+      };
+
+      const showCtaB_2nd = () => {
+        setShoesCtaStep('ctaB_2nd');
+        startCtaTimer(10000, () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); });
+      };
+
+      const showCtaC = () => {
+        setShoesCtaStep('ctaC');
+        startCtaTimer(10000, () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); });
+      };
+
+      const showCtaD = () => {
+        setShoesCtaStep('ctaD');
+        startCtaTimer(10000, () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); });
+      };
+
+      const retryLeg = async (fromCta) => {
+        setShoesCtaStep(null);
+        clearCtaTimer();
+        try {
+          await measureLegImpedance();
+          console.log(`[BIA] Leg retry (${fromCta}) SUCCESS — barefoot confirmed`);
+          await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.legImpedance?.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+          await calculateAndStoreLegBIA();
+          resolveShoesCta('barefoot_success');
+        } catch {
+          console.warn(`[BIA] Leg retry (${fromCta}) FAILED — proceeding shoes path`);
+          resultsRef.current.isShoesContinued = true;
+          resolveShoesCta('barefoot_fail');
+        }
+      };
+
+      shoesCtaHandlersRef.current = {
+        onCtaAYes: () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); },
+        onCtaANo: () => { clearCtaTimer(); showCtaB_1st(); },
+        onCtaB1stStart: () => retryLeg('CTA-B-1st'),
+        onCtaB2ndStart: () => retryLeg('CTA-B-2nd'),
+        onCtaCYes: () => { clearCtaTimer(); showCtaB_2nd(); },
+        onCtaCNoOrTimeout: () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); },
+        onCtaDYes: () => { clearCtaTimer(); showCtaA(); },
+        onCtaDNoOrTimeout: () => { resultsRef.current.isShoesContinued = true; resolveShoesCta('shoes'); },
+      };
+
+      showCtaA();
+    });
+
+  const runPhase2_LegCheck = async () => {
+    console.log("[BIA DEBUG] ========== PHASE 2: LEG 50KHZ ==========");
+    setCurrentPhase('leg');
+    lastLegErrorCodeRef.current = null;
+    attemptTracking.current.leg = 0;
+    errorTriggered.current.leg = false;
 
     try {
-      return await measureHeight();
-    } catch (heightError) {
-      console.error("[BIA DEBUG] Height measurement FAILED:", heightError.message);
-
-      // Retry with incremented attempt count
-      console.log(`[BIA DEBUG] Height retry ${attemptCount + 2}/${MAX_RETRIES}...`);
-      await showError(ERROR_MESSAGES.height, 3000);
-      return await performHeightWithRetry(attemptCount + 1);
+      await measureLegImpedance();
+      console.log("[BIA DEBUG] Phase 2 Leg SUCCESS — barefoot confirmed");
+      await trackStage(STAGES.LEG_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.legImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await calculateAndStoreLegBIA();
+    } catch (legError) {
+      console.error("[BIA DEBUG] Phase 2 Leg FAILED:", legError.message);
+      if (lastLegErrorCodeRef.current === 'ELECTRODE') {
+        console.log("[BIA DEBUG] ELECTRODE error — starting shoes CTA tree");
+        const outcome = await runShoesCtaTree();
+        console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
+      } else {
+        console.warn("[BIA DEBUG] Hardware/generic leg error — skipping leg");
+        await trackStage(STAGES.LEG_50KHZ, STATUS.ERROR, {}, legError.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        resultsRef.current.isShoesContinued = true;
+      }
     }
+
+    // All Phase 2 paths land here
+    console.log("[BIA DEBUG] Phase 2 complete — navigating to /bia/whcomplete");
+    navigate('/bia/whcomplete');
+    await new Promise((resolve) => { whCompleteResolver.current = resolve; });
+    await runPhase3_Impedance();
   };
 
 
@@ -1196,8 +1128,8 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 
-      // Start Phase 1
-      await runPhase1_LegCheck();
+      // Start Phase 1 (W+H)
+      await runPhase1_WeightHeight();
 
     } catch (e) {
       console.error("[BIA DEBUG] Flow error:", e.message);
@@ -1271,11 +1203,33 @@ export default function BIACalculate({ user, onComplete }) {
         onRetry={undefined}
       />
 
-      {/* Barefoot CTA Modal - blocks flow until user makes a choice */}
-      {barefootCTAVisible && (
-        <BarefootCTAModal
-          onRemoveShoe={() => handleBarefootChoice("retry")}
-          onContinueWithShoes={() => handleBarefootChoice("skip")}
+      {/* Shoes CTA Tree — driven by shoesCtaStep state */}
+      {shoesCtaStep === 'ctaA' && (
+        <ContinueWithShoesModal
+          onYes={shoesCtaHandlersRef.current.onCtaAYes}
+          onNo={shoesCtaHandlersRef.current.onCtaANo}
+        />
+      )}
+      {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
+        <PressStartModal
+          timeoutSecs={shoesCtaStep === 'ctaB_1st' ? 30 : 10}
+          onStart={shoesCtaStep === 'ctaB_1st'
+            ? shoesCtaHandlersRef.current.onCtaB1stStart
+            : shoesCtaHandlersRef.current.onCtaB2ndStart}
+        />
+      )}
+      {shoesCtaStep === 'ctaC' && (
+        <AreYouThereModal
+          timeoutSecs={10}
+          onYes={shoesCtaHandlersRef.current.onCtaCYes}
+          onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
+        />
+      )}
+      {shoesCtaStep === 'ctaD' && (
+        <AreYouThereModal
+          timeoutSecs={10}
+          onYes={shoesCtaHandlersRef.current.onCtaDYes}
+          onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
         />
       )}
     </>
@@ -1283,139 +1237,102 @@ export default function BIACalculate({ user, onComplete }) {
 }
 
 
+/* ── CTA A: Continue with shoes? ─────────────────────────────────── */
+const ContinueWithShoesModal = ({ onYes, onNo }) => {
+  const [remaining, setRemaining] = React.useState(10);
+  const firedRef = React.useRef(false);
+  const intervalRef = React.useRef(null);
 
-const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
-  const [step, setStep] = useState("choose"); // "choose" | "barefoot"
+  const fireNo = () => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    clearInterval(intervalRef.current);
+    onNo?.();
+  };
+  const fireYes = () => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    clearInterval(intervalRef.current);
+    onYes?.();
+  };
+
+  React.useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setRemaining((p) => {
+        if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
+        return p - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div
-        className="relative w-screen"
-        style={{ filter: "drop-shadow(0px 0px 40px rgba(139, 195, 229, 0.4))" }}
-      >
-        {/* ── textbgframe background ── */}
-        <img
-          src={textbgframe}
-          alt=""
-          className="w-full h-full block"
-          draggable={false}
-        />
-
-        {/* ── Content ── */}
-        <div
-          className="absolute flex flex-col justify-center"
-          style={{
-            top: "14%",
-            bottom: "20%",
-            left: "14%",
-            right: "14%",
-          }}
-        >
-          {step === "choose" ? (
-            <>
-              {/* Title */}
-              <div className="flex items-center justify-center mb-10">
-                <h2
-                  className="text-[#8BC3E5] text-[40px]  m-0 font-anta w-2/3 text-center"
-                >
-                  Choose how you'd like
-                  to continue.
-                </h2>
-              </div>
-
-              {/* Two-choice buttons */}
-              <div className="w-full flex gap-x-10">
-                <button
-                  onClick={() => setStep("barefoot")}
-                  className="
-                   w-[400px]
-                   h-[120px]
-                    flex items-center justify-center
-                    text-center
-                    rounded-[30px]
-                    border-2 border-white/30
-                    bg-white/5
-                    backdrop-blur-sm
-                    shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)]
-                    text-white
-                    text-[clamp(1.25rem,3vw,3rem)]
-                    tracking-wide
-                    active:scale-[0.98]
-                    transition-all duration-300 ease-in-out
-                    hover:bg-white/10
-                    hover:border-white/50
-                    px-2
-                    font-anta
-                  "
-                >
-                  🦶 Without Shoes
-                </button>
-
-                <button
-                  onClick={onContinueWithShoes}
-                  className="
-                  w-[400px]
-                   h-[120px]
-                    flex items-center justify-center
-                    text-center
-                    rounded-[30px]
-                    border-2 border-white/50
-                    bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
-                    shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
-                    text-white
-                    text-[clamp(1.5rem,3vw,3rem)]
-                    tracking-wide
-                    active:scale-[0.98]
-                    transition-all duration-300 ease-in-out
-                    hover:border-white
-                    font-anta
-                  "
-                >
-                  👟 With Shoes
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              {/* Instruction screen */}
-              <div className="flex items-center gap-2.5 mb-[6%]">
-                <p
-                  className="text-[#8BC3E5] text-[40px] font-anta text-center"
-                >
-                  Remove your socks and shoes
-                  and click on start.
-                </p>
-              </div>
-
-              {/* Start button */}
-              <button
-                onClick={onRemoveShoe}
-                className="
-                  ml-[12rem]
-                  w-[clamp(20rem,33vw,31.25rem)]
-                  h-[clamp(4rem,8vh,6.25rem)]
-                  flex items-center justify-center
-                  text-center
-                  rounded-[30px]
-                  border-2 border-white/50
-                  bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)]
-                  shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)]
-                  text-white
-                  text-[clamp(1.5rem,3vw,3rem)]
-                  tracking-wide
-                  active:scale-[0.98]
-                  transition-all duration-300 ease-in-out
-                  hover:border-white
-                  font-anta
-                "
-              >
-                Start
-              </button>
-            </>
-          )}
+      <div className="relative w-screen" style={{ filter: 'drop-shadow(0px 0px 40px rgba(139,195,229,0.4))' }}>
+        <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
+        <div className="absolute flex flex-col items-center justify-center gap-8"
+          style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
+          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
+            Do you want to continue with shoes?
+          </h2>
+          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
+          <div className="flex gap-10">
+            <button onClick={fireNo}
+              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200">
+              🦶 No
+            </button>
+            <button onClick={fireYes}
+              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
+              👟 Yes
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
+
+/* ── CTA B: Press Start ───────────────────────────────────────────── */
+const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
+  const [remaining, setRemaining] = React.useState(timeoutSecs);
+  const firedRef = React.useRef(false);
+  const intervalRef = React.useRef(null);
+
+  const fireStart = () => {
+    if (firedRef.current) return;
+    firedRef.current = true;
+    clearInterval(intervalRef.current);
+    onStart?.();
+  };
+
+  React.useEffect(() => {
+    intervalRef.current = setInterval(() => {
+      setRemaining((p) => {
+        if (p <= 1) { clearInterval(intervalRef.current); return 0; }
+        return p - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="relative w-screen" style={{ filter: 'drop-shadow(0px 0px 40px rgba(139,195,229,0.4))' }}>
+        <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
+        <div className="absolute flex flex-col items-center justify-center gap-8"
+          style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
+          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
+            Remove your socks and shoes,<br />then press Start.
+          </h2>
+          <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
+          <button onClick={fireStart}
+            className="w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
+            Start
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 

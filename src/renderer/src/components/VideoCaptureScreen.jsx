@@ -14,17 +14,17 @@ import { useTranslation } from "react-i18next"
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV FLAGS — flip these to test without hardware or real API
 // ─────────────────────────────────────────────────────────────────────────────
-const USE_DUMMY_FPT = false
-const USE_DUMMY_MEASUREMENTS = false
+const USE_DUMMY_FPT = true
+const USE_DUMMY_MEASUREMENTS = true
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
 // Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
-const DUMMY_FPT_SCENARIO = "NO_FACE"
+const DUMMY_FPT_SCENARIO = "HIGH_MULTIPLE"
 
 // Measurement scenario to simulate (USE_DUMMY_MEASUREMENTS = true)
 // Only matters when DUMMY_FPT_SCENARIO = "NO_FACE"
 // Options: "WEIGHT_AND_SHORT" | "WEIGHT_AND_TALL" | "WEIGHT_NO_HEIGHT" | "NOTHING"
-const DUMMY_MEASUREMENT_SCENARIO = "NOTHING"
+const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_AND_TALL"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dummy FPT responses — real API shape: everything under .data
@@ -94,7 +94,7 @@ const DUMMY_FPT_RESPONSES = {
       },
       candidates: [
         { user_id: "uuid-1", name: "Ravi Kumar", score: 0.74, grade: "8A", school: "DPS Noida" },
-        { user_id: "uuid-2", name: "Rahul Kumar", score: 0.71, grade: "8B", school: "DPS Noida" },
+        { user_id: "uuid-2", name: "Ravi Kumar", score: 0.71, grade: "7B", school: "DPS Noida" },
       ],
       screening: null,
     },
@@ -352,7 +352,7 @@ const VideoCaptureScreen = () => {
         await playAudio()
         await new Promise((r) => setTimeout(r, 1000))
 
-        const MEASUREMENT_TIMEOUT = 5000
+        //const MEASUREMENT_TIMEOUT = 5000
 
         // Start measurements in background (non-blocking)
         measurementPromiseRef.current = getMeasurements()
@@ -367,7 +367,7 @@ const VideoCaptureScreen = () => {
           fptResponse = DUMMY_FPT_RESPONSES[DUMMY_FPT_SCENARIO]
           measurements = await measurementPromiseRef.current
         } else {
-          ;[fptResponse, measurements] = await Promise.all([
+          [fptResponse, measurements] = await Promise.all([
             realtimeCapture(),
             measurementPromiseRef.current,
           ])
