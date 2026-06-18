@@ -756,6 +756,9 @@ export default function BIACalculate({ user, onComplete }) {
       await calculateAndStoreLegBIA();
     } catch (legError) {
       console.error("[BIA DEBUG] Phase 2 Leg FAILED:", legError.message);
+      // Wait briefly for the async IPC handleLegError event to fire and populate lastLegErrorCodeRef
+      await sleep(300);
+      console.log("[BIA DEBUG] lastLegErrorCodeRef after sleep:", lastLegErrorCodeRef.current);
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
         console.log("[BIA DEBUG] ELECTRODE error — starting shoes CTA tree");
         const outcome = await runShoesCtaTree();

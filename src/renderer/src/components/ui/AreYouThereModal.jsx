@@ -95,7 +95,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
 
           {/* Buttons */}
           <div className="flex gap-10">
-            <button
+            {/* <button
               onClick={fireNo}
               className="
                 w-[200px] h-[80px]
@@ -109,7 +109,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
               "
             >
               No
-            </button>
+            </button> */}
             <button
               onClick={fireYes}
               className="
