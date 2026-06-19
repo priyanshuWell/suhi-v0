@@ -291,13 +291,13 @@ const IdentifyStudent = () => {
                                     setError("")
                                 }}
                             />
-
+                            {/* 
                             <MicButton
                                 voiceState={voiceState}
                                 secondsLeft={secondsLeft}
                                 onClick={startRecording}
                                 disabled={keyboardVisible}
-                            />
+                            /> */}
                         </div>
 
                         <div className="border-t-2 border-white w-full mt-2" />
@@ -361,7 +361,7 @@ const IdentifyStudent = () => {
             {noMatchError && (
                 <FullscreenError
                     title="Student not found"
-                    description="We couldn't find a match. Please try logging in with your SUHI ID."
+                    description="We couldn't find a match. Please try again."
                     showDescription={true}
                     redirectLabel="Going to home"
                     autoRedirectDelay={5000}
