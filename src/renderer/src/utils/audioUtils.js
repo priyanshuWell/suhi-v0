@@ -17,16 +17,19 @@ const preloadAudio = async (baseName, langCode) => {
 }
 
 export const getAudioForCurrentLanguage = async (baseName) => {
-  const currentLang = i18n.language || null;
-  console.log("baselang",currentLang)
+  // Normalize to base language tag (e.g. "hi-IN" → "hi") so it matches asset filenames
+  const rawLang = i18n.language || 'en';
+  const currentLang = rawLang.split('-')[0];
+  console.log("baselang", currentLang)
 
   const langAudio = await preloadAudio(baseName, currentLang)
   if (langAudio) return langAudio
 
-  // if (currentLang !== "en") {
-  //   const fallbackAudio = await preloadAudio(baseName, "en")
-  //   return fallbackAudio
-  // }
+  // Fall back to English if the language-specific file is missing
+  if (currentLang !== 'en') {
+    const fallbackAudio = await preloadAudio(baseName, 'en')
+    if (fallbackAudio) return fallbackAudio
+  }
 
   return null
 }

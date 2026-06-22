@@ -7,7 +7,6 @@ const steps = [
     { id: 3, key: "divide_attention", label: "Mind Scan" },
     { id: 4, key: "voice_analysis", label: "Voice Scan" },
     { id: 5, key: "color_blindness", label: "Vision Scan" },
-
 ];
 
 export default function ProgressStage({ current = 1 }) {
