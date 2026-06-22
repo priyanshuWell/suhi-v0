@@ -93,8 +93,8 @@ const SpaceConvoyMain = () => {
     }
     const handleStartDemo =  async () => {
         // TODO: replace with real userId from your auth/Redux store
-        const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-        const screeningSessionId =  storeUser?.screening?.session_id || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
+        const userId = storeUser?.data?.user_id ;
+        const screeningSessionId =  storeUser?.screening?.session_id;
         const result = await DivideAttentionSession(userId,screeningSessionId, "practice")
         if (result.success) {
             activeSessionId.current = result?.data?.game_session_id;

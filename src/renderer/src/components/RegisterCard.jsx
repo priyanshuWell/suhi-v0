@@ -88,7 +88,7 @@ export default function RegisterCard() {
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
   const studentClass = user?.class_section || "II-A"
-  const nextStage = user?.data?.screening?.next_stage || user?.screening?.next_stage
+  const nextStage = user?.screening?.next_stage
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
