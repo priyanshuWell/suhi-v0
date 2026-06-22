@@ -2,11 +2,12 @@ import { Fragment } from "react";
 import { useSelector } from "react-redux";
 
 const steps = [
-    { id: 1, key: "login",            label: "Face Scan" },
-    { id: 2, key: "bia",              label: "Body Scan" },
-    { id: 3, key: "divide_attention", label: "Cognitive Game" },
-    { id: 4, key: "color_blindness",  label: "Vision Test" },
-    { id: 5, key: "voice_analysis",   label: "Voice Scan" },
+    { id: 1, key: "login", label: "Face Scan" },
+    { id: 2, key: "bia", label: "Body Scan" },
+    { id: 3, key: "divide_attention", label: "Mind Scan" },
+    { id: 4, key: "voice_analysis", label: "Voice Scan" },
+    { id: 5, key: "color_blindness", label: "Vision Scan" },
+
 ];
 
 export default function ProgressStage({ current = 1 }) {

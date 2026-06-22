@@ -115,7 +115,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const screenConfig = {
     leg50: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.let_measure"),
       video: {
         female: bmiWH_female,
@@ -123,7 +123,7 @@ export default function BIACalculate({ user, onComplete }) {
       },
     },
     wh: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.weight_height_measurement"),
 
       video: {
@@ -131,9 +131,16 @@ export default function BIACalculate({ user, onComplete }) {
         male: bmiWH_male,
       },
     },
-
+    hold: {
+      title: t("measurement.core_body_scan"),
+      description: t("measurement.impedance_measurement"),
+      video: {
+        female: biaIm_female,
+        male: biaIm_male,
+      },
+    },
     im: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.core_body_scan"),
       description: t("measurement.impedance_measurement"),
       video: {
         female: biaIm_female,
@@ -850,8 +857,9 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
 
     // Navigate to impedance screen
-    navigate("/bia/im");
+    navigate("/bia/hold");
     await sleep(8000);
+    navigate("/bia/im");
 
     try {
       // Arm Impedance 50kHz
@@ -1285,7 +1293,8 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
-  const [step, setStep] = useState("choose"); // "choose" | "barefoot"
+  const { t } = useTranslation();
+  const [step, setStep] = useState("choose");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1318,8 +1327,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 <h2
                   className="text-[#8BC3E5] text-[40px]  m-0 font-anta w-2/3 text-center"
                 >
-                  Choose how you'd like
-                  to continue.
+                  {t("bia_component.choose_how")}
                 </h2>
               </div>
 
@@ -1348,7 +1356,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                 >
-                  🦶 Without Shoes
+                  {t("bia_component.without_shoes")}
                 </button>
 
                 <button
@@ -1371,7 +1379,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                 >
-                  👟 With Shoes
+                  {t("bia_component.with_shoes")}
                 </button>
               </div>
             </>
@@ -1382,8 +1390,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 <p
                   className="text-[#8BC3E5] text-[40px] font-anta text-center"
                 >
-                  Remove your socks and shoes
-                  and click on start.
+                  {t("bia_component.remove_socks_shoes")}
                 </p>
               </div>
 
@@ -1409,7 +1416,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                   font-anta
                 "
               >
-                Start
+                {t("bia_component.start")}
               </button>
             </>
           )}

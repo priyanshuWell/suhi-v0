@@ -3,7 +3,6 @@ import bg1 from "../../assets/lightbg.png"
 import biaCompleteAlertSvg from "../../assets/bia/bia_complete_alert.svg"
 import { useNavigate, useParams } from "react-router"
 import progessbg from "../../assets/progress-bg.svg"
-import textframe from "../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
 import BlueGradientButton from "../ui/BlueGradientButton"
 import HeightWeightDisplay from "./HeightWeightDisplay"
@@ -12,6 +11,7 @@ import wh_completeAudio from "../../assets/audio/wh_complete_en.mp3"
 import wh_measuringAudio from "../../assets/audio/wh_measuring_en.mp3"
 import impedanceAudio from "../../assets/audio/impedance_en.mp3"
 import im_completeAudio from "../../assets/audio/im_complete_en.mp3"
+import holdRods from "../../assets/bia/hold_rods.mp4"
 import ReplayAudio from "../ReplayAudio"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
@@ -540,28 +540,13 @@ export const BIAComponent = ({
         <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
           <div className="relative flex flex-col items-center">
 
-            {/* Title Frame */}
-            <div className="relative flex items-center justify-center">
-              <img
-                src={textframe}
-                alt="text-frame"
-                className="w-full"
-              />
+            {/* Title */}
+            <p className="text-white text-center portrait:text-[44px] tracking-wider">
+              {title}
+            </p>
 
-              <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
-                {title}
-              </p>
-            </div>
-
-            {/* Bottom Decorative Frame */}
-            <img
-              src={textframe}
-              alt="text-frame"
-              className="rotate-180  mt-10"
-            />
-
-            {/* Description OUTSIDE frame */}
-            <p className="mt-6 text-white font-medium tracking-tight landscape:text-4xl portrait:text-[46px] text-center">
+            {/* Description */}
+            <p className="mt-6 text-[#8BC3E5] font-medium tracking-tight landscape:text-4xl portrait:text-[38px] text-center">
               {description}
             </p>
 
@@ -590,7 +575,7 @@ export const BIAComponent = ({
             />
 
             {/* ── floating metric cards (im screen only) ── */}
-            {screenType === "im" &&
+            {(screenType === "im") &&
               biaMetrics.map((metric, i) => (
                 <BiaMetricCard
                   key={metric.key}
@@ -636,6 +621,16 @@ export const BIAComponent = ({
           onNextClick={onNextClick}
         />
       )}
+      {
+        screenType === "hold" && (
+          <div
+            className="absolute bottom-[28%] right-[34%] w-[45%] rounded-full overflow-hidden"
+            style={{ filter: "drop-shadow(0px 0px 40px rgba(154, 217, 255, 0.5))" }}
+          >
+            <video src={holdRods} autoPlay loop muted playsInline className="" />
+          </div>
+        )
+      }
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">

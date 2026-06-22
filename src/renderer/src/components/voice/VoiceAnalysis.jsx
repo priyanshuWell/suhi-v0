@@ -632,7 +632,7 @@ export default function VoiceAnalysis() {
           </div>
         </div>
 
-        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[15rem] left-[16rem] flex items-center gap-6">
+        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[13rem] left-[16rem] flex items-center gap-6">
           <span>{t("voice.select_instruction")}</span>
         </div>
 
@@ -714,6 +714,12 @@ export default function VoiceAnalysis() {
                 >
                   <div
                     className="relative overflow-hidden"
+                    onClick={isCentered ? (e) => {
+                      // Card body tap → cycle the drum to next image.
+                      // Only the 360° icon button itself opens the viewer.
+                      const next = (selectedIndex + 1) % IMAGES.length;
+                      goToIndex(next);
+                    } : undefined}
                     style={{
                       width: 600,
                       height: ITEM_HEIGHT - 16,
@@ -725,6 +731,7 @@ export default function VoiceAnalysis() {
                         ? "0 0 60px rgba(154,217,255,0.25), inset 0 0 20px rgba(154,217,255,0.08)"
                         : "none",
                       transition: isSnapping ? "all 0.32s ease" : "none",
+                      cursor: isCentered ? "pointer" : undefined,
                     }}
                   >
                     <img
@@ -735,17 +742,19 @@ export default function VoiceAnalysis() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                    {/* 360° badge — only on center card */}
+                    {/* 360° icon — explicit tap target that opens the viewer */}
                     {isCentered && (
-                      <div
+                      <button
                         onClick={(e) => {
-                          e.stopPropagation();
+                          e.stopPropagation(); // don't bubble to card's goToIndex
                           onCenterCardClick();
                         }}
                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
+                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
+                        aria-label="Open 360° view"
                       >
                         <img src={icon360} alt="360-icon" className="w-[100px] h-[100px]" />
-                      </div>
+                      </button>
                     )}
 
                     {/* FIX (Issue 1): Adjacent card overlay — tapping scrolls wheel to that card */}

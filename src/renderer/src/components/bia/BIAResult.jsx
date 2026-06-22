@@ -297,8 +297,8 @@ const BIAResult = () => {
   ]
 
   const learningItems = [
-    { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Medium'), valueClassName: 'text-[#2CEF94]' },
-    { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Beginner'), valueClassName: 'text-[#2CEF94]' },
+    { label: 'Divided Attention', value: formatLabel(apiReport?.attention?.level, 'Medium'), valueClassName: 'text-[#2CEF94]' },
+    { label: 'Working Memory', value: formatLabel(apiReport?.memory?.level, 'Beginner'), valueClassName: 'text-[#2CEF94]' },
     { label: 'Learning Style', value: learnerStyleLabel, valueClassName: 'text-[#2CEF94]' },
   ]
 

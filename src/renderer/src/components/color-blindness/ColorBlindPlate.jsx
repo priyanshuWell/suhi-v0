@@ -137,7 +137,7 @@ export const ColorBlindPlate = () => {
 
                 {/* Instructions */}
                 <p
-                    className="text-white text-center font-anta w-[90%] max-w-[1149px]"
+                    className="text-white text-center font-anta w-[90%] max-w-[849px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
                     {/* {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}
@@ -163,7 +163,7 @@ export const ColorBlindPlate = () => {
                 </button>
 
                 {/* Example plate */}
-                <div className="relative overflow-hidden rounded-3xl w-[70%] max-w-[1018px] flex items-center justify-center p-6">
+                <div className="relative overflow-hidden rounded-3xl w-[50%] max-w-[1018px] flex items-center justify-center p-6">
                     <img
                         src={InitialColorBlindImage}
                         alt={t("colorBlindness.plateAlt", "Example color blindness plate")}
