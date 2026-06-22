@@ -24,7 +24,8 @@
   },
   "measurement": {
     "let_measure": "शरीर का स्कैन शुरू हो रहा है।",
-    "stand_straight": "सीधे खड़े रहें और हिलें नहीं!",
+    "basic_body_scan": "बेसिक बॉडी स्कैन",
+    "core_body_scan": "कोर बॉडी स्कैन",
     "scan_done": "स्कैन पूरा हुआ!",
     "weight_height_measurement": "हम लंबाई और वज़न माप रहे हैं।",
     "measuring_body_composition": "वसा और मांसपेशियों का पता चल रहा है...",
