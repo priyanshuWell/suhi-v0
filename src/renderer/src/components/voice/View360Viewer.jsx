@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from "react";
 import { PanoViewer } from "@egjs/react-view360";
 import Image from "../../assets/voice/nature_360.png";
 import voiceComplete from "../../assets/voice/voiceComplete.png";
+import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import icon360 from "../../assets/voice/360_icon.png"
 import fingerIcon from "../../assets/voice/finger_icon.svg"
@@ -224,15 +225,49 @@ export default function View360Viewer({
             {/* ── Voice Complete modal ─────────────────────────────────── */}
             {/*   Shown when timer ends. User must click Next to proceed.  */}
             {isComplete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-                    <div className="relative flex justify-center">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                    <div
+                        className="relative w-screen"
+                        style={{
+                            filter: "drop-shadow(0px 0px 40px rgba(139, 195, 229, 0.4))",
+                        }}
+                    >
+                        {/* Background frame */}
                         <img
-                            src={voiceComplete}
-                            alt="voice-complete"
-                            className="w-full h-auto"
+                            src={textbgframe}
+                            alt=""
+                            className="w-full h-full block"
+                            draggable={false}
                         />
-                        <div className="absolute bottom-[20%]">
-                            {/* ↓ onNext navigates — only enabled after API response */}
+
+                        {/* Content */}
+                        <div
+                            className="absolute flex flex-col items-center justify-center"
+                            style={{
+                                top: "14%",
+                                bottom: "20%",
+                                left: "14%",
+                                right: "14%",
+                            }}
+                        >
+                            {/* Optional image */}
+                            {/* <img
+                                src={voiceComplete}
+                                alt="voice-complete"
+                                className="w-[220px] mb-8"
+                            /> */}
+
+                            {/* Title */}
+                            <h2 className="text-[#8BC3E5] text-[42px] font-anta text-center mb-4">
+                                {t("voice.status.task_completed")}
+                            </h2>
+
+                            {/* Subtitle */}
+                            <p className="text-white text-[28px] font-anta text-center mb-12">
+                                {t("voice.status.saved")}
+                            </p>
+
+                            {/* Next button */}
                             <BlueGradientButton
                                 onClick={!loading ? onNext : undefined}
                                 style={{
@@ -241,7 +276,11 @@ export default function View360Viewer({
                                     cursor: loading ? "not-allowed" : "pointer",
                                 }}
                             >
-                                {loading ? <Loader className="w-6 h-6 animate-spin" /> : t("common.next")}
+                                {loading ? (
+                                    <Loader className="w-6 h-6 animate-spin" />
+                                ) : (
+                                    t("common.next")
+                                )}
                             </BlueGradientButton>
                         </div>
                     </div>

@@ -94,7 +94,9 @@
       "recording": "recording",
       "processing": "processing",
       "success": "success",
-      "error": "error"
+      "error": "error",
+      "task_completed":"Task Completed!",
+      "saved":"Your Response is Recorded"
     },
     "analysing": "ANALYSING VOICE…",
     "what_you_think": "Voice Scan",

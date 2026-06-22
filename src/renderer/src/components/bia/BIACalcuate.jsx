@@ -39,7 +39,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
+  const [barefootCTAVisible, setBarefootCTAVisible] = useState(true);
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
@@ -1277,6 +1277,7 @@ export default function BIACalculate({ user, onComplete }) {
         <BarefootCTAModal
           onRemoveShoe={() => handleBarefootChoice("retry")}
           onContinueWithShoes={() => handleBarefootChoice("skip")}
+          t={t}
         />
       )}
     </>
@@ -1285,7 +1286,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 
-const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
+const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose, t }) => {
   const [step, setStep] = useState("choose"); // "choose" | "barefoot"
 
   return (
@@ -1319,8 +1320,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 <h2
                   className="text-[#8BC3E5] text-[40px]  m-0 font-anta w-2/3 text-center"
                 >
-                  Choose how you'd like
-                  to continue.
+                  {t("bia_component.choose_how")}
                 </h2>
               </div>
 
@@ -1349,7 +1349,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                 >
-                  🦶 Without Shoes
+                  {t("bia_component.without_shoes")}
                 </button>
 
                 <button
@@ -1372,7 +1372,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                 >
-                  👟 With Shoes
+                  {t("bia_component.with_shoes")}
                 </button>
               </div>
             </>
@@ -1383,8 +1383,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 <p
                   className="text-[#8BC3E5] text-[40px] font-anta text-center"
                 >
-                  Remove your socks and shoes
-                  and click on start.
+                  {t("bia_component.remove_socks_shoes")}
                 </p>
               </div>
 
@@ -1410,7 +1409,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                   font-anta
                 "
               >
-                Start
+                {t("bia_component.start")}
               </button>
             </>
           )}
