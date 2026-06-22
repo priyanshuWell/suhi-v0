@@ -17,10 +17,10 @@ export function StageRecordingProvider({ children }) {
   const prevStageKeyRef = useRef(null);
   const sessionActiveRef = useRef(false);
 
-  const screening = useSelector((state) => state.common.screening);
+  console.log("[StageRecordingProvider] user.screening:", user?.screening, "session_id:", user?.screening?.session_id, "buffer_id:", user?.data?.buffer_id, "user_id:", user?.data?.user_id);
 
   const recording = useStageRecording({
-    sessionId: screening?.session_id,
+    sessionId: user?.screening?.session_id,
     bufferId: user?.data?.buffer_id,
     userId: user?.data?.user_id,
     stageKey: stageKey ?? "unknown",

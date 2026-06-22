@@ -39,7 +39,12 @@ const commonSlice = createSlice({
     },
 
     setUser: (state, action) => {
-      state.user = action.payload;
+      const user = action.payload;
+      // API returns `screening_id` but all consumers read `session_id`
+      if (user?.screening?.screening_id && !user?.screening?.session_id) {
+        user.screening = { ...user.screening, session_id: user.screening.screening_id };
+      }
+      state.user = user;
     },
 
     setLang: (state, action) => {
@@ -136,12 +141,13 @@ const commonSlice = createSlice({
 
     setScreening: (state, action) => {
       if (action.payload) {
-        // Ensure user object exists before attaching screening so the payload
-        // is never silently dropped when setScreening fires before setUser.
         if (!state.user) state.user = {};
-        // Store raw snake_case payload directly on user.screening
-        // so storeUser.screening.session_id / next_stage / etc. work everywhere
-        state.user.screening = action.payload;
+        const screening = { ...action.payload };
+        // API returns `screening_id` but all consumers read `session_id`
+        if (screening.screening_id && !screening.session_id) {
+          screening.session_id = screening.screening_id;
+        }
+        state.user.screening = screening;
       }
     },
 

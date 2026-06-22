@@ -67,7 +67,10 @@ export function useStageRecording({ sessionId, bufferId, userId, stageKey = "bia
     const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
 
     console.log(
-      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", session_id: "${sid}", buffer_id: "${bid}", user_id: "${uid}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
+      `[STAGE REC:${stage}] 📤 DEBUG — sessionIdRef: "${sid}", bufferIdRef: "${bid}", userIdRef: "${uid}"`
+    );
+    console.log(
+      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
     );
 
     (async () => {
