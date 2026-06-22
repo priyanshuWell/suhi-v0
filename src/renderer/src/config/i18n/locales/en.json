@@ -121,7 +121,13 @@
     "instruction": "Let’s play a game, Keep your eyes on all moving asteroids—don’t lose track!",
     "start": "Start Demo",
     "awsomeJob": "Awesome Job!",
-    "complete":"You did  great! You followed all the action in space!"
+    "complete":"You did  great! You followed all the action in space!",
+    "watch_highlighted": "Watch the highlighted asteroids.",
+    "all_look_same": "All asteroids now look the same.",
+    "follow_them": "Follow them as they move.",
+    "tap_tracked": "Now tap on the ones that you were tracking",
+    "great_job_retry": "Great Job. Let's try one more time",
+    "great_job_start": "Great! Let's start the game."
   },
   "bia_result": {
     "congratulations": "Congratulations!",

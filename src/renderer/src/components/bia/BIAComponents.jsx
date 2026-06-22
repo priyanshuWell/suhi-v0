@@ -466,6 +466,7 @@ export const BIAComponent = ({
       wh: "wh_measuring",
       whcomplete: "wh_complete",
       im: "impedance",
+      hold: "impedance",
       imcomplete: "im_complete",
       leg50: "standstraight"
     }
@@ -502,7 +503,7 @@ export const BIAComponent = ({
   const handleAudioEnd = () => { setIsAudioPlaying(false) }
 
   const getAudioPath = (type) => {
-    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, im: impedanceAudio, imcomplete: im_completeAudio }
+    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, im: impedanceAudio, hold: impedanceAudio, imcomplete: im_completeAudio }
     return audioMap[type] || standstraightAudio
   }
 
@@ -621,16 +622,26 @@ export const BIAComponent = ({
           onNextClick={onNextClick}
         />
       )}
-      {
-        screenType === "hold" && (
-          <div
-            className="absolute bottom-[28%] right-[34%] w-[45%] rounded-full overflow-hidden"
-            style={{ filter: "drop-shadow(0px 0px 40px rgba(154, 217, 255, 0.5))" }}
-          >
-            <video src={holdRods} autoPlay loop muted playsInline className="" />
-          </div>
-        )
-      }
+      {/* Hold screen – background blur overlay */}
+      {screenType === "hold" && (
+        <div
+          className="absolute inset-0 z-10"
+          style={{
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            backgroundColor: "rgba(0, 0, 0, 0.2)",
+          }}
+        />
+      )}
+
+      {screenType === "hold" && (
+        <div
+          className="absolute bottom-[28%] right-[34%] w-[45%] rounded-full overflow-hidden z-20"
+          style={{ filter: "drop-shadow(0px 0px 40px rgba(154, 217, 255, 0.5))" }}
+        >
+          <video src={holdRods} autoPlay loop muted playsInline className="" />
+        </div>
+      )}
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">

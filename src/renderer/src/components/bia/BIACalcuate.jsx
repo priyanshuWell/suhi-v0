@@ -104,7 +104,7 @@ export default function BIACalculate({ user, onComplete }) {
   const ERROR_MESSAGES = {
     legImpedance_noWeight: "Please step on the platform barefoot",
     legImpedance_hasWeight: "Please make sure you are barefoot",
-    weight: "Please step on the platform barefoot",
+    weight: "Please step on the platform properly",
     height: "Please stand straight & still",
     armImpedance: "Please hold the rods firmly",
     impedance20: "Please be barefoot and hold the rods firmly",

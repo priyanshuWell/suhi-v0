@@ -40,6 +40,8 @@ export const ColorBlindPlate = () => {
             const src = await getAudioForCurrentLanguage("colorblindness_instruction");
             if (cancelled || !src) {
                 console.warn("[ColorBlindPlate] No audio found for language:", i18n.language);
+                // Unblock the Next button so the user isn't permanently stuck
+                if (!cancelled) setAudioDone(true);
                 return;
             }
 
@@ -54,7 +56,8 @@ export const ColorBlindPlate = () => {
             if (playPromise !== undefined) {
                 playPromise.catch((err) => {
                     console.warn("[ColorBlindPlate] Autoplay prevented:", err.message);
-                    if (!cancelled) setIsPlaying(false);
+                    // Unblock the Next button if autoplay is blocked
+                    if (!cancelled) { setIsPlaying(false); setAudioDone(true); }
                 });
             }
         };
@@ -147,7 +150,7 @@ export const ColorBlindPlate = () => {
 
                     {t("colorBlindness.instruction")}
                     <br /><br />
-                    {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
+                    {/* {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")} */}
                 </p>
 
                 {/* Audio replay button */}
