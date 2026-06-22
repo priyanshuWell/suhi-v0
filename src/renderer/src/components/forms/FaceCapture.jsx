@@ -90,8 +90,8 @@ function FaceCapture() {
         dispatch(setUser(response));
 
         // If this is a resumed session, skip the RegisterCard and go straight to next stage
-        if (storeUser?.data?.screening?.next_stage) {
-          const nextRoute = getNextRoute(storeUser?.data?.screening?.next_stage, '/bia/leg50');
+        if (storeUser?.screening?.next_stage) {
+          const nextRoute = getNextRoute(storeUser?.screening?.next_stage, '/bia/leg50');
           console.log("[FaceCapture] Resumed session: navigating to next stage:", nextRoute);
           navigate(nextRoute);
         } else {

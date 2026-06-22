@@ -90,7 +90,7 @@ export const ColorBlindPlate = () => {
         (async () => {
             try {
                 await getColorBlindessPlates();
-                const res = await colorBlindessStart(userId, kioskId, user?.data?.screening?.session_id);
+                const res = await colorBlindessStart(userId, kioskId, user?.screening?.session_id);
                 console.log("res start colorblindess", res)
                 if (!res.success) throw new Error(res.error ?? "Start failed");
 

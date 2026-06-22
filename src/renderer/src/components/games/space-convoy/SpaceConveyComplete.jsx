@@ -18,7 +18,7 @@ export function SpaceConvoyComplete({ onStartDemo }) {
         // fall back to Redux screening.nextStage, then default to /colorblindness
         const nextRoute =
             location.state?.nextRoute ||
-            getNextRoute(storeUser?.data?.screening?.next_stage, '/colorblindness')
+            getNextRoute(storeUser?.screening?.next_stage, '/colorblindness')
         console.log('[SpaceConvoyComplete] handleNext — navigating to:', nextRoute)
         navigate(nextRoute)
     }

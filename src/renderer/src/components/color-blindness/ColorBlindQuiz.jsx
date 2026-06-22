@@ -139,7 +139,7 @@ export const ColorBlindQuiz = () => {
     const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
-    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", storeUser?.screening?.session_id)
+    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", storeUser?.screening?.session_id,storeUser)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
     const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -200,7 +200,7 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                navigate("/voice");
+                navigate("/bia/result");
                 return;
             }
 
@@ -210,19 +210,13 @@ export const ColorBlindQuiz = () => {
                     const result = await colorBlindessComplete(sessionId, storeUser?.screening?.session_id);
                     console.log("result colorBlindess", result);
                     if (result.success) {
-                        // Update Redux with new next_stage from API response
-                        if (result.screening) {
-                            dispatch(setScreening(result.screening));
-                        }
-                        const nextRoute = getNextRoute(result?.screening?.next_stage, '/voice');
+                        const nextRoute = getNextRoute(result?.screening?.next_stage, '/bia/result');
                         console.log('[ColorBlindQuiz] colorBlindessComplete — navigating to:', nextRoute);
                         navigate(nextRoute);
                         return;
                     }
                 } catch (err) {
                     console.log(err);
-                } finally {
-                    navigate('/voice');
                 }
             } else {
                 setCurrentIndex(nextIndex);
