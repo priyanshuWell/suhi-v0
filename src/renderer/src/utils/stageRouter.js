@@ -66,6 +66,11 @@ export function isSelfManagedStage(stageKey) {
   return Boolean(entry?.selfManaged);
 }
 
+/** Screening stages where session buffer capture should be active (post-login, pre-result). */
+export function isScreeningStage(stageKey) {
+  return Boolean(stageKey) && stageKey !== "login" && stageKey !== "result";
+}
+
 /**
  * Returns the frontend route for a given `next_stage` object or raw stage_key string.
  *

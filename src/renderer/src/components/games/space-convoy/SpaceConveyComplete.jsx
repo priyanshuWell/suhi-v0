@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next"
 import bg1 from "../../../assets/lightbg.png"
 import { useNavigate, useLocation } from "react-router"
 import { getNextRoute } from "../../../utils/stageRouter"
-import { useStageRecordingControl } from "../../../services/StageRecordingProvider"
 import { useSelector } from "react-redux"
 
 export function SpaceConvoyComplete({ onStartDemo }) {
@@ -13,16 +12,14 @@ export function SpaceConvoyComplete({ onStartDemo }) {
     const navigate = useNavigate()
     const location = useLocation()
     const storeUser = useSelector((state) => state.common.user)
-    const stageRecording = useStageRecordingControl()
 
-    const handleNext = async () => {
+    const handleNext = () => {
         // Prefer nextRoute passed from DivideAttentionGame via route state,
         // fall back to Redux screening.nextStage, then default to /colorblindness
         const nextRoute =
             location.state?.nextRoute ||
             getNextRoute(storeUser?.data?.screening?.next_stage, '/colorblindness')
-        console.log('[SpaceConvoyComplete] handleNext — stopping recording and navigating to:', nextRoute)
-        await stageRecording?.stopAndSend?.()
+        console.log('[SpaceConvoyComplete] handleNext — navigating to:', nextRoute)
         navigate(nextRoute)
     }
 

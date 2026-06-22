@@ -7,7 +7,6 @@ import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import { getKioskId } from "../../utils/config";
 import { setScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
-import { useStageRecordingControl } from "../../services/StageRecordingProvider";
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
 import ReplayAudio from "../ReplayAudio";
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg";
@@ -74,7 +73,6 @@ export default function VoiceAnalysis() {
   const user = useSelector((state) => state.common.user);
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const stageRecording = useStageRecordingControl();
 
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(Math.floor(IMAGES.length / 2));
@@ -528,12 +526,11 @@ export default function VoiceAnalysis() {
     stopRecordingAndSubmit();
   }, [stopRecordingAndSubmit]);
 
-  const onNext = useCallback(async () => {
+  const onNext = useCallback(() => {
     const nextRoute = getNextRoute(user?.data?.screening?.next_stage, '/bia/result');
-    console.log('[VoiceAnalysis] onNext — stopping recording and navigating to:', nextRoute);
-    await stageRecording?.stopAndSend?.();
+    console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
-  }, [navigate, user, stageRecording]);
+  }, [navigate, user]);
 
   // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
   //    It fired on every initial render (isRecording starts false) and could race

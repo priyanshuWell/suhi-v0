@@ -8,7 +8,6 @@ import { colorBlindessSubmit, colorBlindessComplete } from "../../utils/api";
 import { useSelector, useDispatch } from "react-redux";
 import { setScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
-import { useStageRecordingControl } from "../../services/StageRecordingProvider";
 
 // ─── Static plate imports ─────────────────────────────────────────────────────
 import CARD_1 from "../../assets/color_blindness/Card_1.png";
@@ -139,7 +138,6 @@ export const ColorBlindQuiz = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
-    const stageRecording = useStageRecordingControl();
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
     console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", storeUser?.screening?.session_id)
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -202,7 +200,6 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                await stageRecording?.stopAndSend?.();
                 navigate("/voice");
                 return;
             }
@@ -219,21 +216,19 @@ export const ColorBlindQuiz = () => {
                         }
                         const nextRoute = getNextRoute(result?.screening?.next_stage, '/voice');
                         console.log('[ColorBlindQuiz] colorBlindessComplete — navigating to:', nextRoute);
-                        await stageRecording?.stopAndSend?.();
                         navigate(nextRoute);
                         return;
                     }
                 } catch (err) {
                     console.log(err);
                 } finally {
-                    await stageRecording?.stopAndSend?.();
                     navigate('/voice');
                 }
             } else {
                 setCurrentIndex(nextIndex);
             }
         },
-        [sessionId, currentPlate, currentIndex, totalPlates, navigate, dispatch, storeUser, stageRecording]
+        [sessionId, currentPlate, currentIndex, totalPlates, navigate, dispatch, storeUser]
     );
 
 
