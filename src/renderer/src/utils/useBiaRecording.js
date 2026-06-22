@@ -11,6 +11,9 @@ import { STAGE_BUFFER_TYPE } from "./stageRouter";
  * Background video capture for screening stages (post-login, pre-result).
  * Records up to 1-minute chunks, uploads via /video/store then /video/buffer-collection.
  * buffer_type is derived from the current route's stage_key.
+ *
+ * sessionId and userId are stored in refs so callbacks always use the
+ * latest Redux values even after login updates them.
  */
 const TIMESLICE_MS = 1000;
 const SESSION_CHUNK_MS = 60_000; // max 1 minute per buffer
@@ -18,6 +21,12 @@ const SESSION_CHUNK_MS = 60_000; // max 1 minute per buffer
 export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
   const stageKeyRef = useRef(stageKey);
   stageKeyRef.current = stageKey;
+
+  const sessionIdRef = useRef(sessionId);
+  sessionIdRef.current = sessionId;
+
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -47,12 +56,14 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
   }, []);
 
   const _uploadInBackground = useCallback((buffer, role, stage) => {
+    const sid = sessionIdRef.current;
+    const uid = userIdRef.current;
     const ts = Date.now();
-    const filename = `${role}_${sessionId ?? "unknown"}_${ts}.webm`;
+    const filename = `${role}_${sid ?? "unknown"}_${ts}.webm`;
     const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
 
     console.log(
-      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
+      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", session_id: "${sid}", user_id: "${uid}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
     );
 
     (async () => {
@@ -61,8 +72,8 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
           ?.saveRecording?.({
             arrayBuffer: buffer,
             filename,
-            session_id: sessionId,
-            user_id: userId,
+            session_id: sid,
+            user_id: uid,
             phase_states: { role, stage, bufferType, ts: new Date(ts).toISOString() },
           })
           .catch((err) => {
@@ -72,14 +83,14 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
         const result = await sendVideoToBackend({
           buffer: new Uint8Array(buffer),
           role,
-          deviceId: sessionId ?? "unknown",
-          meta: { sessionId, userId, role, stage, ts },
+          deviceId: sid ?? "unknown",
+          meta: { sessionId: sid, userId: uid, role, stage, ts },
         });
 
         const shmPath = result?.shm_path ?? result?.data?.shm_path;
         if (shmPath) {
           const kioskId = getKioskId();
-          await bufferCollection(shmPath, kioskId, sessionId, userId, bufferType);
+          await bufferCollection(shmPath, kioskId, sid, uid, bufferType);
           console.log(`[STAGE REC:${stage}] ✅ bufferCollection done — buffer_type: "${bufferType}"`);
         } else {
           console.warn(`[STAGE REC:${stage}] ⚠️ No shm_path in store response`);
@@ -88,7 +99,7 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
         console.error(`[STAGE REC:${stage}] ❌ Upload failed — role: "${role}"`, err.message);
       }
     })();
-  }, [sessionId, userId]);
+  }, []);
 
   const _startRecorderOnStream = useCallback(() => {
     const stream = streamRef.current;
@@ -197,7 +208,9 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
       return;
     }
 
-    console.log("[STAGE REC] 🎬 startSession() — session:", sessionId, "user:", userId);
+    const sid = sessionIdRef.current;
+    const uid = userIdRef.current;
+    console.log("[STAGE REC] 🎬 startSession() — session_id:", sid, "user_id:", uid);
 
     try {
       const videoConstraints = await getRgbCameraConstraints({
@@ -225,7 +238,7 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
       isSessionActiveRef.current = false;
       _releaseCamera();
     }
-  }, [sessionId, userId, _startRecorderOnStream, scheduleNextChunk, _releaseCamera]);
+  }, [_startRecorderOnStream, scheduleNextChunk, _releaseCamera]);
 
   const stopSession = useCallback(
     (stageOverride = null) => {
