@@ -386,14 +386,14 @@ export async function runFPT(shmPath, kioskId) {
 export async function bufferCollection(shmPath, kioskId, session_id, user_id, bufferType = "BIA") {
   try {
     const payload = {
-      shm_path: shmPath,
+      shm_video_path: shmPath,
       kiosk_id: kioskId,
       session_id,
       user_id,
       buffer_type: bufferType,
     };
 
-    const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
+    const response = await fetch(`${API_BASE_URL}/buffer-collection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
