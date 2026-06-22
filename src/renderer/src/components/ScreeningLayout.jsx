@@ -15,10 +15,10 @@ const ROUTE_TO_STEP = [
   { prefix: '/space-convoy-main', step: 3 },
   { prefix: '/divide-attention', step: 3 },
   // Step 4 — Vision
-  { prefix: '/colorblindness/quiz', step: 4 },
-  { prefix: '/colorblindness', step: 4 },
+  { prefix: '/colorblindness/quiz', step: 5 },
+  { prefix: '/colorblindness', step: 5 },
   // Step 5 — Voice
-  { prefix: '/voice', step: 5 },
+  { prefix: '/voice', step: 4 },
 ]
 
 function getStepFromRoute(pathname) {
