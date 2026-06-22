@@ -18,7 +18,8 @@ import ErrorAlert from "../ErrorAlert";
 function FaceCapture() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const screening = useSelector((state) => state.common.screening);
+  const user = useSelector((state) => state.user);
+  const storeUser = useSelector((state) => state.common.user);
 
   const videoRef = useRef(null);
   const captureStarted = useRef(false);
@@ -89,8 +90,8 @@ function FaceCapture() {
         dispatch(setUser(response));
 
         // If this is a resumed session, skip the RegisterCard and go straight to next stage
-        if (screening?.isResumed && screening?.nextStage) {
-          const nextRoute = getNextRoute(screening.nextStage, '/bia/leg50');
+        if (storeUser?.data?.screening?.next_stage) {
+          const nextRoute = getNextRoute(storeUser?.data?.screening?.next_stage, '/bia/leg50');
           console.log("[FaceCapture] Resumed session: navigating to next stage:", nextRoute);
           navigate(nextRoute);
         } else {

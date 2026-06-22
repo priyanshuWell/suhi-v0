@@ -14,7 +14,6 @@ import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
 
 export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user);
-    const screening = useSelector((state) => state.common.screening);
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);  // seeding + starting
@@ -88,7 +87,7 @@ export const ColorBlindPlate = () => {
         (async () => {
             try {
                 await getColorBlindessPlates();
-                const res = await colorBlindessStart(userId, kioskId, screening?.sessionId);
+                const res = await colorBlindessStart(userId, kioskId, user?.data?.screening?.session_id);
                 console.log("res start colorblindess", res)
                 if (!res.success) throw new Error(res.error ?? "Start failed");
 

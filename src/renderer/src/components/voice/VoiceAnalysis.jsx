@@ -71,7 +71,6 @@ function clampDragOffset(offset, selectedIndex) {
 
 export default function VoiceAnalysis() {
   const user = useSelector((state) => state.common.user);
-  const screeningState = useSelector((state) => state.common.screening);
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
@@ -485,7 +484,7 @@ export default function VoiceAnalysis() {
     };
 
     recorder.stop();
-  }, [user, screeningState, navigate]);
+  }, [user, navigate]);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
@@ -528,10 +527,10 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
+    const nextRoute = getNextRoute(user?.data?.screening?.next_stage, '/bia/result');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
-  }, [navigate, screeningState]);
+  }, [navigate, user]);
 
   // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
   //    It fired on every initial render (isRecording starts false) and could race

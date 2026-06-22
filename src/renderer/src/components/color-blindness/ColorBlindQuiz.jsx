@@ -138,9 +138,8 @@ export const ColorBlindQuiz = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
-    const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
     const [sessionId, setSessionId] = useState(location.state?.sessionId);
-    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", screeningSessionId)
+    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", storeUser?.screening?.session_id)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
     const [selectedAnswer, setSelectedAnswer] = useState(null);

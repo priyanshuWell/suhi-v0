@@ -3,16 +3,9 @@ import { createSlice } from "@reduxjs/toolkit";
 const initialState = {
   cloudSyncData: null,
 
-  user: null,
+  user: null, // user.screening holds the latest screening payload (snake_case from API)
   lang: "en",
   sessionId: null, // BIA session identifier
-  screening: {
-    sessionId: null,
-    isResumed: false,
-    resumeCount: 0,
-    nextStage: null,
-    completedStages: [],
-  },
 
   // example shared states
   videoBase64: null,
@@ -142,16 +135,10 @@ const commonSlice = createSlice({
     },
 
     setScreening: (state, action) => {
-      if (action.payload) {
-        state.screening = {
-          sessionId: action.payload.session_id || null,
-          isResumed: action.payload.is_resumed || false,
-          resumeCount: action.payload.resume_count || 0,
-          nextStage: action.payload.next_stage || null,
-          completedStages: action.payload.completed_stages || [],
-        };
-      } else {
-        state.screening = initialState.screening;
+      if (action.payload && state.user) {
+        // Store raw snake_case payload directly on user.screening
+        // so storeUser.screening.session_id / next_stage / etc. work everywhere
+        state.user.screening = action.payload;
       }
     },
 

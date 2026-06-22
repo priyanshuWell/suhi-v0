@@ -34,7 +34,6 @@ const buildProfileImage = (imagePath) => {
 }
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
-  const screening = useSelector((state) => state.common.screening)
 
   const imagePath = user?.data?.image_path || ""
 
@@ -89,11 +88,12 @@ export default function RegisterCard() {
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
   const studentClass = user?.class_section || "II-A"
+  const nextStage = user?.data?.screening?.next_stage || user?.screening?.next_stage
   console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
     // Use the next_stage from the backend (stored in Redux during login)
-    const nextRoute = getNextRoute(screening?.nextStage, '/bia/leg50')
+    const nextRoute = getNextRoute(nextStage, '/bia/leg50')
     console.log('[RegisterCard] navigating to next stage:', nextRoute)
     navigate(nextRoute)
   }

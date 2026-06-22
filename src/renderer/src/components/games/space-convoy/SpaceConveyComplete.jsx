@@ -11,14 +11,14 @@ export function SpaceConvoyComplete({ onStartDemo }) {
     const { t } = useTranslation()
     const navigate = useNavigate()
     const location = useLocation()
-    const screening = useSelector((state) => state.common.screening)
+    const storeUser = useSelector((state) => state.common.user)
 
     const handleNext = () => {
         // Prefer nextRoute passed from DivideAttentionGame via route state,
         // fall back to Redux screening.nextStage, then default to /colorblindness
         const nextRoute =
             location.state?.nextRoute ||
-            getNextRoute(screening?.nextStage, '/colorblindness')
+            getNextRoute(storeUser?.data?.screening?.next_stage, '/colorblindness')
         console.log('[SpaceConvoyComplete] handleNext — navigating to:', nextRoute)
         navigate(nextRoute)
     }
