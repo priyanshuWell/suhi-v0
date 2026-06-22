@@ -634,14 +634,14 @@ export const BIAComponent = ({
         />
       )}
 
-      {screenType === "hold" && (
+      {/* {screenType === "hold" && (
         <div
           className="absolute bottom-[28%] right-[34%] w-[45%] rounded-full overflow-hidden z-20"
-          style={{ filter: "drop-shadow(0px 0px 40px rgba(154, 217, 255, 0.5))" }}
+          // style={{ filter: "drop-shadow(0px 0px 40px rgba(154, 217, 255, 0.5))" }}
         >
           <video src={holdRods} autoPlay loop muted playsInline className="" />
         </div>
-      )}
+      )} */}
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">

@@ -561,11 +561,11 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
 
     // ─── Game loop ───
     useEffect(() => {
-        const loop = (t) => {
-            const dt = prevTime.current ? Math.min(t - prevTime.current, 50) : 16.667;
-            prevTime.current = t;
+        const loop = (time) => {
+            const dt = prevTime.current ? Math.min(time - prevTime.current, 50) : 16.667;
+            prevTime.current = time;
             const g = G.current;
-            g.globalTime = t;
+            g.globalTime = time;
 
             if (g.step !== STEP.LOADING && g.step !== STEP.DONE) {
                 g.elapsed += dt;
@@ -670,7 +670,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 }
             }
 
-            draw(t);
+            draw(time);
             rafRef.current = requestAnimationFrame(loop);
         };
         rafRef.current = requestAnimationFrame(loop);
