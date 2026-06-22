@@ -474,17 +474,17 @@ export default function VoiceAnalysis() {
             setStatus("success");
             setLoading(false);
           } else {
-            console.error("[Voice] run failed:", runResult.error);
+            console.error("[Voice] run failed — Next button will fall back to /colorblindness:", runResult.error);
             setStatus("error");
-            setLoading(false);
+            setLoading(false); // re-enables the Next button in the modal
           }
         } else {
-          console.error("[Voice] store failed:", storeResult.error);
+          console.error("[Voice] store failed — Next button will fall back to /colorblindness:", storeResult.error);
           setStatus("error");
           setLoading(false);
         }
       } catch (err) {
-        console.error("[Voice] API error:", err);
+        console.error("[Voice] API error — Next button will fall back to /colorblindness:", err);
         setStatus("error");
         setLoading(false);
       }
