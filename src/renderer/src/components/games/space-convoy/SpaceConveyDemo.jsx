@@ -300,6 +300,12 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         stim: null, glow: null, correct: null, error: null,
         frame: null, bg: null, loaded: false,
     });
+
+    // Mirror the prop into a ref so game-loop callbacks always read the
+    // latest session_id without needing to be recreated on every render.
+    const sessionIdRef = useRef(activeSessionId);
+    useEffect(() => { sessionIdRef.current = activeSessionId; }, [activeSessionId]);
+
     console.log("active", activeSessionId)
     const G = useRef({
         step: STEP.LOADING,
@@ -372,12 +378,16 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         api.trialId = null;
         api.pendingResponses = [];
 
-        // const activeSessionId = apiRef.current.activeSessionId;
-        //if (!activeSessionId) return;
+        // Read from ref so we always get the latest session_id,
+        // even if the prop arrived after this callback was first created.
+        const sid = sessionIdRef.current;
+        if (!sid) {
+            console.warn("[Demo] Trial start skipped — session_id not yet available");
+            return;
+        }
 
-        // Uses activeSessionId returned from DivideAttentionSession, not the prop
         const result = await DivideAttentionTrialStart({
-            session_id: activeSessionId,
+            session_id: sid,
             trial_number: api.trialNumber,
             num_targets: DEMO_TARGETS,
             num_distractors: DEMO_PARTICLES - DEMO_TARGETS,
@@ -390,15 +400,15 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         } else {
             console.warn("[Demo] Trial start failed, continuing offline");
         }
-    }, [activeSessionId]);
+    }, []); // sessionIdRef is a ref — no dep needed, always reads latest value
 
     // CHANGE: finishPracticeTrial now accepts submitTimeMs for tracking_duration_ms.
     // Removed points_awarded and speed_bonus from response objects.
     // TrialComplete now receives summary stats body.
     const finishPracticeTrial = useCallback(async (ps, submitTimeMs) => {
         const api = apiRef.current;
-        // const activeSessionId = apiRef.current.activeSessionId;
-        if (!activeSessionId || !api.trialId) return;
+        const sid = sessionIdRef.current; // always read the latest session_id from ref
+        if (!sid || !api.trialId) return;
 
         const freezeDurationMs = submitTimeMs;   // freeze start → submit tap
         const speedThresholdMs = freezeDurationMs * 0.5;
@@ -527,9 +537,10 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
             // so the backend's float aggregation sees fully committed trial data.
             await finishPracticeTrial(g.ps, submitTimeMs);
 
-            const r = await DivideAttentionSessionComplete(activeSessionId);
+            const sid = sessionIdRef.current;
+            const r = await DivideAttentionSessionComplete(sid);
             if (!r.success) console.warn("[Demo] Session complete failed");
-            else console.log("[Demo] Practice session complete:", activeSessionId);
+            else console.log("[Demo] Practice session complete:", sid);
 
             if (passed) {
                 // Both trials passed → go to main game
@@ -546,7 +557,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 g.resultHandled = false;
             }
         }
-    }, [finishPracticeTrial, onComplete, activeSessionId]);
+    }, [finishPracticeTrial, onComplete]); // sessionIdRef is a ref — no dep needed
 
     // ─── Game loop ───
     useEffect(() => {
@@ -664,7 +675,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         };
         rafRef.current = requestAnimationFrame(loop);
         return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-    }, [onComplete, handleSubmit]);
+    }, [onComplete, handleSubmit, startPracticeTrial]); // include startPracticeTrial so the loop always calls the latest version
 
     // ─── Draw ───
     const draw = useCallback((time) => {
