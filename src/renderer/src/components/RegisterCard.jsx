@@ -244,6 +244,7 @@ export default function RegisterCard() {
 //   },
 //   "error": null,
 //    "suhi_id":null,
+//    "class_section":"II-A"
 //   "screening": {
 //     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
 //     "is_resumed": true,

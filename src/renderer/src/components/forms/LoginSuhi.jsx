@@ -12,6 +12,7 @@ import { loginSuhi, getStudentBySuhi } from '../../utils/api'
 import { setUser, setScreening } from '../../features/common/commonSlice'
 import { getNextRoute } from '../../utils/stageRouter'
 import { useTranslation } from 'react-i18next'
+import { getSessionId } from '../../utils/config'
 
 const MAX_RETRIES = 2
 
@@ -67,6 +68,7 @@ const LoginSuhi = () => {
           suhiId.trim(),
         gender: response.data?.gender,
         student_name: response.data?.student_name,
+        buffer_id: getSessionId()
 
 
 
