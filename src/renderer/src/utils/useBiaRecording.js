@@ -18,12 +18,15 @@ import { STAGE_BUFFER_TYPE } from "./stageRouter";
 const TIMESLICE_MS = 1000;
 const SESSION_CHUNK_MS = 60_000; // max 1 minute per buffer
 
-export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
+export function useStageRecording({ sessionId, bufferId, userId, stageKey = "bia" }) {
   const stageKeyRef = useRef(stageKey);
   stageKeyRef.current = stageKey;
 
   const sessionIdRef = useRef(sessionId);
   sessionIdRef.current = sessionId;
+
+  const bufferIdRef = useRef(bufferId);
+  bufferIdRef.current = bufferId;
 
   const userIdRef = useRef(userId);
   userIdRef.current = userId;
@@ -56,14 +59,15 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
   }, []);
 
   const _uploadInBackground = useCallback((buffer, role, stage) => {
-    const sid = sessionIdRef.current;
-    const uid = userIdRef.current;
+    const sid = sessionIdRef.current;   // screening.session_id
+    const bid = bufferIdRef.current;    // user.data.buffer_id
+    const uid = userIdRef.current;      // user.data.user_id
     const ts = Date.now();
-    const filename = `${role}_${sid ?? "unknown"}_${ts}.webm`;
+    const filename = `${role}_${bid ?? "unknown"}_${ts}.webm`;
     const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
 
     console.log(
-      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", session_id: "${sid}", user_id: "${uid}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
+      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", session_id: "${sid}", buffer_id: "${bid}", user_id: "${uid}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
     );
 
     (async () => {
@@ -72,7 +76,7 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
           ?.saveRecording?.({
             arrayBuffer: buffer,
             filename,
-            session_id: sid,
+            session_id: bid,
             user_id: uid,
             phase_states: { role, stage, bufferType, ts: new Date(ts).toISOString() },
           })
@@ -83,8 +87,8 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
         const result = await sendVideoToBackend({
           buffer: new Uint8Array(buffer),
           role,
-          deviceId: sid ?? "unknown",
-          meta: { sessionId: sid, userId: uid, role, stage, ts },
+          deviceId: bid ?? "unknown",
+          meta: { sessionId: sid, bufferId: bid, userId: uid, role, stage, ts },
         });
 
         const shmPath = result?.shm_path ?? result?.data?.shm_path;
@@ -209,8 +213,9 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
     }
 
     const sid = sessionIdRef.current;
+    const bid = bufferIdRef.current;
     const uid = userIdRef.current;
-    console.log("[STAGE REC] 🎬 startSession() — session_id:", sid, "user_id:", uid);
+    console.log("[STAGE REC] 🎬 startSession() — session_id:", sid, "buffer_id:", bid, "user_id:", uid);
 
     try {
       const videoConstraints = await getRgbCameraConstraints({
