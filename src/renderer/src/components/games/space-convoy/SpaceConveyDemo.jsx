@@ -11,11 +11,9 @@ import textFrameSvg from "../../../assets/textFrame.svg";
 import divideAttentionBg from "../../../assets/games/divideAttentionbg.png";
 import { StepTextPanel } from "./StepTextPanel";
 import {
-    DivideAttentionSession,
     DivideAttentionTrialStart,
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
-    DivideAttentionSessionComplete,
 } from "../../../utils/api";
 
 
@@ -291,6 +289,8 @@ function isSubmitTap(x, y) {
 // ════════════════════════════════════════════
 export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMoveToComplete }) {
     const { t } = useTranslation();
+    const sessionIdRef = useRef(activeSessionId);
+    sessionIdRef.current = activeSessionId;
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const navigate = useNavigate();
@@ -300,12 +300,6 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
         stim: null, glow: null, correct: null, error: null,
         frame: null, bg: null, loaded: false,
     });
-
-    // Mirror the prop into a ref so game-loop callbacks always read the
-    // latest session_id without needing to be recreated on every render.
-    const sessionIdRef = useRef(activeSessionId);
-    useEffect(() => { sessionIdRef.current = activeSessionId; }, [activeSessionId]);
-
     console.log("active", activeSessionId)
     const G = useRef({
         step: STEP.LOADING,
@@ -537,11 +531,11 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
             // so the backend's float aggregation sees fully committed trial data.
             await finishPracticeTrial(g.ps, submitTimeMs);
 
-            const sid = sessionIdRef.current;
-            const r = await DivideAttentionSessionComplete(sid);
-            if (!r.success) console.warn("[Demo] Session complete failed");
-            else console.log("[Demo] Practice session complete:", sid);
-
+            // const sid = sessionIdRef.current;
+            // const r = await DivideAttentionSessionComplete(sid);
+            // if (!r.success) console.warn("[Demo] Session complete failed");
+            // else console.log("[Demo] Practice session complete:", sid);
+            // await finishPracticeTrial(g.ps, submitTimeMs);
             if (passed) {
                 // Both trials passed → go to main game
                 g.step = STEP.DONE;

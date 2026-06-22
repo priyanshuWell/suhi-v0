@@ -92,24 +92,32 @@ const SpaceConvoyMain = () => {
         setScreen(SCREENS.COMPLETE)
     }
     const handleStartDemo = async () => {
-        // TODO: replace with real userId from your auth/Redux store
-        // const userId = storeUser?.data?.user_id ;
-        // const screeningSessionId =  storeUser?.screening?.session_id;
-        const result = await DivideAttentionSession(storeUser?.data?.user_id, storeUser?.screening?.session_id, "practice")
-        if (result.success) {
-            activeSessionId.current = result?.data?.game_session_id;
-            // setSessionId(result.data.game_session_id ??  null)
-            console.log("[SpaceConvoy] Session created:", result.data.game_session_id, activeSessionId)
-        } else {
-            console.warn("[SpaceConvoy] Session create failed, continuing offline")
+        const userId = storeUser?.data?.user_id;
+        const screeningSessionId = storeUser?.screening?.session_id;
+
+        if (!userId || !screeningSessionId) {
+            console.warn("User or screening session not ready");
+            return;
         }
-        setScreen(SCREENS.DEMO)
-    }
+
+        const result = await DivideAttentionSession(userId, screeningSessionId, "main"); // ← "main" now, single session
+        if (result.success) {
+            activeSessionId.current = result.data.game_session_id;
+            console.log("[SpaceConvoy] Session created:", activeSessionId.current);
+        } else {
+            console.warn("[SpaceConvoy] Session creation failed");
+        }
+
+        setScreen(SCREENS.DEMO);
+    };
+
     const handleDemoComplete = () => setScreen(SCREENS.COUNTDOWN)
     const handleCountdownComplete = () => {
-        setScreen(SCREENS.GAME)
-        navigate('/divide-attention', { state: activeSessionId })
-    }
+        setScreen(SCREENS.GAME);
+        navigate('/divide-attention', {
+            state: { sessionId: activeSessionId.current } // ✅ proper shape
+        });
+    };
 
     // Use lightbg for instruction/countdown, divideAttentionBg for demo/game
     const isGameScreen = screen === SCREENS.DEMO || screen === SCREENS.GAME

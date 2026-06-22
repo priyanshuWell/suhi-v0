@@ -24,8 +24,7 @@ import stimulus_error_3 from "../../../assets/games/stimulus_error_3.svg";
 
 import { ROUNDS } from "./rounds";
 import {
-    DivideAttentionSession,         // called ONCE — creates session, returns active session_id
-    DivideAttentionTrialStart,      // called PER ROUND — gets trial_id for that round
+    DivideAttentionTrialStart,
     DivideAttentionTrialComplete,
     DivideAttentionResponseBatch,
     DivideAttentionSessionComplete,
@@ -599,19 +598,22 @@ export default function SpaceConvoy() {
     // All trial calls use activeSessionId, not the raw sessionId prop.
     const startSession = useCallback(async () => {
         const g = G.current, api = apiState.current;
+
+        api.activeSessionId = sessionId; // ✅ use passed session, don't create new
+        api.trialNumber = 0;
+        api.totalScore = 0;
+
         Object.assign(g, {
             sess: SESS.PLAYING, ri: 0, results: [],
             highestRound: 0, totalCorrect: 0, totalWrong: 0, totalAttempts: 0,
         });
-        api.trialNumber = 0; api.totalScore = 0;
-
-        const sessionRes = await DivideAttentionSession(userId, screeningSessionId, "main");
-        if (sessionRes.success) {
-            api.activeSessionId = sessionRes.data?.game_session_id ?? null;
-            console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
-        } else {
-            console.warn("[SpaceConvoy] Session creation failed — activeSessionId not set");
-        }
+        // const sessionRes = await DivideAttentionSession(userId, screeningSessionId, "main");
+        // if (sessionRes.success) {
+        //     api.activeSessionId = sessionRes.data?.game_session_id ?? null;
+        //     console.log("[SpaceConvoy] Main session created:", api.activeSessionId);
+        // } else {
+        //     console.warn("[SpaceConvoy] Session creation failed — activeSessionId not set");
+        // }
 
         sfx.startAmbient();
         // Start background music
