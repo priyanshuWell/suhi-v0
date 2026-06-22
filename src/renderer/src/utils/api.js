@@ -383,11 +383,12 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
-export async function bufferCollection(shmPath, kioskId, user_id, bufferType = "BIA") {
+export async function bufferCollection(shmPath, kioskId, session_id, user_id, bufferType = "BIA") {
   try {
     const payload = {
       shm_path: shmPath,
       kiosk_id: kioskId,
+      session_id,
       user_id,
       buffer_type: bufferType,
     };

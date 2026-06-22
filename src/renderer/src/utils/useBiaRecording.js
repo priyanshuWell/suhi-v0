@@ -79,7 +79,7 @@ export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
         if (shmPath) {
           const kioskId = getKioskId();
           const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
-          bufferCollection(shmPath, kioskId, userId, bufferType).catch((err) => {
+          bufferCollection(shmPath, kioskId, sessionId, userId, bufferType).catch((err) => {
             console.warn(`[STAGE REC:${stage}] ⚠️ bufferCollection failed:`, err?.message ?? err);
           });
         }
