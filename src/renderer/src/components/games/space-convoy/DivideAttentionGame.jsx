@@ -537,7 +537,7 @@ export default function SpaceConvoy() {
     const dispatch = useDispatch();
     const location = useLocation();
     const sessionId = location.state?.sessionId ?? null;
-    const sessionType = location.state?.sessionType ?? "main"; 
+    const sessionType = location.state?.sessionType ?? "main";
     const storeUser = useSelector((state) => state.common.user);  // "practice" | "main"
     const screeningSessionId = storeUser?.screening?.session_id;
     const userId = storeUser?.data?.user_id;
@@ -728,10 +728,11 @@ export default function SpaceConvoy() {
         if (activeSessionId) {
             const completeResult = await DivideAttentionSessionComplete(activeSessionId);
             // Update Redux screening state with next_stage from API response
-            if (completeResult?.screening) {
-                dispatch(setScreening(completeResult.screening));
-                nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
-            }
+            // if (completeResult?.screening) {
+            //     dispatch(setScreening(completeResult.screening));
+            //     nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
+            // }
+            nextRoute = getNextRoute(completeResult.screening?.next_stage, '/colorblindness');
             console.log('[DivideAttention] endSession — navigating to:', nextRoute);
         } else {
             console.warn('[DivideAttention] No activeSessionId — skipping SessionComplete');
@@ -885,7 +886,7 @@ export default function SpaceConvoy() {
         // Resume background music on first tap if autoplay was blocked
         const g = G.current;
         if (g._bgPending && bgAudioRef.current) {
-            bgAudioRef.current.play().catch(() => {});
+            bgAudioRef.current.play().catch(() => { });
             g._bgPending = false;
         }
         const cfg = ROUNDS_ARR[g.ri];

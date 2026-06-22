@@ -203,7 +203,7 @@ const VideoCaptureScreen = () => {
 
         // Success case - Face recognition successful
         dispatch(setUser(fptResponse))
-        dispatch(setScreening(fptResponse.screening || null))
+        //  dispatch(setScreening(fptResponse.screening || null))
         setStatus("Verification successful!")
         setIsVerify(true)
         stopAudio()

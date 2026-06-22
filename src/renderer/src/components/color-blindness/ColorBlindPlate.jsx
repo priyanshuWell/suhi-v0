@@ -3,7 +3,7 @@ import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import bg1 from "../../assets/lightbg.png";
-import textframe from "../../assets/textFrame.png";
+
 import InitialColorBlindImage from "../../assets/color_blindness/sample.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
@@ -14,6 +14,7 @@ import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
 
 export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user);
+    console.log("user", user)
     const { t, i18n } = useTranslation();
     const navigate = useNavigate();
     const [loading, setLoading] = useState(true);  // seeding + starting
@@ -90,7 +91,7 @@ export const ColorBlindPlate = () => {
         (async () => {
             try {
                 await getColorBlindessPlates();
-                const res = await colorBlindessStart(userId, kioskId, user?.screening?.session_id);
+                const res = await colorBlindessStart(user?.data?.user_id, kioskId, user?.screening?.session_id);
                 console.log("res start colorblindess", res)
                 if (!res.success) throw new Error(res.error ?? "Start failed");
 
@@ -126,20 +127,18 @@ export const ColorBlindPlate = () => {
                 {/* Title badge */}
                 <div className="mt-12 z-10 w-[60%]">
                     <div className="relative text-center flex flex-col items-center gap-20">
-                        <img src={textframe} alt="text-frame" className="absolute top-0" />
                         <p
                             className="text-white text-center tracking-wider my-5 font-anta"
                             style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                         >
                             {t("colorBlindness.title", "Color Blindness Test")}
                         </p>
-                        <img src={textframe} alt="text-frame" className="absolute top-[4.5rem] rotate-180" />
                     </div>
                 </div>
 
                 {/* Instructions */}
                 <p
-                    className="text-white text-center font-anta w-[90%] max-w-[849px]"
+                    className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[849px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
                     {/* {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}
@@ -150,7 +149,7 @@ export const ColorBlindPlate = () => {
 
                     {t("colorBlindness.instruction")}
                     <br /><br />
-                    {/* {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")} */}
+                    {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
                 </p>
 
                 {/* Audio replay button */}

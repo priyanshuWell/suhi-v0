@@ -328,9 +328,9 @@ export default function BIACalculate({ user, onComplete }) {
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
-      if (heightErrorComplete?.screening) {
-        dispatch(setScreening(heightErrorComplete.screening));
-      }
+      // if (heightErrorComplete?.screening) {
+      //   dispatch(setScreening(heightErrorComplete.screening));
+      // }
       const heightErrorRoute = getNextRoute(heightErrorComplete?.screening?.next_stage, '/voice');
       console.log('[BIA] handleHeightError — navigating to:', heightErrorRoute);
       navigate(heightErrorRoute);
@@ -635,9 +635,9 @@ export default function BIACalculate({ user, onComplete }) {
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
-      if (legMaxRetryComplete?.screening) {
-        dispatch(setScreening(legMaxRetryComplete.screening));
-      }
+      // if (legMaxRetryComplete?.screening) {
+      //   dispatch(setScreening(legMaxRetryComplete.screening));
+      // }
       console.log("[BIA REC] ⏏️  Phase 1 — leg max retries exhausted → saveBuffer('leg_max_retry')");
       await saveBuffer("leg_max_retry");
       const legMaxRetryRoute = getNextRoute(legMaxRetryComplete?.screening?.next_stage, '/voice');
@@ -673,9 +673,9 @@ export default function BIACalculate({ user, onComplete }) {
           session_id: storeUser?.data?.buffer_id,
           screening_session_id: storeUser?.screening?.session_id
         });
-        if (legCatchComplete?.screening) {
-          dispatch(setScreening(legCatchComplete.screening));
-        }
+        // if (legCatchComplete?.screening) {
+        //   dispatch(setScreening(legCatchComplete.screening));
+        // }
         const legCatchRoute = getNextRoute(legCatchComplete?.screening?.next_stage, '/voice');
         console.log('[BIA] runPhase1 catch max retry — navigating to:', legCatchRoute);
         navigate(legCatchRoute);
@@ -789,9 +789,9 @@ export default function BIACalculate({ user, onComplete }) {
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
-      if (phase2FailComplete?.screening) {
-        dispatch(setScreening(phase2FailComplete.screening));
-      }
+      // if (phase2FailComplete?.screening) {
+      //   dispatch(setScreening(phase2FailComplete.screening));
+      // }
       const phase2FailRoute = getNextRoute(phase2FailComplete?.screening?.next_stage, '/voice');
       console.log('[BIA] runPhase2 catch — navigating to:', phase2FailRoute);
       navigate(phase2FailRoute);
@@ -881,9 +881,9 @@ export default function BIACalculate({ user, onComplete }) {
         // Cache next_stage from BIAComplete for the shoes path
         biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
         console.log('[BIA] Shoes path BIAComplete next_stage captured:', biaNextStageRef.current);
-        if (shoesCompleteResult?.screening) {
-          dispatch(setScreening(shoesCompleteResult.screening));
-        }
+        // if (shoesCompleteResult?.screening) {
+        //   dispatch(setScreening(shoesCompleteResult.screening));
+        // }
         console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
         await stopAndSend(); // ✅ Stop recording before navigating away
         await new Promise((resolve) => { imCompleteResolver.current = resolve; });
@@ -1136,9 +1136,9 @@ export default function BIACalculate({ user, onComplete }) {
       biaNextStageRef.current = biaCompleteOnError?.screening?.next_stage ?? null;
       console.log('[BIA] BIAComplete (error path) next_stage captured:', biaNextStageRef.current);
 
-      if (biaCompleteOnError?.screening) {
-        dispatch(setScreening(biaCompleteOnError.screening));
-      }
+      // if (biaCompleteOnError?.screening) {
+      //   dispatch(setScreening(biaCompleteOnError.screening));
+      // }
       console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
       await saveBuffer("calc_error");
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
@@ -1169,9 +1169,9 @@ export default function BIACalculate({ user, onComplete }) {
         session_id: storeUser?.data?.buffer_id,
         screening_session_id: storeUser?.screening?.session_id
       });
-      if (portFailComplete?.screening) {
-        dispatch(setScreening(portFailComplete.screening));
-      }
+      // if (portFailComplete?.screening) {
+      //   dispatch(setScreening(portFailComplete.screening));
+      // }
       const portFailRoute = getNextRoute(portFailComplete?.screening?.next_stage, '/voice');
       console.log('[BIA] runFlow port validation failed — navigating to:', portFailRoute);
       navigate(portFailRoute);

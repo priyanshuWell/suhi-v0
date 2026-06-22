@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import textframe from "../../../assets/textFrame.png"
+
 import BlueGradientButton from '../../ui/BlueGradientButton'
 import { useTranslation } from "react-i18next"
 import { getAudioForCurrentLanguage } from "../../../utils/audioUtils"
@@ -69,14 +69,12 @@ export function SpaceConvoyText({ onStartDemo }) {
     return (
         <div className="relative z-10 flex flex-col gap-14 items-center justify-center w-full h-full">
             <div className="relative flex flex-col items-center justify-center h-16 w-full text-center">
-                <img src={textframe} alt="text-frame" className="absolute top-0 w-1/2" />
                 <p className="text-white portrait:text-[32px] tracking-wider z-10">
                     {t('spaceConvoy.title')}
                 </p>
-                <img src={textframe} alt="text-frame" className="absolute bottom-0 rotate-180 w-1/2" />
             </div>
 
-            <h1 className="text-white/90 text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
+            <h1 className="text-[#8BC3E5] text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
                 {t('spaceConvoy.instruction')}
             </h1>
 

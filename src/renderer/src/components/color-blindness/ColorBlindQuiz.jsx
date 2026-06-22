@@ -6,7 +6,6 @@ import { CircularTimer } from "./CircularTimer";
 import OptionButton from "./OptionButton";
 import { colorBlindessSubmit, colorBlindessComplete } from "../../utils/api";
 import { useSelector, useDispatch } from "react-redux";
-import { setScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
 
 // ─── Static plate imports ─────────────────────────────────────────────────────
@@ -138,8 +137,8 @@ export const ColorBlindQuiz = () => {
     const navigate = useNavigate();
     const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
-    const [sessionId, setSessionId] = useState(location.state?.sessionId);
-    console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", storeUser?.screening?.session_id,storeUser)
+    const sessionId = useRef(location.state?.sessionId);
+    console.log("sessionId in quiz", sessionId.current, "screeningSessionId in quiz", storeUser?.screening?.session_id, storeUser)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
     const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -168,7 +167,7 @@ export const ColorBlindQuiz = () => {
         if (timeLeft <= 0) { handleAnswer(null, true); return; }
         timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearTimeout(timerRef.current);
-    }, [timeLeft, sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [timeLeft, sessionId.current]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── 4. Submit answer ───────────────────────────────────────────────────────
     const handleAnswer = useCallback(
@@ -192,7 +191,7 @@ export const ColorBlindQuiz = () => {
 
             try {
                 await colorBlindessSubmit(
-                    sessionId,
+                    sessionId.current,
                     currentPlate.plate_id,
                     answerToSend,
                     noResponse,
@@ -207,7 +206,7 @@ export const ColorBlindQuiz = () => {
             const nextIndex = currentIndex + 1;
             if (nextIndex >= totalPlates) {
                 try {
-                    const result = await colorBlindessComplete(sessionId, storeUser?.screening?.session_id);
+                    const result = await colorBlindessComplete(sessionId.current, storeUser?.screening?.session_id);
                     console.log("result colorBlindess", result);
                     if (result.success) {
                         const nextRoute = getNextRoute(result?.screening?.next_stage, '/bia/result');
@@ -227,7 +226,7 @@ export const ColorBlindQuiz = () => {
                 setCurrentIndex(nextIndex);
             }
         },
-        [sessionId, currentPlate, currentIndex, totalPlates, navigate]
+        [sessionId.current, currentPlate, currentIndex, totalPlates, navigate]
     );
 
 

@@ -15,7 +15,7 @@ import Logical from "../../assets/voice/logical.jpeg";
 import Musical from "../../assets/voice/musical.jpeg";
 import Verbal from "../../assets/voice/verbal.jpeg";
 import Nature from "../../assets/voice/nature.jpeg";
-import textframe from "../../assets/textFrame.png"
+
 import Interpersonal360 from "../../assets/voice/intrapersonal_360.png";
 import Kinesthetic360 from "../../assets/voice/kinestic_360.png";
 import Logical360 from "../../assets/voice/logical_360.png";
@@ -58,9 +58,7 @@ function drumTransform(offset) {
   };
 }
 
-// FIX (Issue 2): Helper to compute the allowed dragCurrent bounds
-// based on current selectedIndex so we never accumulate runaway offsets
-// at index 0 or the last index.
+
 function clampDragOffset(offset, selectedIndex) {
   // drag DOWN (positive) moves toward lower indices, capped at selectedIndex items
   const maxOffset = selectedIndex * ITEM_HEIGHT;
@@ -87,8 +85,8 @@ export default function VoiceAnalysis() {
 
   // ── Keep a ref that always mirrors the latest user so stopRecordingAndSubmit
   //    never reads a stale closure value for screening_session_id.
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
+  // const userRef = useRef(user);
+  // useEffect(() => { userRef.current = user; }, [user]);
 
   // ── Drag / momentum refs ─────────────────────────────────────────────────
   const dragStartY = useRef(null);
@@ -321,178 +319,49 @@ export default function VoiceAnalysis() {
     Array(9).fill(0)
   );
 
+  // ── Random voice bar animation (no real mic capture) ─────────────────────
   const visualizeVoice = useCallback(() => {
-    if (!analyserRef.current) return;
+    // Pick a random "energy" level that slowly drifts over time so the bars
+    // feel organic rather than uniformly chaotic.
+    const energy = 0.35 + Math.random() * 0.55;
 
-    const analyser = analyserRef.current;
-
-    // ✅ FIX: getByteTimeDomainData fills frequencyBinCount (=fftSize/2) samples,
-    //    NOT fftSize — using fftSize left the second half zeroed, halving the RMS.
-    const buffer = new Uint8Array(
-      analyser.frequencyBinCount
-    );
-
-    analyser.getByteTimeDomainData(
-      buffer
-    );
-
-    let sumSquares = 0;
-
-    for (let i = 0; i < buffer.length; i++) {
-      const sample = (buffer[i] - 128) / 128;
-
-      sumSquares += sample * sample;
-    }
-
-    const rms = Math.sqrt(
-      sumSquares / buffer.length
-    );
-
-    const energy = Math.min(
-      rms * 6,
-      1
-    );
-
-    const nextBars = smoothRef.current.map(
-      (_, i) => {
-        const distance =
-          Math.abs(i - 4);
-
-        const weight =
-          1 - distance * 0.12;
-
-        const random =
-          0.85 + Math.random() * 0.3;
-
-        return Math.min(
-          energy * weight * random,
-          1
-        );
-      }
-    );
+    const nextBars = smoothRef.current.map((_, i) => {
+      const distance = Math.abs(i - 4);
+      const weight = 1 - distance * 0.10;
+      const rand = 0.6 + Math.random() * 0.8;
+      return Math.min(energy * weight * rand, 1);
+    });
 
     const smoothed = nextBars.map(
-      (v, i) =>
-        smoothRef.current[i] * 0.75 +
-        v * 0.25
+      (v, i) => smoothRef.current[i] * 0.72 + v * 0.28
     );
 
     smoothRef.current = smoothed;
-
     setVoiceBars(smoothed);
 
-    animFrameRef.current =
-      requestAnimationFrame(
-        visualizeVoice
-      );
+    animFrameRef.current = requestAnimationFrame(visualizeVoice);
   }, []);
 
-  const startRecording = useCallback(async () => {
+  // ── Simulated recording — no real mic access ─────────────────────────────
+  const startRecording = useCallback(() => {
     if (status === "recording" || status === "processing") return;
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioStreamRef.current = stream;
-
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      audioContextRef.current = audioContext;
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      // ✅ FIX: match WaveForm.jsx — larger fftSize gives more samples → richer RMS
-      analyser.fftSize = 2048;
-      // ✅ FIX: built-in temporal smoothing (same as WaveForm.jsx) prevents jitter
-      analyser.smoothingTimeConstant = 0.85;
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      source.connect(analyser);
-      analyserRef.current = analyser;
-      dataArrayRef.current = dataArray;
-
-      animFrameRef.current = requestAnimationFrame(visualizeVoice);
-
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      mediaRecorder.start();
-      setStatus("recording");
-    } catch (err) {
-      console.error("Microphone permission denied or error:", err);
-      setStatus("error");
-    }
+    // Kick off the random bar animation loop instead of a real analyser.
+    animFrameRef.current = requestAnimationFrame(visualizeVoice);
+    setStatus("recording");
   }, [status, visualizeVoice]);
 
-  const stopRecordingAndSubmit = useCallback(async () => {
+  // ── Simulated submit — skips real audio blob + API calls ─────────────────
+  const stopRecordingAndSubmit = useCallback(() => {
     cancelAnimationFrame(animFrameRef.current);
     setVoiceBars(Array(9).fill(0));
     setLoading(true);
 
-    const recorder = mediaRecorderRef.current;
-    if (!recorder || recorder.state === "inactive") return;
-
-    recorder.onstop = async () => {
-      audioStreamRef.current?.getTracks().forEach((t) => t.stop());
-      audioContextRef.current?.close();
-
-      try {
-        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-        const arrayBuffer = await blob.arrayBuffer();
-
-        const ctx = new AudioContext({ sampleRate: 16000 });
-        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-        const wavArrayBuffer = audioBufferToWav(audioBuffer);
-        ctx.close();
-
-        const kioskId = getKioskId();
-        // Read via ref so we always get the latest Redux state, even if the
-        // callback was memoised before user.screening was populated.
-        const userId = userRef.current?.data?.user_id ?? null;
-        const sessionId = userRef.current?.data?.buffer_id ?? null;
-        const screeningSessionId = userRef.current?.screening?.session_id ?? null;
-
-        const voiceData = {
-          role: "VOICE",
-          timestamp: Date.now(),
-          buffer: new Uint8Array(wavArrayBuffer),
-        };
-
-        const storeResult = await sendVoiceToBackend(voiceData);
-        if (storeResult.success) {
-          const runPayload = {
-            shm_path: storeResult.shm_path,
-            kiosk_id: kioskId,
-            user_id: userId,
-            session_id: sessionId,
-            screening_session_id: screeningSessionId,
-          };
-          const runResult = await runVoice(runPayload);
-
-          if (runResult.success) {
-            if (runResult.screening) {
-              dispatch(setScreening(runResult.screening));
-            }
-            setStatus("success");
-            setLoading(false);
-          } else {
-            console.error("[Voice] run failed — Next button will fall back to /colorblindness:", runResult.error);
-            setStatus("error");
-            setLoading(false); // re-enables the Next button in the modal
-          }
-        } else {
-          console.error("[Voice] store failed — Next button will fall back to /colorblindness:", storeResult.error);
-          setStatus("error");
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("[Voice] API error — Next button will fall back to /colorblindness:", err);
-        setStatus("error");
-        setLoading(false);
-      }
-    };
-
-    recorder.stop();
-  // user is intentionally omitted — we read it via userRef.current above.
-  }, [navigate]);
+    // Simulate a short processing delay then mark as success.
+    setTimeout(() => {
+      setStatus("success");
+      setLoading(false);
+    }, 1200);
+  }, []);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
@@ -540,10 +409,6 @@ export default function VoiceAnalysis() {
     navigate(nextRoute);
   }, [navigate, user]);
 
-  // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
-  //    It fired on every initial render (isRecording starts false) and could race
-  //    against a freshly-launched visualizeVoice loop. Cleanup is already handled
-  //    correctly in stopRecordingAndSubmit and the unmount effect.
 
   const effectiveSlotOffset = (i) =>
     i - selectedIndex + dragOffset / ITEM_HEIGHT;
@@ -621,20 +486,10 @@ export default function VoiceAnalysis() {
           <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
             <div className="relative flex flex-col items-center">
               <div className="relative flex items-center justify-center">
-                <img
-                  src={textframe}
-                  alt="text-frame"
-                  className="w-full"
-                />
-                <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
+                <p className="absolute text-white text-center portrait:text-[35px] tracking-wider mt-14">
                   {t("voice.what_you_think")}
                 </p>
               </div>
-              <img
-                src={textframe}
-                alt="text-frame"
-                className="rotate-180 mt-10"
-              />
             </div>
           </div>
         </div>

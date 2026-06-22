@@ -91,15 +91,15 @@ const SpaceConvoyMain = () => {
     const handleMoveToComplete = () => {
         setScreen(SCREENS.COMPLETE)
     }
-    const handleStartDemo =  async () => {
+    const handleStartDemo = async () => {
         // TODO: replace with real userId from your auth/Redux store
-        const userId = storeUser?.data?.user_id ;
-        const screeningSessionId =  storeUser?.screening?.session_id;
-        const result = await DivideAttentionSession(userId,screeningSessionId, "practice")
+        // const userId = storeUser?.data?.user_id ;
+        // const screeningSessionId =  storeUser?.screening?.session_id;
+        const result = await DivideAttentionSession(storeUser?.data?.user_id, storeUser?.screening?.session_id, "practice")
         if (result.success) {
             activeSessionId.current = result?.data?.game_session_id;
             // setSessionId(result.data.game_session_id ??  null)
-            console.log("[SpaceConvoy] Session created:", result.data.game_session_id,activeSessionId)
+            console.log("[SpaceConvoy] Session created:", result.data.game_session_id, activeSessionId)
         } else {
             console.warn("[SpaceConvoy] Session create failed, continuing offline")
         }
@@ -108,7 +108,7 @@ const SpaceConvoyMain = () => {
     const handleDemoComplete = () => setScreen(SCREENS.COUNTDOWN)
     const handleCountdownComplete = () => {
         setScreen(SCREENS.GAME)
-        navigate('/divide-attention', {state:activeSessionId})
+        navigate('/divide-attention', { state: activeSessionId })
     }
 
     // Use lightbg for instruction/countdown, divideAttentionBg for demo/game
@@ -136,7 +136,7 @@ const SpaceConvoyMain = () => {
             )}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={activeSessionId.current}  onComplete={handleDemoComplete} />
+                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={result?.data?.game_session_id} onComplete={handleDemoComplete} />
             )}
 
             {screen === SCREENS.COUNTDOWN && (

@@ -89,9 +89,9 @@ const LoginSuhi = () => {
       )
 
       // Save screening if API returns it
-      if (response.data?.screening) {
-        dispatch(setScreening(response.data?.screening))
-      }
+      // if (response.data?.screening) {
+      //   dispatch(setScreening(response.data?.screening))
+      // }
 
       retryRef.current = 0
 
