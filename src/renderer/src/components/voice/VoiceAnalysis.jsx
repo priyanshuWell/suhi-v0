@@ -15,7 +15,7 @@ import Logical from "../../assets/voice/logical.jpeg";
 import Musical from "../../assets/voice/musical.jpeg";
 import Verbal from "../../assets/voice/verbal.jpeg";
 import Nature from "../../assets/voice/nature.jpeg";
-
+import textframe from "../../assets/textFrame.png"
 import Interpersonal360 from "../../assets/voice/intrapersonal_360.png";
 import Kinesthetic360 from "../../assets/voice/kinestic_360.png";
 import Logical360 from "../../assets/voice/logical_360.png";
@@ -58,7 +58,9 @@ function drumTransform(offset) {
   };
 }
 
-
+// FIX (Issue 2): Helper to compute the allowed dragCurrent bounds
+// based on current selectedIndex so we never accumulate runaway offsets
+// at index 0 or the last index.
 function clampDragOffset(offset, selectedIndex) {
   // drag DOWN (positive) moves toward lower indices, capped at selectedIndex items
   const maxOffset = selectedIndex * ITEM_HEIGHT;
@@ -69,6 +71,7 @@ function clampDragOffset(offset, selectedIndex) {
 
 export default function VoiceAnalysis() {
   const user = useSelector((state) => state.common.user);
+  const screeningState = useSelector((state) => state.common.screening);
   const dispatch = useDispatch();
   const { t } = useTranslation();
 
@@ -82,11 +85,6 @@ export default function VoiceAnalysis() {
   const [isComplete, setIsComplete] = useState(false);
 
   const navigate = useNavigate();
-
-  // ── Keep a ref that always mirrors the latest user so stopRecordingAndSubmit
-  //    never reads a stale closure value for screening_session_id.
-  // const userRef = useRef(user);
-  // useEffect(() => { userRef.current = user; }, [user]);
 
   // ── Drag / momentum refs ─────────────────────────────────────────────────
   const dragStartY = useRef(null);
@@ -319,49 +317,175 @@ export default function VoiceAnalysis() {
     Array(9).fill(0)
   );
 
-  // ── Random voice bar animation (no real mic capture) ─────────────────────
   const visualizeVoice = useCallback(() => {
-    // Pick a random "energy" level that slowly drifts over time so the bars
-    // feel organic rather than uniformly chaotic.
-    const energy = 0.35 + Math.random() * 0.55;
+    if (!analyserRef.current) return;
 
-    const nextBars = smoothRef.current.map((_, i) => {
-      const distance = Math.abs(i - 4);
-      const weight = 1 - distance * 0.10;
-      const rand = 0.6 + Math.random() * 0.8;
-      return Math.min(energy * weight * rand, 1);
-    });
+    const analyser = analyserRef.current;
+
+    // ✅ FIX: getByteTimeDomainData fills frequencyBinCount (=fftSize/2) samples,
+    //    NOT fftSize — using fftSize left the second half zeroed, halving the RMS.
+    const buffer = new Uint8Array(
+      analyser.frequencyBinCount
+    );
+
+    analyser.getByteTimeDomainData(
+      buffer
+    );
+
+    let sumSquares = 0;
+
+    for (let i = 0; i < buffer.length; i++) {
+      const sample = (buffer[i] - 128) / 128;
+
+      sumSquares += sample * sample;
+    }
+
+    const rms = Math.sqrt(
+      sumSquares / buffer.length
+    );
+
+    const energy = Math.min(
+      rms * 6,
+      1
+    );
+
+    const nextBars = smoothRef.current.map(
+      (_, i) => {
+        const distance =
+          Math.abs(i - 4);
+
+        const weight =
+          1 - distance * 0.12;
+
+        const random =
+          0.85 + Math.random() * 0.3;
+
+        return Math.min(
+          energy * weight * random,
+          1
+        );
+      }
+    );
 
     const smoothed = nextBars.map(
-      (v, i) => smoothRef.current[i] * 0.72 + v * 0.28
+      (v, i) =>
+        smoothRef.current[i] * 0.75 +
+        v * 0.25
     );
 
     smoothRef.current = smoothed;
+
     setVoiceBars(smoothed);
 
-    animFrameRef.current = requestAnimationFrame(visualizeVoice);
+    animFrameRef.current =
+      requestAnimationFrame(
+        visualizeVoice
+      );
   }, []);
 
-  // ── Simulated recording — no real mic access ─────────────────────────────
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     if (status === "recording" || status === "processing") return;
-    // Kick off the random bar animation loop instead of a real analyser.
-    animFrameRef.current = requestAnimationFrame(visualizeVoice);
-    setStatus("recording");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      audioContextRef.current = audioContext;
+      const source = audioContext.createMediaStreamSource(stream);
+      const analyser = audioContext.createAnalyser();
+      // ✅ FIX: match WaveForm.jsx — larger fftSize gives more samples → richer RMS
+      analyser.fftSize = 2048;
+      // ✅ FIX: built-in temporal smoothing (same as WaveForm.jsx) prevents jitter
+      analyser.smoothingTimeConstant = 0.85;
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      source.connect(analyser);
+      analyserRef.current = analyser;
+      dataArrayRef.current = dataArray;
+
+      animFrameRef.current = requestAnimationFrame(visualizeVoice);
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      mediaRecorder.start();
+      setStatus("recording");
+    } catch (err) {
+      console.error("Microphone permission denied or error:", err);
+      setStatus("error");
+    }
   }, [status, visualizeVoice]);
 
-  // ── Simulated submit — skips real audio blob + API calls ─────────────────
-  const stopRecordingAndSubmit = useCallback(() => {
+  const stopRecordingAndSubmit = useCallback(async () => {
     cancelAnimationFrame(animFrameRef.current);
     setVoiceBars(Array(9).fill(0));
     setLoading(true);
 
-    // Simulate a short processing delay then mark as success.
-    setTimeout(() => {
-      setStatus("success");
-      setLoading(false);
-    }, 1200);
-  }, []);
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === "inactive") return;
+
+    recorder.onstop = async () => {
+      audioStreamRef.current?.getTracks().forEach((t) => t.stop());
+      audioContextRef.current?.close();
+
+      try {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const arrayBuffer = await blob.arrayBuffer();
+
+        const ctx = new AudioContext({ sampleRate: 16000 });
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        const wavArrayBuffer = audioBufferToWav(audioBuffer);
+        ctx.close();
+
+        const kioskId = getKioskId();
+        const userId = user?.data?.user_id ?? null;
+        const sessionId = user?.data?.buffer_id ?? null;
+        const screeningSessionId = user?.screening?.session_id ?? null;
+
+        const voiceData = {
+          role: "VOICE",
+          timestamp: Date.now(),
+          buffer: new Uint8Array(wavArrayBuffer),
+        };
+
+        const storeResult = await sendVoiceToBackend(voiceData);
+        if (storeResult.success) {
+          const runPayload = {
+            shm_path: storeResult.shm_path,
+            kiosk_id: kioskId,
+            user_id: userId,
+            session_id: sessionId,
+            screening_session_id: screeningSessionId,
+          };
+          const runResult = await runVoice(runPayload);
+
+          if (runResult.success) {
+            if (runResult.screening) {
+              dispatch(setScreening(runResult.screening));
+            }
+            setStatus("success");
+            setLoading(false);
+          } else {
+            console.error("[Voice] run failed:", runResult.error);
+            setStatus("error");
+            setLoading(false);
+          }
+        } else {
+          console.error("[Voice] store failed:", storeResult.error);
+          setStatus("error");
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("[Voice] API error:", err);
+        setStatus("error");
+        setLoading(false);
+      }
+    };
+
+    recorder.stop();
+  }, [user, screeningState, navigate]);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
@@ -404,11 +528,15 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    const nextRoute = getNextRoute(user?.screening?.next_stage, '/colorblindness');
+    const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
-  }, [navigate, user]);
+  }, [navigate, screeningState]);
 
+  // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
+  //    It fired on every initial render (isRecording starts false) and could race
+  //    against a freshly-launched visualizeVoice loop. Cleanup is already handled
+  //    correctly in stopRecordingAndSubmit and the unmount effect.
 
   const effectiveSlotOffset = (i) =>
     i - selectedIndex + dragOffset / ITEM_HEIGHT;
@@ -486,15 +614,25 @@ export default function VoiceAnalysis() {
           <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%]">
             <div className="relative flex flex-col items-center">
               <div className="relative flex items-center justify-center">
-                <p className="absolute text-white text-center portrait:text-[35px] tracking-wider mt-14">
+                <img
+                  src={textframe}
+                  alt="text-frame"
+                  className="w-full"
+                />
+                <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
                   {t("voice.what_you_think")}
                 </p>
               </div>
+              <img
+                src={textframe}
+                alt="text-frame"
+                className="rotate-180 mt-10"
+              />
             </div>
           </div>
         </div>
 
-        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[13rem] left-[16rem] flex items-center gap-6">
+        <div className="w-[60%] h-[200px] text-4xl text-white z-100 absolute top-[15rem] left-[16rem] flex items-center gap-6">
           <span>{t("voice.select_instruction")}</span>
         </div>
 
@@ -576,12 +714,6 @@ export default function VoiceAnalysis() {
                 >
                   <div
                     className="relative overflow-hidden"
-                    onClick={isCentered ? (e) => {
-                      // Card body tap → cycle the drum to next image.
-                      // Only the 360° icon button itself opens the viewer.
-                      const next = (selectedIndex + 1) % IMAGES.length;
-                      goToIndex(next);
-                    } : undefined}
                     style={{
                       width: 600,
                       height: ITEM_HEIGHT - 16,
@@ -593,7 +725,6 @@ export default function VoiceAnalysis() {
                         ? "0 0 60px rgba(154,217,255,0.25), inset 0 0 20px rgba(154,217,255,0.08)"
                         : "none",
                       transition: isSnapping ? "all 0.32s ease" : "none",
-                      cursor: isCentered ? "pointer" : undefined,
                     }}
                   >
                     <img
@@ -604,19 +735,17 @@ export default function VoiceAnalysis() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
 
-                    {/* 360° icon — explicit tap target that opens the viewer */}
+                    {/* 360° badge — only on center card */}
                     {isCentered && (
-                      <button
+                      <div
                         onClick={(e) => {
-                          e.stopPropagation(); // don't bubble to card's goToIndex
+                          e.stopPropagation();
                           onCenterCardClick();
                         }}
                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1"
-                        style={{ background: "none", border: "none", padding: 0, cursor: "pointer" }}
-                        aria-label="Open 360° view"
                       >
                         <img src={icon360} alt="360-icon" className="w-[100px] h-[100px]" />
-                      </button>
+                      </div>
                     )}
 
                     {/* FIX (Issue 1): Adjacent card overlay — tapping scrolls wheel to that card */}
