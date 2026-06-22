@@ -135,7 +135,10 @@ const commonSlice = createSlice({
     },
 
     setScreening: (state, action) => {
-      if (action.payload && state.user) {
+      if (action.payload) {
+        // Ensure user object exists before attaching screening so the payload
+        // is never silently dropped when setScreening fires before setUser.
+        if (!state.user) state.user = {};
         // Store raw snake_case payload directly on user.screening
         // so storeUser.screening.session_id / next_stage / etc. work everywhere
         state.user.screening = action.payload;

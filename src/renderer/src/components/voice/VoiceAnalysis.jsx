@@ -85,6 +85,11 @@ export default function VoiceAnalysis() {
 
   const navigate = useNavigate();
 
+  // ── Keep a ref that always mirrors the latest user so stopRecordingAndSubmit
+  //    never reads a stale closure value for screening_session_id.
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+
   // ── Drag / momentum refs ─────────────────────────────────────────────────
   const dragStartY = useRef(null);
   const dragCurrent = useRef(0);
@@ -439,9 +444,11 @@ export default function VoiceAnalysis() {
         ctx.close();
 
         const kioskId = getKioskId();
-        const userId = user?.data?.user_id ?? null;
-        const sessionId = user?.data?.buffer_id ?? null;
-        const screeningSessionId = user?.screening?.session_id ?? null;
+        // Read via ref so we always get the latest Redux state, even if the
+        // callback was memoised before user.screening was populated.
+        const userId = userRef.current?.data?.user_id ?? null;
+        const sessionId = userRef.current?.data?.buffer_id ?? null;
+        const screeningSessionId = userRef.current?.screening?.session_id ?? null;
 
         const voiceData = {
           role: "VOICE",
@@ -484,7 +491,8 @@ export default function VoiceAnalysis() {
     };
 
     recorder.stop();
-  }, [user, navigate]);
+  // user is intentionally omitted — we read it via userRef.current above.
+  }, [navigate]);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
