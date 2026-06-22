@@ -857,9 +857,9 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
 
     // Navigate to impedance screen
-    navigate("/bia/hold");
-    await sleep(8000);
     navigate("/bia/im");
+    await sleep(8000);
+    // navigate("/bia/im");
 
     try {
       // Arm Impedance 50kHz

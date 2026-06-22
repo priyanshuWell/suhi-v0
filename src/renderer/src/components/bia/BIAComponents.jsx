@@ -623,7 +623,7 @@ export const BIAComponent = ({
         />
       )}
       {/* Hold screen – background blur overlay */}
-      {screenType === "hold" && (
+      {/* {screenType === "hold" && (
         <div
           className="absolute inset-0 z-10"
           style={{
@@ -632,7 +632,7 @@ export const BIAComponent = ({
             backgroundColor: "rgba(0, 0, 0, 0.2)",
           }}
         />
-      )}
+      )} */}
 
       {/* {screenType === "hold" && (
         <div

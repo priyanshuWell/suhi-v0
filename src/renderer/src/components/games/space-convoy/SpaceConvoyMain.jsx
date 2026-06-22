@@ -136,7 +136,7 @@ const SpaceConvoyMain = () => {
             )}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={result?.data?.game_session_id} onComplete={handleDemoComplete} />
+                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={activeSessionId.current} onComplete={handleDemoComplete} />
             )}
 
             {screen === SCREENS.COUNTDOWN && (

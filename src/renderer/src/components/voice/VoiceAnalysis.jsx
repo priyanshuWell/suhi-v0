@@ -462,9 +462,9 @@ export default function VoiceAnalysis() {
           const runResult = await runVoice(runPayload);
 
           if (runResult.success) {
-            if (runResult.screening) {
-              dispatch(setScreening(runResult.screening));
-            }
+            // if (runResult.screening) {
+            //   dispatch(setScreening(runResult.screening));
+            // }
             setStatus("success");
             setLoading(false);
           } else {
@@ -528,7 +528,7 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
+    const nextRoute = getNextRoute(user?.screening?.nextStage, '/colorblindness');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
   }, [navigate, screeningState]);
