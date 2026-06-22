@@ -4,7 +4,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './config/i18n/i18n';
-import { BackgroundCameraProvider } from './services/BackgroundCameraProvider'
+import { StageRecordingProvider } from './services/StageRecordingProvider'
 import { Provider } from 'react-redux'
 import { store } from '../../store/store'
 import { initCameraTracker } from './utils/cameraTracker'
@@ -18,9 +18,11 @@ createRoot(document.getElementById('root')).render(
   // <StrictMode>
   <Provider store={store}>
     <BrowserRouter>
-      {/* <KioskScaler> */}
-      <App />
-      {/* </KioskScaler> */}
+      <StageRecordingProvider>
+        {/* <KioskScaler> */}
+        <App />
+        {/* </KioskScaler> */}
+      </StageRecordingProvider>
     </BrowserRouter>
   </Provider>
   //  </StrictMode> 

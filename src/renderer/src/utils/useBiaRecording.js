@@ -3,23 +3,28 @@ import { bufferCollection, sendVideoToBackend } from "./api";
 import { getRgbCameraConstraints } from "./getRgbCamera";
 import { rotateStream90 } from "../components/dmit/NewDmit";
 import { getKioskId } from "./config";
+import { STAGE_BUFFER_TYPE } from "./stageRouter";
 
 /**
- * useBIARecording
+ * useStageRecording
  *
- * Handles two recording outcomes:
- *  1. COMPLETE  — BIA finished normally   → stopAndSend()
- *  2. PARTIAL   — skipped / error exit    → saveBuffer(reason)
+ * Background video capture for any screening stage. Handles:
+ *  1. COMPLETE  — stage finished normally   → stopAndSend()
+ *  2. PARTIAL   — skipped / error exit     → saveBuffer(reason)
  *
  * Camera selection:
  *  - Prefers any camera whose label includes "RGB" (case-insensitive)
  *  - Falls back to the first available video device if no RGB camera found
  *
  * Usage:
- *   const { startRecording, stopAndSend, saveBuffer } = useBIARecording({ sessionId, userId });
+ *   const { startRecording, stopAndSend, saveBuffer } = useStageRecording({
+ *     sessionId, userId, stageKey: 'voice_analysis'
+ *   });
  */
 const CHUNK_SIZE = 1000; // 1-second timeslices → denser keyframes, smoother playback
-export function useBIARecording({ sessionId, userId }) {
+export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
+  const stageKeyRef = useRef(stageKey);
+  stageKeyRef.current = stageKey;
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
   const streamRef        = useRef(null);      // canvas stream (rotated)
@@ -80,18 +85,19 @@ export function useBIARecording({ sessionId, userId }) {
 
   // ─── Shared: flush chunks → Blob → backend ────────────────────────────────
   const _flushAndSend = useCallback(
-    (role = "bia_complete") =>
+    (role) =>
       new Promise((resolve) => {
         const recorder = mediaRecorderRef.current;
+        const stage = stageKeyRef.current;
 
         if (!recorder || !isRecordingRef.current) {
-          console.warn("[BIA REC] ⚠️ No active recorder to flush — nothing to send");
+          console.warn(`[STAGE REC:${stage}] ⚠️ No active recorder to flush — nothing to send`);
           resolve(null);
           return;
         }
 
         console.log(
-          `[BIA REC] 🛑 Stopping recorder — role: "${role}", total chunks collected: ${chunksRef.current.length}`
+          `[STAGE REC:${stage}] 🛑 Stopping recorder — role: "${role}", total chunks collected: ${chunksRef.current.length}`
         );
 
         // Collect the final in-flight chunk, then send
@@ -105,7 +111,7 @@ export function useBIARecording({ sessionId, userId }) {
             const filename = `${role}_${sessionId ?? "unknown"}_${ts}.webm`;
 
             console.log(
-              `[BIA REC] 📤 Preparing to upload & save — role: "${role}", size: ${(blob.size / 1024).toFixed(1)}KB, chunks: ${chunksRef.current.length}`
+              `[STAGE REC:${stage}] 📤 Preparing to upload & save — role: "${role}", size: ${(blob.size / 1024).toFixed(1)}KB, chunks: ${chunksRef.current.length}`
             );
 
             const buffer = await blob.arrayBuffer();
@@ -121,12 +127,12 @@ export function useBIARecording({ sessionId, userId }) {
                   phase_states: { role, ts: new Date(ts).toISOString() },
                 });
                 if (localResult?.success) {
-                  console.log(`[BIA REC] 💾 Saved locally → ${localResult.filePath}`);
+                  console.log(`[STAGE REC:${stage}] 💾 Saved locally → ${localResult.filePath}`);
                 } else {
-                  console.warn("[BIA REC] ⚠️ Local save failed:", localResult?.error);
+                  console.warn(`[STAGE REC:${stage}] ⚠️ Local save failed:`, localResult?.error);
                 }
               } catch (localErr) {
-                console.warn("[BIA REC] ⚠️ Local save threw:", localErr.message);
+                console.warn(`[STAGE REC:${stage}] ⚠️ Local save threw:`, localErr.message);
               }
             })();
 
@@ -138,16 +144,18 @@ export function useBIARecording({ sessionId, userId }) {
               meta: { sessionId, userId, role, ts },
             });
 
-            console.log(`[BIA REC] ✅ Backend upload DONE — role: "${role}"`, result);
-            const kioskId = getKioskId()
-            const bufferResult = await bufferCollection(result?.data?.shm_path,kioskId, userId);
-            console.log(`[BIA REC] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
+            console.log(`[STAGE REC:${stage}] ✅ Backend upload DONE — role: "${role}"`, result);
+            const kioskId = getKioskId();
+            const shmPath = result?.shm_path ?? result?.data?.shm_path;
+            const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
+            const bufferResult = await bufferCollection(shmPath, kioskId, userId, bufferType);
+            console.log(`[STAGE REC:${stage}] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
             // Wait for local save to finish (so cleanup doesn't race it)
             await localSavePromise;
 
             resolve(result);
           } catch (err) {
-            console.error(`[BIA REC] ❌ Upload/save FAILED — role: "${role}"`, err.message);
+            console.error(`[STAGE REC:${stageKeyRef.current}] ❌ Upload/save FAILED — role: "${role}"`, err.message);
             resolve(null);
           }
         };
@@ -171,7 +179,7 @@ export function useBIARecording({ sessionId, userId }) {
     rawStreamRef.current     = null;
     mediaRecorderRef.current = null;
     chunksRef.current        = [];
-    console.log("[BIA REC] 🧹 Stream and recorder cleaned up (canvas + raw camera released)");
+    console.log(`[STAGE REC:${stageKeyRef.current}] 🧹 Stream and recorder cleaned up (canvas + raw camera released)`);
   };
 
   // ─── 1. COMPLETE — normal BIA finish ──────────────────────────────────────
@@ -180,23 +188,18 @@ export function useBIARecording({ sessionId, userId }) {
    * Stops the recorder cleanly and sends the full video.
    */
   const stopAndSend = useCallback(() => {
-    console.log("[BIA REC] 🏁 stopAndSend() — BIA completed successfully, sending full recording");
-    return _flushAndSend("bia_complete");
+    const stage = stageKeyRef.current;
+    console.log(`[STAGE REC:${stage}] 🏁 stopAndSend() — stage completed, sending full recording`);
+    return _flushAndSend(`${stage}_complete`);
   }, [_flushAndSend]);
 
-  // ─── 2. PARTIAL — skipped or error exit ───────────────────────────────────
-  /**
-   * Call before every navigate('/screen1') that represents an early exit.
-   * Flushes whatever chunks exist and sends them as a partial recording.
-   *
-   * @param {string} reason  e.g. "shoes_skipped" | "leg_max_retry" | "weight_error"
-   */
   const saveBuffer = useCallback(
     (reason = "partial") => {
+      const stage = stageKeyRef.current;
       console.log(
-        `[BIA REC] ⏏️  saveBuffer() — early exit / partial recording, reason: "${reason}"`
+        `[STAGE REC:${stage}] ⏏️  saveBuffer() — partial recording, reason: "${reason}"`
       );
-      return _flushAndSend(`bia_partial__${reason}`);
+      return _flushAndSend(`${stage}_partial__${reason}`);
     },
     [_flushAndSend]
   );
@@ -222,3 +225,6 @@ export function useBIARecording({ sessionId, userId }) {
 
   return { startRecording, stopAndSend, saveBuffer, forceCleanup };
 }
+
+/** @deprecated Use useStageRecording — kept for existing BIA imports */
+export const useBIARecording = useStageRecording;

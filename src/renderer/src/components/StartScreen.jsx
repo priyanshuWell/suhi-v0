@@ -9,10 +9,12 @@ import { Setting } from "./Setting"
 import { useTranslation } from "react-i18next"
 import StartButton from "./ui/BlueGradientButton"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { useStageRecordingControl } from "../services/StageRecordingProvider"
 
 const Flag = true
 export const StartScreen = () => {
   const { t } = useTranslation()
+  const stageRecording = useStageRecordingControl()
   // const [isCameraReady, setIsCameraReady] = React.useState(false)
   const [error, setError] = useState(false)
   const navigate = useNavigate()
@@ -58,8 +60,9 @@ export const StartScreen = () => {
     setIsAudioPlaying(false)
   }
 
-  const handleStartClick = () => {
+  const handleStartClick = async () => {
     stopAudio()
+    await stageRecording?.stopAndSend?.()
     navigate("/capture")
   }
 

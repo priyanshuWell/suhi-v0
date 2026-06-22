@@ -11,6 +11,7 @@ import BodyConstitution from './BodyConstitution'
 import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
 import { releaseAllResources } from '../../utils/cleanup'
+import { useStageRecordingControl } from '../../services/StageRecordingProvider'
 import { BrainIconS, MindIcon } from '../../assets'
 import BlackGradientButton from '../ui/BlackGradientButton';
 
@@ -151,6 +152,7 @@ const BIAResult = () => {
   const storeHeight = useSelector((s) => s.common.height)
   const storeUser = useSelector((s) => s.common.user)
   const { t } = useTranslation()
+  const stageRecording = useStageRecordingControl()
 
   const [apiReport, setApiReport] = useState(null)
 
@@ -639,8 +641,9 @@ const BIAResult = () => {
 
               {/* CTA Button */}
               <BlackGradientButton
-                onClick={() => {
+                onClick={async () => {
                   releaseAllResources()
+                  await stageRecording?.stopAndSend?.()
                   navigate('/welcome')
                 }}
                 style={{

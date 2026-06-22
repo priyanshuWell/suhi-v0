@@ -21,6 +21,51 @@ export const STAGE_ROUTE_MAP = {
   login: '/welcome'
 };
 
+/** Backend `buffer_type` values sent to /video/buffer-collection */
+export const STAGE_BUFFER_TYPE = {
+  bia: 'BIA',
+  divide_attention: 'DIVIDE_ATTENTION',
+  voice_analysis: 'VOICE_ANALYSIS',
+  color_blindness: 'COLOR_BLINDNESS',
+  result: 'RESULT',
+  login: 'LOGIN',
+};
+
+/**
+ * Longest-prefix-first mapping from pathname → stage_key.
+ * Sub-routes (e.g. /colorblindness/quiz) share the parent stage key.
+ */
+const STAGE_ROUTE_PREFIXES = [
+  { prefix: '/bia/result', stageKey: 'result' },
+  { prefix: '/bia/', stageKey: 'bia', selfManaged: true },
+  { prefix: '/space-convoy-complete', stageKey: 'divide_attention' },
+  { prefix: '/divide-attention', stageKey: 'divide_attention' },
+  { prefix: '/space-convoy-main', stageKey: 'divide_attention' },
+  { prefix: '/colorblindness/quiz', stageKey: 'color_blindness' },
+  { prefix: '/colorblindness', stageKey: 'color_blindness' },
+  { prefix: '/voice', stageKey: 'voice_analysis' },
+  { prefix: '/welcome', stageKey: 'login' },
+].sort((a, b) => b.prefix.length - a.prefix.length);
+
+/**
+ * @param {string} pathname
+ * @returns {string|null} stage_key or null when not on a screening stage route
+ */
+export function getStageKeyFromPath(pathname) {
+  for (const { prefix, stageKey } of STAGE_ROUTE_PREFIXES) {
+    if (pathname === prefix || pathname.startsWith(prefix)) {
+      return stageKey;
+    }
+  }
+  return null;
+}
+
+/** Stages that manage their own recording lifecycle (e.g. BIA partial saves). */
+export function isSelfManagedStage(stageKey) {
+  const entry = STAGE_ROUTE_PREFIXES.find((r) => r.stageKey === stageKey);
+  return Boolean(entry?.selfManaged);
+}
+
 /**
  * Returns the frontend route for a given `next_stage` object or raw stage_key string.
  *

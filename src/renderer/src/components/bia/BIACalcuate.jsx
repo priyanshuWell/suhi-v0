@@ -56,6 +56,7 @@ export default function BIACalculate({ user, onComplete }) {
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
+    stageKey: "bia",
   });
 
   // Phase tracking (removed attempt counters - now using parameters)

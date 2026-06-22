@@ -383,13 +383,13 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
-export async function bufferCollection(shmPath, kioskId,user_id) {
+export async function bufferCollection(shmPath, kioskId, user_id, bufferType = "BIA") {
   try {
     const payload = {
       shm_path: shmPath,
       kiosk_id: kioskId,
       user_id,
-      buffer_type: "BIA"
+      buffer_type: bufferType,
     };
 
     const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
