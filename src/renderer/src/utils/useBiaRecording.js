@@ -1,46 +1,209 @@
-import { useRef, useCallback ,useEffect} from "react";
+import { useRef, useCallback, useEffect } from "react";
 import { bufferCollection, sendVideoToBackend } from "./api";
 import { getRgbCameraConstraints } from "./getRgbCamera";
 import { rotateStream90 } from "../components/dmit/NewDmit";
 import { getKioskId } from "./config";
+import { STAGE_BUFFER_TYPE } from "./stageRouter";
 
 /**
- * useBIARecording
+ * useStageRecording
  *
- * Handles two recording outcomes:
- *  1. COMPLETE  — BIA finished normally   → stopAndSend()
- *  2. PARTIAL   — skipped / error exit    → saveBuffer(reason)
- *
- * Camera selection:
- *  - Prefers any camera whose label includes "RGB" (case-insensitive)
- *  - Falls back to the first available video device if no RGB camera found
- *
- * Usage:
- *   const { startRecording, stopAndSend, saveBuffer } = useBIARecording({ sessionId, userId });
+ * Background video capture for screening stages (post-login, pre-result).
+ * Records up to 1-minute chunks, uploads via /video/store then /video/buffer-collection.
+ * buffer_type is derived from the current route's stage_key.
  */
-const CHUNK_SIZE = 1000; // 1-second timeslices → denser keyframes, smoother playback
-export function useBIARecording({ sessionId, userId }) {
+const TIMESLICE_MS = 1000;
+const SESSION_CHUNK_MS = 60_000; // max 1 minute per buffer
+
+export function useStageRecording({ sessionId, userId, stageKey = "bia" }) {
+  const stageKeyRef = useRef(stageKey);
+  stageKeyRef.current = stageKey;
+
   const mediaRecorderRef = useRef(null);
-  const chunksRef        = useRef([]);
-  const streamRef        = useRef(null);      // canvas stream (rotated)
-  const rawStreamRef     = useRef(null);      // ✅ original getUserMedia stream (camera device)
-  const isRecordingRef   = useRef(false);
+  const chunksRef = useRef([]);
+  const streamRef = useRef(null);
+  const rawStreamRef = useRef(null);
+  const isRecordingRef = useRef(false);
+  const isSessionActiveRef = useRef(false);
+  const chunkTimerRef = useRef(null);
+  const rotatingRef = useRef(false);
 
+  const clearChunkTimer = () => {
+    if (chunkTimerRef.current) {
+      clearTimeout(chunkTimerRef.current);
+      chunkTimerRef.current = null;
+    }
+  };
 
+  const scheduleNextChunk = useCallback(() => {
+    clearChunkTimer();
+    if (!isSessionActiveRef.current) return;
 
+    chunkTimerRef.current = setTimeout(() => {
+      if (isSessionActiveRef.current && isRecordingRef.current) {
+        rotateChunk("rolling");
+      }
+    }, SESSION_CHUNK_MS);
+  }, []);
 
-  // ─── Start ────────────────────────────────────────────────────────────────
-  const startRecording = useCallback(async () => {
-    if (isRecordingRef.current) {
-      console.warn("[BIA REC] ⚠️ Already recording — skipping startRecording()");
+  const _uploadInBackground = useCallback((buffer, role, stage) => {
+    const ts = Date.now();
+    const filename = `${role}_${sessionId ?? "unknown"}_${ts}.webm`;
+    const bufferType = STAGE_BUFFER_TYPE[stage] ?? stage.toUpperCase();
+
+    console.log(
+      `[STAGE REC:${stage}] 📤 Uploading chunk — role: "${role}", buffer_type: "${bufferType}", size: ${(buffer.byteLength / 1024).toFixed(1)}KB`
+    );
+
+    (async () => {
+      try {
+        window.api
+          ?.saveRecording?.({
+            arrayBuffer: buffer,
+            filename,
+            session_id: sessionId,
+            user_id: userId,
+            phase_states: { role, stage, bufferType, ts: new Date(ts).toISOString() },
+          })
+          .catch((err) => {
+            console.warn(`[STAGE REC:${stage}] ⚠️ Local save failed:`, err?.message ?? err);
+          });
+
+        const result = await sendVideoToBackend({
+          buffer: new Uint8Array(buffer),
+          role,
+          deviceId: sessionId ?? "unknown",
+          meta: { sessionId, userId, role, stage, ts },
+        });
+
+        const shmPath = result?.shm_path ?? result?.data?.shm_path;
+        if (shmPath) {
+          const kioskId = getKioskId();
+          await bufferCollection(shmPath, kioskId, sessionId, userId, bufferType);
+          console.log(`[STAGE REC:${stage}] ✅ bufferCollection done — buffer_type: "${bufferType}"`);
+        } else {
+          console.warn(`[STAGE REC:${stage}] ⚠️ No shm_path in store response`);
+        }
+      } catch (err) {
+        console.error(`[STAGE REC:${stage}] ❌ Upload failed — role: "${role}"`, err.message);
+      }
+    })();
+  }, [sessionId, userId]);
+
+  const _startRecorderOnStream = useCallback(() => {
+    const stream = streamRef.current;
+    if (!stream) return false;
+
+    chunksRef.current = [];
+
+    const recorder = new MediaRecorder(stream, {
+      mimeType: "video/webm;codecs=vp8",
+    });
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    recorder.start(TIMESLICE_MS);
+    mediaRecorderRef.current = recorder;
+    isRecordingRef.current = true;
+    return true;
+  }, []);
+
+  const _releaseCamera = useCallback(() => {
+    if (typeof streamRef.current?.stop === "function") {
+      streamRef.current.stop();
+    }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    rawStreamRef.current?.getTracks().forEach((t) => t.stop());
+    rawStreamRef.current = null;
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+    isRecordingRef.current = false;
+    console.log(`[STAGE REC:${stageKeyRef.current}] 🧹 Camera released`);
+  }, []);
+
+  const _restartRecorderAfterChunk = useCallback(() => {
+    if (!isSessionActiveRef.current || !streamRef.current) return;
+
+    if (_startRecorderOnStream()) {
+      scheduleNextChunk();
+      console.log(`[STAGE REC:${stageKeyRef.current}] 🔄 Next 1-minute chunk started`);
+    }
+  }, [_startRecorderOnStream, scheduleNextChunk]);
+
+  const rotateChunk = useCallback(
+    (role, { endSession = false, stageOverride = null } = {}) => {
+      if (rotatingRef.current) return Promise.resolve(null);
+      rotatingRef.current = true;
+
+      const stage = stageOverride ?? stageKeyRef.current;
+
+      return new Promise((resolve) => {
+        const recorder = mediaRecorderRef.current;
+
+        if (!recorder || !isRecordingRef.current) {
+          rotatingRef.current = false;
+          if (endSession) {
+            isSessionActiveRef.current = false;
+            clearChunkTimer();
+            _releaseCamera();
+          }
+          resolve(null);
+          return;
+        }
+
+        clearChunkTimer();
+        isRecordingRef.current = false;
+
+        recorder.onstop = async () => {
+          rotatingRef.current = false;
+          const parts = chunksRef.current;
+          chunksRef.current = [];
+
+          if (parts.length) {
+            const blob = new Blob(parts, { type: "video/webm" });
+            const buffer = await blob.arrayBuffer();
+            _uploadInBackground(buffer, role, stage);
+          }
+
+          if (endSession) {
+            isSessionActiveRef.current = false;
+            _releaseCamera();
+          } else {
+            _restartRecorderAfterChunk();
+          }
+
+          resolve(null);
+        };
+
+        try {
+          recorder.stop();
+        } catch {
+          rotatingRef.current = false;
+          resolve(null);
+        }
+      });
+    },
+    [_uploadInBackground, _releaseCamera, _restartRecorderAfterChunk]
+  );
+
+  const startSession = useCallback(async () => {
+    if (isSessionActiveRef.current) {
+      console.warn("[STAGE REC] ⚠️ Session already active — skipping startSession()");
       return;
     }
 
-    console.log("[BIA REC] 🎬 startRecording() called — session:", sessionId, "user:", userId);
+    console.log("[STAGE REC] 🎬 startSession() — session:", sessionId, "user:", userId);
 
     try {
       const videoConstraints = await getRgbCameraConstraints({
-        width: 640, height: 480, frameRate: 30,
+        width: 640,
+        height: 480,
+        frameRate: 30,
       });
 
       const rawstream = await navigator.mediaDevices.getUserMedia({
@@ -48,177 +211,74 @@ export function useBIARecording({ sessionId, userId }) {
         audio: false,
       });
 
-      rawStreamRef.current = rawstream;                 // ✅ keep a ref so we can stop device later
+      rawStreamRef.current = rawstream;
       const stream = await rotateStream90(rawstream);
-      streamRef.current  = stream;
-      chunksRef.current  = [];
+      streamRef.current = stream;
+      isSessionActiveRef.current = true;
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType: "video/webm;codecs=vp8",
-      });
-
-      recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunksRef.current.push(e.data);
-          console.log(
-            `[BIA REC] 📦 Chunk received — #${chunksRef.current.length}, size: ${e.data.size}B, total chunks so far: ${chunksRef.current.length}`
-          );
-        }
-      };
-
-      // Collect a chunk every 5 s so the buffer is always fresh
-      recorder.start(CHUNK_SIZE);
-      mediaRecorderRef.current = recorder;
-      isRecordingRef.current   = true;
-
-      console.log("[BIA REC] ✅ Recording STARTED — session:", sessionId);
+      if (_startRecorderOnStream()) {
+        scheduleNextChunk();
+        console.log("[STAGE REC] ✅ Recording started (1-minute max chunks)");
+      }
     } catch (err) {
-      console.error("[BIA REC] ❌ Could not start recording:", err.message);
-      // Non-blocking — BIA flow must not depend on recording
+      console.error("[STAGE REC] ❌ Could not start recording:", err.message);
+      isSessionActiveRef.current = false;
+      _releaseCamera();
     }
-  }, [sessionId, userId]);
+  }, [sessionId, userId, _startRecorderOnStream, scheduleNextChunk, _releaseCamera]);
 
-  // ─── Shared: flush chunks → Blob → backend ────────────────────────────────
-  const _flushAndSend = useCallback(
-    (role = "bia_complete") =>
-      new Promise((resolve) => {
-        const recorder = mediaRecorderRef.current;
+  const stopSession = useCallback(
+    (stageOverride = null) => {
+      if (!isSessionActiveRef.current && !isRecordingRef.current) {
+        return Promise.resolve(null);
+      }
 
-        if (!recorder || !isRecordingRef.current) {
-          console.warn("[BIA REC] ⚠️ No active recorder to flush — nothing to send");
-          resolve(null);
-          return;
-        }
-
-        console.log(
-          `[BIA REC] 🛑 Stopping recorder — role: "${role}", total chunks collected: ${chunksRef.current.length}`
-        );
-
-        // Collect the final in-flight chunk, then send
-        recorder.onstop = async () => {
-          // ✅ Release camera IMMEDIATELY — chunks are already in memory, upload is unaffected
-          _cleanup();
-
-          try {
-            const blob = new Blob(chunksRef.current, { type: "video/webm" });
-            const ts   = Date.now();
-            const filename = `${role}_${sessionId ?? "unknown"}_${ts}.webm`;
-
-            console.log(
-              `[BIA REC] 📤 Preparing to upload & save — role: "${role}", size: ${(blob.size / 1024).toFixed(1)}KB, chunks: ${chunksRef.current.length}`
-            );
-
-            const buffer = await blob.arrayBuffer();
-
-            // ── 1. Save locally (non-blocking, runs in parallel) ──────────────
-            const localSavePromise = (async () => {
-              try {
-                const localResult = await window.api.saveRecording({
-                  arrayBuffer: buffer,
-                  filename,
-                  session_id: sessionId,
-                  user_id:    userId,
-                  phase_states: { role, ts: new Date(ts).toISOString() },
-                });
-                if (localResult?.success) {
-                  console.log(`[BIA REC] 💾 Saved locally → ${localResult.filePath}`);
-                } else {
-                  console.warn("[BIA REC] ⚠️ Local save failed:", localResult?.error);
-                }
-              } catch (localErr) {
-                console.warn("[BIA REC] ⚠️ Local save threw:", localErr.message);
-              }
-            })();
-
-            // ── 2. Upload to backend ──────────────────────────────────────────
-            const result = await sendVideoToBackend({
-              buffer:   new Uint8Array(buffer),
-              role,
-              deviceId: sessionId ?? "unknown",
-              meta: { sessionId, userId, role, ts },
-            });
-
-            console.log(`[BIA REC] ✅ Backend upload DONE — role: "${role}"`, result);
-            const kioskId = getKioskId()
-            const bufferResult = await bufferCollection(result?.data?.shm_path,kioskId, userId);
-            console.log(`[BIA REC] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
-            // Wait for local save to finish (so cleanup doesn't race it)
-            await localSavePromise;
-
-            resolve(result);
-          } catch (err) {
-            console.error(`[BIA REC] ❌ Upload/save FAILED — role: "${role}"`, err.message);
-            resolve(null);
-          }
-        };
-
-        recorder.stop();
-        isRecordingRef.current = false;
-      }),
-    [sessionId, userId]
+      console.log(`[STAGE REC:${stageKeyRef.current}] 🏁 stopSession() — flushing final chunk`);
+      clearChunkTimer();
+      return rotateChunk("session_end", { endSession: true, stageOverride });
+    },
+    [rotateChunk]
   );
 
-  const _cleanup = () => {
-    // ✅ Cancel the rAF draw loop inside rotateStream90 and release the hidden video element
-    if (typeof streamRef.current?.stop === "function") {
-      streamRef.current.stop();
-    }
-    // Stop the canvas/rotated stream tracks
-    streamRef.current?.getTracks().forEach((t) => t.stop());
-    streamRef.current = null;
-    // Stop the ORIGINAL camera device stream so other components can use the camera
-    rawStreamRef.current?.getTracks().forEach((t) => t.stop());
-    rawStreamRef.current     = null;
-    mediaRecorderRef.current = null;
-    chunksRef.current        = [];
-    console.log("[BIA REC] 🧹 Stream and recorder cleaned up (canvas + raw camera released)");
-  };
+  const startRecording = useCallback(() => startSession(), [startSession]);
 
-  // ─── 1. COMPLETE — normal BIA finish ──────────────────────────────────────
-  /**
-   * Call after runCalculateAndComplete() succeeds.
-   * Stops the recorder cleanly and sends the full video.
-   */
-  const stopAndSend = useCallback(() => {
-    console.log("[BIA REC] 🏁 stopAndSend() — BIA completed successfully, sending full recording");
-    return _flushAndSend("bia_complete");
-  }, [_flushAndSend]);
+  const stopAndSend = useCallback(
+    (stageOverride = null) => stopSession(stageOverride),
+    [stopSession]
+  );
 
-  // ─── 2. PARTIAL — skipped or error exit ───────────────────────────────────
-  /**
-   * Call before every navigate('/screen1') that represents an early exit.
-   * Flushes whatever chunks exist and sends them as a partial recording.
-   *
-   * @param {string} reason  e.g. "shoes_skipped" | "leg_max_retry" | "weight_error"
-   */
   const saveBuffer = useCallback(
-    (reason = "partial") => {
-      console.log(
-        `[BIA REC] ⏏️  saveBuffer() — early exit / partial recording, reason: "${reason}"`
-      );
-      return _flushAndSend(`bia_partial__${reason}`);
+    (reason = "partial", stageOverride = null) => {
+      const stage = stageOverride ?? stageKeyRef.current;
+      console.log(`[STAGE REC:${stage}] ⏏️ saveBuffer() — reason: "${reason}"`);
+      if (!isSessionActiveRef.current) return Promise.resolve(null);
+      return rotateChunk(`${stage}_partial__${reason}`, { stageOverride: stage });
     },
-    [_flushAndSend]
+    [rotateChunk]
   );
 
   const forceCleanup = useCallback(() => {
-    console.log("[BIA REC] 🧹 forceCleanup() called — stopping any active stream/recorder");
+    clearChunkTimer();
+    isSessionActiveRef.current = false;
+
     if (mediaRecorderRef.current && isRecordingRef.current) {
       try {
+        mediaRecorderRef.current.onstop = () => _releaseCamera();
         mediaRecorderRef.current.stop();
-      } catch (_) { /* ignore if already stopped */ }
-      isRecordingRef.current = false;
+      } catch {
+        _releaseCamera();
+      }
+    } else {
+      _releaseCamera();
     }
-    _cleanup();
-  }, []);
+  }, [_releaseCamera]);
 
-  // ✅ Auto-cleanup on unmount to prevent leaks
   useEffect(() => {
-    return () => {
-      console.log("[BIA REC] 🧹 Component unmounting — ensuring camera release");
-      forceCleanup();
-    };
+    return () => forceCleanup();
   }, [forceCleanup]);
 
-  return { startRecording, stopAndSend, saveBuffer, forceCleanup };
+  return { startSession, stopSession, startRecording, stopAndSend, saveBuffer, forceCleanup };
 }
+
+/** @deprecated Use useStageRecording */
+export const useBIARecording = useStageRecording;
