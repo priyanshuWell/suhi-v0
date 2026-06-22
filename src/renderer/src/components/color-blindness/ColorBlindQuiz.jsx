@@ -214,9 +214,14 @@ export const ColorBlindQuiz = () => {
                         console.log('[ColorBlindQuiz] colorBlindessComplete — navigating to:', nextRoute);
                         navigate(nextRoute);
                         return;
+                    } else {
+                        console.error('[ColorBlindQuiz] colorBlindessComplete returned failure — falling back to /bia/result');
+                        navigate('/bia/result');
+                        return;
                     }
                 } catch (err) {
-                    console.log(err);
+                    console.error('[ColorBlindQuiz] colorBlindessComplete error — falling back to /bia/result:', err);
+                    navigate('/bia/result');
                 }
             } else {
                 setCurrentIndex(nextIndex);
