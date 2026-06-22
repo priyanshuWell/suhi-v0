@@ -30,6 +30,7 @@ export default function BIACalculate({ user, onComplete }) {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
+  const screeningState = useSelector((state) => state.common.screening);
 
   // const { updateMetadata, clearMetadata } = useBackgroundCamera();
 
@@ -432,7 +433,7 @@ export default function BIACalculate({ user, onComplete }) {
     } else {
       setIsComplete(true);
       // Use next_stage captured from the BIAComplete API response
-      const nextRoute = getNextRoute(biaNextStageRef.current, '/voice');
+      const nextRoute = getNextRoute(biaNextStageRef.current, '/space-convoy-main');
       console.log('[BIA] handleImNextClick — navigating to:', nextRoute);
       navigate(nextRoute);
     }
@@ -635,10 +636,10 @@ export default function BIACalculate({ user, onComplete }) {
         ]);
         const whSkipComplete = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.session_id,
+          screening_session_id: screeningState?.sessionId,
         });
         if (whSkipComplete?.screening) dispatch(setScreening(whSkipComplete.screening));
-        const whSkipRoute = getNextRoute(whSkipComplete?.screening?.next_stage, '/voice');
+        const whSkipRoute = getNextRoute(whSkipComplete?.screening?.next_stage, '/space-convoy-main');
         console.log('[BIA] Phase 1 W+H skip — navigating to:', whSkipRoute);
         navigate(whSkipRoute);
         return;
@@ -795,11 +796,11 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Check if we've exhausted retries BEFORE attempting
     if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /voice`);
+      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /space-convoy-main`);
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screeningState?.sessionId
       });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
@@ -835,7 +836,7 @@ export default function BIACalculate({ user, onComplete }) {
         navigate("/bia/imcomplete");
         const shoesCompleteResult = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.session_id
+          screening_session_id: screeningState?.sessionId
         });
         // Cache next_stage from BIAComplete for the shoes path
         biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
@@ -847,7 +848,7 @@ export default function BIACalculate({ user, onComplete }) {
         await stopAndSend(); // ✅ Stop recording before navigating away
         await new Promise((resolve) => { imCompleteResolver.current = resolve; });
         setIsComplete(true);
-        const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/voice');
+        const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/space-convoy-main');
         console.log('[BIA] runPhase3 shoes path — navigating to:', shoesNextRoute);
         navigate(shoesNextRoute);
         return;
@@ -1057,7 +1058,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const biaCompleteResult = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screeningState?.sessionId
       });
 
       // Cache next_stage from BIAComplete for handleImNextClick fallback
@@ -1075,7 +1076,7 @@ export default function BIACalculate({ user, onComplete }) {
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
       // Navigate to next stage based on backend response
-      const nextRoute = getNextRoute(biaCompleteResult?.screening?.next_stage, '/voice');
+      const nextRoute = getNextRoute(biaCompleteResult?.screening?.next_stage, '/space-convoy-main');
       console.log('[BIA] runCalculateAndComplete SUCCESS — navigating to:', nextRoute);
       navigate(nextRoute);
 
@@ -1088,7 +1089,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       const biaCompleteOnError = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screeningState?.sessionId
       });
 
       // Cache next_stage from BIAComplete (error path) for handleImNextClick fallback
@@ -1102,7 +1103,7 @@ export default function BIACalculate({ user, onComplete }) {
       await saveBuffer("calc_error");
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
-      const errorFallbackRoute = getNextRoute(biaCompleteOnError?.screening?.next_stage, '/voice');
+      const errorFallbackRoute = getNextRoute(biaCompleteOnError?.screening?.next_stage, '/space-convoy-main');
       console.log('[BIA] runCalculateAndComplete ERROR — navigating to:', errorFallbackRoute);
       navigate(errorFallbackRoute);
     }
@@ -1126,12 +1127,12 @@ export default function BIACalculate({ user, onComplete }) {
       await showError("Ports are not connected. Please check device connections.", 3000);
       const portFailComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screeningState?.sessionId
       });
       if (portFailComplete?.screening) {
         dispatch(setScreening(portFailComplete.screening));
       }
-      const portFailRoute = getNextRoute(portFailComplete?.screening?.next_stage, '/voice');
+      const portFailRoute = getNextRoute(portFailComplete?.screening?.next_stage, '/space-convoy-main');
       console.log('[BIA] runFlow port validation failed — navigating to:', portFailRoute);
       navigate(portFailRoute);
       return;
@@ -1172,7 +1173,7 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
       await saveBuffer("flow_exception");
-      navigate("/voice");
+      navigate("/space-convoy-main");
     } finally {
       setIsRunning(false);
       //clearAllTimeouts();
@@ -1207,8 +1208,8 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Handle video end - navigate to screen1
   const handleVideoEnd = () => {
-    console.log("[BIA DEBUG] Completion video ended, navigating to /voice");
-    navigate("/voice");
+    console.log("[BIA DEBUG] Completion video ended, navigating to /space-convoy-main");
+    navigate("/space-convoy-main");
   };
 
   /* =======================

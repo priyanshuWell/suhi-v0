@@ -442,7 +442,7 @@ export default function VoiceAnalysis() {
         const kioskId = getKioskId();
         const userId = user?.data?.user_id ?? null;
         const sessionId = user?.data?.buffer_id ?? null;
-        const screeningSessionId = user?.screening?.session_id ?? null;
+        const screeningSessionId = screeningState?.sessionId ?? null;
 
         const voiceData = {
           role: "VOICE",

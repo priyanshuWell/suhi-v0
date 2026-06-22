@@ -150,6 +150,7 @@ const BIAResult = () => {
   const storeWeight = useSelector((s) => s.common.weight)
   const storeHeight = useSelector((s) => s.common.height)
   const storeUser = useSelector((s) => s.common.user)
+  const screeningState = useSelector((s) => s.common.screening)
   const { t } = useTranslation()
 
   const [apiReport, setApiReport] = useState(null)
@@ -258,8 +259,8 @@ const BIAResult = () => {
     try {
       const res = await axios.post('http://localhost:8000/report/', {
         user_id: storeUser?.data?.user_id,
-        session_id: storeUser?.screening?.session_id,
-        screening_session_id: storeUser?.screening?.session_id,
+        session_id: screeningState?.sessionId,
+        screening_session_id: screeningState?.sessionId,
       })
       if (res?.data?.success) { setApiReport(mergeWithFallback(mapReportToUI(res.data))); return }
       setApiReport(fallbackPartialJson)
