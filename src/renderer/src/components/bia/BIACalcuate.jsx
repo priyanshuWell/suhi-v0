@@ -39,7 +39,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
   const [isComplete, setIsComplete] = useState(false);
-  const [barefootCTAVisible, setBarefootCTAVisible] = useState(true);
+  const [barefootCTAVisible, setBarefootCTAVisible] = useState(false);
   const barefootCTAResolver = useRef(null);
   const whCompleteResolver = useRef(null);
   const imCompleteResolver = useRef(null);
