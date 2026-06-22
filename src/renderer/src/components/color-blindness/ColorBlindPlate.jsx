@@ -3,7 +3,7 @@ import { Volume2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 import bg1 from "../../assets/lightbg.png";
-import textframe from "../../assets/textFrame.png";
+
 import InitialColorBlindImage from "../../assets/color_blindness/sample.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
@@ -124,20 +124,18 @@ export const ColorBlindPlate = () => {
                 {/* Title badge */}
                 <div className="mt-12 z-10 w-[60%]">
                     <div className="relative text-center flex flex-col items-center gap-20">
-                        <img src={textframe} alt="text-frame" className="absolute top-0" />
                         <p
                             className="text-white text-center tracking-wider my-5 font-anta"
                             style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                         >
                             {t("colorBlindness.title", "Color Blindness Test")}
                         </p>
-                        <img src={textframe} alt="text-frame" className="absolute top-[4.5rem] rotate-180" />
                     </div>
                 </div>
 
                 {/* Instructions */}
                 <p
-                    className="text-white text-center font-anta w-[90%] max-w-[1149px]"
+                    className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[1149px]"
                     style={{ fontSize: "clamp(1rem, 4vw, 4rem)" }}
                 >
                     {/* {t("colorBlindness.instructions_line1", "You have to click the number/shape for each image.")}

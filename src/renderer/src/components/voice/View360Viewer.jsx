@@ -34,7 +34,7 @@ export default function View360Viewer({
     const rafRef = useRef(null);
     const wrapperRef = useRef(null);
     const { t } = useTranslation();
-
+    const [showCTA, setShowCTA] = useState(true);
     // Use prop-driven bars (real mic data) – fall back to flat when no data.
     // Parent supplies 9 bars; mirror them so both sides react to the mic.
     const halfBars = voiceBarsProp ?? Array(BARS_PER_SIDE).fill(0);
@@ -96,14 +96,14 @@ export default function View360Viewer({
 
     useEffect(() => {
         const el = wrapperRef.current;
-        if (!el || !isReady) return;
+        if (!el || !isReady || showCTA) return;
         el.addEventListener("pointerdown", handleInteract, { capture: true, once: true });
         el.addEventListener("touchstart", handleInteract, { capture: true, once: true, passive: true });
         return () => {
             el.removeEventListener("pointerdown", handleInteract, { capture: true });
             el.removeEventListener("touchstart", handleInteract, { capture: true });
         };
-    }, [isReady, handleInteract]);
+    }, [isReady, showCTA, handleInteract]);
 
     // ── Viewport resize ───────────────────────────────────────────────────
     useEffect(() => {
@@ -260,7 +260,49 @@ export default function View360Viewer({
                     </p>
                 </div>
             )}
-
+            {/* ── Intro CTA overlay ────────────────────────────────────── */}
+            {isReady && showCTA && (
+                <div
+                    className="absolute inset-0 z-40 flex items-center justify-center"
+                    style={{
+                        background: "rgba(0,0,0,0.20)",
+                        backdropFilter: "blur(6px)",
+                    }}
+                >
+                    <div
+                        className="flex flex-col items-center gap-10 px-10 py-12 rounded-3xl max-w-lg text-center"
+                        style={{
+                            background: "rgba(255,255,255,0.08)",
+                            border: "1px solid rgba(154,217,255,0.3)",
+                            boxShadow: "0 0 60px rgba(154,217,255,0.12)",
+                        }}
+                    >
+                        <img
+                            src={icon360}
+                            alt="360-icon"
+                            className="w-24 h-24"
+                        />
+                        <p
+                            className="text-white text-2xl font-semibold leading-relaxed"
+                            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}
+                        >
+                            {t("voice.cta_intro")}
+                        </p>
+                        <BlueGradientButton
+                            onClick={() => setShowCTA(false)}
+                            className="px-4 py-2  text-white font-bold text-xl tracking-widest "
+                        // style={{
+                        //     background: "linear-gradient(135deg, #1a7fd4 0%, #0d4fa8 100%)",
+                        //     boxShadow: "0 0 40px rgba(26,127,212,0.55), 0 4px 20px rgba(0,0,0,0.4)",
+                        //     border: "1px solid rgba(154,217,255,0.4)",
+                        //     letterSpacing: "0.2em",
+                        // }}
+                        >
+                            {t("voice.cta_start")}
+                        </BlueGradientButton>
+                    </div>
+                </div>
+            )}
             {/* ── Drag-to-start nudge ──────────────────────────────────── */}
             {isReady && !hasInteracted && (
                 <div
@@ -287,6 +329,30 @@ export default function View360Viewer({
 
             )
             }
+
+            {/* ── Drag-to-start nudge ──────────────────────────────────── */}
+            {isReady && !showCTA && !hasInteracted && (
+                <div
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex flex-col items-center gap-20"
+                >
+                    <img
+                        src={icon360}
+                        alt="360-icon"
+                        className="w-[100px] h-[100px]"
+                    />
+
+                    <p className="text-2xl bg-black/50 rounded-4xl text-white font-medium whitespace-nowrap flex  items-center py-3 px-10">
+                        <img
+                            src={fingerIcon}
+                            alt="finger-icon"
+                            className="w-10 h-10 ml-2"
+                        />
+                        <span>
+                            {t("voice.tap_to_rotate")}
+                        </span>
+                    </p>
+                </div>
+            )}
 
             {/* ── HUD ─────────────────────────────────────────────────── */}
             {

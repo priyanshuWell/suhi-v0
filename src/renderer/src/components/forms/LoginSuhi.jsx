@@ -12,6 +12,7 @@ import { loginSuhi, getStudentBySuhi } from '../../utils/api'
 import { setUser, setScreening } from '../../features/common/commonSlice'
 import { getNextRoute } from '../../utils/stageRouter'
 import { useTranslation } from 'react-i18next'
+import { getSessionId } from '../../utils/config'
 
 const MAX_RETRIES = 2
 
@@ -61,11 +62,11 @@ const LoginSuhi = () => {
       const response = await getStudentBySuhi(suhiId.trim())
       const normalizedUser = {
         ...response.data,
+        buffer_id: getSessionId(),
         suhi_id:
           response.suhi_id ||
           response.data?.suhi_id ||
           suhiId.trim(),
-        class_section: response.data?.class_section,
         gender: response.data?.gender,
         student_name: response.data?.student_name,
 
@@ -82,7 +83,8 @@ const LoginSuhi = () => {
         setUser({
           success: true,
           data: normalizedUser,
-          screening: response.data?.screening
+          screening: response.data?.screening,
+          class_section: response.data?.class_section,
         })
       )
 

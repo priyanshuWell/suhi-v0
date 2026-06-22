@@ -116,7 +116,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const screenConfig = {
     leg50: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.let_measure"),
       video: {
         female: bmiWH_female,
@@ -124,7 +124,7 @@ export default function BIACalculate({ user, onComplete }) {
       },
     },
     wh: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.weight_height_measurement"),
 
       video: {
@@ -134,7 +134,7 @@ export default function BIACalculate({ user, onComplete }) {
     },
 
     im: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.core_body_scan"),
       description: t("measurement.impedance_measurement"),
       video: {
         female: biaIm_female,

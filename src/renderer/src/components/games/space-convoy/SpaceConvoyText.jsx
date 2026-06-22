@@ -1,48 +1,63 @@
 import { useEffect, useRef, useState } from "react"
-import textframe from "../../../assets/textFrame.png"
+
 import BlueGradientButton from '../../ui/BlueGradientButton'
 import { useTranslation } from "react-i18next"
-import instructionAudio from "../../../assets/audio/cognitive_game_instruction_en.mp3"
+import { getAudioForCurrentLanguage } from "../../../utils/audioUtils"
 import { Volume2 } from "lucide-react"
 
 export function SpaceConvoyText({ onStartDemo }) {
-    const { t } = useTranslation()
+    const { t, i18n } = useTranslation()
     const audioRef = useRef(null)
     const [audioDone, setAudioDone] = useState(false)
     const [isPlaying, setIsPlaying] = useState(false)
 
-    // Auto-play instruction audio on mount
+    // Auto-play instruction audio on mount (locale-aware)
     useEffect(() => {
-        const audio = new Audio(instructionAudio)
-        audioRef.current = audio
+        let audio = null
+        let cancelled = false
 
-        const handleEnded = () => {
-            setAudioDone(true)
-            setIsPlaying(false)
+        const handleEnded = () => { if (!cancelled) { setAudioDone(true); setIsPlaying(false) } }
+        const handlePlay = () => { if (!cancelled) setIsPlaying(true) }
+        const handlePause = () => { if (!cancelled) setIsPlaying(false) }
+
+        const loadAndPlay = async () => {
+            const src = await getAudioForCurrentLanguage("cognitive_game_instruction")
+            if (cancelled || !src) {
+                console.warn("[SpaceConvoyText] No audio found for current language")
+                if (!cancelled) setAudioDone(true) // unblock Start button
+                return
+            }
+
+            audio = new Audio(src)
+            audioRef.current = audio
+
+            audio.addEventListener("ended", handleEnded)
+            audio.addEventListener("play", handlePlay)
+            audio.addEventListener("pause", handlePause)
+
+            const playPromise = audio.play()
+            if (playPromise !== undefined) {
+                playPromise.catch((err) => {
+                    console.warn("[SpaceConvoyText] Autoplay prevented:", err.message)
+                    if (!cancelled) { setIsPlaying(false); setAudioDone(true) }
+                })
+            }
         }
-        const handlePlay = () => setIsPlaying(true)
-        const handlePause = () => setIsPlaying(false)
 
-        audio.addEventListener("ended", handleEnded)
-        audio.addEventListener("play", handlePlay)
-        audio.addEventListener("pause", handlePause)
-
-        const playPromise = audio.play()
-        if (playPromise !== undefined) {
-            playPromise.catch((err) => {
-                console.warn("[SpaceConvoyText] Autoplay prevented:", err.message)
-                setIsPlaying(false)
-            })
-        }
+        loadAndPlay()
 
         return () => {
-            audio.removeEventListener("ended", handleEnded)
-            audio.removeEventListener("play", handlePlay)
-            audio.removeEventListener("pause", handlePause)
-            audio.pause()
-            audio.src = ""
+            cancelled = true
+            if (audio) {
+                audio.removeEventListener("ended", handleEnded)
+                audio.removeEventListener("play", handlePlay)
+                audio.removeEventListener("pause", handlePause)
+                audio.pause()
+                audio.src = ""
+            }
+            audioRef.current = null
         }
-    }, [])
+    }, [i18n.language]) // re-run when language changes
 
     const handleReplay = () => {
         const audio = audioRef.current
@@ -54,14 +69,12 @@ export function SpaceConvoyText({ onStartDemo }) {
     return (
         <div className="relative z-10 flex flex-col gap-14 items-center justify-center w-full h-full">
             <div className="relative flex flex-col items-center justify-center h-16 w-full text-center">
-                <img src={textframe} alt="text-frame" className="absolute top-0 w-1/2" />
                 <p className="text-white portrait:text-[32px] tracking-wider z-10">
                     {t('spaceConvoy.title')}
                 </p>
-                <img src={textframe} alt="text-frame" className="absolute bottom-0 rotate-180 w-1/2" />
             </div>
 
-            <h1 className="text-white/90 text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
+            <h1 className="text-[#8BC3E5] text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
                 {t('spaceConvoy.instruction')}
             </h1>
 
