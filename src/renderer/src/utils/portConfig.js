@@ -17,6 +17,11 @@ console.log('[PORT CONFIG] Port Indices loaded:', PORT_INDICES)
 /**
  * Serial port configuration
  */
+
+export const PORT_PATHS = {
+  HEIGHT: import.meta.env.VITE_HEIGHT_PORT_PATH || null,
+  BIA: import.meta.env.VITE_BIA_PORT_PATH || null,
+};
 export const SERIAL_CONFIG = {
   baudRate: parseInt(import.meta.env.VITE_SERIAL_BAUD_RATE || '9600'),
   dataBits: parseInt(import.meta.env.VITE_SERIAL_DATA_BITS || '8'),
