@@ -23,6 +23,7 @@ import DivideAttentionGame from './DivideAttentionGame'
 import { useNavigate } from 'react-router'
 import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
 import { useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { SpaceConvoyComplete } from './SpaceConveyComplete'
 import { store } from '../../../../../store/store'
 
@@ -93,8 +94,14 @@ const SpaceConvoyMain = () => {
     }
     const handleStartDemo =  async () => {
         // TODO: replace with real userId from your auth/Redux store
-        const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-        const screeningSessionId =  storeUser?.screening?.session_id || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
+        const userId = storeUser?.data?.user_id;
+        //  Read session from Redux screening slice (camelCase) — no UUID fallback
+        const screeningSessionId = storeUser?.common?.screening?.sessionId
+          ?? store.getState().common.screening?.sessionId;
+        if (!screeningSessionId) {
+          console.error('[SpaceConvoy] No screening session — aborting game session creation');
+          return;
+        }
         const result = await DivideAttentionSession(userId,screeningSessionId, "practice")
         if (result.success) {
             activeSessionId.current = result?.data?.game_session_id;

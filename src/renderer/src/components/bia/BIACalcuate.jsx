@@ -320,7 +320,7 @@ export default function BIACalculate({ user, onComplete }) {
       await saveBuffer("height_port_error");
       const heightErrorComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
       if (heightErrorComplete?.screening) {
         dispatch(setScreening(heightErrorComplete.screening));
@@ -627,7 +627,7 @@ export default function BIACalculate({ user, onComplete }) {
       // showError(ERROR_MESSAGES.maxRetryReached, 4000);
       const legMaxRetryComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
       if (legMaxRetryComplete?.screening) {
         dispatch(setScreening(legMaxRetryComplete.screening));
@@ -665,7 +665,7 @@ export default function BIACalculate({ user, onComplete }) {
         // updatePhaseState('leg', 'failed', 'Max retries exhausted');
         const legCatchComplete = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.session_id
+          screening_session_id: screening?.sessionId
         });
         if (legCatchComplete?.screening) {
           dispatch(setScreening(legCatchComplete.screening));
@@ -781,7 +781,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const phase2FailComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
       if (phase2FailComplete?.screening) {
         dispatch(setScreening(phase2FailComplete.screening));
@@ -833,7 +833,7 @@ export default function BIACalculate({ user, onComplete }) {
       //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
       await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
       console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
       await saveBuffer("arm_max_retry");
@@ -869,7 +869,7 @@ export default function BIACalculate({ user, onComplete }) {
         navigate("/bia/imcomplete");
         const shoesCompleteResult = await BIAComplete({
           session_id: storeUser?.data?.buffer_id,
-          screening_session_id: storeUser?.screening?.session_id
+          screening_session_id: screening?.sessionId
         });
         // Cache next_stage from BIAComplete for the shoes path
         biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
@@ -1091,7 +1091,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const biaCompleteResult = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
 
       // Cache next_stage from BIAComplete for handleImNextClick fallback
@@ -1122,7 +1122,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       const biaCompleteOnError = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
 
       // Cache next_stage from BIAComplete (error path) for handleImNextClick fallback
@@ -1160,7 +1160,7 @@ export default function BIACalculate({ user, onComplete }) {
       await showError("Ports are not connected. Please check device connections.", 3000);
       const portFailComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: storeUser?.screening?.session_id
+        screening_session_id: screening?.sessionId
       });
       if (portFailComplete?.screening) {
         dispatch(setScreening(portFailComplete.screening));
@@ -1206,7 +1206,17 @@ export default function BIACalculate({ user, onComplete }) {
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
       await saveBuffer("flow_exception");
-      navigate("/voice");
+      // ✅ Ask backend for next stage instead of hardcoding /voice
+      const flowExceptionComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: screening?.sessionId,
+      });
+      if (flowExceptionComplete?.screening) {
+        dispatch(setScreening(flowExceptionComplete.screening));
+      }
+      const flowExceptionRoute = getNextRoute(flowExceptionComplete?.screening?.next_stage, '/voice');
+      console.log('[BIA] runFlow unhandled exception — navigating to:', flowExceptionRoute);
+      navigate(flowExceptionRoute);
     } finally {
       setIsRunning(false);
       //clearAllTimeouts();
@@ -1239,10 +1249,12 @@ export default function BIACalculate({ user, onComplete }) {
     }
   }, [ports]);
 
-  // Handle video end - navigate to screen1
+  // Handle video end — use backend next_stage if available, fall back to /voice
   const handleVideoEnd = () => {
-    console.log("[BIA DEBUG] Completion video ended, navigating to /voice");
-    navigate("/voice");
+    // ✅ Use stageRouter so this respects whatever stage the backend set after BIAComplete
+    const nextRoute = getNextRoute(screening?.nextStage, '/voice');
+    console.log('[BIA DEBUG] Completion video ended, navigating to:', nextRoute);
+    navigate(nextRoute);
   };
 
   /* =======================
@@ -1418,4 +1430,3 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose, t }) => 
     </div>
   );
 };
-

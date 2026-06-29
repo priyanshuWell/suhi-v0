@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { useSelector } from 'react-redux'
+import { getNextRoute } from '../../../utils/stageRouter'
 
 /**
  * UnityGameLauncher
@@ -12,6 +14,7 @@ import { useNavigate } from 'react-router'
  */
 export default function UnityGameLauncher() {
   const navigate = useNavigate()
+  const screening = useSelector((s) => s.common.screening) // x for stageRouter
   const [status, setStatus] = useState('launching') // 'launching' | 'running' | 'error'
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -42,14 +45,14 @@ export default function UnityGameLauncher() {
     const cleanup = window.api.onUnityGameExit?.((exitCode) => {
       if (!isMounted) return
       console.log('[UnityGameLauncher] Unity exited with code:', exitCode)
-      navigate('/space-convoy-complete')
+      navigate(getNextRoute(screening?.nextStage, '/space-convoy-complete')) // ✅ stageRouter
     })
 
     // ESC key — bail out manually
     const handleKey = (e) => {
       if (e.key === 'Escape') {
         window.api.stopUnityGame?.()
-        navigate('/space-convoy-complete')
+        navigate(getNextRoute(screening?.nextStage, '/space-convoy-complete')) // ✅ stageRouter
       }
     }
     window.addEventListener('keydown', handleKey)
@@ -88,7 +91,7 @@ export default function UnityGameLauncher() {
           <p style={{ ...hint, maxWidth: 320 }}>{errorMsg}</p>
           <button
             style={btn}
-            onClick={() => navigate('/space-convoy-complete')}
+            onClick={() => navigate(getNextRoute(screening?.nextStage, '/space-convoy-complete'))} // ✅ stageRouter
           >
             Continue
           </button>

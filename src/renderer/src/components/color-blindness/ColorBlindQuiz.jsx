@@ -139,7 +139,8 @@ export const ColorBlindQuiz = () => {
     const dispatch = useDispatch();
     const storeUser = useSelector((state) => state.common.user);
     const screeningSessionId = useSelector((state) => state.common.screening?.sessionId);
-    const [sessionId, setSessionId] = useState(location.state?.sessionId);
+    //  Prefer Redux sessionId; fall back to location.state for backward compat
+    const [sessionId, setSessionId] = useState(location.state?.sessionId ?? screeningSessionId);
     console.log("sessionId in quiz", sessionId, "screeningSessionId in quiz", screeningSessionId)
     const [currentIndex, setCurrentIndex] = useState(0);
     const [timeLeft, setTimeLeft] = useState(initialTimer);
@@ -165,7 +166,7 @@ export const ColorBlindQuiz = () => {
 
     // ── 3. Countdown tick ─────────────────────────────────────────────────────
     useEffect(() => {
-        // if (!sessionId) return;
+        if (!sessionId) { console.warn("[ColorBlindQuiz] No sessionId — skipping timer"); return; } // guard re-enabled
         if (timeLeft <= 0) { handleAnswer(null, true); return; }
         timerRef.current = setTimeout(() => setTimeLeft((t) => t - 1), 1000);
         return () => clearTimeout(timerRef.current);
@@ -201,14 +202,15 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                navigate("/voice");
+                //  Navigate to next stage via stageRouter on submit error
+                navigate(getNextRoute(null, "/voice"));
                 return;
             }
 
             const nextIndex = currentIndex + 1;
             if (nextIndex >= totalPlates) {
                 try {
-                    const result = await colorBlindessComplete(sessionId, storeUser?.screening?.session_id);
+                    const result = await colorBlindessComplete(sessionId, screeningSessionId); //  use Redux key
                     console.log("result colorBlindess", result);
                     if (result.success) {
                         // Update Redux with new next_stage from API response

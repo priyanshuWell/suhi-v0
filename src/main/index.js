@@ -840,10 +840,22 @@ function convertBIADataToAPIPayload(
 
     // user inputs
     gender: userInputs?.gender == "male" ? 1 : 0,
-    age_years: userInputs?.age || 29,
+    //  Removed silent defaults (29, 170, 70) — surface missing data as null
+    //    so the BIA calculation fails loudly rather than producing wrong results.
+    age_years: (() => {
+      if (!userInputs?.age) { console.error('[BIA CALC] age missing — cannot calculate'); return null; }
+      return userInputs.age;
+    })(),
 
-    final_height_cm: userInputs?.height || 170,
-    final_weight_kg: userInputs?.weight || STD.bodyWeight,
+    final_height_cm: (() => {
+      if (!userInputs?.height) { console.error('[BIA CALC] height missing — cannot calculate'); return null; }
+      return userInputs.height;
+    })(),
+
+    final_weight_kg: (() => {
+      if (!userInputs?.weight) { console.error('[BIA CALC] weight missing — cannot calculate'); return null; }
+      return userInputs.weight;
+    })(),
 
     // impedance
     impedance_20khz_ohm: safeAverage(impedanceData?.impedance20),
