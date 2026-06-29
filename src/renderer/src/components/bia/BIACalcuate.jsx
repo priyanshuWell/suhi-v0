@@ -12,7 +12,7 @@ import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
-import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS } from "../../utils/portConfig";
+import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPort, getBiaPortPath } from "../../utils/portConfig";
 import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
@@ -503,7 +503,7 @@ export default function BIACalculate({ user, onComplete }) {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
     console.log('[MEASUREMENT] Connecting to height port:');
-    await window.api.connectHeightPort(ports[1]?.path);
+    await window.api.connectHeightPort(getHeightPortPath(ports));
     const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 
@@ -1193,7 +1193,7 @@ export default function BIACalculate({ user, onComplete }) {
     try {
       // Connect BIA port
       console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
-      await window.api.connectBiaPort(ports[0]?.path);
+      await window.api.connectBiaPort(getBiaPortPath(ports));
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 

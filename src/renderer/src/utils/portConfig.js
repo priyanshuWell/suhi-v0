@@ -6,14 +6,23 @@
  */
 
 /**
- * Port indices for automatic discovery
- * These map to the order in which ports are discovered
+ * Explicit device paths (preferred over index when set)
+ * Set VITE_HEIGHT_PORT_PATH / VITE_BIA_PORT_PATH in .env to use by name.
+ */
+export const PORT_PATHS = {
+  HEIGHT: import.meta.env.VITE_HEIGHT_PORT_PATH || null,
+  BIA: import.meta.env.VITE_BIA_PORT_PATH || null,
+};
+
+/**
+ * Port indices — fallback when PATH is not configured
  */
 export const PORT_INDICES = {
-  HEIGHT: parseInt(import.meta.env.VITE_HEIGHT_PORT_INDEX),
-  BIA: parseInt(import.meta.env.VITE_BIA_PORT_INDEX),
+  HEIGHT: parseInt(import.meta.env.VITE_HEIGHT_PORT_INDEX || '1'),
+  BIA: parseInt(import.meta.env.VITE_BIA_PORT_INDEX || '0'),
 };
-console.log('[PORT CONFIG] Port Indices loaded:', PORT_INDICES)
+console.log('[PORT CONFIG] Port Paths loaded:', PORT_PATHS);
+console.log('[PORT CONFIG] Port Indices (fallback) loaded:', PORT_INDICES);
 /**
  * Serial port configuration
  */
@@ -45,7 +54,8 @@ export const MEASUREMENT_TIMEOUTS = {
 };
 
 /**
- * Get the height port from the ports array using configured index
+ * Get the height port from the ports array.
+ * Prefers VITE_HEIGHT_PORT_PATH (by device name); falls back to index.
  */
 export function getHeightPort(ports) {
   if (!ports || ports.length === 0) {
@@ -53,19 +63,30 @@ export function getHeightPort(ports) {
     return null;
   }
 
+  // --- Path-based lookup (preferred) ---
+  if (PORT_PATHS.HEIGHT) {
+    const byPath = ports.find((p) => p.path === PORT_PATHS.HEIGHT);
+    if (byPath) {
+      console.log(`[PORT CONFIG] Height port found by path: ${byPath.path}`);
+      return byPath;
+    }
+    console.warn(`[PORT CONFIG] Height port path "${PORT_PATHS.HEIGHT}" not found in discovered ports; falling back to index`);
+  }
+
+  // --- Index-based fallback ---
   const heightPort = ports[PORT_INDICES.HEIGHT];
-  
   if (!heightPort) {
     console.warn(`[PORT CONFIG] Height port not found at index ${PORT_INDICES.HEIGHT}`);
     return null;
   }
 
-  console.log(`[PORT CONFIG] Height port selected: ${heightPort.path}`);
+  console.log(`[PORT CONFIG] Height port selected by index: ${heightPort.path}`);
   return heightPort;
 }
 
 /**
- * Get the BIA/Weight port from the ports array using configured index
+ * Get the BIA/Weight port from the ports array.
+ * Prefers VITE_BIA_PORT_PATH (by device name); falls back to index.
  */
 export function getBiaPort(ports) {
   if (!ports || ports.length === 0) {
@@ -73,14 +94,24 @@ export function getBiaPort(ports) {
     return null;
   }
 
+  // --- Path-based lookup (preferred) ---
+  if (PORT_PATHS.BIA) {
+    const byPath = ports.find((p) => p.path === PORT_PATHS.BIA);
+    if (byPath) {
+      console.log(`[PORT CONFIG] BIA port found by path: ${byPath.path}`);
+      return byPath;
+    }
+    console.warn(`[PORT CONFIG] BIA port path "${PORT_PATHS.BIA}" not found in discovered ports; falling back to index`);
+  }
+
+  // --- Index-based fallback ---
   const biaPort = ports[PORT_INDICES.BIA];
-  
   if (!biaPort) {
     console.warn(`[PORT CONFIG] BIA port not found at index ${PORT_INDICES.BIA}`);
     return null;
   }
 
-  console.log(`[PORT CONFIG] BIA port selected: ${biaPort.path}`);
+  console.log(`[PORT CONFIG] BIA port selected by index: ${biaPort.path}`);
   return biaPort;
 }
 
@@ -111,12 +142,18 @@ export function validatePorts(ports) {
     return { valid: false, errors };
   }
 
-  if (!ports[PORT_INDICES.HEIGHT]) {
-    errors.push(`Height port not found at index ${PORT_INDICES.HEIGHT}`);
+  if (!getHeightPort(ports)) {
+    const desc = PORT_PATHS.HEIGHT
+      ? `path "${PORT_PATHS.HEIGHT}"`
+      : `index ${PORT_INDICES.HEIGHT}`;
+    errors.push(`Height port not found by ${desc}`);
   }
 
-  if (!ports[PORT_INDICES.BIA]) {
-    errors.push(`BIA port not found at index ${PORT_INDICES.BIA}`);
+  if (!getBiaPort(ports)) {
+    const desc = PORT_PATHS.BIA
+      ? `path "${PORT_PATHS.BIA}"`
+      : `index ${PORT_INDICES.BIA}`;
+    errors.push(`BIA port not found by ${desc}`);
   }
 
   return {
@@ -142,6 +179,7 @@ export function logPortConfiguration() {
 }
 
 export default {
+  PORT_PATHS,
   PORT_INDICES,
   SERIAL_CONFIG,
   CONNECTION_TIMEOUTS,
