@@ -540,28 +540,13 @@ export const BIAComponent = ({
         <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
           <div className="relative flex flex-col items-center">
 
-            {/* Title Frame */}
-            <div className="relative flex items-center justify-center">
-              <img
-                src={textframe}
-                alt="text-frame"
-                className="w-full"
-              />
+            {/* Title */}
+            <p className="text-white text-center portrait:text-[44px] tracking-wider">
+              {title}
+            </p>
 
-              <p className="absolute text-white text-center portrait:text-[32px] tracking-wider mt-14">
-                {title}
-              </p>
-            </div>
-
-            {/* Bottom Decorative Frame */}
-            <img
-              src={textframe}
-              alt="text-frame"
-              className="rotate-180  mt-10"
-            />
-
-            {/* Description OUTSIDE frame */}
-            <p className="mt-6 text-white font-medium tracking-tight landscape:text-4xl portrait:text-[46px] text-center">
+            {/* Description */}
+            <p className="mt-6 text-[#8BC3E5] font-medium tracking-tight landscape:text-4xl portrait:text-[38px] text-center">
               {description}
             </p>
 

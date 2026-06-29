@@ -528,7 +528,7 @@ export default function VoiceAnalysis() {
   }, [stopRecordingAndSubmit]);
 
   const onNext = useCallback(() => {
-    const nextRoute = getNextRoute(screeningState?.nextStage, '/bia/result');
+    const nextRoute = getNextRoute(screeningState?.nextStage, '/colorblindness');
     console.log('[VoiceAnalysis] onNext — navigating to:', nextRoute);
     navigate(nextRoute);
   }, [navigate, screeningState]);

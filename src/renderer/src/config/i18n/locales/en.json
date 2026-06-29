@@ -23,9 +23,11 @@
   },
   "measurement": {
     "let_measure": "Your body scan is starting",
-    "stand_straight": "Stand Straight",
+    "basic_body_scan": "Basic Body Scan",
+    "core_body_scan": "Core Body Scan",
+
     "scan_done": "Scan Completed!",
-    "weight_height_measurement": "We're measuring your height and weight",
+    "weight_height_measurement": "Stand Straight! \n we're measuring your height and weight",
     "measuring_body_composition": "Measuring your fat and muscle mass",
     "weight_height_completed": "Your height and weight have been recorded",
     "impedance_measurement": "Hold both handles firmly until the scan is complete",
@@ -42,7 +44,7 @@
     "error_unrecognized_max_desc": "Maximum attempts reached\nReturning to login screen..."
   },
   "colorBlindness": {
-    "title": "Color Blindness Test",
+    "title": "Color Vision Scan",
     "instruction": "Look at each picture carefully and choose the number or shape you see.",
     "instructions_example": "Example: This Number is 6. Click on next button to start!",
     "plateAlt": "Example color blindness plate",
@@ -92,16 +94,20 @@
       "recording": "recording",
       "processing": "processing",
       "success": "success",
-      "error": "error"
+      "error": "error",
+      "task_completed":"Task Completed!",
+      "saved":"Your Response is Recorded"
     },
     "analysing": "ANALYSING VOICE…",
-    "what_you_think": "What you Think?",
-    "select_instruction": "Select a 360° image and describe what’s happening as you explore it.",
+    "what_you_think": "Voice Scan",
+    "select_instruction": "Scroll through the images & Select 360° image and describe what you see.",
     "tap_to_explore": "Tap to explore",
     "loading_panorama": "Loading panorama…",
     "failed_load_pano": "Failed to load panorama image.",
     "check_image_path": "Check the image path or URL.",
     "tap_to_rotate": "Tap to rotate & start describing",
+    "cta_intro": "Let's explore a picture together! Tap Start, then look at the picture and talk about anything you see or think about for 30 seconds.",
+    "cta_start": "Start",
     "labels": {
       "interpersonal": "Interpersonal",
       "kinesthetic": "Kinesthetic",
@@ -112,12 +118,18 @@
     }
   },
   "spaceConvoy": {
-    "title": "Space Convoy",
+    "title": "Mind Scan",
     "countdownText": "Game starting in...",
     "instruction": "Let’s play a game, Keep your eyes on all moving asteroids—don’t lose track!",
     "start": "Start Demo",
     "awsomeJob": "Awesome Job!",
-    "complete":"You did  great! You followed all the action in space!"
+    "complete":"You did  great! You followed all the action in space!",
+    "watch_highlighted": "Watch the highlighted asteroids.",
+    "all_look_same": "All asteroids now look the same.",
+    "follow_them": "Follow them as they move.",
+    "tap_tracked": "Now tap on the ones that you were tracking",
+    "great_job_retry": "Great Job. Let's try one more time",
+    "great_job_start": "Great! Let's start the game."
   },
   "bia_result": {
     "congratulations": "Congratulations!",
@@ -135,7 +147,12 @@
     "head_desc":"In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!"
   },
   "bia_component": {
-    "attempt": "Attempt"
+    "attempt": "Attempt",
+    "choose_how": "Choose how you'd like to continue.",
+    "without_shoes": "🦶 Without Shoes",
+    "with_shoes": "👟 With Shoes",
+    "remove_socks_shoes": "Remove your socks and shoes and click on start.",
+    "start": "Start"
   },
   "error": {
     "no_result": "Failed to load result data",

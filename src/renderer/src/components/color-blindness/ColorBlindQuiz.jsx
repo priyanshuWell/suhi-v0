@@ -201,7 +201,7 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                navigate("/voice");
+                navigate("/bia/result");
                 return;
             }
 
@@ -215,16 +215,17 @@ export const ColorBlindQuiz = () => {
                         if (result.screening) {
                             dispatch(setScreening(result.screening));
                         }
-                        const nextRoute = getNextRoute(result?.screening?.next_stage, '/voice');
+                        const nextRoute = getNextRoute(result?.screening?.next_stage, '/bia/result');
                         console.log('[ColorBlindQuiz] colorBlindessComplete — navigating to:', nextRoute);
                         navigate(nextRoute);
                         return;
                     }
                 } catch (err) {
                     console.log(err);
-                } finally {
-                    navigate('/voice');
-                }
+                 }
+                 // finally {
+                //     navigate('/voice');
+                // }
             } else {
                 setCurrentIndex(nextIndex);
             }

@@ -15,7 +15,7 @@
  *    - VITE_HEIGHT_MEASUREMENT_TIMEOUT (default: 30000ms)
  */
 
-import { MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPortPath } from './portConfig.js';
+import { MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPortPath, PORT_PATHS } from './portConfig.js';
 
 // Track connected ports to prevent conflicts
 let connectedPorts = new Set();
@@ -275,8 +275,8 @@ export function isPortConnected(portPath) {
 
 export async function measureWeightAndHeight(ports, timeoutMs = DEFAULT_MEASUREMENT_TIMEOUT) {
   // Use configured port indices to select correct ports from the discovered list
-  const heightPortPath = getHeightPortPath(ports);
-  const weightPortPath = getBiaPortPath(ports);
+  const heightPortPath = PORT_PATHS.HEIGHT;
+  const weightPortPath = PORT_PATHS.BIA;
 
   const result = {
     weight: null,

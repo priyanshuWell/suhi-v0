@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: suhi-v0
+productName: suhi
 directories:
   buildResources: build
 files:

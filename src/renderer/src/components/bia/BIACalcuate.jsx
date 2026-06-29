@@ -12,7 +12,7 @@ import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
 import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
 import { trackStage } from "../../utils/config";
-import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, getHeightPortPath, getBiaPortPath } from "../../utils/portConfig";
+import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, PORT_PATHS } from "../../utils/portConfig";
 import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
@@ -121,7 +121,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   const screenConfig = {
     leg50: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.let_measure"),
       video: {
         female: bmiWH_female,
@@ -129,7 +129,7 @@ export default function BIACalculate({ user, onComplete }) {
       },
     },
     wh: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.basic_body_scan"),
       description: t("measurement.weight_height_measurement"),
 
       video: {
@@ -139,7 +139,7 @@ export default function BIACalculate({ user, onComplete }) {
     },
 
     im: {
-      title: t("measurement.stand_straight"),
+      title: t("measurement.core_body_scan"),
       description: t("measurement.impedance_measurement"),
       video: {
         female: biaIm_female,
@@ -465,22 +465,9 @@ export default function BIACalculate({ user, onComplete }) {
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement...");
     // setCurrentStatus("Measuring your weight, please stand still!")
-    console.log('[MEASUREMENT] Connecting to height port:');
-    await window.api.connectHeightPort(getHeightPortPath(ports));
-
-    // Race the IPC call against the configured timeout (VITE_HEIGHT_MEASUREMENT_TIMEOUT = 10s).
-    // If no height data arrives within 10 s the promise rejects, which causes heightOk=false
-    // in attemptWH() — Phase 1's retry logic then shows "stand straight" and retries once.
-    // After 2 consecutive timeouts Phase 1 skips BIA entirely.
-    const res = await Promise.race([
-      window.api.startHeightMeasurement(),
-      new Promise((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Height measurement timed out after " + MEASUREMENT_TIMEOUTS.height + "ms")),
-          MEASUREMENT_TIMEOUTS.height
-        )
-      ),
-    ]);
+    console.log('[MEASUREMENT] Connecting to height port:', PORT_PATHS.HEIGHT);
+    await window.api.connectHeightPort(PORT_PATHS.HEIGHT);
+    const res = await window.api.startHeightMeasurement();
     console.log("[BIA DEBUG] Height result:", res);
 
     if (!res?.height) {
@@ -1159,8 +1146,8 @@ export default function BIACalculate({ user, onComplete }) {
     // Recording is handled by BackgroundCameraProvider automatically
     try {
       // Connect BIA port
-      console.log("[BIA DEBUG] Connecting BIA port:", portValidation.ports.bia?.path);
-      await window.api.connectBiaPort(getBiaPortPath(ports));
+      console.log("[BIA DEBUG] Connecting BIA port:", PORT_PATHS.BIA);
+      await window.api.connectBiaPort(PORT_PATHS.BIA);
       await sleep(800);
       console.log("[BIA DEBUG] BIA port connected");
 
@@ -1266,6 +1253,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaDYes}
           onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
+          t={t}
         />
       )}
     </>
@@ -1274,7 +1262,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
-const ContinueWithShoesModal = ({ onYes, onNo }) => {
+const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
   const [remaining, setRemaining] = React.useState(10);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav";
 import stimulus_1 from "../../../assets/games/stimulus_1.svg";
 import stimulus_glow_1 from "../../../assets/games/stimulus_glow_1.svg";
@@ -79,13 +80,13 @@ const STEP = {
     DONE: "DONE",
 };
 
-const STEP_MESSAGES = {
-    [STEP.SHOW_TARGETS]: "Watch the highlighted\nasteroids.",
-    [STEP.ALL_SAME]: "All asteroids now look\nthe same.",
-    [STEP.MOVING]: "Follow them as they move.",
-    [STEP.STOPPED]: "Now tap on the ones that you were tracking",
-    [STEP.RESULT]: "Great Job. Lets Try one more time",
-    [STEP.DONE]: "Great! Let's start\nthe game.",
+const STEP_I18N_KEYS = {
+    [STEP.SHOW_TARGETS]: "spaceConvoy.watch_highlighted",
+    [STEP.ALL_SAME]: "spaceConvoy.all_look_same",
+    [STEP.MOVING]: "spaceConvoy.follow_them",
+    [STEP.STOPPED]: "spaceConvoy.tap_tracked",
+    [STEP.RESULT]: "spaceConvoy.great_job_retry",
+    [STEP.DONE]: "spaceConvoy.great_job_start",
 };
 
 // ─── Utilities ───
@@ -289,6 +290,7 @@ function isSubmitTap(x, y) {
 //  DEMO COMPONENT
 // ════════════════════════════════════════════
 export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMoveToComplete }) {
+    const { t } = useTranslation();
     const [displayStep, setDisplayStep] = useState(STEP.LOADING);
     const [displayMsg, setDisplayMsg] = useState("");
     const navigate = useNavigate();
@@ -347,7 +349,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
             g.ps = spawnDemo();
             g.step = STEP.SHOW_TARGETS;
             g.elapsed = 0;
-            setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+            setDisplayMsg(t(STEP_I18N_KEYS[STEP.SHOW_TARGETS]));
             setDisplayStep(STEP.SHOW_TARGETS);
 
             // Start music (may require user gesture in browser; works immediately in Electron)
@@ -532,7 +534,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
             if (passed) {
                 // Both trials passed → go to main game
                 g.step = STEP.DONE;
-                setDisplayMsg(STEP_MESSAGES[STEP.DONE]);
+                setDisplayMsg(t(STEP_I18N_KEYS[STEP.DONE]));
                 setDisplayStep(STEP.DONE);
                 // Stop background music when demo completes
                 if (bgAudioRef.current) { bgAudioRef.current.pause(); bgAudioRef.current.currentTime = 0; }
@@ -548,11 +550,11 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
 
     // ─── Game loop ───
     useEffect(() => {
-        const loop = (t) => {
-            const dt = prevTime.current ? Math.min(t - prevTime.current, 50) : 16.667;
-            prevTime.current = t;
+        const loop = (time) => {
+            const dt = prevTime.current ? Math.min(time - prevTime.current, 50) : 16.667;
+            prevTime.current = time;
             const g = G.current;
-            g.globalTime = t;
+            g.globalTime = time;
 
             if (g.step !== STEP.LOADING && g.step !== STEP.DONE) {
                 g.elapsed += dt;
@@ -564,7 +566,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                             g.step = STEP.ALL_SAME;
                             g.elapsed = 0;
                             setDisplayStep(STEP.ALL_SAME);
-                            setDisplayMsg(STEP_MESSAGES[STEP.ALL_SAME]);
+                            setDisplayMsg(t(STEP_I18N_KEYS[STEP.ALL_SAME]));
                         }
                         break;
 
@@ -578,7 +580,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                             g.ps.forEach((p) => { p.opacity = 1; });
                             g.step = STEP.MOVING;
                             g.elapsed = 0;
-                            setDisplayMsg(STEP_MESSAGES[STEP.MOVING]);
+                            setDisplayMsg(t(STEP_I18N_KEYS[STEP.MOVING]));
                         }
                         break;
 
@@ -591,7 +593,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                             g.freezeStartTime = performance.now();
                             g.submitted = false;    // reset submit guard for new round
                             g.trialStarted = false;
-                            setDisplayMsg(STEP_MESSAGES[STEP.STOPPED]);
+                            setDisplayMsg(t(STEP_I18N_KEYS[STEP.STOPPED]));
                         }
                         break;
 
@@ -626,7 +628,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                                     g.step = STEP.SHOW_TARGETS;
                                     g.elapsed = 0;
                                     setDisplayStep(STEP.SHOW_TARGETS);
-                                    setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+                                    setDisplayMsg(t(STEP_I18N_KEYS[STEP.SHOW_TARGETS]));
                                 }, 2000);
                             } else {
                                 // Trial 1 or Trial 2 failed — retry or give up
@@ -648,7 +650,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                                         g.step = STEP.SHOW_TARGETS;
                                         g.elapsed = 0;
                                         setDisplayStep(STEP.SHOW_TARGETS);
-                                        setDisplayMsg(STEP_MESSAGES[STEP.SHOW_TARGETS]);
+                                        setDisplayMsg(t(STEP_I18N_KEYS[STEP.SHOW_TARGETS]));
                                     }, 2000);
                                 }
                             }
@@ -657,7 +659,7 @@ export default function SpaceConveyDemo({ activeSessionId, onComplete, handleMov
                 }
             }
 
-            draw(t);
+            draw(time);
             rafRef.current = requestAnimationFrame(loop);
         };
         rafRef.current = requestAnimationFrame(loop);
