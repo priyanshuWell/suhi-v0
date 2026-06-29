@@ -201,7 +201,7 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                navigate("/voice");
+                navigate("/bia/result");
                 return;
             }
 
