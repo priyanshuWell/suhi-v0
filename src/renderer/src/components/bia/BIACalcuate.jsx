@@ -1194,7 +1194,7 @@ export default function BIACalculate({ user, onComplete }) {
 
         setMeasuredValues((prev) => ({
           ...prev,
-          arms50k: resultsRef.current.arms50k,
+          leg50k: resultsRef.current.leg50k,
         }));
         //  await window.api.sendLegBiaResult(legBiaPayload);
         await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.SUCCESS, { bia_object: legBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
