@@ -56,6 +56,7 @@ const SpaceConvoyMain = () => {
     const assetsRef = useRef(null)
     const navigate = useNavigate();
     const storeUser = useSelector((state) => state.common.user);
+    const screening = useSelector((state) => state.common.screening); //  proper selector
     // ─── Preload ALL assets once at mount ───
     useEffect(() => {
         (async () => {
@@ -96,8 +97,7 @@ const SpaceConvoyMain = () => {
         // TODO: replace with real userId from your auth/Redux store
         const userId = storeUser?.data?.user_id;
         //  Read session from Redux screening slice (camelCase) — no UUID fallback
-        const screeningSessionId = storeUser?.common?.screening?.sessionId
-          ?? store.getState().common.screening?.sessionId;
+        const screeningSessionId = screening?.sessionId; //  fixed — was storeUser?.common (wrong) + store.getState() (undefined)
         if (!screeningSessionId) {
           console.error('[SpaceConvoy] No screening session — aborting game session creation');
           return;
