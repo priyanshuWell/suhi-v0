@@ -123,7 +123,7 @@ const VideoCaptureScreen = () => {
         } else {
           // Await both face capture and weight/height measurements in parallel
           ;[fptResponse, measurements] = await Promise.all([
-            realtimeCapture(),
+            realtimeCapture(getKioskId()),
             measurementPromiseRef.current
           ])
         }

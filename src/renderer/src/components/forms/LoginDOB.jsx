@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useDispatch } from 'react-redux'
-import { setUser, setScreening } from '../features/common/commonSlice'
+import { setUser, setScreening } from '../../features/common/commonSlice'
 import LoginComponent from '../ui/LoginComponent'
 import BlueGradientButton from '../ui/BlueGradientButton'
-import { API_BASE_URL } from '../utils/config'
+import { API_BASE_URL } from '../../utils/config'
 import axios from 'axios'
 
 const LoginDOB = () => {

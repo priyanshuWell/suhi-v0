@@ -24,7 +24,7 @@ import { getNextRoute } from "../../utils/stageRouter"
 import { getRgbCamera } from "../../utils/getRgbCamera"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 import { getKioskId, API_BASE_URL } from "../../utils/config"
-import { DMITComplete } from "../../utils/api"
+// import { DMITComplete } from "../../utils/api"
 
 /**
  * :white_check_mark: 4 Steps (single camera only)
@@ -310,19 +310,19 @@ const NewDmitScreen = () => {
         setStatus("All hands completed  Redirecting...")
         stopAudio()
         //  Notify backend, then use stageRouter for next destination
-        setTimeout(async () => {
-          try {
-            const dmitComplete = await DMITComplete({
-              session_id: userId,
-              screening_session_id: sessionId,
-            })
-            if (dmitComplete?.screening) dispatch(setScreening(dmitComplete.screening))
-            const nextRoute = getNextRoute(dmitComplete?.screening?.next_stage, '/voice')
-            navigate(nextRoute)
-          } catch {
-            navigate('/voice')
-          }
-        }, 700)
+        // setTimeout(async () => {
+        //   try {
+        //     const dmitComplete = await DMITComplete({
+        //       session_id: userId,
+        //       screening_session_id: sessionId,
+        //     })
+        //     if (dmitComplete?.screening) dispatch(setScreening(dmitComplete.screening))
+        //     const nextRoute = getNextRoute(dmitComplete?.screening?.next_stage, '/voice')
+        //     navigate(nextRoute)
+        //   } catch {
+        //     navigate('/voice')
+        //   }
+        // }, 700)
       }
     } catch (err) {
       console.error("runStep error:", err)
