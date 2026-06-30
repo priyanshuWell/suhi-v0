@@ -776,116 +776,376 @@ export default function BIACalculate({ user, onComplete }) {
      PHASE 3: ARM IMPEDANCE + 20kHz + 100kHz
      - If any fails, retry from arm impedance
   ======================= */
-  const runPhase3_Impedance = async (attemptCount = 0) => {
-    console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS ==========");
-    console.log(`[BIA DEBUG] Phase 3 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
+  // const runPhase3_Impedance = async (attemptCount = 0) => {
+  //   console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS ==========");
+  //   console.log(`[BIA DEBUG] Phase 3 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
+  //   setCurrentPhase('arm');
+
+  //   // Check if we've exhausted retries BEFORE attempting
+  //   if (attemptCount >= MAX_RETRIES) {
+  //     console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /space-convoy-main`);
+  //     //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
+  //     await BIAComplete({
+  //       session_id: storeUser?.data?.buffer_id,
+  //       screening_session_id: screeningState?.sessionId
+  //     });
+  //     console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
+  //     await saveBuffer("arm_max_retry");
+  //     navigate("/bia/imcomplete");
+  //     return;
+  //   }
+
+  //   // Reset attempt tracking and error flags for arm and impedance
+  //   attemptTracking.current.arm = 0;
+  //   attemptTracking.current.impedance20 = 0;
+  //   attemptTracking.current.impedance100 = 0;
+  //   errorTriggered.current.arm = false;
+  //   errorTriggered.current.impedance20 = false;
+  //   errorTriggered.current.impedance100 = false;
+  //   console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
+
+  //   // Navigate to impedance screen
+  //   navigate("/bia/im");
+  //   await sleep(8000);
+
+  //   try {
+  //     // Arm Impedance 50kHz
+  //     const res = await measureArmImpedance(attemptCount);
+  //     await sleep(800);
+  //     console.log("[BIA DEBUG] Arm impedance SUCCESS");
+  //     await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.armImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
+
+  //     // Calculate Arm BIA immediately after arm impedance
+  //     await calculateAndStoreArmBIA(attemptCount);
+
+  //     if (resultsRef.current.isShoesContinued) {
+  //       console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
+  //       navigate("/bia/imcomplete");
+  //       const shoesCompleteResult = await BIAComplete({
+  //         session_id: storeUser?.data?.buffer_id,
+  //         screening_session_id: screeningState?.sessionId
+  //       });
+  //       // Cache next_stage from BIAComplete for the shoes path
+  //       biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
+  //       console.log('[BIA] Shoes path BIAComplete next_stage captured:', biaNextStageRef.current);
+  //       if (shoesCompleteResult?.screening) {
+  //         dispatch(setScreening(shoesCompleteResult.screening));
+  //       }
+  //       console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
+  //       await stopAndSend(); // ✅ Stop recording before navigating away
+  //       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
+  //       setIsComplete(true);
+  //       const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/space-convoy-main');
+  //       console.log('[BIA] runPhase3 shoes path — navigating to:', shoesNextRoute);
+  //       navigate(shoesNextRoute);
+  //       return;
+  //     }
+  //     // Impedance 20kHz
+  //     await measureImpedance("20", attemptCount);
+  //     // await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+  //     await sleep(1500);
+  //     console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
+
+
+  //     // Impedance 100kHz
+  //     await measureImpedance("100", attemptCount);
+
+  //     // Track combined Impedances
+  //     if (resultsRef.current.impedance.k20 && resultsRef.current.impedance.k100) {
+  //       await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
+  //         impedance_data: {
+  //           impedance_20khz_ohm: resultsRef.current.impedance.k20.avg,
+  //           impedance_100khz_ohm: resultsRef.current.impedance.k100.avg
+  //         }
+  //       }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
+  //     }
+  //     console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
+
+  //     // All impedance measurements success
+  //     console.log("[BIA DEBUG] Phase 3 COMPLETE - All impedance measurements done");
+  //     await runCalculateAndComplete();
+
+  //   } catch (impedanceError) {
+  //     console.error("[BIA DEBUG] Phase 3 FAILED:", impedanceError.message);
+
+  //     // Track Error for Consolidated Impedances
+  //     await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {
+
+  //     }, impedanceError.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+
+  //     // Reset arm and impedance results to retry from arm
+  //     resultsRef.current.armImpedance = null;
+  //     resultsRef.current.impedance = { k20: null, k100: null };
+
+  //     // Retry with incremented attempt count
+  //     console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
+  //     if (attemptCount === 0) {
+  //       await showError(ERROR_MESSAGES.armImpedance, 3000);
+  //     }
+  //     await runPhase3_Impedance(attemptCount + 1);
+  //   }
+  // };
+  const runPhase3_Impedance = async () => {
+    console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS (revised) ==========");
     setCurrentPhase('arm');
 
-    // Check if we've exhausted retries BEFORE attempting
-    if (attemptCount >= MAX_RETRIES) {
-      console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /space-convoy-main`);
-      //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-      await BIAComplete({
-        session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screeningState?.sessionId
-      });
-      console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
-      await saveBuffer("arm_max_retry");
-      navigate("/bia/imcomplete");
-      return;
-    }
+    const legExists = !!resultsRef.current.legImpedance;
+    console.log("[BIA DEBUG] Phase 3 — leg detected:", legExists);
 
-    // Reset attempt tracking and error flags for arm and impedance
+    if (legExists) {
+      await runPhase3_LegExists();
+    } else {
+      await runPhase3_NoLeg();
+    }
+  };
+
+  const try20kHz = async (attemptLabel) => {
+    console.log(`[BIA DEBUG] ${attemptLabel}: attempting 20kHz`);
+    try {
+      await measureImpedance("20", 0);
+      console.log(`[BIA DEBUG] ${attemptLabel}: 20kHz SUCCESS`);
+      return true;
+    } catch {
+      console.warn(`[BIA DEBUG] ${attemptLabel}: 20kHz FAILED`);
+      resultsRef.current.impedance.k20 = null;
+      return false;
+    }
+  };
+
+  const try100kHz = async (attemptLabel) => {
+    console.log(`[BIA DEBUG] ${attemptLabel}: attempting 100kHz`);
+    try {
+      await measureImpedance("100", 0);
+      console.log(`[BIA DEBUG] ${attemptLabel}: 100kHz SUCCESS`);
+      return true;
+    } catch {
+      console.warn(`[BIA DEBUG] ${attemptLabel}: 100kHz FAILED`);
+      resultsRef.current.impedance.k100 = null;
+      return false;
+    }
+  };
+
+  /**
+ * Thin wrapper around the existing measureArmImpedance + calculateAndStoreArmBIA.
+ * attemptCount is passed through for trackStage numbering.
+ * Returns true on success, false on failure.
+ */
+  const tryArm50kHz = async (attemptLabel, attemptCount = 0) => {
+    console.log(`[BIA DEBUG] ${attemptLabel}: attempting arm 50kHz (attemptCount=${attemptCount})`);
+    try {
+      await measureArmImpedance(attemptCount);
+      await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.armImpedance?.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, attemptCount + 1);
+      await calculateAndStoreArmBIA(attemptCount);
+      console.log(`[BIA DEBUG] ${attemptLabel}: arm 50kHz SUCCESS`);
+      return true;
+    } catch {
+      console.warn(`[BIA DEBUG] ${attemptLabel}: arm 50kHz FAILED`);
+      resultsRef.current.armImpedance = null;
+      return false;
+    }
+  };
+
+  /**
+  * Navigate to /bia/imcomplete, call BIAComplete, wait for user click, then navigate away.
+  * Used by all fallback paths that skip runCalculateAndComplete().
+  */
+  const finishWithImcomplete = async (bufferTag) => {
+    navigate("/bia/imcomplete");
+
+    const result = await BIAComplete({
+      session_id: storeUser?.data?.buffer_id,
+      screening_session_id: screeningState?.sessionId,
+    });
+    biaNextStageRef.current = result?.screening?.next_stage ?? null;
+    if (result?.screening) dispatch(setScreening(result.screening));
+
+    console.log(`[BIA REC] ⏏️  ${bufferTag} → saveBuffer('${bufferTag}')`);
+    await saveBuffer(bufferTag);
+
+    await new Promise((resolve) => { imCompleteResolver.current = resolve; });
+    setIsComplete(true);
+    const route = getNextRoute(result?.screening?.next_stage, '/space-convoy-main');
+    console.log('[BIA] finishWithImcomplete — navigating to:', route);
+    navigate(route);
+  };
+
+
+  /* ─────────────────────────────────────────────
+     PATH A: Leg was detected in Phase 2
+  ───────────────────────────────────────────── */
+  const runPhase3_LegExists = async () => {
+    console.log("[BIA DEBUG] Phase 3 path: LEG EXISTS — skipping arm 50kHz, starting 20kHz");
+    navigate("/bia/im");
+    await sleep(8000);
+
+    // Reset tracking
     attemptTracking.current.arm = 0;
     attemptTracking.current.impedance20 = 0;
     attemptTracking.current.impedance100 = 0;
     errorTriggered.current.arm = false;
     errorTriggered.current.impedance20 = false;
     errorTriggered.current.impedance100 = false;
-    console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
 
-    // Navigate to impedance screen
+    // ── Try 20kHz (first attempt) ──
+    const ok20_first = await try20kHz("P3-LegExists-1st");
+
+    if (ok20_first) {
+      // ── Try 100kHz ──
+      const ok100 = await try100kHz("P3-LegExists");
+      if (ok100) {
+        await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
+          impedance_data: {
+            impedance_20khz_ohm: resultsRef.current.impedance.k20?.avg,
+            impedance_100khz_ohm: resultsRef.current.impedance.k100?.avg,
+          }
+        }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, 1);
+        await runCalculateAndComplete();
+      } else {
+        // 100kHz failed — treat same as full fail, fallback
+        await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "100kHz failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+        await finishWithImcomplete("100khz_fail");
+      }
+      return;
+    }
+
+    // ── 20kHz failed → arm 50kHz [v1] ──
+    console.log("[BIA DEBUG] 20kHz failed — entering arm 50kHz [v1] path");
+    const armOk = await runArm50kHz_v1();
+
+    if (!armOk) {
+      // Arm completely failed after retries → show leg result
+      console.log("[BIA DEBUG] Arm 50kHz exhausted — showing leg result");
+      await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "Arm 50kHz exhausted, showing leg result", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await finishWithImcomplete("leg_result_fallback");
+      return;
+    }
+
+    // Arm succeeded → retry 20kHz up to 2 times
+    await retry20kHz_after_arm();
+  };
+
+  /**
+   * Try arm 50kHz, retry up to 2 times on failure.
+   * Returns true if arm eventually succeeded, false if exhausted.
+   */
+  const runArm50kHz_v1 = async () => {
+    // Attempt 1
+    const ok1 = await tryArm50kHz("Arm-v1-attempt-1", 0);
+    if (ok1) return true;
+
+    // Attempt 2 — show error first
+    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    const ok2 = await tryArm50kHz("Arm-v1-attempt-2", 1);
+    if (ok2) return true;
+
+    // Attempt 3 — show error first
+    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    const ok3 = await tryArm50kHz("Arm-v1-attempt-3", 2);
+    return ok3;
+  };
+
+  /**
+   * After arm 50kHz succeeded ([v1]), retry 20kHz up to 2 times.
+   * Shows error before the 2nd attempt.
+   * On continued failure → show 50kHz arm result.
+   * On success → do 100kHz → runCalculateAndComplete().
+   */
+  const retry20kHz_after_arm = async () => {
+    console.log("[BIA DEBUG] Retrying 20kHz after arm 50kHz success (up to 2 attempts)");
+
+    // Attempt 1
+    const ok1 = await try20kHz("20kHz-retry-1");
+    if (ok1) {
+      const ok100 = await try100kHz("20kHz-retry-1-then-100kHz");
+      if (ok100) {
+        await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
+          impedance_data: {
+            impedance_20khz_ohm: resultsRef.current.impedance.k20?.avg,
+            impedance_100khz_ohm: resultsRef.current.impedance.k100?.avg,
+          }
+        }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, 1);
+        await runCalculateAndComplete();
+      } else {
+        await finishWithImcomplete("arm50k_result_100khz_fail");
+      }
+      return;
+    }
+
+    // Show error before attempt 2
+    await showError(ERROR_MESSAGES.armImpedance, 3000);
+
+    // Attempt 2
+    const ok2 = await try20kHz("20kHz-retry-2");
+    if (ok2) {
+      const ok100 = await try100kHz("20kHz-retry-2-then-100kHz");
+      if (ok100) {
+        await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
+          impedance_data: {
+            impedance_20khz_ohm: resultsRef.current.impedance.k20?.avg,
+            impedance_100khz_ohm: resultsRef.current.impedance.k100?.avg,
+          }
+        }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, 2);
+        await runCalculateAndComplete();
+      } else {
+        await finishWithImcomplete("arm50k_result_100khz_fail");
+      }
+      return;
+    }
+
+    // Both retries failed → show 50kHz arm result
+    console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing 50kHz arm result");
+    await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "20kHz failed after arm 50kHz retries", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+    await finishWithImcomplete("arm50k_result_20khz_exhausted");
+  };
+
+  /* ─────────────────────────────────────────────
+     PATH B: Leg was NOT detected in Phase 2
+  ───────────────────────────────────────────── */
+  const runPhase3_NoLeg = async () => {
+    console.log("[BIA DEBUG] Phase 3 path: NO LEG — doing arm 50kHz only");
     navigate("/bia/im");
     await sleep(8000);
 
-    try {
-      // Arm Impedance 50kHz
-      const res = await measureArmImpedance(attemptCount);
-      await sleep(800);
-      console.log("[BIA DEBUG] Arm impedance SUCCESS");
-      await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.armImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
+    attemptTracking.current.arm = 0;
+    errorTriggered.current.arm = false;
 
-      // Calculate Arm BIA immediately after arm impedance
-      await calculateAndStoreArmBIA(attemptCount);
-
-      if (resultsRef.current.isShoesContinued) {
-        console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
-        navigate("/bia/imcomplete");
-        const shoesCompleteResult = await BIAComplete({
-          session_id: storeUser?.data?.buffer_id,
-          screening_session_id: screeningState?.sessionId
-        });
-        // Cache next_stage from BIAComplete for the shoes path
-        biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
-        console.log('[BIA] Shoes path BIAComplete next_stage captured:', biaNextStageRef.current);
-        if (shoesCompleteResult?.screening) {
-          dispatch(setScreening(shoesCompleteResult.screening));
-        }
-        console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
-        await stopAndSend(); // ✅ Stop recording before navigating away
-        await new Promise((resolve) => { imCompleteResolver.current = resolve; });
-        setIsComplete(true);
-        const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/space-convoy-main');
-        console.log('[BIA] runPhase3 shoes path — navigating to:', shoesNextRoute);
-        navigate(shoesNextRoute);
-        return;
-      }
-      // Impedance 20kHz
-      await measureImpedance("20", attemptCount);
-      // await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      await sleep(1500);
-      console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
-
-
-      // Impedance 100kHz
-      await measureImpedance("100", attemptCount);
-
-      // Track combined Impedances
-      if (resultsRef.current.impedance.k20 && resultsRef.current.impedance.k100) {
-        await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
-          impedance_data: {
-            impedance_20khz_ohm: resultsRef.current.impedance.k20.avg,
-            impedance_100khz_ohm: resultsRef.current.impedance.k100.avg
-          }
-        }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-      }
-      console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
-
-      // All impedance measurements success
-      console.log("[BIA DEBUG] Phase 3 COMPLETE - All impedance measurements done");
-      await runCalculateAndComplete();
-
-    } catch (impedanceError) {
-      console.error("[BIA DEBUG] Phase 3 FAILED:", impedanceError.message);
-
-      // Track Error for Consolidated Impedances
-      await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {
-
-      }, impedanceError.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-
-      // Reset arm and impedance results to retry from arm
-      resultsRef.current.armImpedance = null;
-      resultsRef.current.impedance = { k20: null, k100: null };
-
-      // Retry with incremented attempt count
-      console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
-      if (attemptCount === 0) {
-        await showError(ERROR_MESSAGES.armImpedance, 3000);
-      }
-      await runPhase3_Impedance(attemptCount + 1);
+    // Attempt 1
+    const ok1 = await tryArm50kHz("NoLeg-arm-attempt-1", 0);
+    if (ok1) {
+      console.log("[BIA DEBUG] No-leg path: arm 50kHz success — showing hand result");
+      await finishWithImcomplete("noleg_arm50k_success");
+      return;
     }
-  };
 
+    // Attempt 2 — show error first
+    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    const ok2 = await tryArm50kHz("NoLeg-arm-attempt-2", 1);
+    if (ok2) {
+      await finishWithImcomplete("noleg_arm50k_success_retry2");
+      return;
+    }
+
+    // Attempt 3 — show error first
+    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    const ok3 = await tryArm50kHz("NoLeg-arm-attempt-3", 2);
+    if (ok3) {
+      await finishWithImcomplete("noleg_arm50k_success_retry3");
+      return;
+    }
+
+    // All failed → move to next screen
+    console.log("[BIA DEBUG] No-leg path: arm 50kHz exhausted — moving to next screen");
+    await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "No-leg arm 50kHz exhausted", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+    const result = await BIAComplete({
+      session_id: storeUser?.data?.buffer_id,
+      screening_session_id: screeningState?.sessionId,
+    });
+    if (result?.screening) dispatch(setScreening(result.screening));
+    await saveBuffer("noleg_arm_exhausted");
+    const route = getNextRoute(result?.screening?.next_stage, '/space-convoy-main');
+    console.log('[BIA] No-leg exhausted — navigating to:', route);
+    navigate(route);
+  };
   /* =======================
      INTERMEDIATE CALCULATIONS
   ======================= */
