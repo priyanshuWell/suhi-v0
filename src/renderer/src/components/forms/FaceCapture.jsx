@@ -9,7 +9,7 @@ import cameraRing from "../../assets/camera-ring.png";
 
 import { getCameraSession, openCamerasInBackground } from "../../utils/cameraSession";
 import { realtimeCapture } from "../../utils/api";
-import { setUser } from "../../features/common/commonSlice";
+import { setUser, setLoginScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
 
 import ErrorAlert from "../ErrorAlert";
@@ -87,10 +87,17 @@ function FaceCapture() {
 
       if (response.student_status === "REGISTERED") {
         dispatch(setUser(response));
+        // FaceCapture calls realtime/capture — this IS the login step.
+        //    Was previously missing entirely, leaving Redux screening stale/null
+        //    and breaking the nextStage check immediately below.
+        dispatch(setLoginScreening(response.screening || null));
 
         // If this is a resumed session, skip the RegisterCard and go straight to next stage
-        if (screening?.isResumed && screening?.nextStage) {
-          const nextRoute = getNextRoute(screening.nextStage, '/bia/leg50');
+        //  Read directly from the fresh API response rather than Redux —
+        //    avoids any risk of using a stale value before the dispatch above
+        //    has been applied to the store.
+        if (response.screening?.is_resumed && response.screening?.next_stage) {
+          const nextRoute = getNextRoute(response.screening.next_stage, '/bia/leg50');
           console.log("[FaceCapture] Resumed session: navigating to next stage:", nextRoute);
           navigate(nextRoute);
         } else {
