@@ -51,7 +51,11 @@ export default function BIACalculate({ user, onComplete }) {
   // Stores next_stage from BIAComplete API response for use in handleImNextClick
   const biaNextStageRef = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
-    height: "-- cm", weight: "-- kg", arms50k: {}
+    height: "-- cm",
+    weight: "-- kg",
+    arms50k: {},
+    leg50k: {},
+    bia20k_100khz: {}
   });
   const [displayValues, setDisplayValues] = useState({
     height: null,
@@ -74,6 +78,7 @@ export default function BIACalculate({ user, onComplete }) {
     preHeight: null,
     armImpedance: null,
     arms50k: null,
+    leg50k: null,
     isShoesContinued: false,
     impedance: { k20: null, k100: null }
   });
@@ -525,12 +530,12 @@ export default function BIACalculate({ user, onComplete }) {
     
     */
 
-    resultsRef.current.arms50k = {
-      fatPercentage: res.body_fat_percentage ?? "20",
-      waterPercentage: res.moisture_content_kg ?? "55",
-      muscleMassKg: res.muscle_mass_kg ?? "30",
-      boneMassKg: res.bone_mass_kg ?? "10",
-    };
+    // resultsRef.current.arms50k = {
+    //   fatPercentage: res.body_fat_percentage ?? "20",
+    //   waterPercentage: res.moisture_content_kg ?? "55",
+    //   muscleMassKg: res.muscle_mass_kg ?? "30",
+    //   boneMassKg: res.bone_mass_kg ?? "10",
+    // };
     setMeasuredValues((prev) => ({
       ...prev,
       arms50k: resultsRef.current.arms50k,
@@ -1177,6 +1182,20 @@ export default function BIACalculate({ user, onComplete }) {
           weightKg: resultsRef.current.weight.value
         });
         console.log("[BIA DEBUG] Leg BIA payload:", legBiaPayload);
+        resultsRef.current.leg50k = {
+          fatPercentage: legBiaPayload.body_fat_percentage ?? "8",
+          waterPercentage: legBiaPayload.moisture_content_kg ?? "57",
+          muscleMassKg: legBiaPayload.muscle_mass_kg ?? "5",
+          boneMassKg: legBiaPayload.bone_mass_kg ?? "2.7",
+          skeletalMuscleMassKg: legBiaPayload.skeletal_muscle_mass_kg ?? "10",
+          visceralFat: legBiaPayload.visceral_fat_level ?? "5",
+          proteinMassKg: legBiaPayload.protein_mass_kg ?? "2.7",
+        };
+
+        setMeasuredValues((prev) => ({
+          ...prev,
+          arms50k: resultsRef.current.arms50k,
+        }));
         //  await window.api.sendLegBiaResult(legBiaPayload);
         await trackStage(STAGES.LEG_BIA_50KHZ, STATUS.SUCCESS, { bia_object: legBiaPayload }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       } else {
@@ -1284,6 +1303,12 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] BIA success:", bia?.success);
       console.log("[BIA DEBUG] BIA summary:", bia?.summary);
 
+      resultsRef.current.bia20k_100khz = bia?.summary;
+
+      setMeasuredValues((prev) => ({
+        ...prev,
+        bia20k_100khz: bia?.summary,
+      }));
       if (!bia?.success) {
         console.error("[BIA DEBUG] BIA calculation failed:", bia?.error);
         throw new Error(bia?.error || "BIA calculation failed");
@@ -1475,6 +1500,8 @@ export default function BIACalculate({ user, onComplete }) {
         onNextVoiceClick={handleImNextClick}
         onNextClick={handleWhNextClick}
         arms50k={measuredValues.arms50k}
+        leg50k={measuredValues.leg50k}
+        bia20k_100khz={measuredValues.bia20k_100khz}
         user={storeUser}
       />
 

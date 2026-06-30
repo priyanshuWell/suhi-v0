@@ -89,7 +89,7 @@ export default function RegisterCard() {
   const studentName = user?.data?.student_name || "Student" || user?.data?.name
   const studentAge = user?.data?.age || "15"
   const studentClass = user?.class_section || "II-A"
-  console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
+  // console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
     // Use the next_stage from the backend (stored in Redux during login)
