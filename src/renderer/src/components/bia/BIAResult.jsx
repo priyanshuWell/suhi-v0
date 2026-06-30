@@ -329,49 +329,6 @@ const BIAResult = () => {
      RENDER
   ──────────────────────────────────────────── */
 
-  // ── Error state — shown when the report API fails ──────────────────────────
-  if (reportError) {
-    return (
-      <div style={{
-        position: 'fixed', inset: 0, background: '#000',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '32px',
-      }}>
-        <p style={{ fontFamily: FONT, fontSize: '32px', color: '#fff', textAlign: 'center', maxWidth: '600px', lineHeight: 1.4 }}>
-          Unable to load your report.<br />
-          <span style={{ fontSize: '22px', color: 'rgba(255,255,255,0.6)' }}>
-            Please try again or speak to a staff member.
-          </span>
-        </p>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <button
-            onClick={fetchBiometricReport}
-            style={{
-              fontFamily: FONT, fontSize: '26px', color: '#fff',
-              background: 'linear-gradient(135deg, #2E75B6, #1F3864)',
-              border: 'none', borderRadius: '16px',
-              padding: '18px 48px', cursor: 'pointer',
-            }}
-          >
-            Retry
-          </button>
-          <button
-            onClick={() => { releaseAllResources(); navigate('/welcome') }}
-            style={{
-              fontFamily: FONT, fontSize: '26px', color: 'rgba(255,255,255,0.7)',
-              background: 'transparent',
-              border: '2px solid rgba(255,255,255,0.3)', borderRadius: '16px',
-              padding: '18px 48px', cursor: 'pointer',
-            }}
-          >
-            Go Home
-          </button>
-        </div>
-      </div>
-    )
-  }
-  // ────────────────────────────────────────────────────────────────────────────
-
   return (
     /*
       Outer shell — fills the physical screen, clips everything, hides scroll.
