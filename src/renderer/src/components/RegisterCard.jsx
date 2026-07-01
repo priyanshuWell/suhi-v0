@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { getNextRoute } from "../utils/stageRouter"
+import { IMAGE_SERVER_URL } from "../utils/config"
 
 
 const buildProfileImage = (imagePath) => {
@@ -18,7 +19,7 @@ const buildProfileImage = (imagePath) => {
     const parts = imagePath.split("/")
     const userId = parts[parts.length - 2]
 
-    return `http://127.0.0.1:5174/user_images/${userId}/latest.jpg`
+    return `${IMAGE_SERVER_URL}/user_images/${userId}/latest.jpg`  //  from config
   }
 
   if (imagePath.includes(".images")) {
@@ -27,7 +28,7 @@ const buildProfileImage = (imagePath) => {
         imagePath.lastIndexOf("/") + 1
       )
 
-    return `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+    return `${IMAGE_SERVER_URL}/images/${folderName}/original.jpg`  //  from config
   }
 
   return profilepic

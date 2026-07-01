@@ -50,6 +50,25 @@ const commonSlice = createSlice({
       state.user = action.payload;
     },
 
+    //  The ONLY action that may set sessionId. Called once, from the
+    // login/realtime-capture response. This is the single source of truth
+    // for sessionId for the entire screening flow — every later stage
+    // response (BIA, voice, DMIT, etc.) also includes a `session_id`, but
+    // we deliberately ignore it there and rely on this value instead.
+    setLoginScreening: (state, action) => {
+      if (action.payload) {
+        state.screening = {
+          sessionId: action.payload.session_id || null,
+          isResumed: action.payload.is_resumed || false,
+          resumeCount: action.payload.resume_count || 0,
+          nextStage: action.payload.next_stage || null,
+          completedStages: action.payload.completed_stages || [],
+        };
+      } else {
+        state.screening = initialState.screening;
+      }
+    },
+
     setLang: (state, action) => {
       state.lang = action.payload;
     },
@@ -146,18 +165,25 @@ const commonSlice = createSlice({
       state.sessionId = action.payload;
     },
 
+    //  Used for every stage-complete call AFTER login (BIA, voice, DMIT, etc.)
+    // Deliberately NEVER touches sessionId — that is locked in once by
+    // setLoginScreening and must persist for the entire screening flow,
+    // per product requirement: "screening session id always from login API."
     setScreening: (state, action) => {
       if (action.payload) {
         state.screening = {
-          sessionId: action.payload.session_id || null,
-          isResumed: action.payload.is_resumed || false,
-          resumeCount: action.payload.resume_count || 0,
-          nextStage: action.payload.next_stage || null,
-          completedStages: action.payload.completed_stages || [],
+          ...state.screening,
+          // sessionId intentionally NOT updated here — see setLoginScreening
+          isResumed: action.payload.is_resumed ?? state.screening.isResumed,
+          resumeCount: action.payload.resume_count ?? state.screening.resumeCount,
+          nextStage: action.payload.next_stage ?? state.screening.nextStage,
+          completedStages: action.payload.completed_stages ?? state.screening.completedStages,
         };
-      } else {
-        state.screening = initialState.screening;
       }
+      // Note: removed the "else → reset to initialState" branch that existed
+      // previously, since setScreening should never be called with a falsy
+      // payload during normal stage progression. Use resetCommonState() to
+      // clear the session on logout instead.
     },
 
     resetCommonState: () => initialState,
@@ -167,6 +193,7 @@ const commonSlice = createSlice({
 export const {
   setCloudSyncData,
   setUser,
+  setLoginScreening,
   setLang,
   setVideoBase64,
   setRecordedVideoInfo,

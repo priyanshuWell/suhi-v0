@@ -442,7 +442,7 @@ export default function VoiceAnalysis() {
         const kioskId = getKioskId();
         const userId = user?.data?.user_id ?? null;
         const sessionId = user?.data?.buffer_id ?? null;
-        const screeningSessionId = screeningState?.sessionId ?? null;
+        const screeningSessionId = screeningState?.sessionId ?? null; // fixed — was user?.screening?.session_id (always undefined)
 
         const voiceData = {
           role: "VOICE",
@@ -510,7 +510,7 @@ export default function VoiceAnalysis() {
     stopInstructionAudio();
     setConfirmedImage(IMAGES[selectedIndex]);
     setPhase("viewing");
-    // ✅ FIX: start mic immediately so voice bars are live from the first frame.
+    //  FIX: start mic immediately so voice bars are live from the first frame.
     //    Previously recording only started after the user interacted with the
     //    panorama (onFirstInteract), meaning bars stayed flat until then.
     //    startRecording() has its own guard against double-starts.
@@ -533,7 +533,7 @@ export default function VoiceAnalysis() {
     navigate(nextRoute);
   }, [navigate, screeningState]);
 
-  // ✅ FIX: removed the effect that cancelled the RAF whenever isRecording was false.
+  //  FIX: removed the effect that cancelled the RAF whenever isRecording was false.
   //    It fired on every initial render (isRecording starts false) and could race
   //    against a freshly-launched visualizeVoice loop. Cleanup is already handled
   //    correctly in stopRecordingAndSubmit and the unmount effect.

@@ -1,12 +1,45 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router'
+import { useDispatch } from 'react-redux'
+import { setUser, setScreening } from '../../features/common/commonSlice'
 import LoginComponent from '../ui/LoginComponent'
 import BlueGradientButton from '../ui/BlueGradientButton'
+import { API_BASE_URL } from '../../utils/config'
+import axios from 'axios'
 
 const LoginDOB = () => {
+  const navigate = useNavigate()
+  const dispatch = useDispatch()
   const [suhiId, setSuhiId] = useState('')
   const [dob, setDob] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const isButtonDisabled = !suhiId.trim() || !dob.trim()
+  const isButtonDisabled = !suhiId.trim() || !dob.trim() || loading
+
+  //  Submit: verify SUHI ID + DOB against backend
+  const handleSubmit = async () => {
+    if (isButtonDisabled) return
+    setError('')
+    setLoading(true)
+    try {
+      const res = await axios.post(`${API_BASE_URL}/auth/login-dob`, {
+        suhi_id: suhiId.trim(),
+        dob: dob.trim(),
+      })
+      if (res?.data?.success) {
+        dispatch(setUser(res.data.user))
+        dispatch(setScreening(res.data.screening))
+        navigate('/register')
+      } else {
+        setError(res?.data?.message || 'Invalid SUHI ID or Date of Birth')
+      }
+    } catch (err) {
+      setError('Login failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Format date input as DD/MM/YY
   const handleDobChange = (e) => {
@@ -70,12 +103,14 @@ const LoginDOB = () => {
       </div>
 
       <div className="fixed left-1/2 bottom-[40%] -translate-x-1/2">
+        {error && <p className="text-red-400 text-center text-xl mb-4">{error}</p>}
         <BlueGradientButton 
           width={'w-[clamp(16rem,33vw,31.25rem)]'} 
           padX={'px-3'}
           disabled={isButtonDisabled}
+          onClick={handleSubmit}  //  wired up
         >
-          Next
+          {loading ? 'Verifying...' : 'Next'}
         </BlueGradientButton>
       </div>
     </>

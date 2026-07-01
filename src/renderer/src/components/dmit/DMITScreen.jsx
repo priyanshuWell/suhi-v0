@@ -131,8 +131,7 @@ import rightBack from "../../assets/hands/left-back.svg"
 import leftFront from "../../assets/hands/right-front.svg"
 import leftBack from "../../assets/hands/right-back.svg"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
-
-const API_BASE_URL = "http://127.0.0.1:8000"
+import { API_BASE_URL, getKioskId } from "../../utils/config"
 
 // ✅ You can change this mapping any time
 const mapCameras = (cams) => {
@@ -374,9 +373,19 @@ const DMITScreen = () => {
         setStepIndex((prev) => prev + 1)
       } else {
         setStatus(t("dmit.status.all_captured"))
-        // Navigate to voice analysis
         await new Promise((r) => setTimeout(r, 1000))
-        navigate("/voice")
+        // ✅ Notify backend then use stageRouter
+        try {
+          const dmitComplete = await DMITComplete({
+            session_id: storeUser?.data?.user_id,
+            screening_session_id: screening?.sessionId,
+          })
+          if (dmitComplete?.screening) dispatch(setScreening(dmitComplete.screening))
+          const nextRoute = getNextRoute(dmitComplete?.screening?.next_stage, '/voice')
+          navigate(nextRoute)
+        } catch {
+          navigate('/voice')
+        }
       }
     } catch (err) {
       console.error("runStep error:", err)

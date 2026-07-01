@@ -5,7 +5,7 @@ import { realtimeCapture, sendVideoToBackend } from "../utils/api"
 import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
-import { setUser, setScreening, setCandidates } from "../features/common/commonSlice"
+import { setUser, setLoginScreening, setCandidates } from "../features/common/commonSlice"
 import { trackStage } from "../utils/config"
 import FullscreenError from "./FullScreenError"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
@@ -385,9 +385,10 @@ const VideoCaptureScreen = () => {
           fptResponse = DUMMY_FPT_RESPONSES[DUMMY_FPT_SCENARIO]
           measurements = await measurementPromiseRef.current
         } else {
-          [fptResponse, measurements] = await Promise.all([
-            realtimeCapture(),
-            measurementPromiseRef.current,
+          // Await both face capture and weight/height measurements in parallel
+          ;[fptResponse, measurements] = await Promise.all([
+            realtimeCapture(getKioskId()),
+            measurementPromiseRef.current
           ])
         }
 

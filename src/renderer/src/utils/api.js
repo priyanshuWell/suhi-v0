@@ -1,7 +1,5 @@
 import axios from "axios";
-const FPT_API_BASE_URL = "http://127.0.0.1:9000";
-const API_BASE_URL = "http://127.0.0.1:8000";
-const VOICE_API_BASE_URL = "http://127.0.0.1:9100"
+import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL } from "./config";
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -178,11 +176,11 @@ export async function runVoice(payload) {
 }
 
 
-export async function realtimeCapture(kiosk_id=null) {
+export async function realtimeCapture(kiosk_id = null) {
   try {
     const payload = {
-      kiosk_id: "aabbcc44",
-      camera_index: 6,
+      kiosk_id: kiosk_id,                                              // use the passed-in parameter
+      camera_index: parseInt(import.meta.env?.VITE_CAMERA_INDEX ?? 0, 10), // read from env, default 0
       max_seconds: 5,
       quality_threshold: 40
     };

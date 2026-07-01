@@ -11,14 +11,10 @@ import RegisterCard from './components/RegisterCard'
 import ErrorAlert from './components/ErrorAlert'
 import BIAResult from './components/bia/BIAResult'
 import VoiceAnalysis from './components/voice/VoiceAnalysis'
-
-import NewDmit from './components/dmit/NewDmit'
-import DMITScreen from './components/dmit/DMITScreen'
 import UserDetailsForm from './components/forms/UserDetailsForm'
 import FaceCapture from './components/forms/FaceCapture'
 import ConfirmationScreen from './components/forms/ConfirmationScreen'
 import LoginSuhi from './components/forms/LoginSuhi'
-import LoginDOB from './components/forms/LoginDOB'
 import LoginFather from './components/forms/LoginFather'
 import FingerPrintScreen from './components/forms/FingerPrintScreen'
 import ColorBlindPlate from './components/color-blindness/ColorBlindPlate'
@@ -67,7 +63,6 @@ function App() {
         <Route path="/login-father" element={<LoginFather />} />
         <Route path='/verified' element={<RegisterCard />} />
         <Route path='/bia/:screenType' element={<BIACalcuate />} />
-        <Route path='/screen1' element={<NewDmit />} />
         <Route path='/voice' element={<VoiceAnalysis />} />
         <Route path="/fingerprint" element={<FingerPrintScreen />} />
         <Route path="/colorblindness" element={<ColorBlindPlate />} />
