@@ -1,7 +1,26 @@
-
-
 import { BIAMeasurementStage } from "./api";
 // import store from '../../../store/store'
+
+// ─── Centralised API base URLs ───────────────────────────────────────────────
+// All files should import from here instead of hardcoding URLs inline.
+// Override any of these at deploy time via the corresponding VITE_ env var.
+export const API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  'http://127.0.0.1:8000';
+
+export const VOICE_API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_VOICE_API_BASE_URL) ||
+  'http://127.0.0.1:9100';
+
+export const FPT_API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_FPT_API_BASE_URL) ||
+  'http://127.0.0.1:9000';
+
+export const IMAGE_SERVER_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_IMAGE_SERVER_URL) ||
+  'http://127.0.0.1:5174';
+// ─────────────────────────────────────────────────────────────────────────────
+
 export const VIDEO_CONFIG = {
   // Video buffer duration in milliseconds
   // Can be adjusted based on requirements (5000ms = 5 seconds, 7000ms = 7 seconds, etc.)

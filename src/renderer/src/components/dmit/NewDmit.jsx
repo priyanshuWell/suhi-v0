@@ -18,11 +18,13 @@ import rightFront from "../../assets/hands/right-front.svg"
 import rightBack from "../../assets/hands/right-back.svg"
 
 import { useNavigate } from "react-router"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { setScreening } from "../../features/common/commonSlice"
+import { getNextRoute } from "../../utils/stageRouter"
 import { getRgbCamera } from "../../utils/getRgbCamera"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
-
-const API_BASE_URL = "http://127.0.0.1:8000"
+import { getKioskId, API_BASE_URL } from "../../utils/config"
+// import { DMITComplete } from "../../utils/api"
 
 /**
  * :white_check_mark: 4 Steps (single camera only)
@@ -111,10 +113,11 @@ const NewDmitScreen = () => {
     }
   }, [stepIndex])
 
-  // :white_check_mark: required payload values (replace with your real values / redux / localstorage)
-  const kioskId = "KIOSK_001"
+  const dispatch = useDispatch()
+  const screening = useSelector((state) => state.common.screening)
+  const kioskId = getKioskId()                    //  reads from env / config
   const userId = user?.data?.user_id
-  const sessionId = "session001"
+  const sessionId = screening?.sessionId           //  live session from Redux
 
   /**
    * :white_check_mark: Start ONLY ONE camera: cams[1]
@@ -304,11 +307,22 @@ const NewDmitScreen = () => {
       } else {
         setPhase("INFO")
         setIsVerify(true)
-        setStatus("All hands completed :white_check_mark: Redirecting...")
+        setStatus("All hands completed  Redirecting...")
         stopAudio()
-        setTimeout(() => {
-          navigate("/voice")
-        }, 700)
+        //  Notify backend, then use stageRouter for next destination
+        // setTimeout(async () => {
+        //   try {
+        //     const dmitComplete = await DMITComplete({
+        //       session_id: userId,
+        //       screening_session_id: sessionId,
+        //     })
+        //     if (dmitComplete?.screening) dispatch(setScreening(dmitComplete.screening))
+        //     const nextRoute = getNextRoute(dmitComplete?.screening?.next_stage, '/voice')
+        //     navigate(nextRoute)
+        //   } catch {
+        //     navigate('/voice')
+        //   }
+        // }, 700)
       }
     } catch (err) {
       console.error("runStep error:", err)

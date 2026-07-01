@@ -7,7 +7,7 @@ import { realtimeCapture, runFPT, sendVideoToBackend } from "../utils/api"
 import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch, useSelector } from "react-redux"
-import { setUser, setScreening } from "../features/common/commonSlice"
+import { setUser, setLoginScreening } from "../features/common/commonSlice"
 import { BIAMeasurementStage } from "../utils/api"
 import { trackStage } from "../utils/config"
 import ErrorAlert from "./ErrorAlert"
@@ -123,7 +123,7 @@ const VideoCaptureScreen = () => {
         } else {
           // Await both face capture and weight/height measurements in parallel
           ;[fptResponse, measurements] = await Promise.all([
-            realtimeCapture(),
+            realtimeCapture(getKioskId()),
             measurementPromiseRef.current
           ])
         }
@@ -203,7 +203,9 @@ const VideoCaptureScreen = () => {
 
         // Success case - Face recognition successful
         dispatch(setUser(fptResponse))
-        dispatch(setScreening(fptResponse.screening || null))
+        // realtime/capture is the login step — sessionId is locked in here
+        // and never overwritten by later stage-complete calls.
+        dispatch(setLoginScreening(fptResponse.screening || null))
         setStatus("Verification successful!")
         setIsVerify(true)
         stopAudio()
