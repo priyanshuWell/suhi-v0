@@ -19,6 +19,7 @@ import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 import biaIm_female from "../../assets/bia/bia-immeasuring_female.mp4"
 
 import { useBIARecording } from "../../utils/useBiaRecording";
+import { useBufferCollection } from "../../hooks/useBufferCollection";
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
@@ -57,6 +58,26 @@ export default function BIACalculate({ user, onComplete }) {
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
+  });
+
+  // Buffer collection hook for automatic video buffer collection
+  const recordingHook = { startRecording, stopAndSend, saveBuffer, forceCleanup };
+  
+  const { 
+    isCollecting: isBufferCollecting, 
+    collectionStatus: bufferCollectionStatus,
+    lastCollectionTime,
+    error: bufferCollectionError,
+    startCollection: startBufferCollection,
+    stopCollection: stopBufferCollection
+  } = useBufferCollection({
+    sessionId: storeUser?.data?.buffer_id,
+    userId: storeUser?.data?.user_id,
+    kioskId: storeUser?.data?.kiosk_id || 'default-kiosk',
+    bufferType: 'BIA',
+    isEnabled: true,
+    maxDuration: 60000, // 1 minute
+    recordingHook // Pass the recording hook for integration
   });
 
   // Phase tracking (removed attempt counters - now using parameters)
@@ -377,6 +398,16 @@ export default function BIACalculate({ user, onComplete }) {
       // clearAllTimeouts();
     };
   }, []);
+
+  // Log buffer collection status changes for debugging
+  useEffect(() => {
+    console.log('📊 [BIA BUFFER] Collection status changed:', {
+      isCollecting: isBufferCollecting,
+      status: bufferCollectionStatus,
+      lastCollectionTime: lastCollectionTime ? new Date(lastCollectionTime).toISOString() : null,
+      error: bufferCollectionError
+    });
+  }, [isBufferCollecting, bufferCollectionStatus, lastCollectionTime, bufferCollectionError]);
 
   /* =======================
      UTILITY FUNCTIONS
