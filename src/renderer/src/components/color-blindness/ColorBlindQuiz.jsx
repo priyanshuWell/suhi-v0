@@ -202,8 +202,7 @@ export const ColorBlindQuiz = () => {
                 );
             } catch (err) {
                 console.error("colorBlindessSubmit error:", err);
-                //  Navigate to next stage via stageRouter on submit error
-                navigate(getNextRoute(null, "/voice"));
+                navigate("/bia/result");
                 return;
             }
 
