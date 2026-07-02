@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useBufferCollection } from '../hooks/useBufferCollection';
 import { useLocation } from 'react-router';
+import { getKioskId } from '../utils/config';
 
 /**
  * Higher-Order Component (HOC) that adds buffer collection functionality to components
@@ -24,14 +25,13 @@ const withBufferCollection = (WrappedComponent, options = {}) => {
     
     // Determine if buffer collection should be enabled
     const shouldBeEnabled = !shouldExclude && 
-                           !!(storeUser?.data?.buffer_id && storeUser?.data?.user_id) &&
-                           !!(storeUser?.data?.kiosk_id);
+                           !!(screening?.sessionId && storeUser?.data?.user_id);
 
     console.log(`🔍 [BUFFER HOC] Route analysis for ${location.pathname}:`, {
       shouldExclude,
-      hasSessionId: !!storeUser?.data?.buffer_id,
+      hasSessionId: !!screening?.sessionId,
       hasUserId: !!storeUser?.data?.user_id,
-      hasKioskId: !!storeUser?.data?.kiosk_id,
+      hasKioskId: !!getKioskId(),
       shouldBeEnabled
     });
     
@@ -45,12 +45,13 @@ const withBufferCollection = (WrappedComponent, options = {}) => {
       stopCollection,
       triggerCollection
     } = useBufferCollection({
-      sessionId: storeUser?.data?.buffer_id,
+      sessionId: screening?.sessionId,
       userId: storeUser?.data?.user_id,
-      kioskId: storeUser?.data?.kiosk_id || 'default-kiosk',
+      kioskId: getKioskId(),
       bufferType,
       isEnabled: shouldBeEnabled,
-      maxDuration
+      maxDuration,
+      pageKey: location.pathname,
     });
 
     // Log buffer collection status changes for debugging

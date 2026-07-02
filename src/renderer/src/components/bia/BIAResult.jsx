@@ -13,7 +13,6 @@ import { useTranslation } from 'react-i18next'
 import { releaseAllResources } from '../../utils/cleanup'
 import { BrainIconS, MindIcon } from '../../assets'
 import BlackGradientButton from '../ui/BlackGradientButton';
-import { API_BASE_URL } from '../../utils/config';
 
 /*
   ─────────────────────────────────────────────────────────────
@@ -148,14 +147,12 @@ const renderInsightCard = ({
 ───────────────────────────────────────────── */
 const BIAResult = () => {
   const navigate = useNavigate()
-  const storeWeight   = useSelector((s) => s.common.weight)
-  const storeHeight   = useSelector((s) => s.common.height)
-  const storeUser     = useSelector((s) => s.common.user)
-  const screening     = useSelector((s) => s.common.screening)  //  correct Redux slice
+  const storeWeight = useSelector((s) => s.common.weight)
+  const storeHeight = useSelector((s) => s.common.height)
+  const storeUser = useSelector((s) => s.common.user)
   const { t } = useTranslation()
 
-  const [apiReport, setApiReport]     = useState(null)
-  const [reportError, setReportError] = useState(false)   // show error UI on fetch failure
+  const [apiReport, setApiReport] = useState(null)
 
   /* ── Scaling refs ── */
   const innerRef = useRef(null)   // the content wrapper we measure
@@ -258,28 +255,15 @@ const BIAResult = () => {
   }
 
   const fetchBiometricReport = async () => {
-    setReportError(false)
     try {
-      const sessionId = screening?.sessionId            //  camelCase — matches Redux slice
-      const userId    = storeUser?.data?.user_id
-
-      const res = await axios.post(`${API_BASE_URL}/report/`, {  //  centralised URL
-        user_id: userId,
-        session_id: sessionId,
-        screening_session_id: sessionId,
+      const res = await axios.post('http://localhost:8000/report/', {
+        user_id: storeUser?.data?.user_id,
+        session_id: storeUser?.screening?.session_id,
+        screening_session_id: storeUser?.screening?.session_id,
       })
-
-      if (res?.data?.success) {
-        setApiReport(mergeWithFallback(mapReportToUI(res.data)))
-        return
-      }
-      // Backend responded but indicated failure — show error
-      console.warn('[BIAResult] Report API returned success:false', res?.data)
-      setReportError(true)
-    } catch (err) {
-      console.error('[BIAResult] Report fetch failed:', err)
-      setReportError(true)
-    }
+      if (res?.data?.success) { setApiReport(mergeWithFallback(mapReportToUI(res.data))); return }
+      setApiReport(fallbackPartialJson)
+    } catch { setApiReport(fallbackPartialJson) }
   }
 
   useEffect(() => {
@@ -288,7 +272,6 @@ const BIAResult = () => {
   }, [])
 
   /* ── derived values ── */
-  // Show '–' on screen rather than silently defaulting to 170 cm / 70 kg
   const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
   const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
 
@@ -328,7 +311,6 @@ const BIAResult = () => {
   /* ────────────────────────────────────────────
      RENDER
   ──────────────────────────────────────────── */
-
   return (
     /*
       Outer shell — fills the physical screen, clips everything, hides scroll.
@@ -510,8 +492,8 @@ const BIAResult = () => {
                       style={{ marginTop: S.mtGrid, gap: '14px' }}
                     >
                       {[
-                        { label: t('bia_result.height'), value: finalHeight != null ? Math.round(finalHeight) : '–', unit: 'cm', icon: HeightIcon },
-                        { label: t('bia_result.weight'), value: finalWeight != null ? Math.round(finalWeight) : '–', unit: 'kg', icon: WeightIcon },
+                        { label: t('bia_result.height'), value: Math.round(finalHeight), unit: 'cm', icon: HeightIcon },
+                        { label: t('bia_result.weight'), value: Math.round(finalWeight), unit: 'kg', icon: WeightIcon },
                       ].map((item) => (
                         <div
                           key={item.label}

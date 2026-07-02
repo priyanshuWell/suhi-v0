@@ -19,12 +19,11 @@ import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 import biaIm_female from "../../assets/bia/bia-immeasuring_female.mp4"
 
 import { useBIARecording } from "../../utils/useBiaRecording";
-import { useBufferCollection } from "../../hooks/useBufferCollection";
+import { releasePageRecordingCamera } from "../../utils/pageRecordingControl";
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
-import { CircleAlert, FileWarning } from "lucide-react";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -58,26 +57,8 @@ export default function BIACalculate({ user, onComplete }) {
   const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
     sessionId: storeUser?.data?.buffer_id,
     userId: storeUser?.data?.user_id,
-  });
-
-  // Buffer collection hook for automatic video buffer collection
-  const recordingHook = { startRecording, stopAndSend, saveBuffer, forceCleanup };
-  
-  const { 
-    isCollecting: isBufferCollecting, 
-    collectionStatus: bufferCollectionStatus,
-    lastCollectionTime,
-    error: bufferCollectionError,
-    startCollection: startBufferCollection,
-    stopCollection: stopBufferCollection
-  } = useBufferCollection({
-    sessionId: storeUser?.data?.buffer_id,
-    userId: storeUser?.data?.user_id,
-    kioskId: storeUser?.data?.kiosk_id || 'default-kiosk',
-    bufferType: 'BIA',
-    isEnabled: true,
-    maxDuration: 60000, // 1 minute
-    recordingHook // Pass the recording hook for integration
+    screeningSessionId: screening?.sessionId,
+    bufferType: "BIA",
   });
 
   // Phase tracking (removed attempt counters - now using parameters)
@@ -399,15 +380,6 @@ export default function BIACalculate({ user, onComplete }) {
     };
   }, []);
 
-  // Log buffer collection status changes for debugging
-  useEffect(() => {
-    console.log('📊 [BIA BUFFER] Collection status changed:', {
-      isCollecting: isBufferCollecting,
-      status: bufferCollectionStatus,
-      lastCollectionTime: lastCollectionTime ? new Date(lastCollectionTime).toISOString() : null,
-      error: bufferCollectionError
-    });
-  }, [isBufferCollecting, bufferCollectionStatus, lastCollectionTime, bufferCollectionError]);
 
   /* =======================
      UTILITY FUNCTIONS
@@ -1215,6 +1187,7 @@ export default function BIACalculate({ user, onComplete }) {
     setCurrentPhase('init');
     resultsRef.current.isShoesContinued = false;
     // clearMetadata(); // Reset metadata at start of flow
+    releasePageRecordingCamera();
     console.log("[BIA REC] 🎬 Starting BIA recording — session:", storeUser?.data?.buffer_id, "user:", storeUser?.data?.user_id);
     await startRecording();
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
