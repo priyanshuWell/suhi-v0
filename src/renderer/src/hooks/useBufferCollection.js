@@ -276,3 +276,6 @@ export const usePageBufferCollection = ({
     stopCollection,
   };
 };
+
+// Backward-compatible alias for existing imports
+export const useBufferCollection = usePageBufferCollection;
