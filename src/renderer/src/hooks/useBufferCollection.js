@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { sendVideoToBackend, bufferCollection } from '../utils/api';
 import { getRgbCameraConstraints } from '../utils/getRgbCamera';
 import { getKioskId } from '../utils/config';
+import { rotateStream90 } from '../components/dmit/NewDmit';
 
 /**
  * usePageBufferCollection
@@ -39,6 +40,7 @@ export const usePageBufferCollection = ({
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const streamRef = useRef(null);
+  const rawStreamRef = useRef(null);
   const timeoutRef = useRef(null);
   const hasCollectedRef = useRef(false);
   const isCollectingRef = useRef(false);
@@ -48,10 +50,13 @@ export const usePageBufferCollection = ({
 
   // ─── Cleanup camera/recorder ─────────────────────────────────────────────
   const _cleanup = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
+    if (typeof streamRef.current?.stop === 'function') {
+      streamRef.current.stop();
     }
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    rawStreamRef.current?.getTracks().forEach((t) => t.stop());
+    rawStreamRef.current = null;
     mediaRecorderRef.current = null;
     chunksRef.current = [];
     console.log('[BUFFER COLLECTION] Camera and recorder cleaned up');
@@ -197,11 +202,13 @@ export const usePageBufferCollection = ({
         width: 640, height: 480, frameRate: 15,
       });
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const rawStream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
         audio: false,
       });
 
+      rawStreamRef.current = rawStream;
+      const stream = await rotateStream90(rawStream);
       streamRef.current = stream;
       chunksRef.current = [];
 
