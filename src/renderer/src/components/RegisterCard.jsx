@@ -34,7 +34,9 @@ const buildProfileImage = (imagePath) => {
 }
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
-
+  const screening = useSelector((state) => state.common.screening)
+  const nextStage = screening?.next_stage || null
+  console.log("nextStage:", nextStage)
   const imagePath = user?.data?.image_path || ""
 
   // safer extraction
