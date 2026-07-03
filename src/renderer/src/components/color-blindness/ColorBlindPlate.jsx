@@ -10,7 +10,6 @@ import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
 import { useSelector } from "react-redux";
 import { getKioskId } from "../../utils/config";
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
-import { usePageBufferCollection } from "../../hooks/useBufferCollection";
 
 
 export const ColorBlindPlate = () => {
@@ -23,15 +22,6 @@ export const ColorBlindPlate = () => {
     const [error, setError] = useState(null);
     const kioskId = getKioskId();
     const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-
-    // Buffer collection for ColorBlindness page group (max 1 minute)
-    usePageBufferCollection({
-      screeningSessionId: screening?.sessionId,
-      userId: user?.data?.user_id,
-      bufferType: 'COLOR_BLINDNESS',
-      isEnabled: !!(screening?.sessionId && user?.data?.user_id),
-      maxDuration: 60000,
-    });
 
     // ── Instruction audio ─────────────────────────────────────────────────────
     const audioRef = useRef(null);

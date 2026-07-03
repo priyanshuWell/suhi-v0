@@ -7,7 +7,6 @@ import { sendVoiceToBackend, runVoice } from "../../utils/api";
 import { getKioskId } from "../../utils/config";
 import { setScreening } from "../../features/common/commonSlice";
 import { getNextRoute } from "../../utils/stageRouter";
-import { usePageBufferCollection } from "../../hooks/useBufferCollection";
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
 import ReplayAudio from "../ReplayAudio";
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg";
@@ -75,15 +74,6 @@ export default function VoiceAnalysis() {
   const screeningState = useSelector((state) => state.common.screening);
   const dispatch = useDispatch();
   const { t } = useTranslation();
-
-  // Buffer collection for Voice page (max 1 minute)
-  usePageBufferCollection({
-    screeningSessionId: screeningState?.sessionId,
-    userId: user?.data?.user_id,
-    bufferType: 'VOICE',
-    isEnabled: !!(screeningState?.sessionId && user?.data?.user_id),
-    maxDuration: 60000,
-  });
 
   const [phase, setPhase] = useState("picking");
   const [selectedIndex, setSelectedIndex] = useState(Math.floor(IMAGES.length / 2));

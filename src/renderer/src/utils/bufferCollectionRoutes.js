@@ -1,38 +1,58 @@
 /**
- * Routes where video buffer collection runs (max 1 minute per page visit).
- * BIA routes are handled inside BIACalcuate because they share useBIARecording.
+ * Four screening steps — each captures at most 1 minute of video across all
+ * listed routes. Recording continues when navigating between routes in the
+ * same step; once 1 minute is captured, no further recording for that step.
  */
 export const BUFFER_COLLECTION_MAX_MS = 60000;
 
-const ROUTE_BUFFER_TYPES = [
-  { prefix: '/bia/', exclude: ['/bia/result'], bufferType: 'BIA' },
-  { prefix: '/voice', bufferType: 'VOICE' },
-  { prefix: '/colorblindness', bufferType: 'COLOR_BLINDNESS' },
-  { prefix: '/space-convoy-main', bufferType: 'SPACE_CONVOY' },
-  { prefix: '/divide-attention', bufferType: 'SPACE_CONVOY' },
-  { prefix: '/space-convoy-complete', bufferType: 'SPACE_CONVOY' },
+export const BUFFER_COLLECTION_STEPS = [
+  {
+    bufferType: 'BIA',
+    routes: [
+      '/bia/leg50',
+      '/bia/wh',
+      '/bia/whcomplete',
+      '/bia/im',
+      '/bia/imcomplete',
+    ],
+  },
+  {
+    bufferType: 'VOICE',
+    routes: ['/voice'],
+  },
+  {
+    bufferType: 'COLOR_BLINDNESS',
+    routes: ['/colorblindness', '/colorblindness/quiz'],
+  },
+  {
+    bufferType: 'SPACE_CONVOY',
+    routes: [
+      '/space-convoy-main',
+      '/divide-attention',
+      '/space-convoy-complete',
+    ],
+  },
 ];
 
-export function getBufferCollectionConfig(pathname) {
-  for (const route of ROUTE_BUFFER_TYPES) {
-    const matchesPrefix = route.prefix.endsWith('/')
-      ? pathname.startsWith(route.prefix)
-      : pathname === route.prefix || pathname.startsWith(`${route.prefix}/`);
-
-    if (!matchesPrefix) continue;
-
-    if (route.exclude?.some((excluded) => pathname.startsWith(excluded))) {
-      return null;
+/**
+ * @param {string} pathname
+ * @returns {{ bufferType: string, routes: string[] } | null}
+ */
+export function getStepForPath(pathname) {
+  for (const step of BUFFER_COLLECTION_STEPS) {
+    if (step.routes.some((route) => pathname === route || pathname.startsWith(`${route}/`))) {
+      return step;
     }
-
-    return {
-      bufferType: route.bufferType,
-    };
   }
-
   return null;
 }
 
+/** @deprecated Use getStepForPath */
+export function getBufferCollectionConfig(pathname) {
+  const step = getStepForPath(pathname);
+  return step ? { bufferType: step.bufferType } : null;
+}
+
 export function shouldCollectBufferOnRoute(pathname) {
-  return !!getBufferCollectionConfig(pathname);
+  return !!getStepForPath(pathname);
 }

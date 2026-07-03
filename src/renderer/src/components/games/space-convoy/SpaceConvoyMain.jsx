@@ -26,7 +26,6 @@ import { useSelector } from 'react-redux'
 import { useDispatch } from 'react-redux'
 import { SpaceConvoyComplete } from './SpaceConveyComplete'
 import { store } from '../../../../../store/store'
-import { usePageBufferCollection } from '../../../hooks/useBufferCollection'
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.
@@ -59,14 +58,6 @@ const SpaceConvoyMain = () => {
     const storeUser = useSelector((state) => state.common.user);
     const screening = useSelector((state) => state.common.screening); //  proper selector
 
-    // Buffer collection for Space Convoy page group (max 1 minute)
-    usePageBufferCollection({
-      screeningSessionId: screening?.sessionId,
-      userId: storeUser?.data?.user_id,
-      bufferType: 'SPACE_CONVOY',
-      isEnabled: !!(screening?.sessionId && storeUser?.data?.user_id),
-      maxDuration: 60000,
-    });
     // ─── Preload ALL assets once at mount ───
     useEffect(() => {
         (async () => {
