@@ -32,9 +32,10 @@ const BiaReportRouter = () => {
                     session_id: sessionId,
                     screening_session_id: sessionId,
                 })
+                console.log("[BiaReportRouter] report api result", res.data)
                 if (res?.data?.success) {
                     setRawReport(res.data)
-                    setShowFullResult(hasAnyVitals(res.data.data))
+                    setShowFullResult(hasAnyVitals(res.data))
                 } else {
                     setError(true)
                 }
@@ -52,7 +53,7 @@ const BiaReportRouter = () => {
     if (loading) return null // or a spinner
 
     return showFullResult
-        ? <Result apiReportRaw={rawReport} />
+        ? <Result apiReportRaw={rawReport} reportError={error} />
         : <BIAResult apiReportRaw={rawReport} reportError={error} />
 }
 

@@ -136,7 +136,7 @@ const InfoPill = ({ icon, label, value, color }) => (
 /* ─────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────── */
-const Result = () => {
+const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const navigate = useNavigate()
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
@@ -305,6 +305,12 @@ const Result = () => {
     }
 
     useEffect(() => {
+        // If the router already fetched the report, use it directly — no second request
+        if (apiReportRaw) {
+            setApiReport(mergeWithFallback(mapReportToUI(apiReportRaw)))
+            if (reportErrorProp) setReportError(true)
+            return
+        }
         const timer = setTimeout(fetchBiometricReport, 0)
         return () => clearTimeout(timer)
     }, [])

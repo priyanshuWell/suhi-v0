@@ -145,7 +145,7 @@ const renderInsightCard = ({
 /* ─────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────── */
-const BIAResult = () => {
+const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const navigate = useNavigate()
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
@@ -267,6 +267,11 @@ const BIAResult = () => {
     }
 
     useEffect(() => {
+        // If the router already fetched the report, use it directly — no second request
+        if (apiReportRaw) {
+            setApiReport(mergeWithFallback(mapReportToUI(apiReportRaw)))
+            return
+        }
         const timer = setTimeout(fetchBiometricReport, 0)
         return () => clearTimeout(timer)
     }, [])
