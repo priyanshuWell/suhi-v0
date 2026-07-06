@@ -35,7 +35,7 @@ const BiaReportRouter = () => {
                 console.log("[BiaReportRouter] report api result", res.data)
                 if (res?.data?.success) {
                     setRawReport(res.data)
-                    setShowFullResult(hasAnyVitals(res.data))
+                    setShowFullResult(hasAnyVitals(res.data.data))
                 } else {
                     setError(true)
                 }
