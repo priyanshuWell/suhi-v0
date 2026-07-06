@@ -26,6 +26,7 @@ import { StartCountDown } from './components/games/space-convoy/StartCountDown'
 import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConveyComplete'
 import ScreeningLayout from './components/ScreeningLayout'
 import View360Viewer from './components/voice/View360Viewer'
+import Result from './components/bia/Result'
 
 function App() {
   // Play looping background music on all routes except voice & game sections
@@ -48,7 +49,7 @@ function App() {
     <Routes>
 
       {/* Routes WITHOUT the progress bar */}
-      <Route path="/" element={<SplashScreen />} />
+      {/* <Route path="/" element={<SplashScreen />} /> */}
       <Route path='/welcome' element={<StartScreen />} />
       <Route path='/capture' element={<VideoCaptureScreen />} />
       <Route path="/login-suhi" element={<LoginSuhi />} />
@@ -68,6 +69,8 @@ function App() {
 
         <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
+        <Route path='/identify-student' element={<IdentifyStudent />} />
+        <Route path='/' element={<Result />} />
       </Route>
 
     </Routes>

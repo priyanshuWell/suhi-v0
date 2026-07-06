@@ -1,18 +1,19 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
-import biaResultFrame from '../../assets/biaResultFrame1.svg';
 import BodyIcon from '../../assets/bia/BodyIcon.svg'
 import WeightIcon from '../../assets/bia/weight.svg'
 import HeightIcon from '../../assets/bia/height.svg'
 import Eye_Icon from '../../assets/bia/Eye_Icon.svg'
+import bgTexture from '../../assets/lightbg.png' // TODO: save Figma "image 1190" asset locally
+// import qrCode from '../../assets/bia/qr-code.png'        // TODO: save Figma "QR Code" asset locally
+// import emotionIcon from '../../assets/bia/emotion.svg'   // TODO: save Figma "😌" asset locally
+// import vitalsIcon from '../../assets/bia/vitals.svg'     // TODO: save Figma "🫀" asset locally
 import { useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import axios from "axios"
 import BodyConstitution from './BodyConstitution'
-import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
 import { releaseAllResources } from '../../utils/cleanup'
 import { BrainIconS, MindIcon } from '../../assets'
-import BlackGradientButton from '../ui/BlackGradientButton';
 import { API_BASE_URL } from '../../utils/config';
 
 /*
@@ -20,670 +21,453 @@ import { API_BASE_URL } from '../../utils/config';
   KIOSK SCALING STRATEGY
   ─────────────────────────────────────────────────────────────
   Target screen : 1402 × 1802 px (portrait kiosk, no scrolling ever)
-
-  Approach:
-    1. Render the entire page content in a fixed-width inner wrapper
-       (DESIGN_W = 1402px — matches the screen width 1:1).
-    2. After render, measure the wrapper's naturalHeight.
-    3. Compute scale = min(screenH / naturalH, 1)
-       → scale ≤ 1 so we only ever shrink, never zoom in.
-    4. Apply transform: scale(scale) with transform-origin top-left.
-    5. Use a ResizeObserver so this recalculates if fonts shift layout.
-
-  Result: content always fits the screen exactly. No scroll. No overflow.
+  Same approach as before: render at DESIGN_W, measure natural
+  height, scale down to fit, never upscale.
   ─────────────────────────────────────────────────────────────
 */
-
-/* Design canvas width — matches kiosk screen width exactly */
 const DESIGN_W = 1402
-
 const FONT = "'Anta', sans-serif"
 
-/* ── Size tokens (fixed px — we scale the whole canvas, not individual elements) ── */
-const S = {
-  titleSize: '42px',
-  labelSize: '32px',
-  valueSize: '44px',
-  iconSize: '48px',
-  cardPaddingH: '56px',
-  cardPaddingV: '28px',
-  sepHeight: '65px',
-  hwLabel: '32px',
-  hwValue: '44px',
-  hwUnit: '36px',
-  hwIcon: '36px',
-  headerGap: '16px',
-  colGap: '24px',
-  cellPadV: '20px',
-  cellPadH: '14px',
-  mtGrid: '20px',
+/* ── Liquid-glass pill shared styling ── */
+const pill = {
+    background: 'rgba(0,0,0,0.55)',
+    border: '1.5px solid rgba(255,255,255,0.3)',
+    borderRadius: '28px',
+    boxShadow: '0 4px 28px 0 rgba(154,217,255,0.35)',
+    backdropFilter: 'blur(12px)',
+}
+
+const pillRow = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '8px',
+    padding: '20px 24px',
 }
 
 /* ─────────────────────────────────────────────
-   INSIGHT CARD  (Mind / Brain)
+   STAT CARD  (Mind / Brain / Body / Vitals)
+   Each card = icon + title + stacked label:value pill rows
 ───────────────────────────────────────────── */
-const renderInsightCard = ({
-  title, icon, titleClassName, cardClassName,
-  items, separatorClassName, borderColor
-}) => (
-  <div
-    className={`relative w-full rounded-[10px] overflow-hidden ${cardClassName}`}
-    style={{
-      border: `0.5px solid ${borderColor || 'rgba(255,255,255,0.2)'}`,
-      padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
-    }}
-  >
-    {/* ambient glow */}
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-      <div className="w-[220px] h-[220px] bg-[#3EC6FF]/20 blur-[70px] rounded-full" />
-    </div>
-
-    <div className="relative z-10">
-      {/* Header row */}
-      <div className="flex items-center justify-center" style={{ gap: S.headerGap }}>
-        <span
-          className="flex items-center justify-center shrink-0"
-          style={{ width: S.iconSize, height: S.iconSize }}
-        >
-          {icon}
-        </span>
-        <h3
-          className={`leading-none tracking-[0.04em] ${titleClassName}`}
-          style={{ fontFamily: FONT, fontSize: S.titleSize }}
-        >
-          {title}
-        </h3>
-      </div>
-
-      {/* Metric columns */}
-      <div
-        className="grid items-stretch"
+const StatCard = ({ title, icon, color, rows }) => (
+    <div
+        className="flex flex-col items-center rounded-[28px]"
         style={{
-          marginTop: S.mtGrid,
-          gridTemplateColumns: '1fr auto 1fr auto 1fr',
+            ...pill,
+            flex: 1,
+            padding: '28px 16px',
+            gap: '16px',
         }}
-      >
-        {items.map((item, index) => (
-          <div key={item.label} className="contents">
-            <div
-              className="flex flex-col items-center justify-center text-center relative"
-              style={{ padding: `${S.cellPadV} ${S.cellPadH}` }}
+    >
+        <div className="flex items-center justify-center" style={{ gap: '16px' }}>
+            <span className="flex items-center justify-center shrink-0" style={{ width: '48px', height: '48px' }}>
+                {icon}
+            </span>
+            <h3
+                className="leading-none tracking-[0.04em]"
+                style={{ fontFamily: FONT, fontSize: '48px', color }}
             >
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="w-[140px] h-[100px] rounded-full blur-[40px] bg-white/10" />
-              </div>
-              <div className="relative z-10 flex flex-col items-center">
-                <p
-                  className="text-white/80 tracking-[0.04em] leading-tight text-center"
-                  style={{ fontFamily: FONT, fontSize: S.labelSize }}
-                >
-                  {item.label}
-                </p>
-                <p
-                  className={`leading-tight tracking-[0.04em] font-normal ${item.valueClassName || 'text-white'}`}
-                  style={{ fontFamily: FONT, fontSize: S.valueSize, marginTop: '8px' }}
-                >
-                  {item.value}
-                </p>
-              </div>
-            </div>
+                {title}
+            </h3>
+        </div>
 
-            {index < items.length - 1 ? (
-              <div className="flex items-center justify-center">
+        <div className="flex flex-col w-full" style={{ gap: '12px' }}>
+            {rows.map((row) => (
                 <div
-                  className={`w-[1.5px] rounded-full ${separatorClassName}`}
-                  style={{ height: S.sepHeight }}
-                />
-              </div>
-            ) : null}
-          </div>
-        ))}
-      </div>
+                    key={row.label}
+                    className="flex items-center justify-center w-full"
+                    style={{ ...pillRow, gap: '12px' }}
+                >
+                    <p
+                        className="text-white text-center whitespace-nowrap"
+                        style={{ fontFamily: FONT, fontSize: '28px' }}
+                    >
+                        {row.label}:
+                    </p>
+                    <p
+                        className="text-center whitespace-nowrap"
+                        style={{ fontFamily: FONT, fontSize: '36px', color }}
+                    >
+                        {row.value}
+                    </p>
+                </div>
+            ))}
+        </div>
     </div>
-  </div>
+)
+
+/* Full-width single-row pill (Color Blindness / Emotion) */
+const InfoPill = ({ icon, label, value, color }) => (
+    <div
+        className="flex items-center justify-center w-full"
+        style={{ ...pill, gap: '16px', padding: '24px' }}
+    >
+        <span className="flex items-center justify-center shrink-0" style={{ width: '40px', height: '40px' }}>
+            {icon}
+        </span>
+        <p className="text-white whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '36px' }}>
+            {label}:
+        </p>
+        <p className="whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '38px', color }}>
+            {value}
+        </p>
+    </div>
 )
 
 /* ─────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────── */
 const BIAResult = () => {
-  const navigate = useNavigate()
-  const storeWeight   = useSelector((s) => s.common.weight)
-  const storeHeight   = useSelector((s) => s.common.height)
-  const storeUser     = useSelector((s) => s.common.user)
-  const screening     = useSelector((s) => s.common.screening)  //  correct Redux slice
-  const { t } = useTranslation()
+    const navigate = useNavigate()
+    const storeWeight = useSelector((s) => s.common.weight)
+    const storeHeight = useSelector((s) => s.common.height)
+    const storeUser = useSelector((s) => s.common.user)
+    const screening = useSelector((s) => s.common.screening)
+    const { t } = useTranslation()
 
-  const [apiReport, setApiReport]     = useState(null)
-  const [reportError, setReportError] = useState(false)   // show error UI on fetch failure
+    const [apiReport, setApiReport] = useState(null)
+    const [reportError, setReportError] = useState(false)
 
-  /* ── Scaling refs ── */
-  const innerRef = useRef(null)   // the content wrapper we measure
-  const [scale, setScale] = useState(1)
+    const innerRef = useRef(null)
+    const [scale, setScale] = useState(1)
 
-  /* Recompute scale whenever inner content height changes */
-  const recomputeScale = useCallback(() => {
-    const el = innerRef.current
-    if (!el) return
-    const screenH = window.innerHeight   // actual device height
-    const screenW = window.innerWidth    // actual device width
+    const recomputeScale = useCallback(() => {
+        const el = innerRef.current
+        if (!el) return
+        const screenH = window.innerHeight
+        const screenW = window.innerWidth
+        const naturalH = el.scrollHeight
+        const scaleByH = screenH / naturalH
+        const scaleByW = screenW / DESIGN_W
+        setScale(Math.min(scaleByH, scaleByW, 1))
+    }, [])
 
-    /*
-      We fix the inner wrapper at DESIGN_W wide.
-      After layout, measure its scrollHeight (natural height).
-      Scale so it fits within screenH.
-      Also guard against width overflow (scale to fit width if wider than screen).
-    */
-    const naturalH = el.scrollHeight
-    const scaleByH = screenH / naturalH
-    const scaleByW = screenW / DESIGN_W
-    const finalScale = Math.min(scaleByH, scaleByW, 1) // never upscale
-    setScale(finalScale)
-  }, [])
+    useEffect(() => {
+        const el = innerRef.current
+        if (!el) return
+        const ro = new ResizeObserver(recomputeScale)
+        ro.observe(el)
+        recomputeScale()
+        window.addEventListener('resize', recomputeScale)
+        return () => {
+            ro.disconnect()
+            window.removeEventListener('resize', recomputeScale)
+        }
+    }, [recomputeScale])
 
-  /* Watch for layout shifts (fonts loading, API data arriving) */
-  useEffect(() => {
-    const el = innerRef.current
-    if (!el) return
+    useEffect(() => {
+        if (apiReport) {
+            requestAnimationFrame(() => requestAnimationFrame(recomputeScale))
+        }
+    }, [apiReport, recomputeScale])
 
-    const ro = new ResizeObserver(recomputeScale)
-    ro.observe(el)
-    recomputeScale() // initial
-
-    window.addEventListener('resize', recomputeScale)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', recomputeScale)
+    /* ── Fallback / merge helpers ── */
+    const fallbackPartialJson = {
+        height: 170, weight: 70,
+        body_constitution: { vata: 34, pitta: 40, kapha: 26 },
+        hydration: { level: 'Ideal' },
+        learner_type: { type: 'visual', title: 'Visual' },
+        personality: { animal: 'Dominant', traits: ['Calm', 'Adaptive', 'Focused'] },
+        attention: { level: 'Good' },
+        memory: { level: 'Developing' },
+        self_esteem: { level: 'Well Developed' },
+        emotional_regulation: { level: 'Good' },
+        color_blindness: { status: 'Not present' },
+        muscle_mass: { level: 'Ideal' },
+        fat_mass: { level: 'Low' },
+        vitals: { heart_rate: '--', breathing_rate: '--', stress: 'Low' },
+        emotion: { label: 'Happy' },
     }
-  }, [recomputeScale])
 
-  /* Re-run after API data resolves */
-  useEffect(() => {
-    if (apiReport) {
-      // Give the DOM one frame to re-paint with new data, then remeasure
-      requestAnimationFrame(() => requestAnimationFrame(recomputeScale))
+    const mergeWithFallback = (api) => ({
+        height: api?.height ?? fallbackPartialJson.height,
+        weight: api?.weight ?? fallbackPartialJson.weight,
+        body_constitution: api?.body_constitution ?? fallbackPartialJson.body_constitution,
+        hydration: api?.hydration ?? fallbackPartialJson.hydration,
+        learner_type: api?.learner_type ?? fallbackPartialJson.learner_type,
+        personality: api?.personality ?? fallbackPartialJson.personality,
+        attention: api?.attention ?? fallbackPartialJson.attention,
+        memory: api?.memory ?? fallbackPartialJson.memory,
+        self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
+        emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
+        color_blindness: api?.color_blindness ?? fallbackPartialJson.color_blindness,
+        muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
+        fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
+        vitals: api?.vitals ?? fallbackPartialJson.vitals,
+        emotion: api?.emotion ?? fallbackPartialJson.emotion,
+    })
+
+    const mapReportToUI = (api) => {
+        if (!api) return null
+        const d = api.data
+        return {
+            height: d?.bia?.height_cm ?? null,
+            weight: d?.bia?.weight_kg ?? null,
+            body_constitution: d?.prakriti ? { vata: d.prakriti.vata, pitta: d.prakriti.pitta, kapha: d.prakriti.kapha } : null,
+            hydration: d?.bia?.hydration ? { level: d.bia.hydration } : null,
+            learner_type: d?.learning_style ? { type: d.learning_style.toLowerCase(), title: d.learning_style } : null,
+            personality: d?.personality ? { animal: d.personality, traits: [d.personality] } : null,
+            attention: d?.attention,
+            memory: d?.memory,
+            self_esteem: d?.self_esteem,
+            emotional_regulation: d?.emotional_regulation,
+            color_blindness: d?.color_blindness ? { status: d.color_blindness } : null,
+            muscle_mass: { level: d?.bia?.muscle_mass?.status },
+            fat_mass: { level: d?.bia?.fat_mass?.status },
+            // NOTE: backend does not yet return vitals/emotion — wire these up once available
+            vitals: d?.vitals ? {
+                heart_rate: d.vitals.heart_rate,
+                breathing_rate: d.vitals.breathing_rate,
+                stress: d.vitals.stress,
+            } : null,
+            emotion: d?.emotion ? { label: d.emotion } : null,
+        }
     }
-  }, [apiReport, recomputeScale])
 
-  /* ── Fallback / merge helpers ── */
-  const fallbackPartialJson = {
-    height: 170, weight: 70,
-    body_constitution: { vata: 34, pitta: 40, kapha: 26 },
-    hydration: { level: 'Low', message: 'Increase your water intake for better performance' },
-    learner_type: { type: 'integrated', title: 'You learn best using multiple methods', description: 'Use visual, auditory, and hands-on techniques together' },
-    personality: { animal: 'Balanced', traits: ['Calm', 'Adaptive', 'Focused'] },
-    attention: { tracking_accuracy: 55, level: 'Medium' },
-    memory: { score: 3, level: 'Beginner' },
-    self_esteem: { level: 'Average' },
-    emotional_regulation: { level: 'Good' },
-    color_blindness: { status: 'Not Present' },
-    muscle_mass: { level: 'Ideal' },
-    fat_mass: { level: 'Ideal' },
-  }
-
-  const mergeWithFallback = (api) => ({
-    height: api?.height ?? fallbackPartialJson.height,
-    weight: api?.weight ?? fallbackPartialJson.weight,
-    body_constitution: api?.body_constitution ?? fallbackPartialJson.body_constitution,
-    hydration: api?.hydration ?? fallbackPartialJson.hydration,
-    learner_type: api?.learner_type ?? fallbackPartialJson.learner_type,
-    personality: api?.personality ?? fallbackPartialJson.personality,
-    attention: api?.attention ?? fallbackPartialJson.attention,
-    memory: api?.memory ?? fallbackPartialJson.memory,
-    self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
-    emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
-    color_blindness: api?.color_blindness ?? fallbackPartialJson.color_blindness,
-    muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
-    fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
-  })
-
-  const mapReportToUI = (api) => {
-    if (!api) return null
-    const d = api.data
-    return {
-      height: d?.bia?.height_cm ?? null,
-      weight: d?.bia?.weight_kg ?? null,
-      body_constitution: d?.prakriti ? { vata: d.prakriti.vata, pitta: d.prakriti.pitta, kapha: d.prakriti.kapha } : null,
-      hydration: d?.bia?.hydration ? { level: d.bia.hydration } : null,
-      learner_type: d?.learning_style ? { type: d.learning_style.toLowerCase(), title: `Your learning style is ${d.learning_style}`, description: 'Personalized learning recommendation' } : null,
-      personality: d?.personality ? { animal: d.personality, traits: [d.personality] } : null,
-      attention: d?.attention,
-      memory: d?.memory,
-      self_esteem: d?.self_esteem,
-      emotional_regulation: d?.emotional_regulation,
-      color_blindness: d?.color_blindness ? { status: d.color_blindness } : null,
-      muscle_mass: { level: d?.bia?.muscle_mass?.status },
-      fat_mass: { level: d?.bia?.fat_mass?.status },
+    const fetchBiometricReport = async () => {
+        setReportError(false)
+        try {
+            const sessionId = screening?.sessionId
+            const userId = storeUser?.data?.user_id
+            const res = await axios.post(`${API_BASE_URL}/report/`, {
+                user_id: userId,
+                session_id: sessionId,
+                screening_session_id: sessionId,
+            })
+            if (res?.data?.success) {
+                setApiReport(mergeWithFallback(mapReportToUI(res.data)))
+                return
+            }
+            console.warn('[BIAResult] Report API returned success:false', res?.data)
+            setReportError(true)
+        } catch (err) {
+            console.error('[BIAResult] Report fetch failed:', err)
+            setReportError(true)
+        }
     }
-  }
 
-  const fetchBiometricReport = async () => {
-    setReportError(false)
-    try {
-      const sessionId = screening?.sessionId            //  camelCase — matches Redux slice
-      const userId    = storeUser?.data?.user_id
+    useEffect(() => {
+        const timer = setTimeout(fetchBiometricReport, 0)
+        return () => clearTimeout(timer)
+    }, [])
 
-      const res = await axios.post(`${API_BASE_URL}/report/`, {  //  centralised URL
-        user_id: userId,
-        session_id: sessionId,
-        screening_session_id: sessionId,
-      })
+    /* ── derived values ── */
+    const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
+    const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
+    const userName = storeUser?.data?.name || t('bia_result.default_name', 'there')
 
-      if (res?.data?.success) {
-        setApiReport(mergeWithFallback(mapReportToUI(res.data)))
-        return
-      }
-      // Backend responded but indicated failure — show error
-      console.warn('[BIAResult] Report API returned success:false', res?.data)
-      setReportError(true)
-    } catch (err) {
-      console.error('[BIAResult] Report fetch failed:', err)
-      setReportError(true)
-    }
-  }
+    const formatLabel = (v, fallback = 'Not Available') =>
+        (v === null || v === undefined || v === '') ? fallback : String(v)
 
-  useEffect(() => {
-    const timer = setTimeout(fetchBiometricReport, 0)
-    return () => clearTimeout(timer)
-  }, [])
+    const learnerType = apiReport?.learner_type?.type
+    const learnerStyleLabel = learnerType
+        ? learnerType.charAt(0).toUpperCase() + learnerType.slice(1)
+        : 'Visual'
 
-  /* ── derived values ── */
-  // Show '–' on screen rather than silently defaulting to 170 cm / 70 kg
-  const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
-  const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
-
-  const formatLabel = (v, fallback = 'Not Available') =>
-    (v === null || v === undefined || v === '') ? fallback : String(v)
-
-  const learnerType = apiReport?.learner_type?.type?.toLowerCase()
-  const learnerStyleLabel = learnerType
-    ? learnerType.charAt(0).toUpperCase() + learnerType.slice(1)
-    : 'Balanced'
-
-  const hydrationLevel = apiReport?.hydration?.level || 'Low'
-  const hydrationMessage = apiReport?.hydration?.message || t('bia_result.hydration_low_message')
-
-  const hasInsightCardsData = Boolean(
-    apiReport?.personality || apiReport?.learner_type || apiReport?.color_blindness
-  )
-
-  const feelingsItems = [
-    { label: 'Emotion Regulation', value: formatLabel(apiReport?.emotional_regulation?.level, 'Good'), valueClassName: 'text-[#29ABE2]' },
-    { label: 'Self-Esteem', value: formatLabel(apiReport?.self_esteem?.level, 'Average'), valueClassName: 'text-[#29ABE2]' },
-    { label: 'Personality', value: formatLabel(apiReport?.personality?.animal, 'Balanced'), valueClassName: 'text-[#29ABE2]' },
-  ]
-
-  const learningItems = [
-    { label: 'Divide & Attention', value: formatLabel(apiReport?.attention?.level, 'Medium'), valueClassName: 'text-[#2CEF94]' },
-    { label: 'Working Memory', value: formatLabel(apiReport?.memory?.level, 'Beginner'), valueClassName: 'text-[#2CEF94]' },
-    { label: 'Learning Style', value: learnerStyleLabel, valueClassName: 'text-[#2CEF94]' },
-  ]
-
-  const healthSummaryItems = [
-    { label: t('bia_result.hydration'), value: hydrationLevel },
-    { label: 'Muscle Mass', value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal') },
-    { label: 'Fat Mass', value: formatLabel(apiReport?.fat_mass?.level, 'Ideal') },
-  ]
-
-  /* ────────────────────────────────────────────
-     RENDER
-  ──────────────────────────────────────────── */
-
-  return (
-    /*
-      Outer shell — fills the physical screen, clips everything, hides scroll.
-      Nothing inside this element should scroll.
-    */
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        overflow: 'hidden',
-        background: '#000',
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'center',
-      }}
-    >
-      {/*
-        Scale container:
-          • Fixed at DESIGN_W so layout is predictable
-          • transform-origin top-left → scaling shrinks downward/rightward
-          • transform: scale(scale) applied after measuring naturalHeight
-          • We translate back to center it horizontally after scale
-      */}
-      <div
-        ref={innerRef}
-        style={{
-          width: `${DESIGN_W}px`,
-          // DO NOT set height here — let content define it so we can measure
-          transformOrigin: 'top left',
-          transform: `scale(0.818) translateX(162px)`,
-          // Prevent any internal scroll
-          // overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        {/* Background layer */}
+    /* ────────────────────────────────────────────
+       RENDER
+    ──────────────────────────────────────────── */
+    return (
         <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: '#000',
-            zIndex: 0,
-          }}
-        />
-
-        {/* Page content */}
-        <div
-          style={{
-            position: 'relative',
-            zIndex: 1,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '24px 16px 32px',
-            gap: '0px',
-          }}
-        >
-          {/* Page title */}
-          <h1
             style={{
-              fontFamily: FONT,
-              fontSize: '38px',
-              fontWeight: 'bold',
-              color: '#fff',
-              textAlign: 'center',
-              letterSpacing: '0.05em',
-              lineHeight: '1.3',
-              width: '80%',
-              marginTop: '8px',
-              marginBottom: '0px',
-            }}
-          >
-            {t('bia_result.congratulations')}
-            <br />
-            {t('bia_result.here_are_results')}
-          </h1>
-
-          {/* Frame container */}
-          <div
-            style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '1080px',
-              marginTop: '16px',
-              boxShadow: '0px 35.76px 176.82px rgba(154, 217, 255, 0.5)',
-            }}
-          >
-            <img
-              src={biaResultFrame}
-              alt="BIA Frame"
-              style={{
-                width: '100%',
-                height: 'auto',
-                objectFit: 'contain',
-                filter: 'drop-shadow(0px 35.76px 176.82px rgba(154, 217, 255, 0.5))',
-                display: 'block',
-              }}
-            />
-
-            {/* Content overlay */}
-            <div
-              style={{
-                position: 'absolute',
+                position: 'fixed',
                 inset: 0,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                // NO overflow-y: auto — everything must fit
                 overflow: 'hidden',
-                fontFamily: FONT,
-                color: '#fff',
-                padding: '6% 8.5% 14%',
-                gap: '16px',
-              }}
-            >
-              {/* Dosha chart */}
-              <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: '100%' }}>
-                  <BodyConstitution
-                    vata={apiReport?.body_constitution?.vata}
-                    pitta={apiReport?.body_constitution?.pitta}
-                    kapha={apiReport?.body_constitution?.kapha}
-                  />
-                </div>
-              </div>
-
-              {hasInsightCardsData ? (
-                <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-
-                  {/* MIND card */}
-                  {renderInsightCard({
-                    title: 'Persona',
-                    icon: <MindIcon style={{ width: '100%', height: '100%' }} />,
-                    titleClassName: 'text-[#29ABE2]',
-                    cardClassName: 'bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_48%,rgba(41,171,226,0.1)_70%)]',
-                    items: feelingsItems,
-                    separatorClassName: 'bg-[#29ABE2]',
-                    borderColor: 'rgb(41 171 226 / 57%)',
-                  })}
-
-                  {/* BRAIN card */}
-                  {renderInsightCard({
-                    title: 'Mind',
-                    icon: <BrainIconS style={{ width: '100%', height: '100%' }} />,
-                    titleClassName: 'text-[#2CEF94]',
-                    cardClassName: 'bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)]',
-                    items: learningItems,
-                    separatorClassName: 'bg-[#2CEF94]',
-                    borderColor: 'rgb(44 239 148 / 55%)',
-                  })}
-
-                  {/* BODY card */}
-                  <div
-                    className="w-full rounded-[10px]"
-                    style={{
-                      border: '0.5px solid rgb(255 157 92 / 52%)',
-                      background: 'linear-gradient(180deg, rgba(255,157,92,0.05) 0%, rgba(255,157,92,0.2) 100%)',
-                      padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-center" style={{ gap: S.headerGap }}>
-                      <span
-                        className="flex items-center justify-center shrink-0"
-                        style={{ width: S.iconSize, height: S.iconSize }}
-                      >
-                        <img src={BodyIcon} alt="body icon" className="w-full h-full object-contain" />
-                      </span>
-                      <h3
-                        className="leading-none tracking-[0.04em] text-[#FF9D5C]"
-                        style={{ fontFamily: FONT, fontSize: S.titleSize }}
-                      >
-                        Body
-                      </h3>
-                    </div>
-
-                    {/* Height & Weight */}
-                    <div
-                      className="grid grid-cols-2"
-                      style={{ marginTop: S.mtGrid, gap: '14px' }}
-                    >
-                      {[
-                        { label: t('bia_result.height'), value: finalHeight != null ? Math.round(finalHeight) : '–', unit: 'cm', icon: HeightIcon },
-                        { label: t('bia_result.weight'), value: finalWeight != null ? Math.round(finalWeight) : '–', unit: 'kg', icon: WeightIcon },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="flex items-center justify-center rounded-[8px] bg-[rgba(0,0,0,0.6)]"
-                          style={{
-                            gap: '14px',
-                            padding: '14px 20px',
-                            border: '2.693px solid rgba(255,255,255,0.3)',
-                            boxShadow: '0 0 20px rgba(255,255,255,0.05) inset',
-                          }}
-                        >
-                          <div className="flex items-center" style={{ gap: '8px' }}>
-                            <img
-                              src={item.icon}
-                              alt={item.label}
-                              style={{ width: S.hwIcon, height: S.hwIcon }}
-                              className="object-contain shrink-0"
-                            />
-                            <p
-                              className="text-white leading-tight tracking-[0.04em] whitespace-nowrap"
-                              style={{ fontFamily: FONT, fontSize: S.hwLabel }}
-                            >
-                              {item.label}
-                            </p>
-                          </div>
-                          <div className="flex items-baseline" style={{ gap: '3px' }}>
-                            <p
-                              className="leading-none text-[#FF9D5C]"
-                              style={{ fontFamily: FONT, fontSize: S.hwValue }}
-                            >
-                              {item.value}
-                            </p>
-                            <span
-                              className="text-[#FF9D5C]/80"
-                              style={{ fontFamily: FONT, fontSize: S.hwUnit }}
-                            >
-                              {item.unit}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Hydration / Muscle / Fat row */}
-                    <div
-                      className="grid items-stretch"
-                      style={{
-                        marginTop: '12px',
-                        gridTemplateColumns: '1fr auto 1fr auto 1fr',
-                      }}
-                    >
-                      {healthSummaryItems.map((item, index) => (
-                        <div key={item.label} className="contents">
-                          <div
-                            className="flex flex-col items-center justify-center text-center relative"
-                            style={{ padding: `${S.cellPadV} ${S.cellPadH}` }}
-                          >
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                              <div className="w-[140px] h-[100px] rounded-full blur-[40px] bg-white/10" />
-                            </div>
-                            <div className="relative z-10">
-                              <p
-                                className="text-white/80 tracking-[0.04em] leading-tight"
-                                style={{ fontFamily: FONT, fontSize: S.labelSize }}
-                              >
-                                {item.label}
-                              </p>
-                              <p
-                                className="leading-tight tracking-[0.04em] text-[#FF9D5C]"
-                                style={{ fontFamily: FONT, fontSize: S.valueSize, marginTop: '6px' }}
-                              >
-                                {item.value}
-                              </p>
-                            </div>
-                          </div>
-
-                          {index < healthSummaryItems.length - 1 ? (
-                            <div className="flex items-center justify-center">
-                              <div
-                                className="w-[1.5px] rounded-full bg-[#FF9D5C]"
-                                style={{ height: S.sepHeight }}
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* COLOR BLINDNESS card */}
-                  <div
-                    className="w-full rounded-[10px]"
-                    style={{
-                      border: '0.5px solid rgb(255 225 92 / 47%)',
-                      background: 'linear-gradient(180deg, rgba(255,225,92,0.05) 0%, rgba(255,225,92,0.2) 100%)',
-                      padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
-                    }}
-                  >
-                    <div
-                      className="flex items-center justify-center flex-wrap text-center"
-                      style={{ gap: S.headerGap }}
-                    >
-                      <span
-                        className="flex items-center justify-center shrink-0"
-                        style={{ width: S.iconSize, height: S.iconSize }}
-                      >
-                        <img src={Eye_Icon} alt="eye icon" className="w-full h-full object-contain" />
-                      </span>
-                      <h3
-                        className="leading-none tracking-[0.04em]  whitespace-nowrap"
-                        style={{ fontFamily: FONT, fontSize: S.titleSize }}
-                      >
-                        Color Blindness -
-                      </h3>
-                      <span
-                        className="leading-none tracking-[0.04em] text-[#FFE15C] whitespace-nowrap"
-                        style={{ fontFamily: FONT, fontSize: S.valueSize }}
-                      >
-                        {formatLabel(apiReport?.color_blindness?.status, 'Not present')}
-                      </span>
-                    </div>
-                  </div>
-
-                </div>
-              ) : (
-                /* Fallback hydration-only view */
-                <div className="w-full rounded-[10px] border-[0.5px] border-[#29ABE2] bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_0%,rgba(41,171,226,0.1)_100%)] p-5">
-                  <div className="flex flex-col items-center justify-center gap-2.5 text-center">
-                    <div className="flex items-center justify-center gap-2.5">
-                      <img src={droplet} className="h-6 w-6" alt="" />
-                      <h3
-                        className="tracking-wide text-[#29ABE2]"
-                        style={{ fontFamily: FONT, fontSize: '22px' }}
-                      >
-                        {t('bia_result.hydration')} -{' '}
-                        <span className="text-white">{hydrationLevel}</span>
-                      </h3>
-                    </div>
-                    <p className="pt-0.5 text-xl tracking-wider text-white/90">{hydrationMessage}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* CTA Button */}
-              <BlackGradientButton
-                onClick={() => {
-                  releaseAllResources()
-                  navigate('/welcome')
-                }}
+                background: '#000',
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+            }}
+        >
+            <div
+                ref={innerRef}
                 style={{
-                  width: "400px",
-                  height: "clamp(90px, 9vw, 145px)",
-
+                    width: `${DESIGN_W}px`,
+                    transformOrigin: 'top center',
+                    transform: `scale(${scale})`,
+                    flexShrink: 0,
                 }}
-              >
-                <span
-                  className="font-anta text-white whitespace-nowrap tracking-tight rounded-2xl"
-                  style={{
-                    fontSize: "clamp(1rem, 3.8vw, 3.75rem)",
-                    // letterSpacing: "-0.06em",
-                  }}
+            >
+                {/* Background layer — Figma "image 1190", 50% opacity, oversized/cropped */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        inset: 0,
+                        zIndex: 0,
+                        overflow: 'hidden',
+                    }}
                 >
-                  {t('bia_result.go_to_homepage')}
-                </span>
-              </BlackGradientButton>
+                    <img
+                        src={bgTexture}
+                        alt=""
+                        style={{
+                            position: 'absolute',
+                            top: '-9px',
+                            left: '-5px',
+                            width: '109%',
+                            opacity: 0.5,
+                            objectFit: 'cover',
+                        }}
+                    />
+                </div>
 
+                {/* Page content */}
+                <div
+                    style={{
+                        position: 'relative',
+                        zIndex: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '60px 40px 40px',
+                        gap: '48px',
+                    }}
+                >
+                    {/* Title */}
+                    <h1
+                        style={{
+                            fontFamily: FONT,
+                            fontSize: '60px',
+                            color: '#fff',
+                            textAlign: 'center',
+                            lineHeight: 1.25,
+                            width: '1220px',
+                            maxWidth: '100%',
+                            filter: 'drop-shadow(0px 4px 2px rgba(0,0,0,0.6))',
+                        }}
+                    >
+                        {t('bia_result.congratulations_named', `Congratulations ${userName}, Here are your results`)}
+                    </h1>
+
+                    {/* Prakriti / dosha chart */}
+                    <div style={{ width: '717px', maxWidth: '100%' }}>
+                        <BodyConstitution
+                            vata={apiReport?.body_constitution?.vata}
+                            pitta={apiReport?.body_constitution?.pitta}
+                            kapha={apiReport?.body_constitution?.kapha}
+                        />
+                    </div>
+
+                    {/* Height / Weight row */}
+                    <div className="flex w-full" style={{ gap: '24px' }}>
+                        {[
+                            { label: t('bia_result.height'), value: finalHeight != null ? Math.round(finalHeight) : '–', unit: 'cm', icon: HeightIcon },
+                            { label: t('bia_result.weight'), value: finalWeight != null ? Math.round(finalWeight) : '–', unit: 'kg', icon: WeightIcon },
+                        ].map((item) => (
+                            <div
+                                key={item.label}
+                                className="flex flex-1 items-center justify-center"
+                                style={{ ...pill, gap: '16px', padding: '28px' }}
+                            >
+                                <img src={item.icon} alt="" style={{ width: '36px', height: '36px' }} className="object-contain shrink-0" />
+                                <p className="text-white whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '40px' }}>
+                                    {item.label}:
+                                </p>
+                                <p className="whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '42px', color: '#FF9D5C' }}>
+                                    {item.value} {item.unit}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Mind + Brain row */}
+                    <div className="flex w-full" style={{ gap: '24px' }}>
+                        <StatCard
+                            title="Mind"
+                            icon={<MindIcon style={{ width: '100%', height: '100%' }} />}
+                            color="#29ABE2"
+                            rows={[
+                                { label: 'Emotion Regulation', value: formatLabel(apiReport?.emotional_regulation?.level, 'Good') },
+                                { label: 'Self-Esteem', value: formatLabel(apiReport?.self_esteem?.level, 'Well Developed') },
+                                { label: 'Personality', value: formatLabel(apiReport?.personality?.animal, 'Dominant') },
+                            ]}
+                        />
+                        <StatCard
+                            title="Brain"
+                            icon={<BrainIconS style={{ width: '100%', height: '100%' }} />}
+                            color="#2CEF94"
+                            rows={[
+                                { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
+                                { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Developing') },
+                                { label: 'Learning Style', value: learnerStyleLabel },
+                            ]}
+                        />
+                    </div>
+
+                    {/* Body + Vitals row */}
+                    <div className="flex w-full" style={{ gap: '24px' }}>
+                        <StatCard
+                            title="Body"
+                            icon={<img src={BodyIcon} alt="" className="w-full h-full object-contain" />}
+                            color="#FF9D5C"
+                            rows={[
+                                { label: 'Hydration', value: formatLabel(apiReport?.hydration?.level, 'Ideal') },
+                                { label: 'Muscle Mass', value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal') },
+                                { label: 'Fat Mass', value: formatLabel(apiReport?.fat_mass?.level, 'Low') },
+                            ]}
+                        />
+                        <StatCard
+                            title="Vitals"
+                            icon={<img src={""} alt="" className="w-full h-full object-contain" />}
+                            color="#EA73FF"
+                            rows={[
+                                { label: 'Heart Rate', value: `${formatLabel(apiReport?.vitals?.heart_rate, '--')} bpm` },
+                                { label: 'Breathing Rate', value: `${formatLabel(apiReport?.vitals?.breathing_rate, '--')} breaths/min` },
+                                { label: 'Stress', value: formatLabel(apiReport?.vitals?.stress, 'Low') },
+                            ]}
+                        />
+                    </div>
+
+                    {/* Color Blindness + Emotion pills */}
+                    <div className="flex flex-col w-full" style={{ gap: '24px' }}>
+                        <InfoPill
+                            icon={<img src={Eye_Icon} alt="" className="w-full h-full object-contain" />}
+                            label="Color Blindness"
+                            value={formatLabel(apiReport?.color_blindness?.status, 'Not present')}
+                            color="#FFE15C"
+                        />
+                        <InfoPill
+                            icon={<img src={""} alt="" className="w-full h-full object-contain" />}
+                            label="Emotion"
+                            value={formatLabel(apiReport?.emotion?.label, 'Happy')}
+                            color="#FFE15C"
+                        />
+                    </div>
+
+                    {/* QR + download report */}
+                    <div className="flex items-center justify-center" style={{ gap: '28px' }}>
+                        <p
+                            className="text-white"
+                            style={{ fontFamily: FONT, fontSize: '45px', maxWidth: '716px' }}
+                        >
+                            {t('bia_result.download_report', 'Download Suhi Holistic Wellness report for more details')}
+                        </p>
+                        <img src={""} alt="QR Code" style={{ width: '134px', height: '134px' }} />
+                    </div>
+
+                    {/* CTA */}
+                    <button
+                        onClick={() => {
+                            releaseAllResources()
+                            navigate('/welcome')
+                        }}
+                        className="flex items-center justify-center cursor-pointer"
+                        style={{
+                            ...pill,
+                            padding: '28px 86px',
+                            borderRadius: '28px',
+                        }}
+                    >
+                        <span
+                            className="text-white whitespace-nowrap"
+                            style={{ fontFamily: FONT, fontSize: '60px' }}
+                        >
+                            {t('bia_result.go_to_homepage')}
+                        </span>
+                    </button>
+                </div>
             </div>
-          </div>
         </div>
-      </div>
-    </div>
-  )
+    )
 }
 
 export default BIAResult
