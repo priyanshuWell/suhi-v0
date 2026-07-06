@@ -18,7 +18,7 @@ const BiaReportRouter = () => {
     const screening = useSelector((s) => s.common.screening)
 
     const [rawReport, setRawReport] = useState(null)
-    const [showFullResult, setShowFullResult] = useState(true)
+    const [showFullResult, setShowFullResult] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
 
