@@ -55,14 +55,14 @@ const pillRow = {
      returned a real reading for a given field. Generated once per
      mount (see randomVitalsRef below) so the UI doesn't flicker
      between renders. ── */
-const generateRandomVitals = () => ({
-    heart_rate: Math.round(60 + Math.random() * 40),       // 60–100 bpm
-    breathing_rate: Math.round(12 + Math.random() * 8),    // 12–20 breaths/min
-    stress: ['Low', 'Moderate'][Math.floor(Math.random() * 2)],
-    systolic: Math.round(110 + Math.random() * 20),        // 110–130 mmHg
-    diastolic: Math.round(70 + Math.random() * 15),        // 70–85 mmHg
-    bp_category: 'Normal',
-})
+// const generateRandomVitals = () => ({
+//     heart_rate: Math.round(60 + Math.random() * 40),       // 60–100 bpm
+//     breathing_rate: Math.round(12 + Math.random() * 8),    // 12–20 breaths/min
+//     stress: ['Low', 'Moderate'][Math.floor(Math.random() * 2)],
+//     systolic: Math.round(110 + Math.random() * 20),        // 110–130 mmHg
+//     diastolic: Math.round(70 + Math.random() * 15),        // 70–85 mmHg
+//     bp_category: 'Normal',
+// })
 
 /* ─────────────────────────────────────────────
    STAT CARD  (Mind / Brain / Body / Vitals)
@@ -151,7 +151,21 @@ const Result = () => {
     const [scale, setScale] = useState(1)
 
     // Generated once on mount so fallback values stay stable across re-renders
-    const randomVitalsRef = useRef(generateRandomVitals())
+    // const randomVitalsRef = useRef(generateRandomVitals())
+    const vitalsRows = [
+        apiReport?.vitals?.heart_rate != null &&
+        { label: 'Heart Rate', value: `${apiReport.vitals.heart_rate} bpm` },
+        apiReport?.vitals?.breathing_rate != null &&
+        { label: 'Breathing Rate', value: `${apiReport.vitals.breathing_rate} breaths/min` },
+        (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
+        {
+            label: 'Blood Pressure',
+            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg` +
+                (apiReport.vitals.blood_pressure.category ? ` (${apiReport.vitals.blood_pressure.category})` : ''),
+        },
+        apiReport?.vitals?.stress != null &&
+        { label: 'Stress', value: apiReport.vitals.stress },
+    ].filter(Boolean)
 
     const recomputeScale = useCallback(() => {
         const el = innerRef.current
@@ -308,14 +322,14 @@ const Result = () => {
         ? learnerType.charAt(0).toUpperCase() + learnerType.slice(1)
         : 'Visual'
 
-    /* ── vitals display values: real reading if present, otherwise the
-         stable per-mount random fallback ── */
-    const heartRateDisplay = apiReport?.vitals?.heart_rate ?? randomVitalsRef.current.heart_rate
-    const breathingRateDisplay = apiReport?.vitals?.breathing_rate ?? randomVitalsRef.current.breathing_rate
-    const stressDisplay = apiReport?.vitals?.stress ?? randomVitalsRef.current.stress
-    const bpSystolicDisplay = apiReport?.vitals?.blood_pressure?.systolic ?? randomVitalsRef.current.systolic
-    const bpDiastolicDisplay = apiReport?.vitals?.blood_pressure?.diastolic ?? randomVitalsRef.current.diastolic
-    const bpCategoryDisplay = apiReport?.vitals?.blood_pressure?.category ?? randomVitalsRef.current.bp_category
+    // /* ── vitals display values: real reading if present, otherwise the
+    //      stable per-mount random fallback ── */
+    // const heartRateDisplay = apiReport?.vitals?.heart_rate ?? randomVitalsRef.current.heart_rate
+    // const breathingRateDisplay = apiReport?.vitals?.breathing_rate ?? randomVitalsRef.current.breathing_rate
+    // const stressDisplay = apiReport?.vitals?.stress ?? randomVitalsRef.current.stress
+    // const bpSystolicDisplay = apiReport?.vitals?.blood_pressure?.systolic ?? randomVitalsRef.current.systolic
+    // const bpDiastolicDisplay = apiReport?.vitals?.blood_pressure?.diastolic ?? randomVitalsRef.current.diastolic
+    // const bpCategoryDisplay = apiReport?.vitals?.blood_pressure?.category ?? randomVitalsRef.current.bp_category
 
     /* ────────────────────────────────────────────
        RENDER
@@ -463,12 +477,7 @@ const Result = () => {
                             title="Vitals"
                             icon={<img src={vitalsIcon} alt="" className="w-full h-full object-contain" />}
                             color="#EA73FF"
-                            rows={[
-                                { label: 'Heart Rate', value: `${heartRateDisplay} bpm` },
-                                { label: 'Breathing Rate', value: `${breathingRateDisplay} breaths/min` },
-                                { label: 'Blood Pressure', value: `${bpSystolicDisplay}/${bpDiastolicDisplay} mmHg (${bpCategoryDisplay})` },
-                                { label: 'Stress', value: stressDisplay },
-                            ]}
+                            rows={vitalsRows}
                         />
                     </div>
 

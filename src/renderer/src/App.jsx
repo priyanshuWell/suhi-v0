@@ -26,6 +26,7 @@ import { SpaceConvoyComplete } from './components/games/space-convoy/SpaceConvey
 import ScreeningLayout from './components/ScreeningLayout'
 import View360Viewer from './components/voice/View360Viewer'
 import Result from './components/bia/Result'
+import BiaReportRouter from './components/bia/BiaReportRouter'
 
 function App() {
   // Play looping background music on all routes except voice & game sections
@@ -43,43 +44,43 @@ function App() {
 
   //   doSync()
   // }, [])
-/*
-bia -> bia/wh -> bia/imcomplete
-voice -> /voice
-colorblindness -> /colorblindness -> /colorblindness/quiz
-space-convoy -> /space-convoy-main - /space-convoy-demo  ->  /divide-attention -> /space-convoy-complete
-*/
+  /*
+  bia -> bia/wh -> bia/imcomplete
+  voice -> /voice
+  colorblindness -> /colorblindness -> /colorblindness/quiz
+  space-convoy -> /space-convoy-main - /space-convoy-demo  ->  /divide-attention -> /space-convoy-complete
+  */
   return (
     <>
       <BufferCollectionManager />
       <Routes>
 
-      {/* Routes WITHOUT the progress bar */}
-      {/* <Route path="/" element={<SplashScreen />} /> */}
-      <Route path='/welcome' element={<StartScreen />} />
-      <Route path='/capture' element={<VideoCaptureScreen />} />
-      <Route path="/login-suhi" element={<LoginSuhi />} />
-      <Route path='/divide-attention' element={<DivideAttentionGame />} />
-      <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
-      <Route path='/bia/result' element={<BIAResult />} />
-      {/* All screening routes — get the top progress bar automatically */}
-      <Route element={<ScreeningLayout />}>
-        <Route path="/faceCapture" element={<FaceCapture />} />
-        <Route path="/confirmation" element={<ConfirmationScreen />} />
-        <Route path="/login-father" element={<LoginFather />} />
-        <Route path='/verified' element={<RegisterCard />} />
-        <Route path='/bia/:screenType' element={<BIACalcuate />} />
-        <Route path='/voice' element={<VoiceAnalysis />} />
-        <Route path="/fingerprint" element={<FingerPrintScreen />} />
-        <Route path="/colorblindness" element={<ColorBlindPlate />} />
+        {/* Routes WITHOUT the progress bar */}
+        {/* <Route path="/" element={<SplashScreen />} /> */}
+        <Route path='/welcome' element={<StartScreen />} />
+        <Route path='/capture' element={<VideoCaptureScreen />} />
+        <Route path="/login-suhi" element={<LoginSuhi />} />
+        <Route path='/divide-attention' element={<DivideAttentionGame />} />
+        <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
+        <Route path='/bia/result' element={<BIAResult />} />
+        {/* All screening routes — get the top progress bar automatically */}
+        <Route element={<ScreeningLayout />}>
+          <Route path="/faceCapture" element={<FaceCapture />} />
+          <Route path="/confirmation" element={<ConfirmationScreen />} />
+          <Route path="/login-father" element={<LoginFather />} />
+          <Route path='/verified' element={<RegisterCard />} />
+          <Route path='/bia/:screenType' element={<BIACalcuate />} />
+          <Route path='/voice' element={<VoiceAnalysis />} />
+          <Route path="/fingerprint" element={<FingerPrintScreen />} />
+          <Route path="/colorblindness" element={<ColorBlindPlate />} />
 
-        <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
-        <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
-        {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
-        <Route path='/' element={<Result />} />
-      </Route>
+          <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
+          <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
+          {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
+          <Route path='/' element={<BiaReportRouter />} />
+        </Route>
 
-    </Routes>
+      </Routes>
     </>
   )
 }
