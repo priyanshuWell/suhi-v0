@@ -6,8 +6,6 @@ import { StartScreen } from './components/StartScreen'
 import VideoCaptureScreen from './components/VideoCaptureScreen'
 import BIACalcuate from './components/bia/BIACalcuate'
 import RegisterCard from './components/RegisterCard'
-// import DMITScreen from './components/dmit/DMITScreen'
-// import FaceScan from './components/FaceScan'
 import ErrorAlert from './components/ErrorAlert'
 import BIAResult from './components/bia/BIAResult'
 import VoiceAnalysis from './components/voice/VoiceAnalysis'
@@ -69,7 +67,7 @@ function App() {
 
         <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
         <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
-        <Route path='/identify-student' element={<IdentifyStudent />} />
+        {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
         <Route path='/' element={<Result />} />
       </Route>
 
