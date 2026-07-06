@@ -155,7 +155,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const vitalsRows = [
         apiReport?.vitals?.heart_rate != null &&
         { label: 'Heart Rate', value: `${apiReport.vitals.heart_rate} bpm` },
-        apiReport?.vitals?.breathing_rate != null &&
+        apiReport?.vitals?.breathing_rate != null && apiReport?.vitals?.breathing_rate != 0.0 && 
         { label: 'Breathing Rate', value: `${apiReport.vitals.breathing_rate} breaths/min` },
         (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
         {
@@ -208,7 +208,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         memory: { level: 'Developing' },
         self_esteem: { level: 'Well Developed' },
         emotional_regulation: { level: 'Good' },
-        color_blindness: { status: 'Not present' },
+        color_blindness: { status: 'Rescan Recommended' },
         muscle_mass: { level: 'Ideal' },
         fat_mass: { level: 'Low' },
         vitals: {
@@ -217,7 +217,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             stress: null,
             blood_pressure: null,
         },
-        emotion: { label: 'Happy' },
+        emotion: { label: 'Calm' },
     }
 
     const mergeWithFallback = (api) => ({
@@ -231,7 +231,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         memory: api?.memory ?? fallbackPartialJson.memory,
         self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
         emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
-        color_blindness: api?.color_blindness ?? fallbackPartialJson.color_blindness,
+        color_blindness: api?.color_blindness?.result ?? fallbackPartialJson.color_blindness,
         muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
         fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
         // merge field-by-field so a partially-populated vitals object

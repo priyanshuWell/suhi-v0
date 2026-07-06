@@ -213,7 +213,7 @@ const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         memory: { score: 3, level: 'Beginner' },
         self_esteem: { level: 'Average' },
         emotional_regulation: { level: 'Good' },
-        color_blindness: { status: 'Not Present' },
+        color_blindness: { status: 'Rescan Recommended' },
         muscle_mass: { level: 'Ideal' },
         fat_mass: { level: 'Ideal' },
     }
@@ -229,7 +229,7 @@ const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         memory: api?.memory ?? fallbackPartialJson.memory,
         self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
         emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
-        color_blindness: api?.color_blindness ?? fallbackPartialJson.color_blindness,
+        color_blindness: api?.color_blindness.result ?? fallbackPartialJson.color_blindness,
         muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
         fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
     })
@@ -248,7 +248,7 @@ const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             memory: d?.memory,
             self_esteem: d?.self_esteem,
             emotional_regulation: d?.emotional_regulation,
-            color_blindness: d?.color_blindness ? { status: d.color_blindness } : null,
+            color_blindness: d?.color_blindness.result ? { status: d.color_blindness } : null,
             muscle_mass: { level: d?.bia?.muscle_mass?.status },
             fat_mass: { level: d?.bia?.fat_mass?.status },
         }

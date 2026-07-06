@@ -56,13 +56,13 @@ function App() {
       <Routes>
 
         {/* Routes WITHOUT the progress bar */}
-        {/* <Route path="/" element={<SplashScreen />} /> */}
+        <Route path="/" element={<SplashScreen />} />
         <Route path='/welcome' element={<StartScreen />} />
         <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path='/divide-attention' element={<DivideAttentionGame />} />
         <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
-        <Route path='/bia/result' element={<BIAResult />} />
+        <Route path='/bia/result' element={<BiaReportRouter />} />
         {/* All screening routes — get the top progress bar automatically */}
         <Route element={<ScreeningLayout />}>
           <Route path="/faceCapture" element={<FaceCapture />} />
@@ -77,7 +77,7 @@ function App() {
           <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
           <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
           {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
-          <Route path='/' element={<BiaReportRouter />} />
+         
         </Route>
 
       </Routes>
