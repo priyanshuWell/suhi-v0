@@ -14,7 +14,6 @@ import BodyConstitution from './BodyConstitution'
 import { useTranslation } from 'react-i18next'
 import { releaseAllResources } from '../../utils/cleanup'
 import { BrainIconS, MindIcon } from '../../assets'
-import { API_BASE_URL } from '../../utils/config';
 
 /*
   ─────────────────────────────────────────────────────────────
@@ -121,11 +120,9 @@ const BIAResult = () => {
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
     const storeUser = useSelector((s) => s.common.user)
-    const screening = useSelector((s) => s.common.screening)
     const { t } = useTranslation()
 
     const [apiReport, setApiReport] = useState(null)
-    const [reportError, setReportError] = useState(false)
 
     const innerRef = useRef(null)
     const [scale, setScale] = useState(1)
@@ -224,25 +221,15 @@ const BIAResult = () => {
     }
 
     const fetchBiometricReport = async () => {
-        setReportError(false)
         try {
-            const sessionId = screening?.sessionId
-            const userId = storeUser?.data?.user_id
-            const res = await axios.post(`${API_BASE_URL}/report/`, {
-                user_id: userId,
-                session_id: sessionId,
-                screening_session_id: sessionId,
+            const res = await axios.post('http://localhost:8000/report/', {
+                user_id: storeUser?.data?.user_id,
+                session_id: storeUser?.screening?.session_id,
+                screening_session_id: storeUser?.screening?.session_id,
             })
-            if (res?.data?.success) {
-                setApiReport(mergeWithFallback(mapReportToUI(res.data)))
-                return
-            }
-            console.warn('[BIAResult] Report API returned success:false', res?.data)
-            setReportError(true)
-        } catch (err) {
-            console.error('[BIAResult] Report fetch failed:', err)
-            setReportError(true)
-        }
+            if (res?.data?.success) { setApiReport(mergeWithFallback(mapReportToUI(res.data))); return }
+            setApiReport(fallbackPartialJson)
+        } catch { setApiReport(fallbackPartialJson) }
     }
 
     useEffect(() => {
@@ -253,7 +240,6 @@ const BIAResult = () => {
     /* ── derived values ── */
     const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
     const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
-    const userName = storeUser?.data?.name || t('bia_result.default_name', 'there')
 
     const formatLabel = (v, fallback = 'Not Available') =>
         (v === null || v === undefined || v === '') ? fallback : String(v)
@@ -267,6 +253,10 @@ const BIAResult = () => {
        RENDER
     ──────────────────────────────────────────── */
     return (
+        /*
+          Outer shell — fills the physical screen, clips everything, hides scroll.
+          Nothing inside this element should scroll.
+        */
         <div
             style={{
                 position: 'fixed',
@@ -278,37 +268,34 @@ const BIAResult = () => {
                 justifyContent: 'center',
             }}
         >
+            {/*
+        Scale container:
+          • Fixed at DESIGN_W so layout is predictable
+          • transform-origin top-left → scaling shrinks downward/rightward
+          • transform: scale(scale) applied after measuring naturalHeight
+          • We translate back to center it horizontally after scale
+      */}
             <div
                 ref={innerRef}
                 style={{
                     width: `${DESIGN_W}px`,
-                    transformOrigin: 'top center',
-                    transform: `scale(${scale})`,
+                    // DO NOT set height here — let content define it so we can measure
+                    transformOrigin: 'top left',
+                    transform: `scale(0.818) translateX(162px)`,
+                    // Prevent any internal scroll
+                    // overflow: 'hidden',
                     flexShrink: 0,
                 }}
             >
-                {/* Background layer — Figma "image 1190", 50% opacity, oversized/cropped */}
+                {/* Background layer */}
                 <div
                     style={{
                         position: 'absolute',
                         inset: 0,
+                        background: '#000',
                         zIndex: 0,
-                        overflow: 'hidden',
                     }}
-                >
-                    <img
-                        src={bgTexture}
-                        alt=""
-                        style={{
-                            position: 'absolute',
-                            top: '-9px',
-                            left: '-5px',
-                            width: '109%',
-                            opacity: 0.5,
-                            objectFit: 'cover',
-                        }}
-                    />
-                </div>
+                />
 
                 {/* Page content */}
                 <div
@@ -347,127 +334,205 @@ const BIAResult = () => {
                         />
                     </div>
 
-                    {/* Height / Weight row */}
-                    <div className="flex w-full" style={{ gap: '24px' }}>
-                        {[
-                            { label: t('bia_result.height'), value: finalHeight != null ? Math.round(finalHeight) : '–', unit: 'cm', icon: HeightIcon },
-                            { label: t('bia_result.weight'), value: finalWeight != null ? Math.round(finalWeight) : '–', unit: 'kg', icon: WeightIcon },
-                        ].map((item) => (
+                    {hasInsightCardsData ? (
+                        <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+
+                            {/* MIND card */}
+                            {renderInsightCard({
+                                title: 'Persona',
+                                icon: <MindIcon style={{ width: '100%', height: '100%' }} />,
+                                titleClassName: 'text-[#29ABE2]',
+                                cardClassName: 'bg-[linear-gradient(180deg,rgba(41,171,226,0.05)_48%,rgba(41,171,226,0.1)_70%)]',
+                                items: feelingsItems,
+                                separatorClassName: 'bg-[#29ABE2]',
+                                borderColor: 'rgb(41 171 226 / 57%)',
+                            })}
+
+                            {/* BRAIN card */}
+                            {renderInsightCard({
+                                title: 'Mind',
+                                icon: <BrainIconS style={{ width: '100%', height: '100%' }} />,
+                                titleClassName: 'text-[#2CEF94]',
+                                cardClassName: 'bg-[linear-gradient(180deg,rgba(44,239,148,0.05)_0%,rgba(44,239,148,0.2)_100%)]',
+                                items: learningItems,
+                                separatorClassName: 'bg-[#2CEF94]',
+                                borderColor: 'rgb(44 239 148 / 55%)',
+                            })}
+
+                            {/* BODY card */}
                             <div
-                                key={item.label}
-                                className="flex flex-1 items-center justify-center"
-                                style={{ ...pill, gap: '16px', padding: '28px' }}
+                                className="w-full rounded-[10px]"
+                                style={{
+                                    border: '0.5px solid rgb(255 157 92 / 52%)',
+                                    background: 'linear-gradient(180deg, rgba(255,157,92,0.05) 0%, rgba(255,157,92,0.2) 100%)',
+                                    padding: `${S.cardPaddingV} ${S.cardPaddingH}`,
+                                }}
                             >
-                                <img src={item.icon} alt="" style={{ width: '36px', height: '36px' }} className="object-contain shrink-0" />
-                                <p className="text-white whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '40px' }}>
-                                    {item.label}:
-                                </p>
-                                <p className="whitespace-nowrap" style={{ fontFamily: FONT, fontSize: '42px', color: '#FF9D5C' }}>
-                                    {item.value} {item.unit}
-                                </p>
+                                <div className="flex items-center justify-center" style={{ gap: S.headerGap }}>
+                                    <span
+                                        className="flex items-center justify-center shrink-0"
+                                        style={{ width: S.iconSize, height: S.iconSize }}
+                                    >
+                                        <img src={BodyIcon} alt="body icon" className="w-full h-full object-contain" />
+                                    </span>
+                                    <h3
+                                        className="leading-none tracking-[0.04em] text-[#FF9D5C]"
+                                        style={{ fontFamily: FONT, fontSize: S.titleSize }}
+                                    >
+                                        Body
+                                    </h3>
+                                </div>
+
+                                {/* Height & Weight */}
+                                <div
+                                    className="grid grid-cols-2"
+                                    style={{ marginTop: S.mtGrid, gap: '14px' }}
+                                >
+                                    {[
+                                        { label: t('bia_result.height'), value: Math.round(finalHeight), unit: 'cm', icon: HeightIcon },
+                                        { label: t('bia_result.weight'), value: Math.round(finalWeight), unit: 'kg', icon: WeightIcon },
+                                    ].map((item) => (
+                                        <div
+                                            key={item.label}
+                                            className="flex items-center justify-center rounded-[8px] bg-[rgba(0,0,0,0.6)]"
+                                            style={{
+                                                gap: '14px',
+                                                padding: '14px 20px',
+                                                border: '2.693px solid rgba(255,255,255,0.3)',
+                                                boxShadow: '0 0 20px rgba(255,255,255,0.05) inset',
+                                            }}
+                                        >
+                                            <div className="flex items-center" style={{ gap: '8px' }}>
+                                                <img
+                                                    src={item.icon}
+                                                    alt={item.label}
+                                                    style={{ width: S.hwIcon, height: S.hwIcon }}
+                                                    className="object-contain shrink-0"
+                                                />
+                                                <p
+                                                    className="text-white leading-tight tracking-[0.04em] whitespace-nowrap"
+                                                    style={{ fontFamily: FONT, fontSize: S.hwLabel }}
+                                                >
+                                                    {item.label}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-baseline" style={{ gap: '3px' }}>
+                                                <p
+                                                    className="leading-none text-[#FF9D5C]"
+                                                    style={{ fontFamily: FONT, fontSize: S.hwValue }}
+                                                >
+                                                    {item.value}
+                                                </p>
+                                                <span
+                                                    className="text-[#FF9D5C]/80"
+                                                    style={{ fontFamily: FONT, fontSize: S.hwUnit }}
+                                                >
+                                                    {item.unit}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Mind + Brain row */}
+                                <div className="flex w-full" style={{ gap: '24px' }}>
+                                    <StatCard
+                                        title="Mind"
+                                        icon={<MindIcon style={{ width: '100%', height: '100%' }} />}
+                                        color="#29ABE2"
+                                        rows={[
+                                            { label: 'Emotion Regulation', value: formatLabel(apiReport?.emotional_regulation?.level, 'Good') },
+                                            { label: 'Self-Esteem', value: formatLabel(apiReport?.self_esteem?.level, 'Well Developed') },
+                                            { label: 'Personality', value: formatLabel(apiReport?.personality?.animal, 'Dominant') },
+                                        ]}
+                                    />
+                                    <StatCard
+                                        title="Brain"
+                                        icon={<BrainIconS style={{ width: '100%', height: '100%' }} />}
+                                        color="#2CEF94"
+                                        rows={[
+                                            { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
+                                            { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Developing') },
+                                            { label: 'Learning Style', value: learnerStyleLabel },
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Body + Vitals row */}
+                                <div className="flex w-full" style={{ gap: '24px' }}>
+                                    <StatCard
+                                        title="Body"
+                                        icon={<img src={BodyIcon} alt="" className="w-full h-full object-contain" />}
+                                        color="#FF9D5C"
+                                        rows={[
+                                            { label: 'Hydration', value: formatLabel(apiReport?.hydration?.level, 'Ideal') },
+                                            { label: 'Muscle Mass', value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal') },
+                                            { label: 'Fat Mass', value: formatLabel(apiReport?.fat_mass?.level, 'Low') },
+                                        ]}
+                                    />
+                                    <StatCard
+                                        title="Vitals"
+                                        icon={<img src={""} alt="" className="w-full h-full object-contain" />}
+                                        color="#EA73FF"
+                                        rows={[
+                                            { label: 'Heart Rate', value: `${formatLabel(apiReport?.vitals?.heart_rate, '--')} bpm` },
+                                            { label: 'Breathing Rate', value: `${formatLabel(apiReport?.vitals?.breathing_rate, '--')} breaths/min` },
+                                            { label: 'Stress', value: formatLabel(apiReport?.vitals?.stress, 'Low') },
+                                        ]}
+                                    />
+                                </div>
+
+                                {/* Color Blindness + Emotion pills */}
+                                <div className="flex flex-col w-full" style={{ gap: '24px' }}>
+                                    <InfoPill
+                                        icon={<img src={Eye_Icon} alt="" className="w-full h-full object-contain" />}
+                                        label="Color Blindness"
+                                        value={formatLabel(apiReport?.color_blindness?.status, 'Not present')}
+                                        color="#FFE15C"
+                                    />
+                                    <InfoPill
+                                        icon={<img src={""} alt="" className="w-full h-full object-contain" />}
+                                        label="Emotion"
+                                        value={formatLabel(apiReport?.emotion?.label, 'Happy')}
+                                        color="#FFE15C"
+                                    />
+                                </div>
+
+                                {/* QR + download report */}
+                                <div className="flex items-center justify-center" style={{ gap: '28px' }}>
+                                    <p
+                                        className="text-white"
+                                        style={{ fontFamily: FONT, fontSize: '45px', maxWidth: '716px' }}
+                                    >
+                                        {t('bia_result.download_report', 'Download Suhi Holistic Wellness report for more details')}
+                                    </p>
+                                    <img src={""} alt="QR Code" style={{ width: '134px', height: '134px' }} />
+                                </div>
+
+                                {/* CTA */}
+                                <button
+                                    onClick={() => {
+                                        releaseAllResources()
+                                        navigate('/welcome')
+                                    }}
+                                    className="flex items-center justify-center cursor-pointer"
+                                    style={{
+                                        ...pill,
+                                        padding: '28px 86px',
+                                        borderRadius: '28px',
+                                    }}
+                                >
+                                    <span
+                                        className="text-white whitespace-nowrap"
+                                        style={{ fontFamily: FONT, fontSize: '60px' }}
+                                    >
+                                        {t('bia_result.go_to_homepage')}
+                                    </span>
+                                </button>
                             </div>
-                        ))}
-                    </div>
-
-                    {/* Mind + Brain row */}
-                    <div className="flex w-full" style={{ gap: '24px' }}>
-                        <StatCard
-                            title="Mind"
-                            icon={<MindIcon style={{ width: '100%', height: '100%' }} />}
-                            color="#29ABE2"
-                            rows={[
-                                { label: 'Emotion Regulation', value: formatLabel(apiReport?.emotional_regulation?.level, 'Good') },
-                                { label: 'Self-Esteem', value: formatLabel(apiReport?.self_esteem?.level, 'Well Developed') },
-                                { label: 'Personality', value: formatLabel(apiReport?.personality?.animal, 'Dominant') },
-                            ]}
-                        />
-                        <StatCard
-                            title="Brain"
-                            icon={<BrainIconS style={{ width: '100%', height: '100%' }} />}
-                            color="#2CEF94"
-                            rows={[
-                                { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
-                                { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Developing') },
-                                { label: 'Learning Style', value: learnerStyleLabel },
-                            ]}
-                        />
-                    </div>
-
-                    {/* Body + Vitals row */}
-                    <div className="flex w-full" style={{ gap: '24px' }}>
-                        <StatCard
-                            title="Body"
-                            icon={<img src={BodyIcon} alt="" className="w-full h-full object-contain" />}
-                            color="#FF9D5C"
-                            rows={[
-                                { label: 'Hydration', value: formatLabel(apiReport?.hydration?.level, 'Ideal') },
-                                { label: 'Muscle Mass', value: formatLabel(apiReport?.muscle_mass?.level, 'Ideal') },
-                                { label: 'Fat Mass', value: formatLabel(apiReport?.fat_mass?.level, 'Low') },
-                            ]}
-                        />
-                        <StatCard
-                            title="Vitals"
-                            icon={<img src={""} alt="" className="w-full h-full object-contain" />}
-                            color="#EA73FF"
-                            rows={[
-                                { label: 'Heart Rate', value: `${formatLabel(apiReport?.vitals?.heart_rate, '--')} bpm` },
-                                { label: 'Breathing Rate', value: `${formatLabel(apiReport?.vitals?.breathing_rate, '--')} breaths/min` },
-                                { label: 'Stress', value: formatLabel(apiReport?.vitals?.stress, 'Low') },
-                            ]}
-                        />
-                    </div>
-
-                    {/* Color Blindness + Emotion pills */}
-                    <div className="flex flex-col w-full" style={{ gap: '24px' }}>
-                        <InfoPill
-                            icon={<img src={Eye_Icon} alt="" className="w-full h-full object-contain" />}
-                            label="Color Blindness"
-                            value={formatLabel(apiReport?.color_blindness?.status, 'Not present')}
-                            color="#FFE15C"
-                        />
-                        <InfoPill
-                            icon={<img src={""} alt="" className="w-full h-full object-contain" />}
-                            label="Emotion"
-                            value={formatLabel(apiReport?.emotion?.label, 'Happy')}
-                            color="#FFE15C"
-                        />
-                    </div>
-
-                    {/* QR + download report */}
-                    <div className="flex items-center justify-center" style={{ gap: '28px' }}>
-                        <p
-                            className="text-white"
-                            style={{ fontFamily: FONT, fontSize: '45px', maxWidth: '716px' }}
-                        >
-                            {t('bia_result.download_report', 'Download Suhi Holistic Wellness report for more details')}
-                        </p>
-                        <img src={""} alt="QR Code" style={{ width: '134px', height: '134px' }} />
-                    </div>
-
-                    {/* CTA */}
-                    <button
-                        onClick={() => {
-                            releaseAllResources()
-                            navigate('/welcome')
-                        }}
-                        className="flex items-center justify-center cursor-pointer"
-                        style={{
-                            ...pill,
-                            padding: '28px 86px',
-                            borderRadius: '28px',
-                        }}
-                    >
-                        <span
-                            className="text-white whitespace-nowrap"
-                            style={{ fontFamily: FONT, fontSize: '60px' }}
-                        >
-                            {t('bia_result.go_to_homepage')}
-                        </span>
-                    </button>
-                </div>
-            </div>
+                        </div>
         </div>
-    )
+                )
 }
 
-export default BIAResult
+                export default BIAResult

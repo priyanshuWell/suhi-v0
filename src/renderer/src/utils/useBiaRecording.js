@@ -19,7 +19,7 @@ import { getKioskId } from "./config";
  *   const { startRecording, stopAndSend, saveBuffer } = useBIARecording({ sessionId, userId });
  */
 const CHUNK_SIZE = 1000; // 1-second timeslices → denser keyframes, smoother playback
-export function useBIARecording({ sessionId, userId }) {
+export function useBIARecording({ sessionId, userId, screeningSessionId, bufferType = "BIA" }) {
   const mediaRecorderRef = useRef(null);
   const chunksRef        = useRef([]);
   const streamRef        = useRef(null);      // canvas stream (rotated)
@@ -139,9 +139,18 @@ export function useBIARecording({ sessionId, userId }) {
             });
 
             console.log(`[BIA REC] ✅ Backend upload DONE — role: "${role}"`, result);
-            const kioskId = getKioskId()
-            const bufferResult = await bufferCollection(result?.data?.shm_path,kioskId, userId);
-            console.log(`[BIA REC] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
+            const shmPath = result?.data?.shm_path ?? result?.shm_path;
+            if (screeningSessionId && shmPath) {
+              const kioskId = getKioskId();
+              const bufferResult = await bufferCollection(
+                shmPath,
+                userId,
+                screeningSessionId,
+                bufferType,
+                kioskId
+              );
+              console.log(`[BIA REC] ✅ Buffer collection DONE — role: "${role}"`, bufferResult);
+            }
             // Wait for local save to finish (so cleanup doesn't race it)
             await localSavePromise;
 
@@ -155,7 +164,7 @@ export function useBIARecording({ sessionId, userId }) {
         recorder.stop();
         isRecordingRef.current = false;
       }),
-    [sessionId, userId]
+    [sessionId, userId, screeningSessionId, bufferType]
   );
 
   const _cleanup = () => {

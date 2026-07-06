@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router'
+import BufferCollectionManager from './components/BufferCollectionManager'
 import { useBackgroundAudio } from './hooks/useBackgroundAudio'
 import SplashScreen from './components/SplashScreen'
 import Versions from './components/Versions'
@@ -42,9 +43,16 @@ function App() {
 
   //   doSync()
   // }, [])
-
+/*
+bia -> bia/wh -> bia/imcomplete
+voice -> /voice
+colorblindness -> /colorblindness -> /colorblindness/quiz
+space-convoy -> /space-convoy-main - /space-convoy-demo  ->  /divide-attention -> /space-convoy-complete
+*/
   return (
-    <Routes>
+    <>
+      <BufferCollectionManager />
+      <Routes>
 
       {/* Routes WITHOUT the progress bar */}
       {/* <Route path="/" element={<SplashScreen />} /> */}
@@ -72,6 +80,7 @@ function App() {
       </Route>
 
     </Routes>
+    </>
   )
 }
 
