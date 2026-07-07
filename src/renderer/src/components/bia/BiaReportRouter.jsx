@@ -5,6 +5,7 @@ import axios from 'axios'
 import Result from './Result'
 import BIAResult from './BIAResult'
 import { API_BASE_URL } from '../../utils/config'
+import bgTexture from '../../assets/lightbg.png'
 export const hasValue = (obj) =>
     !!obj && Object.values(obj).some((v) => v !== null && v !== undefined && v !== '')
 
@@ -50,7 +51,60 @@ const BiaReportRouter = () => {
         return () => clearTimeout(timer)
     }, [])
 
-    if (loading) return null // or a spinner
+    if (loading) return (
+        <div
+            style={{
+                position: 'fixed',
+                inset: 0,
+                background: '#000',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '24px',
+                overflow: 'hidden',
+            }}
+        >
+            {/* Same textured background as Result.jsx */}
+            <img
+                src={bgTexture}
+                alt=""
+                style={{
+                    position: 'absolute',
+                    top: '-9px',
+                    left: '-5px',
+                    width: '109%',
+                    opacity: 0.5,
+                    objectFit: 'cover',
+                    pointerEvents: 'none',
+                }}
+            />
+            {/* Spinner + label, on top of the background */}
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px' }}>
+                <div
+                    style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '50%',
+                        border: '4px solid rgba(255,255,255,0.15)',
+                        borderTopColor: '#29ABE2',
+                        animation: 'spin 0.9s linear infinite',
+                    }}
+                />
+                <p
+                    style={{
+                        fontFamily: "'Anta', sans-serif",
+                        fontSize: '28px',
+                        color: 'rgba(255,255,255,0.7)',
+                        letterSpacing: '0.05em',
+                    }}
+                >
+                    Loading your results…
+                </p>
+            </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+    )
 
     return showFullResult
         ? <Result apiReportRaw={rawReport} reportError={error} />
