@@ -160,11 +160,9 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
         {
             label: 'Blood Pressure',
-            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg` +
-                (apiReport.vitals.blood_pressure.category ? ` (${apiReport.vitals.blood_pressure.category})` : ''),
+            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} MMHg` ,
         },
-        apiReport?.vitals?.stress != null &&
-        { label: 'Stress', value: apiReport.vitals.stress },
+        { label: 'Stress', value: apiReport?.vitals?.stress, },
     ].filter(Boolean)
 
     const recomputeScale = useCallback(() => {
@@ -214,7 +212,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         vitals: {
             heart_rate: null,
             breathing_rate: null,
-            stress: null,
+            stress: "Low",
             blood_pressure: null,
         },
         emotion: { label: 'Calm' },
@@ -231,7 +229,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         memory: api?.memory ?? fallbackPartialJson.memory,
         self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
         emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
-        color_blindness: api?.color_blindness?.result ?? fallbackPartialJson.color_blindness,
+        color_blindness:
+    api?.color_blindness ?? fallbackPartialJson.color_blindness,
         muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
         fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
         // merge field-by-field so a partially-populated vitals object
@@ -257,12 +256,30 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             learner_type: d?.learning_style ? { type: d.learning_style.toLowerCase(), title: d.learning_style } : null,
             personality: d?.personality ? { animal: d.personality, traits: [d.personality] } : null,
             // backend key is `divided_attention`, not `attention`
-            attention: d?.divided_attention ? { level: d.divided_attention } : null,
+          attention: d?.divided_attention
+  ? {
+      level: d.divided_attention.level,
+      tracking_accuracy: d.divided_attention.tracking_accuracy,
+    }
+  : null,
             // backend key is `cognitive_flexibility`, not `memory`
-            memory: d?.cognitive_flexibility ? { level: d.cognitive_flexibility } : null,
+            memory: d?.cognitive_flexibility
+  ? {
+      level: d.cognitive_flexibility.level,
+      score: d.cognitive_flexibility.score,
+    }
+  : null,
             self_esteem: d?.self_esteem,
             emotional_regulation: d?.emotional_regulation,
-            color_blindness: d?.color_blindness ? { status: d.color_blindness } : null,
+            color_blindness: d?.color_blindness
+  ? {
+      result: d.color_blindness.result,
+      deficiency_type: d.color_blindness.deficiency_type,
+      normal_score: d.color_blindness.normal_score,
+      colorblind_score: d.color_blindness.colorblind_score,
+      irrelevant_score: d.color_blindness.irrelevant_score,
+    }
+  : null,
             muscle_mass: { level: d?.bia?.muscle_mass?.status },
             fat_mass: { level: d?.bia?.fat_mass?.status },
             // backend returns heart_rate / breathing_rate / blood_pressure as
@@ -278,7 +295,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                 } : null,
             },
             // backend key is `facial_emotion.dominant_emotion`, not `emotion.label`
-            emotion: d?.facial_emotion?.dominant_emotion ? { label: d.facial_emotion.dominant_emotion } : null,
+            emotion: d?.facial_emotion?.masked_emotion ? { label: d.facial_emotion.masked_emotion } : null,
         }
     }
 
@@ -424,8 +441,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                     {/* Height / Weight row */}
                     <div className="flex w-full" style={{ gap: '24px' }}>
                         {[
-                            { label: t('bia_result.height'), value: finalHeight != null ? Math.round(finalHeight) : '–', unit: 'cm', icon: HeightIcon },
-                            { label: t('bia_result.weight'), value: finalWeight != null ? Math.round(finalWeight) : '–', unit: 'kg', icon: WeightIcon },
+                            { label: t('bia_result.height'), value: finalHeight != null ? parseFloat(finalHeight).toFixed(2) : '–', unit: 'cm', icon: HeightIcon },
+                            { label: t('bia_result.weight'), value: finalWeight != null ? parseFloat(finalWeight).toFixed(2) : '–', unit: 'kg', icon: WeightIcon },
                         ].map((item) => (
                             <div
                                 key={item.label}
@@ -492,7 +509,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                         <InfoPill
                             icon={<img src={Eye_Icon} alt="" className="w-full h-full object-contain" />}
                             label="Color Blindness"
-                            value={formatLabel(apiReport?.color_blindness?.status, 'Not present')}
+                            value={formatLabel(apiReport?.color_blindness?.result)}
                             color="#FFE15C"
                         />
                         <InfoPill
