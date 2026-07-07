@@ -115,6 +115,19 @@ const StatCard = ({ title, icon, color, rows }) => (
     </div>
 )
 
+const formatColorBlindness = (val, type) => {
+    switch (val) {
+        case 'color_vision_deficit_not_present':
+            return `Color Vision Deficit Not Present [${type !== null ? type : ''}] `
+        case 'color_vision_deficit_present':
+            return `color Vision Deficit Present [${type !== null ? type : ''}]`
+        case 'rescan_recommended':
+            return `Rescan Recommended[${type !== null ? type : ''}]`
+        default:
+            return `Rescan Recommended `
+    }
+}
+
 /* Full-width single-row pill (Color Blindness / Emotion) */
 const InfoPill = ({ icon, label, value, color }) => (
     <div
@@ -155,12 +168,12 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const vitalsRows = [
         apiReport?.vitals?.heart_rate != null &&
         { label: 'Heart Rate', value: `${apiReport.vitals.heart_rate} bpm` },
-        apiReport?.vitals?.breathing_rate != null && apiReport?.vitals?.breathing_rate != 0.0 && 
+        apiReport?.vitals?.breathing_rate != null && apiReport?.vitals?.breathing_rate != 0.0 &&
         { label: 'Breathing Rate', value: `${apiReport.vitals.breathing_rate} breaths/min` },
         (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
         {
             label: 'Blood Pressure',
-            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} MMHg` ,
+            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg`,
         },
         { label: 'Stress', value: apiReport?.vitals?.stress, },
     ].filter(Boolean)
@@ -230,7 +243,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
         emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
         color_blindness:
-    api?.color_blindness ?? fallbackPartialJson.color_blindness,
+            api?.color_blindness ?? fallbackPartialJson.color_blindness,
         muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
         fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
         // merge field-by-field so a partially-populated vitals object
@@ -256,30 +269,30 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             learner_type: d?.learning_style ? { type: d.learning_style.toLowerCase(), title: d.learning_style } : null,
             personality: d?.personality ? { animal: d.personality, traits: [d.personality] } : null,
             // backend key is `divided_attention`, not `attention`
-          attention: d?.divided_attention
-  ? {
-      level: d.divided_attention.level,
-      tracking_accuracy: d.divided_attention.tracking_accuracy,
-    }
-  : null,
+            attention: d?.divided_attention
+                ? {
+                    level: d.divided_attention.level,
+                    tracking_accuracy: d.divided_attention.tracking_accuracy,
+                }
+                : null,
             // backend key is `cognitive_flexibility`, not `memory`
             memory: d?.cognitive_flexibility
-  ? {
-      level: d.cognitive_flexibility.level,
-      score: d.cognitive_flexibility.score,
-    }
-  : null,
+                ? {
+                    level: d.cognitive_flexibility.level,
+                    score: d.cognitive_flexibility.score,
+                }
+                : null,
             self_esteem: d?.self_esteem,
             emotional_regulation: d?.emotional_regulation,
             color_blindness: d?.color_blindness
-  ? {
-      result: d.color_blindness.result,
-      deficiency_type: d.color_blindness.deficiency_type,
-      normal_score: d.color_blindness.normal_score,
-      colorblind_score: d.color_blindness.colorblind_score,
-      irrelevant_score: d.color_blindness.irrelevant_score,
-    }
-  : null,
+                ? {
+                    result: d.color_blindness.result,
+                    deficiency_type: d.color_blindness.deficiency_type,
+                    normal_score: d.color_blindness.normal_score,
+                    colorblind_score: d.color_blindness.colorblind_score,
+                    irrelevant_score: d.color_blindness.irrelevant_score,
+                }
+                : null,
             muscle_mass: { level: d?.bia?.muscle_mass?.status },
             fat_mass: { level: d?.bia?.fat_mass?.status },
             // backend returns heart_rate / breathing_rate / blood_pressure as
@@ -509,13 +522,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                         <InfoPill
                             icon={<img src={Eye_Icon} alt="" className="w-full h-full object-contain" />}
                             label="Color Blindness"
-                            value={formatLabel(apiReport?.color_blindness?.result)}
+                            value={formatColorBlindness(apiReport?.color_blindness?.result, apiReport?.color_blindness?.deficiency_type)}
                             color="#FFE15C"
                         />
                         <InfoPill
                             icon={<p className="text-4xl">😌</p>}
                             label="Emotion"
-                            value={formatLabel(apiReport?.emotion?.label, 'Happy')}
+                            value={formatLabel(apiReport?.emotion?.label === 'neutral' ? 'Calm' : apiReport?.emotion?.label)}
                             color="#FFE15C"
                         />
                     </div>
