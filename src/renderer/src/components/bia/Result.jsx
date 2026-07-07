@@ -118,11 +118,11 @@ const StatCard = ({ title, icon, color, rows }) => (
 const formatColorBlindness = (val, type) => {
     switch (val) {
         case 'color_vision_deficit_not_present':
-            return `Color Vision Deficit Not Present [${type !== null ? type : ''}] `
+            return `Color Vision Deficit Not Present ${type !== null ? `[${type}]` : ''} `
         case 'color_vision_deficit_present':
-            return `color Vision Deficit Present [${type !== null ? type : ''}]`
+            return `color Vision Deficit Present ${type !== null ? `[${type}]` : ''}`
         case 'rescan_recommended':
-            return `Rescan Recommended[${type !== null ? type : ''}]`
+            return `Rescan Recommended ${type !== null ? `[${type}]` : ''}`
         default:
             return `Rescan Recommended `
     }
