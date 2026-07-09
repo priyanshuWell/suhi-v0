@@ -37,7 +37,8 @@ export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
 
-  const imagePath = user?.data?.image_path || ""
+  // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
+  const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
 
   // safer extraction
   const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1)
@@ -48,7 +49,7 @@ export default function RegisterCard() {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = React.useRef(null)
 
-  const profileImageSrc = buildProfileImage(user?.data?.image_path)
+  const profileImageSrc = buildProfileImage(imagePath)
 
   console.log("profileImageSrc:", profileImageSrc)
   useEffect(() => {
@@ -87,7 +88,7 @@ export default function RegisterCard() {
 
 
 
-  const studentName = user?.data?.student_name || "Student" || user?.data?.name
+  const studentName = user?.data?.name || user?.data?.student_name || "Student"
   const studentAge = user?.data?.age || "15"
   const studentClass = user?.class_section || "II-A"
   // console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
