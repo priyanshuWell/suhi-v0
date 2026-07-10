@@ -4597,8 +4597,86 @@ export async function case41_WeightMeasurement() {
 // ======================== CALIBRATION FUNCTIONS ========================
 
 /**
- * performTare — reads the raw sensor value N times with nothing on the scale,
- * averages them, and stores the result as the zero offset.
+ * Helper: collects stable raw readings from the scale for tare or full calibration.
+ * Waits until consecutive readings stabilize (range < 0.1) or up to 25 attempts.
+ * @param {string} actionName - Name of action for logging ('Tare' or 'Full Calibration')
+ * @returns {Promise<number>} stable raw average reading
+ */
+async function collectStableRawReading(actionName = 'Calibration') {
+  const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
+  const weightQueryCommand   = [0x55, 0x05, 0xa1, 0x00, 0x05]
+  const MAX_ATTEMPTS = 30
+
+  try {
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    await new Promise((r) => setTimeout(r, 400))
+    await sendBiaCommand(setWeightModeCommand)
+    await new Promise((r) => setTimeout(r, 400))
+  } catch (e) {
+    console.warn(`[CAL] ${actionName}: could not set weight mode:`, e.message)
+  }
+
+  const rawReadings = []
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const data = await sendBiaCommand(weightQueryCommand, { timeout: 4000, verbose: false })
+
+      if (data && data.length >= 14 && data[0] === 0xaa && data[2] === 0xa1) {
+        const statusByte = data[3]
+        const upperNibble = statusByte & 0xF0
+
+        // ✅ Only accept readings when scale reports stable state
+        // 0x51 = weight stable, 0x11 = zero/empty stable
+        // Upper nibble 0x10 or 0x50 = stable; 0x20 = unstable/measuring
+        if (upperNibble !== 0x10 && upperNibble !== 0x50) {
+          console.log(`[CAL] ${actionName} attempt ${attempt}/${MAX_ATTEMPTS}: skipped — status 0x${statusByte.toString(16).toUpperCase()} (not stable yet)`)
+          await new Promise((r) => setTimeout(r, 400))
+          continue
+        }
+
+        const raw = ((data[6] << 8) | data[5]) / 10.0
+
+        if (!isNaN(raw) && raw >= 0) {
+          rawReadings.push(raw)
+          console.log(`[CAL] ${actionName} sample ${rawReadings.length}: ${raw.toFixed(2)} kg (raw) status=0x${statusByte.toString(16).toUpperCase()}`)
+
+          // Need at least 4 stable-status readings before checking range
+          if (rawReadings.length >= 4) {
+            const lastFour = rawReadings.slice(-4)
+            const maxVal = Math.max(...lastFour)
+            const minVal = Math.min(...lastFour)
+            const range = maxVal - minVal
+
+            if (range < 0.1) {
+              const stableAvg = lastFour.reduce((a, b) => a + b, 0) / lastFour.length
+              console.log(`[CAL] ✅ ${actionName}: Stable at ${stableAvg.toFixed(4)} kg (range: ${range.toFixed(3)}) after ${attempt} attempts`)
+              return stableAvg
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[CAL] ${actionName} sample attempt ${attempt} failed:`, e.message)
+    }
+
+    await new Promise((r) => setTimeout(r, 400))
+  }
+
+  if (rawReadings.length === 0) {
+    throw new Error(`${actionName} failed — scale never reached stable state (0x1x or 0x5x status) within ${MAX_ATTEMPTS} attempts`)
+  }
+
+  // Fallback: average of last 5 accepted (stable-status) readings
+  const fallbackSamples = rawReadings.slice(-5)
+  const fallbackAvg = fallbackSamples.reduce((a, b) => a + b, 0) / fallbackSamples.length
+  console.warn(`[CAL] ⚠️ ${actionName}: range never reached < 0.1 within ${MAX_ATTEMPTS} attempts. Using avg of last ${fallbackSamples.length} stable samples: ${fallbackAvg.toFixed(4)}`)
+  return fallbackAvg
+}
+
+/**
+ * performTare — reads the raw sensor value with nothing on the scale until stable,
+ * and stores the result as the zero offset.
  * Call this on startup (after biaPort is connected) to cancel platform drift.
  * @returns {object} updated weightCalibration
  */
@@ -4608,42 +4686,7 @@ export async function performTare() {
     throw new Error('BIA port not connected — cannot tare')
   }
 
-  const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
-  const weightQueryCommand   = [0x55, 0x05, 0xa1, 0x00, 0x05]
-  const SAMPLES = 5
-
-  // Ensure weight mode
-  try {
-    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-    await new Promise((r) => setTimeout(r, 400))
-    await sendBiaCommand(setWeightModeCommand)
-    await new Promise((r) => setTimeout(r, 400))
-  } catch (e) {
-    console.warn('[CAL] Tare: could not set weight mode:', e.message)
-  }
-
-  const rawReadings = []
-  for (let i = 0; i < SAMPLES; i++) {
-    try {
-      const data = await sendBiaCommand(weightQueryCommand, { timeout: 4000, verbose: false })
-      if (data && data.length >= 14 && data[0] === 0xaa && data[2] === 0xa1) {
-        const raw = ((data[6] << 8) | data[5]) / 10.0
-        if (!isNaN(raw) && raw >= 0) {
-          rawReadings.push(raw)
-          console.log(`[CAL] Tare sample ${i + 1}: ${raw.toFixed(2)} (raw)`)
-        }
-      }
-    } catch (e) {
-      console.warn(`[CAL] Tare sample ${i + 1} failed:`, e.message)
-    }
-    await new Promise((r) => setTimeout(r, 300))
-  }
-
-  if (rawReadings.length === 0) {
-    throw new Error('Tare failed — no valid readings from scale')
-  }
-
-  const avgRaw = rawReadings.reduce((a, b) => a + b, 0) / rawReadings.length
+  const avgRaw = await collectStableRawReading('Tare')
   weightCalibration.zeroOffset = avgRaw
   console.log(`[CAL] Tare complete. Zero offset = ${avgRaw.toFixed(4)}`)
   return { ...weightCalibration }
@@ -4651,7 +4694,7 @@ export async function performTare() {
 
 /**
  * performFullCalibration — places a known reference weight on the scale,
- * reads raw, then computes calibration factor = knownWeightKg / (rawAvg - zeroOffset).
+ * reads raw until stable, then computes calibration factor = knownWeightKg / (rawAvg - zeroOffset).
  * @param {number} knownWeightKg — The actual weight of the reference object in kg
  * @returns {object} updated weightCalibration
  */
@@ -4664,41 +4707,7 @@ export async function performFullCalibration(knownWeightKg) {
     throw new Error('Invalid known weight — must be > 0 kg')
   }
 
-  const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
-  const weightQueryCommand   = [0x55, 0x05, 0xa1, 0x00, 0x05]
-  const SAMPLES = 5
-
-  try {
-    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-    await new Promise((r) => setTimeout(r, 400))
-    await sendBiaCommand(setWeightModeCommand)
-    await new Promise((r) => setTimeout(r, 400))
-  } catch (e) {
-    console.warn('[CAL] Full calibration: could not set weight mode:', e.message)
-  }
-
-  const rawReadings = []
-  for (let i = 0; i < SAMPLES; i++) {
-    try {
-      const data = await sendBiaCommand(weightQueryCommand, { timeout: 4000, verbose: false })
-      if (data && data.length >= 14 && data[0] === 0xaa && data[2] === 0xa1) {
-        const raw = ((data[6] << 8) | data[5]) / 10.0
-        if (!isNaN(raw) && raw > 0) {
-          rawReadings.push(raw)
-          console.log(`[CAL] Calibration sample ${i + 1}: ${raw.toFixed(2)} (raw)`)
-        }
-      }
-    } catch (e) {
-      console.warn(`[CAL] Calibration sample ${i + 1} failed:`, e.message)
-    }
-    await new Promise((r) => setTimeout(r, 300))
-  }
-
-  if (rawReadings.length === 0) {
-    throw new Error('Calibration failed — no valid readings from scale')
-  }
-
-  const avgRaw = rawReadings.reduce((a, b) => a + b, 0) / rawReadings.length
+  const avgRaw = await collectStableRawReading('Full Calibration')
   const netRaw = avgRaw - weightCalibration.zeroOffset
 
   if (netRaw <= 0) {
@@ -4711,11 +4720,11 @@ export async function performFullCalibration(knownWeightKg) {
   weightCalibration.isCalibrated = true
 
   console.log(`[CAL] Full calibration complete.`)
-  console.log(`[CAL]   Raw avg    : ${avgRaw.toFixed(4)}`)
-  console.log(`[CAL]   Zero offset: ${weightCalibration.zeroOffset.toFixed(4)}`)
-  console.log(`[CAL]   Net raw    : ${netRaw.toFixed(4)}`)
-  console.log(`[CAL]   Known kg   : ${knownWeightKg}`)
-  console.log(`[CAL]   New factor : ${newFactor.toFixed(6)}`)
+  console.log(`[CAL]   Raw stable avg: ${avgRaw.toFixed(4)}`)
+  console.log(`[CAL]   Zero offset   : ${weightCalibration.zeroOffset.toFixed(4)}`)
+  console.log(`[CAL]   Net raw       : ${netRaw.toFixed(4)}`)
+  console.log(`[CAL]   Known kg      : ${knownWeightKg}`)
+  console.log(`[CAL]   New factor    : ${newFactor.toFixed(6)}`)
   return { ...weightCalibration }
 }
 
