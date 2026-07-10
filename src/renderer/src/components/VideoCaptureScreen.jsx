@@ -330,7 +330,7 @@ const VideoCaptureScreen = () => {
 
     // ── Branch C: Good confidence, single match ────────────────────────────
     if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && !multiple_matches) {
-      dispatch(setUser({ success: true, data: matched_student }))
+      dispatch(setUser({ success: true, data }))
       dispatch(setScreening(screening ?? null))
 
       trackStage(STAGES.FACE_SCAN, STATUS_KEYS.SUCCESS, {

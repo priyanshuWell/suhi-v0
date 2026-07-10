@@ -78,9 +78,9 @@ const Spinner = ({ size = 40 }) => (
 const StatusPill = ({ type, text }) => {
   const colors = {
     success: { bg: 'rgba(0,201,122,0.15)', border: '#00c97a', text: '#00c97a' },
-    error:   { bg: 'rgba(255,80,80,0.15)',  border: '#ff5050', text: '#ff5050' },
-    info:    { bg: 'rgba(0,179,255,0.12)',   border: '#00B3FF', text: '#9ad9ff' },
-    warn:    { bg: 'rgba(255,185,0,0.12)',   border: '#ffb900', text: '#ffb900' },
+    error: { bg: 'rgba(255,80,80,0.15)', border: '#ff5050', text: '#ff5050' },
+    info: { bg: 'rgba(0,179,255,0.12)', border: '#00B3FF', text: '#9ad9ff' },
+    warn: { bg: 'rgba(255,185,0,0.12)', border: '#ffb900', text: '#ffb900' },
   }
   const c = colors[type] || colors.info
   return (
@@ -192,17 +192,17 @@ export default function CalibrationModal({ onClose, onDone }) {
   }
   const backspace = () => setKnownWeight((prev) => prev.slice(0, -1))
 
-  const numPadKeys = ['1','2','3','4','5','6','7','8','9','.','0','⌫']
+  const numPadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫']
 
   return (
     <>
-      <style>{CAL_STYLES}</style>
+      {/* <style>{CAL_STYLES}</style> */}
 
       {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0, zIndex: 200,
+          position: 'fixed', inset: 0, zIndex: 210,
           background: 'rgba(0,0,0,0.75)',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
@@ -213,7 +213,7 @@ export default function CalibrationModal({ onClose, onDone }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'fixed', zIndex: 201,
+          position: 'fixed', zIndex: 211,
           top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
           width: 'min(680px, 90vw)',

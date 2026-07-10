@@ -4,33 +4,51 @@ import bg from "../assets/background.png"
 import video1 from "../assets/avatar.mp4"
 import startFrame from "../assets/start_frame.svg"
 import { useNavigate } from "react-router"
-import { openCamerasInBackground } from "../utils/cameraSession"
 import { Setting } from "./Setting"
 import { useTranslation } from "react-i18next"
 import StartButton from "./ui/BlueGradientButton"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import CalibrationModal from "./bia/CalibrationModal"
 
-const Flag = true
+/* ── Inline keyframes for the calibration warning overlay ── */
+const CAL_WARN_STYLES = `
+  @keyframes calWarnPulse {
+    0%, 100% { box-shadow: 0 0 30px rgba(255,120,0,0.3), 0 0 60px rgba(255,80,0,0.15); }
+    50%       { box-shadow: 0 0 60px rgba(255,120,0,0.7), 0 0 100px rgba(255,80,0,0.35); }
+  }
+  @keyframes calWarnIcon {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.12); }
+  }
+  @keyframes calWarnFadeIn {
+    from { opacity: 0; transform: translate(-50%, -44%); }
+    to   { opacity: 1; transform: translate(-50%, -50%); }
+  }
+  @keyframes calDotBlink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+  }
+`
+
 export const StartScreen = () => {
   const { t } = useTranslation()
-  const [error, setError] = useState(false)
   const navigate = useNavigate()
   const [isActive, setIsActive] = useState(false)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = React.useRef(null)
 
   // ── Calibration state ────────────────────────────────────────────────────
-  const [calStatus, setCalStatus] = useState(null)        // null | calibration object
-  const [showCalModal, setShowCalModal] = useState(false) // toggle CalibrationModal
+  const [calStatus, setCalStatus] = useState(null)        // null = loading, object = loaded
+  const [showCalModal, setShowCalModal] = useState(false)
 
   useEffect(() => {
-    // Fetch calibration status from main process
     window.api?.getCalibrationStatus?.().then((cal) => {
       console.log('[StartScreen] Calibration status:', cal)
       setCalStatus(cal)
     }).catch((err) => {
       console.warn('[StartScreen] Could not fetch calibration status:', err)
+      // On fetch error, don't block the user
+      setCalStatus({ isCalibrated: true })
     })
   }, [])
 
@@ -40,16 +58,11 @@ export const StartScreen = () => {
   }
 
   useEffect(() => {
-    try {
-      playAudio()
-    } catch (error) {
-      console.log(error)
-    }
+    try { playAudio() } catch (e) { console.log(e) }
   }, [])
 
   const playAudio = async () => {
     const audioPath = await getAudioForCurrentLanguage("welcome_screen")
-    console.log("audiopath", audioPath)
     if (audioPath && audioRef.current) {
       audioRef.current.src = audioPath
       setIsAudioPlaying(true)
@@ -57,8 +70,6 @@ export const StartScreen = () => {
         console.log("Audio playback failed:", err)
         setIsAudioPlaying(false)
       })
-    } else if (!audioPath) {
-      console.log("No audio for welcome_screen in current language")
     }
   }
 
@@ -70,175 +81,186 @@ export const StartScreen = () => {
     }
   }
 
-  const handleAudioEnd = () => {
-    setIsAudioPlaying(false)
-  }
-
   const handleStartClick = () => {
+    if (!isCalibrated) return
     stopAudio()
     navigate("/capture")
   }
 
-  const isCalibrated = calStatus?.isCalibrated === true
+  // calStatus === null means still loading — treat as calibrated to avoid flash-of-block
+  const isCalibrated = calStatus === null || calStatus?.isCalibrated === true
+  const isLoaded = calStatus !== null
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 1, ease: "easeOut" }}
-      className="
-        fixed inset-0
-        w-screen h-screen
-        overflow-hidden
-        bg-black
-      "
+      className="fixed inset-0 w-screen h-screen overflow-hidden bg-black"
     >
-      {/* Audio Element */}
+      <style>{CAL_WARN_STYLES}</style>
+
+      {/* Audio */}
       <audio
         ref={audioRef}
-        onEnded={handleAudioEnd}
+        onEnded={() => setIsAudioPlaying(false)}
         onPlay={() => setIsAudioPlaying(true)}
         autoPlay
       >
         Your browser does not support the audio element.
       </audio>
 
-      {/* ── Top-right controls: Settings + Calibration button ── */}
-      <div className={`absolute top-0 right-0 z-[51] p-4 flex flex-col items-end gap-3`}>
-        <Setting setIsActive={setIsActive} isActive={isActive} />
-        {/* Calibration button — always visible */}
-        <button
-          id="calibrate-scale-btn"
-          onClick={() => setShowCalModal(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '10px 18px', borderRadius: '20px',
-            background: isCalibrated
-              ? 'rgba(0,201,122,0.12)'
-              : 'rgba(255,140,0,0.15)',
-            border: `1.5px solid ${isCalibrated ? 'rgba(0,201,122,0.4)' : 'rgba(255,140,0,0.5)'}`,
-            color: isCalibrated ? '#00c97a' : '#ffb040',
-            fontSize: '14px', fontFamily: "'Anta', sans-serif",
-            cursor: 'pointer', transition: 'all 0.25s',
-            boxShadow: isCalibrated
-              ? '0 0 12px rgba(0,201,122,0.2)'
-              : '0 0 16px rgba(255,140,0,0.25)',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {isCalibrated ? '✓ Scale Calibrated' : '⚠ Calibrate Scale'}
-        </button>
+      {/* Top-right: sound + language + calibrate icon buttons */}
+      <div className="absolute top-0 right-0 z-[51] p-4">
+        <Setting
+          setIsActive={setIsActive}
+          isActive={isActive}
+          onCalibrate={() => setShowCalModal(true)}
+          isCalibrated={isCalibrated}
+        />
       </div>
-
-      {/* ── NOT CALIBRATED banner ── */}
-      {calStatus !== null && !isCalibrated && (
-        <div
-          style={{
-            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
-            background: 'linear-gradient(90deg, rgba(255,100,0,0.85), rgba(255,60,0,0.7))',
-            borderBottom: '1px solid rgba(255,140,0,0.4)',
-            padding: '10px 24px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            backdropFilter: 'blur(4px)',
-            animation: 'none',
-          }}
-        >
-          <span style={{ color: 'white', fontSize: '15px', fontFamily: "'Anta', sans-serif" }}>
-            ⚠️ &nbsp; Scale is <strong>not calibrated</strong> — weight readings will be inaccurate until calibration is completed.
-          </span>
-          <button
-            onClick={() => setShowCalModal(true)}
-            style={{
-              padding: '8px 20px', borderRadius: '16px',
-              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
-              color: 'white', fontSize: '14px', cursor: 'pointer',
-              fontFamily: "'Anta', sans-serif", whiteSpace: 'nowrap', marginLeft: '16px',
-              transition: 'all 0.2s',
-            }}
-          >
-            Calibrate Now
-          </button>
-        </div>
-      )}
 
       {/* Background */}
       <div
-        className="
-          absolute inset-0
-          bg-center bg-cover
-          z-0
-        "
+        className="absolute inset-0 bg-center bg-cover z-0"
         style={{ backgroundImage: `url(${bg})` }}
       />
 
-      {/* Main Content Area */}
+      {/* Main content */}
       <div className="relative z-50 w-full h-full flex flex-col items-center justify-between py-12 mt-[3rem]">
-        {/* Placeholder or Header Space if needed */}
         <div className="h-0" />
 
-        {/* Center: Video with Frame */}
-        <div
-          className="
-            relative
-            flex items-center justify-center
-            w-full flex-1
-          "
-        >
-          {/* Frame SVG */}
+        {/* Center: Video + Frame */}
+        <div className="relative flex items-center justify-center w-full flex-1">
           <img
             src={startFrame}
             alt="frame"
-            className="
-            landscape:hidden
-              absolute
-              w-[clamp(600px,75vw,1073px)]
-              h-auto
-              pointer-events-none
-              z-20
-            "
+            className="landscape:hidden absolute w-[clamp(600px,75vw,1073px)] h-auto pointer-events-none z-20"
           />
-
-          {/* Video */}
           <video
             src={video1}
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="
-              relative z-10
-              w-[clamp(400px,70vw,800px)]
-              h-auto
-              max-h-[63vh]
-              object-contain
-              will-change-transform
-            "
+            autoPlay muted loop playsInline
+            className="relative z-10 w-[clamp(400px,70vw,800px)] h-auto max-h-[63vh] object-contain will-change-transform"
           />
         </div>
 
-        {/* Bottom: Buttons */}
-        <div
-          className="
-            flex flex-col items-center
-            gap-[clamp(1rem,2vh,2rem)]
-            z-20
-            px-4
-            w-full
-            pb-[clamp(6rem,3vh,15rem)]
-          "
-        >
-          <StartButton className="" width='w-[clamp(27rem,40vw,31.25rem)]' height='h-[clamp(7rem,8vh,6.25rem)]' onClick={handleStartClick}>{t("common.start")}</StartButton>
-
-          <div
-            className="
-              w-[clamp(16rem,40vw,31.25rem)]
-              h-[clamp(4rem,8vh,6.25rem)]
-            "
-          />
-        </div>
+        {/* Bottom: Start button — hidden while not calibrated */}
+        {isCalibrated && (
+          <div className="flex flex-col items-center gap-[clamp(1rem,2vh,2rem)] z-20 px-4 w-full pb-[clamp(6rem,3vh,15rem)]">
+            <StartButton
+              width="w-[clamp(27rem,40vw,31.25rem)]"
+              height="h-[clamp(7rem,8vh,6.25rem)]"
+              onClick={handleStartClick}
+            >
+              {t("common.start")}
+            </StartButton>
+            <div className="w-[clamp(16rem,40vw,31.25rem)] h-[clamp(4rem,8vh,6.25rem)]" />
+          </div>
+        )}
       </div>
 
-      {/* ── Calibration Modal ── */}
+      {/* ══════════════════════════════════════════════════════════════
+          CALIBRATION REQUIRED — Full-screen blocking overlay
+          Rendered when calibration data is loaded and not calibrated
+         ══════════════════════════════════════════════════════════════ */}
+      {isLoaded && !isCalibrated && (
+        <>
+          {/* Blur + dim backdrop — above all content, below modal */}
+          <div
+            style={{
+              position: 'fixed', inset: 0, zIndex: 60,
+              background: 'rgba(0,0,0,0.72)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}
+          />
+
+          {/* Centered warning card */}
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 61,
+              width: 'min(600px, 88vw)',
+              background: 'linear-gradient(145deg, rgba(12,18,32,0.98), rgba(20,10,5,0.98))',
+              border: '1.5px solid rgba(255,120,0,0.35)',
+              borderRadius: '32px',
+              padding: '48px 40px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px',
+              animation: 'calWarnFadeIn 0.45s cubic-bezier(0.16,1,0.3,1) forwards, calWarnPulse 2.5s ease-in-out 0.45s infinite',
+              fontFamily: "'Anta', sans-serif",
+            }}
+          >
+            {/* Animated scale icon */}
+            <div style={{ fontSize: '72px', lineHeight: 1, animation: 'calWarnIcon 2s ease-in-out infinite' }}>
+              ⚖️
+            </div>
+
+            {/* Blinking status badge */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{
+                width: '10px', height: '10px', borderRadius: '50%',
+                background: '#ff7020',
+                animation: 'calDotBlink 1.2s ease-in-out infinite',
+                display: 'inline-block',
+              }} />
+              <span style={{ color: '#ff9050', fontSize: '13px', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                Action Required
+              </span>
+            </div>
+
+            <h2 style={{
+              color: 'white',
+              fontSize: 'clamp(22px, 4vw, 32px)',
+              margin: 0, textAlign: 'center', lineHeight: 1.3, fontWeight: 700,
+            }}>
+              Scale Not Calibrated
+            </h2>
+
+            <p style={{
+              color: 'rgba(255,255,255,0.55)',
+              fontSize: 'clamp(14px, 2vw, 17px)',
+              margin: 0, textAlign: 'center', lineHeight: 1.7,
+              fontFamily: 'sans-serif', maxWidth: '420px',
+            }}>
+              The weighing scale must be calibrated before screenings can begin.
+              Weight measurements will be inaccurate without calibration.
+            </p>
+
+            {/* Divider */}
+            <div style={{ width: '100%', height: '1px', background: 'rgba(255,120,0,0.2)', margin: '4px 0' }} />
+
+            {/* CTA button */}
+            <button
+              onClick={() => setShowCalModal(true)}
+              style={{
+                width: '100%', height: '64px', borderRadius: '20px',
+                background: 'linear-gradient(135deg, #ff6010, #ff3a00)',
+                border: '1.5px solid rgba(255,160,80,0.5)',
+                boxShadow: '0 0 30px rgba(255,80,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
+                color: 'white', fontSize: 'clamp(16px, 2.5vw, 22px)',
+                cursor: 'pointer', letterSpacing: '0.04em',
+                fontFamily: "'Anta', sans-serif",
+                transition: 'transform 0.15s',
+              }}
+              onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+              onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              ⚖️ &nbsp; Calibrate Scale Now
+            </button>
+
+            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '13px', margin: 0, fontFamily: 'sans-serif' }}>
+              You will not be able to start screenings until this is complete.
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Calibration Modal — z-index above the blocking overlay */}
       {showCalModal && (
         <CalibrationModal
           onClose={() => setShowCalModal(false)}
