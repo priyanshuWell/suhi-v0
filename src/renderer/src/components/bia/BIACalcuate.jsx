@@ -980,9 +980,9 @@ export default function BIACalculate({ user, onComplete }) {
   ───────────────────────────────────────────── */
   const runPhase3_LegExists = async () => {
     console.log("[BIA DEBUG] Phase 3 path: LEG EXISTS — skipping arm 50kHz, starting 20kHz");
-    navigate("/bia/im");
+    navigate('/bia/hold')
     await sleep(8000);
-
+    navigate("/bia/im");
     // Reset tracking
     attemptTracking.current.arm = 0;
     attemptTracking.current.impedance20 = 0;

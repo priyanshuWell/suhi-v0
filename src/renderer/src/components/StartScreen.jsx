@@ -9,28 +9,44 @@ import { Setting } from "./Setting"
 import { useTranslation } from "react-i18next"
 import StartButton from "./ui/BlueGradientButton"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import CalibrationModal from "./bia/CalibrationModal"
 
 const Flag = true
 export const StartScreen = () => {
   const { t } = useTranslation()
-  // const [isCameraReady, setIsCameraReady] = React.useState(false)
   const [error, setError] = useState(false)
   const navigate = useNavigate()
   const [isActive, setIsActive] = useState(false)
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = React.useRef(null)
+
+  // ── Calibration state ────────────────────────────────────────────────────
+  const [calStatus, setCalStatus] = useState(null)        // null | calibration object
+  const [showCalModal, setShowCalModal] = useState(false) // toggle CalibrationModal
+
   useEffect(() => {
-    // const openCameras = async () => {
-    //   return await openCamerasInBackground()
-    // }
+    // Fetch calibration status from main process
+    window.api?.getCalibrationStatus?.().then((cal) => {
+      console.log('[StartScreen] Calibration status:', cal)
+      setCalStatus(cal)
+    }).catch((err) => {
+      console.warn('[StartScreen] Could not fetch calibration status:', err)
+    })
+  }, [])
+
+  const handleCalDone = (cal) => {
+    setCalStatus(cal)
+    setShowCalModal(false)
+  }
+
+  useEffect(() => {
     try {
-      // openCameras()
-      // setIsCameraReady(true)
       playAudio()
     } catch (error) {
       console.log(error)
     }
   }, [])
+
   const playAudio = async () => {
     const audioPath = await getAudioForCurrentLanguage("welcome_screen")
     console.log("audiopath", audioPath)
@@ -63,6 +79,8 @@ export const StartScreen = () => {
     navigate("/capture")
   }
 
+  const isCalibrated = calStatus?.isCalibrated === true
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -75,7 +93,7 @@ export const StartScreen = () => {
         bg-black
       "
     >
-      {/* Audio Element - plays language-specific audio on load */}
+      {/* Audio Element */}
       <audio
         ref={audioRef}
         onEnded={handleAudioEnd}
@@ -84,9 +102,65 @@ export const StartScreen = () => {
       >
         Your browser does not support the audio element.
       </audio>
-      <div className={`absolute top-0 right-0 z-[51] p-4`}>
+
+      {/* ── Top-right controls: Settings + Calibration button ── */}
+      <div className={`absolute top-0 right-0 z-[51] p-4 flex flex-col items-end gap-3`}>
         <Setting setIsActive={setIsActive} isActive={isActive} />
+        {/* Calibration button — always visible */}
+        <button
+          id="calibrate-scale-btn"
+          onClick={() => setShowCalModal(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '10px 18px', borderRadius: '20px',
+            background: isCalibrated
+              ? 'rgba(0,201,122,0.12)'
+              : 'rgba(255,140,0,0.15)',
+            border: `1.5px solid ${isCalibrated ? 'rgba(0,201,122,0.4)' : 'rgba(255,140,0,0.5)'}`,
+            color: isCalibrated ? '#00c97a' : '#ffb040',
+            fontSize: '14px', fontFamily: "'Anta', sans-serif",
+            cursor: 'pointer', transition: 'all 0.25s',
+            boxShadow: isCalibrated
+              ? '0 0 12px rgba(0,201,122,0.2)'
+              : '0 0 16px rgba(255,140,0,0.25)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isCalibrated ? '✓ Scale Calibrated' : '⚠ Calibrate Scale'}
+        </button>
       </div>
+
+      {/* ── NOT CALIBRATED banner ── */}
+      {calStatus !== null && !isCalibrated && (
+        <div
+          style={{
+            position: 'absolute', top: 0, left: 0, right: 0, zIndex: 50,
+            background: 'linear-gradient(90deg, rgba(255,100,0,0.85), rgba(255,60,0,0.7))',
+            borderBottom: '1px solid rgba(255,140,0,0.4)',
+            padding: '10px 24px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            backdropFilter: 'blur(4px)',
+            animation: 'none',
+          }}
+        >
+          <span style={{ color: 'white', fontSize: '15px', fontFamily: "'Anta', sans-serif" }}>
+            ⚠️ &nbsp; Scale is <strong>not calibrated</strong> — weight readings will be inaccurate until calibration is completed.
+          </span>
+          <button
+            onClick={() => setShowCalModal(true)}
+            style={{
+              padding: '8px 20px', borderRadius: '16px',
+              background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
+              color: 'white', fontSize: '14px', cursor: 'pointer',
+              fontFamily: "'Anta', sans-serif", whiteSpace: 'nowrap', marginLeft: '16px',
+              transition: 'all 0.2s',
+            }}
+          >
+            Calibrate Now
+          </button>
+        </div>
+      )}
+
       {/* Background */}
       <div
         className="
@@ -124,7 +198,7 @@ export const StartScreen = () => {
             "
           />
 
-          {/* Video - positioned to align within frame */}
+          {/* Video */}
           <video
             src={video1}
             autoPlay
@@ -163,6 +237,14 @@ export const StartScreen = () => {
           />
         </div>
       </div>
+
+      {/* ── Calibration Modal ── */}
+      {showCalModal && (
+        <CalibrationModal
+          onClose={() => setShowCalModal(false)}
+          onDone={handleCalDone}
+        />
+      )}
     </motion.div>
   )
 }
