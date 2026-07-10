@@ -510,11 +510,6 @@ export default function VoiceAnalysis() {
     stopInstructionAudio();
     setConfirmedImage(IMAGES[selectedIndex]);
     setPhase("viewing");
-    //  FIX: start mic immediately so voice bars are live from the first frame.
-    //    Previously recording only started after the user interacted with the
-    //    panorama (onFirstInteract), meaning bars stayed flat until then.
-    //    startRecording() has its own guard against double-starts.
-    startRecording();
   };
 
   const onFirstInteract = useCallback(() => {
@@ -585,6 +580,7 @@ export default function VoiceAnalysis() {
           timerSeconds={30}
           onTimerEnd={onTimerEnd}
           onFirstInteract={onFirstInteract}
+          onStart={startRecording}
           voiceBars={voiceBars}
           isComplete={isComplete}
           onNext={onNext}
