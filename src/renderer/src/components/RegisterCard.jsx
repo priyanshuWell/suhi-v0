@@ -35,7 +35,7 @@ const buildProfileImage = (imagePath) => {
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
-  const nextStage = screening?.next_stage || null
+  const nextStage = screening?.nextStage || null
   console.log("nextStage:", nextStage)
   // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
   const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
