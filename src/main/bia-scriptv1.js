@@ -4728,6 +4728,51 @@ export async function performFullCalibration(knownWeightKg) {
   return { ...weightCalibration }
 }
 
+/**
+ * performMultiPointCalibration — reads a stable raw value for ONE reference weight
+ * and returns the computed factor for that point WITHOUT saving to disk.
+ * Call for each reference weight (e.g. 50 kg, 100 kg), then average the results
+ * and persist using the returned factor.
+ *
+ * @param {number} knownWeightKg — The actual weight of the reference object in kg
+ * @returns {{ factor: number, rawAvg: number, netRaw: number }} per-point calibration data
+ */
+export async function performMultiPointCalibration(knownWeightKg) {
+  console.log(`\n[CAL] ── performMultiPointCalibration (known = ${knownWeightKg} kg) ──`)
+  if (!biaPort || !biaPort.isOpen) {
+    throw new Error('BIA port not connected — cannot calibrate')
+  }
+  if (!knownWeightKg || knownWeightKg <= 0) {
+    throw new Error('Invalid known weight — must be > 0 kg')
+  }
+
+  const avgRaw = await collectStableRawReading(`Cal-${knownWeightKg}kg`)
+  const netRaw = avgRaw - weightCalibration.zeroOffset
+
+  if (netRaw <= 0) {
+    throw new Error(
+      `Net raw reading (${netRaw.toFixed(3)}) is zero or negative at ${knownWeightKg} kg — ensure tare was run first and weight is on the scale`
+    )
+  }
+
+  const factor = knownWeightKg / netRaw
+  console.log(`[CAL] Point ${knownWeightKg} kg: rawAvg=${avgRaw.toFixed(4)}, netRaw=${netRaw.toFixed(4)}, factor=${factor.toFixed(6)}`)
+  return { factor, rawAvg: avgRaw, netRaw }
+}
+
+/**
+ * applyAveragedFactor — stores the pre-computed averaged factor into
+ * weightCalibration and marks the device as calibrated.
+ * @param {number} avgFactor
+ */
+export function applyAveragedFactor(avgFactor) {
+  weightCalibration.factor = avgFactor
+  weightCalibration.calibratedAt = new Date().toISOString()
+  weightCalibration.isCalibrated = true
+  console.log(`[CAL] Averaged factor applied: ${avgFactor.toFixed(6)}`)
+  return { ...weightCalibration }
+}
+
 // Show menu
 function showMenu() {
   if (IS_ELECTRON) return

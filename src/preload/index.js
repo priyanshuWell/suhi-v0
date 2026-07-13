@@ -63,6 +63,12 @@ const api = {
   runTare: (portPath) => ipcRenderer.invoke('run-tare', portPath),
   runFullCalibration: (knownWeightKg, portPath) =>
     ipcRenderer.invoke('run-full-calibration', { knownWeightKg, portPath }),
+  /** Read stable raw at ONE reference weight; returns { factor, rawAvg, netRaw } */
+  runMultipointCalibration: (knownWeightKg, portPath) =>
+    ipcRenderer.invoke('run-multipoint-calibration', { knownWeightKg, portPath }),
+  /** Persist the pre-computed averaged factor to disk */
+  applyAveragedFactor: (avgFactor) =>
+    ipcRenderer.invoke('apply-averaged-factor', { avgFactor }),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

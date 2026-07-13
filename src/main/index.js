@@ -317,6 +317,46 @@ ipcMain.handle('run-full-calibration', async (_event, { knownWeightKg, portPath 
   }
 })
 
+/**
+ * Multi-point calibration — reads stable raw at ONE reference weight and returns per-point factor.
+ * Call for 50 kg and 100 kg separately; average the two factors in the renderer,
+ * then call apply-averaged-factor to persist.
+ */
+ipcMain.handle('run-multipoint-calibration', async (_event, { knownWeightKg, portPath }) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      if (portPath) {
+        await biaa.connectBiaPort(portPath)
+        await new Promise((r) => setTimeout(r, 600))
+      } else {
+        return { success: false, error: 'BIA port not connected' }
+      }
+    }
+    const result = await biaa.performMultiPointCalibration(knownWeightKg)
+    return { success: true, ...result }
+  } catch (err) {
+    console.error('[CAL] run-multipoint-calibration error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
+/**
+ * Apply averaged factor — stores the pre-computed avg factor into weightCalibration and persists to disk.
+ */
+ipcMain.handle('apply-averaged-factor', async (_event, { avgFactor }) => {
+  try {
+    if (typeof avgFactor !== 'number' || avgFactor <= 0) {
+      return { success: false, error: 'Invalid averaged factor' }
+    }
+    const cal = biaa.applyAveragedFactor(avgFactor)
+    saveCalibration()
+    return { success: true, calibration: cal }
+  } catch (err) {
+    console.error('[CAL] apply-averaged-factor error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
 ipcMain.handle("start-height-measurement", async () => {
   if (!biaa.heightPort) {
     return { success: false }
