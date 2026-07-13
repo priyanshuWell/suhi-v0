@@ -381,16 +381,26 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
-export async function bufferCollection(shmPath, kioskId,user_id) {
+export async function bufferCollection(shm_video_path, user_id, session_id, buffer_type, kiosk_id) {
   try {
-    const payload = {
-      shm_path: shmPath,
-      kiosk_id: kioskId,
+    console.log('🔄 [BUFFER COLLECTION API] Starting buffer collection API call');
+    console.log('📤 [BUFFER COLLECTION API] Payload:', {
+      shm_video_path,
       user_id,
-      buffer_type: "BIA"
+      session_id,
+      buffer_type,
+      kiosk_id
+    });
+
+    const payload = {
+      shm_video_path,
+      user_id,
+      session_id,
+      buffer_type,
+      kiosk_id
     };
 
-    const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
+    const response = await fetch(`${API_BASE_URL}/buffer-collection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -403,12 +413,13 @@ export async function bufferCollection(shmPath, kioskId,user_id) {
     }
 
     const data = await response.json();
+    console.log('✅ [BUFFER COLLECTION API] Buffer collection API response:', data);
     return {
       success: true,
       ...data
     };
   } catch (error) {
-    console.error("Error running FPT:", error);
+    console.error("❌ [BUFFER COLLECTION API] Error calling buffer collection:", error);
     return {
       success: false,
       error: error.message

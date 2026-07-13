@@ -57,6 +57,7 @@ const SpaceConvoyMain = () => {
     const navigate = useNavigate();
     const storeUser = useSelector((state) => state.common.user);
     const screening = useSelector((state) => state.common.screening); //  proper selector
+
     // ─── Preload ALL assets once at mount ───
     useEffect(() => {
         (async () => {

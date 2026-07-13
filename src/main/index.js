@@ -452,15 +452,19 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       success: true,
       raw: JSON.stringify(bodyComposition),
       finalBia: apiPayload,
-     summary: {
-  fatPercentage: apiPayload.body_fat_percentage || 0,
-  waterPercentage: apiPayload.moisture_content_kg || 0,
-  muscleMassKg: apiPayload.muscle_mass_kg || 0,
-  boneMassKg: apiPayload.bone_mass_kg || 0,
-  skeletalMuscleMassKg: apiPayload.skeletal_muscle_mass_kg || 0,
-  visceralFat: apiPayload.visceral_fat_level || 0,
-  proteinMassKg: apiPayload.protein_mass_kg || 0
-}
+      summary: {
+        fatPercentage: p3.bodyFatPercentage || 0,
+        muscleMassKg: p1.muscleMass || 0,
+        bmi: p3.bodyMassIndex || 0,
+        visceralFat: p3.visceralFatLevel || 0,
+        basalMetabolism: p3.basalMetabolism || 0,
+        bodyScore: p3.bodyScore || 0,
+        physicalAge: p3.physicalAge || 0,
+        waterPercentage: p1.moistureContent || 0,
+        boneMassKg: p1.boneMass || 0,
+        skeletalMuscleMassKg: p1.skeletalMuscleMass || 0,
+        proteinMassKg: p1.proteinMass || 0,
+      }
     }
 
     return result;
