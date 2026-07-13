@@ -18,13 +18,11 @@ import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 import biaIm_female from "../../assets/bia/bia-immeasuring_female.mp4"
 
-import { useBIARecording } from "../../utils/useBiaRecording";
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
-import { CircleAlert, FileWarning } from "lucide-react";
-import AreYouThereModal from "../ui/AreYouThereModal";
+import AreYouThereModal from "./AreYouThereModal";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -62,11 +60,6 @@ export default function BIACalculate({ user, onComplete }) {
     weight: null,
   });
 
-
-  const { startRecording, stopAndSend, saveBuffer, forceCleanup } = useBIARecording({
-    sessionId: storeUser?.data?.buffer_id,
-    userId: storeUser?.data?.user_id,
-  });
 
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
@@ -364,6 +357,7 @@ export default function BIACalculate({ user, onComplete }) {
       // clearAllTimeouts();
     };
   }, []);
+
 
   /* =======================
      UTILITY FUNCTIONS
@@ -980,9 +974,9 @@ export default function BIACalculate({ user, onComplete }) {
   ───────────────────────────────────────────── */
   const runPhase3_LegExists = async () => {
     console.log("[BIA DEBUG] Phase 3 path: LEG EXISTS — skipping arm 50kHz, starting 20kHz");
-    navigate('/bia/hold')
-    await sleep(8000);
     navigate("/bia/im");
+    await sleep(8000);
+
     // Reset tracking
     attemptTracking.current.arm = 0;
     attemptTracking.current.impedance20 = 0;
@@ -1330,7 +1324,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const biaCompleteResult = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screening?.sessionId
+        screening_session_id: screeningState?.sessionId
       });
 
       // Cache next_stage from BIAComplete for handleImNextClick fallback
@@ -1341,9 +1335,6 @@ export default function BIACalculate({ user, onComplete }) {
       if (biaCompleteResult?.screening) {
         dispatch(setScreening(biaCompleteResult.screening));
       }
-
-      console.log("[BIA REC] 🏁 BIA SUCCESS — stopping and sending full recording via stopAndSend()");
-      await stopAndSend(); // Upload full BIA recording
 
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
@@ -1361,7 +1352,7 @@ export default function BIACalculate({ user, onComplete }) {
       navigate("/bia/imcomplete");
       const biaCompleteOnError = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screening?.sessionId
+        screening_session_id: screeningState?.sessionId
       });
 
       // Cache next_stage from BIAComplete (error path) for handleImNextClick fallback
@@ -1371,8 +1362,6 @@ export default function BIACalculate({ user, onComplete }) {
       if (biaCompleteOnError?.screening) {
         dispatch(setScreening(biaCompleteOnError.screening));
       }
-      console.log("[BIA REC] ⏏️  Final BIA calc failed → saveBuffer('calc_error')");
-      await saveBuffer("calc_error");
       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
       setIsComplete(true);
       const errorFallbackRoute = getNextRoute(biaCompleteOnError?.screening?.next_stage, '/space-convoy-main');
@@ -1399,7 +1388,7 @@ export default function BIACalculate({ user, onComplete }) {
       await showError("Ports are not connected. Please check device connections.", 3000);
       const portFailComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screening?.sessionId
+        screening_session_id: screeningState?.sessionId
       });
       if (portFailComplete?.screening) {
         dispatch(setScreening(portFailComplete.screening));
@@ -1423,8 +1412,7 @@ export default function BIACalculate({ user, onComplete }) {
     setCurrentPhase('init');
     resultsRef.current.isShoesContinued = false;
     // clearMetadata(); // Reset metadata at start of flow
-    console.log("[BIA REC] 🎬 Starting BIA recording — session:", storeUser?.data?.buffer_id, "user:", storeUser?.data?.user_id);
-    await startRecording();
+    console.log("[BIA DEBUG] Starting BIA flow — session:", storeUser?.data?.buffer_id, "user:", storeUser?.data?.user_id);
     // Note: No global timeout - only navigate on MAX_RETRIES exhaustion
     console.log(`[BIA DEBUG] Flow will only redirect on MAX_RETRIES (${MAX_RETRIES}) exhaustion`);
 
@@ -1443,8 +1431,6 @@ export default function BIACalculate({ user, onComplete }) {
       console.error("[BIA DEBUG] Flow error:", e.message);
       // updatePhaseState('flow', 'failed', e.message);
       await trackStage(STAGES.BIA_COMPLETE, STATUS.ERROR, {}, e.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-      console.log(`[BIA REC] ⏏️  Unhandled flow exception: "${e.message}" → saveBuffer('flow_exception')`);
-      await saveBuffer("flow_exception");
       // ✅ Ask backend for next stage instead of hardcoding /voice
       const flowExceptionComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
@@ -1475,8 +1461,6 @@ export default function BIACalculate({ user, onComplete }) {
 
     return () => {
       console.log("[BIA DEBUG] Component unmounting, cleaning up...");
-      // ✅ Always release the camera when BIACalculate leaves the screen
-      forceCleanup();
       //clearAllTimeouts();
     };
   }, []);
@@ -1488,12 +1472,10 @@ export default function BIACalculate({ user, onComplete }) {
     }
   }, [ports]);
 
-  // Handle video end — use backend next_stage if available, fall back to /voice
+  // Handle video end - navigate to screen1
   const handleVideoEnd = () => {
-    // ✅ Use stageRouter so this respects whatever stage the backend set after BIAComplete
-    const nextRoute = getNextRoute(screening?.nextStage, '/voice');
-    console.log('[BIA DEBUG] Completion video ended, navigating to:', nextRoute);
-    navigate(nextRoute);
+    console.log("[BIA DEBUG] Completion video ended, navigating to /space-convoy-main");
+    navigate("/space-convoy-main");
   };
 
   /* =======================
@@ -1657,3 +1639,4 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
     </div>
   );
 };
+

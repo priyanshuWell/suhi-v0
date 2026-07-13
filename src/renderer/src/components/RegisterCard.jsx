@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { getNextRoute } from "../utils/stageRouter"
-import { IMAGE_SERVER_URL } from "../utils/config"
 
 
 const buildProfileImage = (imagePath) => {
@@ -19,7 +18,7 @@ const buildProfileImage = (imagePath) => {
     const parts = imagePath.split("/")
     const userId = parts[parts.length - 2]
 
-    return `${IMAGE_SERVER_URL}/user_images/${userId}/latest.jpg`  //  from config
+    return `http://127.0.0.1:5174/user_images/${userId}/latest.jpg`
   }
 
   if (imagePath.includes(".images")) {
@@ -28,7 +27,7 @@ const buildProfileImage = (imagePath) => {
         imagePath.lastIndexOf("/") + 1
       )
 
-    return `${IMAGE_SERVER_URL}/images/${folderName}/original.jpg`  //  from config
+    return `http://127.0.0.1:5174/images/${folderName}/original.jpg`
   }
 
   return profilepic
@@ -36,7 +35,8 @@ const buildProfileImage = (imagePath) => {
 export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
-
+  const nextStage = screening?.next_stage || null
+  console.log("nextStage:", nextStage)
   // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
   const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
 
@@ -90,12 +90,12 @@ export default function RegisterCard() {
 
   const studentName = user?.data?.name || user?.data?.student_name || "Student"
   const studentAge = user?.data?.age || "15"
-  const studentClass = user?.class_section || "II-A"
-  // console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
+  const studentClass = user?.data?.class_section || user?.class_section || "II-A"
+  console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
   const handleLetsGo = () => {
     stopAudio()
     // Use the next_stage from the backend (stored in Redux during login)
-    const nextRoute = getNextRoute(screening?.nextStage, '/bia/leg50')
+    const nextRoute = getNextRoute(nextStage, '/bia/leg50')
     console.log('[RegisterCard] navigating to next stage:', nextRoute)
     navigate(nextRoute)
   }
@@ -246,6 +246,7 @@ export default function RegisterCard() {
 //   },
 //   "error": null,
 //    "suhi_id":null,
+//    "class_section":"II-A"
 //   "screening": {
 //     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
 //     "is_resumed": true,
