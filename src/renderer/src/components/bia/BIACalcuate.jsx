@@ -1445,7 +1445,7 @@ export default function BIACalculate({ user, onComplete }) {
       // ✅ Ask backend for next stage instead of hardcoding /voice
       const flowExceptionComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screening?.sessionId,
+        screening_session_id: screeningState?.sessionId,
       });
       if (flowExceptionComplete?.screening) {
         dispatch(setScreening(flowExceptionComplete.screening));
