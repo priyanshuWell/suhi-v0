@@ -212,6 +212,8 @@ export default function BIACalculate({ user, onComplete }) {
           attemptTracking.current.leg = payload.attempt;
         } else if (payload.source === 'ARM') {
           attemptTracking.current.arm = payload.attempt;
+        } else if (payload.source === 'HEIGHT') {
+          attemptTracking.current.height = payload.attempt;
         } else if (payload.frequency === 20) {
           attemptTracking.current.impedance20 = payload.attempt;
         } else if (payload.frequency === 100) {
@@ -237,6 +239,9 @@ export default function BIACalculate({ user, onComplete }) {
           } else if (payload.source === 'ARM' && payload.attempt === ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
             shouldShow = true;
             errorTriggered.current.arm = true;
+          } else if (payload.source === 'HEIGHT' && payload.attempt === ATTEMPT_THRESHOLDS.height && !errorTriggered.current.height) {
+            shouldShow = true;
+            errorTriggered.current.height = true;
           } else if (payload.frequency === 20 && payload.attempt === ATTEMPT_THRESHOLDS.impedance20 && !errorTriggered.current.impedance20) {
             shouldShow = true;
             errorTriggered.current.impedance20 = true;
@@ -247,7 +252,7 @@ export default function BIACalculate({ user, onComplete }) {
 
           if (shouldShow) {
             console.log(`[BIA DEBUG] Showing status error at attempt ${payload.attempt}: "${payload.userMessage}"`);
-            // showError(payload.userMessage, 3000);
+            showError(payload.userMessage, 3000);
           } else {
             console.log(`[BIA DEBUG] Skipping duplicate error at attempt ${payload.attempt}`);
           }
