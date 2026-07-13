@@ -58,6 +58,11 @@ const api = {
   launchUnityGame: () => ipcRenderer.invoke('launch-unity-game'),
   stopUnityGame: () => ipcRenderer.invoke('stop-unity-game'),
   onUnityGameExit: (callback) => unityGameExitChannel.subscribe(callback),
+  // ── Calibration ────────────────────────────────────────────────────────────
+  getCalibrationStatus: () => ipcRenderer.invoke('get-calibration-status'),
+  runTare: (portPath) => ipcRenderer.invoke('run-tare', portPath),
+  runFullCalibration: (knownWeightKg, portPath) =>
+    ipcRenderer.invoke('run-full-calibration', { knownWeightKg, portPath }),
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
