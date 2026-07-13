@@ -82,7 +82,7 @@ export default function RegisterCard() {
     setIsAudioPlaying(false)
   }
 
-  console.log("users", user)
+  console.log("users", user,screening, nextStage)
   const navigate = useNavigate()
   const { t } = useTranslation()
 

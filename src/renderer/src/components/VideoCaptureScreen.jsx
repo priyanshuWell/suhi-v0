@@ -6,7 +6,7 @@ import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
 import { setUser, setLoginScreening, setCandidates, setScreening } from "../features/common/commonSlice"
-import { trackStage } from "../utils/config"
+import { getKioskId, trackStage } from "../utils/config"
 import FullscreenError from "./FullScreenError"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { useTranslation } from "react-i18next"
@@ -296,7 +296,7 @@ const VideoCaptureScreen = () => {
       multiple_matches,
       candidates,
       screening,
-    } = data
+    } = data;
 
     // ── Branch A: Face NOT detected ────────────────────────────────────────
     if (!face_detected) {
@@ -348,7 +348,7 @@ const VideoCaptureScreen = () => {
     // ── Branch C: Good confidence, single match ────────────────────────────
     if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && !multiple_matches) {
       dispatch(setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } }))
-      dispatch(setScreening(screening ?? null))
+      dispatch(setLoginScreening(screening))
 
       trackStage(STAGES.FACE_SCAN, STATUS_KEYS.SUCCESS, {
         weight_kg: measurements?.weight,
@@ -365,7 +365,7 @@ const VideoCaptureScreen = () => {
       dispatch(setCandidates(candidates ?? []))
       // Also store the top matched_student and screening for later
       dispatch(setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } }))
-      dispatch(setScreening(screening ?? null))
+      dispatch(setLoginScreening(screening))
 
       trackStage(STAGES.FACE_SCAN, STATUS_KEYS.SUCCESS, {
         weight_kg: measurements?.weight,
