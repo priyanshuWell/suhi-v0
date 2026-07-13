@@ -17,6 +17,8 @@ import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 import biaIm_female from "../../assets/bia/bia-immeasuring_female.mp4"
+import biaHold_female from "../../assets/bia/bia-hold_female.mp4"
+import biaHold_male from "../../assets/bia/bia-hold_male.mp4"
 
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
@@ -142,6 +144,14 @@ export default function BIACalculate({ user, onComplete }) {
       video: {
         female: biaIm_female,
         male: biaIm_male,
+      },
+    },
+    hold: {
+      title: t("measurement.core_body_scan"),
+      description: t("measurement.impedance_measurement"),
+      video: {
+        female: biaHold_female,
+        male: biaHold_male,
       },
     },
     whcomplete: {
@@ -974,9 +984,9 @@ export default function BIACalculate({ user, onComplete }) {
   ───────────────────────────────────────────── */
   const runPhase3_LegExists = async () => {
     console.log("[BIA DEBUG] Phase 3 path: LEG EXISTS — skipping arm 50kHz, starting 20kHz");
-    navigate("/bia/im");
+    navigate("/bia/hold")
     await sleep(8000);
-
+    navigate("/bia/im");
     // Reset tracking
     attemptTracking.current.arm = 0;
     attemptTracking.current.impedance20 = 0;
@@ -1102,8 +1112,9 @@ export default function BIACalculate({ user, onComplete }) {
   ───────────────────────────────────────────── */
   const runPhase3_NoLeg = async () => {
     console.log("[BIA DEBUG] Phase 3 path: NO LEG — doing arm 50kHz only");
-    navigate("/bia/im");
+    navigate("/bia/hold")
     await sleep(8000);
+    navigate("/bia/im");
 
     attemptTracking.current.arm = 0;
     errorTriggered.current.arm = false;
