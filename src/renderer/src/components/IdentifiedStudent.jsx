@@ -140,6 +140,7 @@ const IdentifyStudent = () => {
     const { t } = useTranslation()
 
     const candidates = useSelector((state) => state.common.candidates)
+    const user = useSelector((state) => state.common.user)
 
     const [stepIndex, setStepIndex] = useState(0)
     const [inputValue, setInputValue] = useState("")
@@ -211,7 +212,7 @@ const IdentifyStudent = () => {
         console.log("matches", matches, filteredCandidates, candidates)
         if (matches.length === 1 || stepIndex === STEPS.length - 1) {
             const matched = matches[0]
-            dispatch(setUser({ success: true, data: matched }))
+            dispatch(setUser({ success: true, data: { ...matched, buffer_id: user?.data?.buffer_id } }))
             // screening is already set from the face-scan step; don't overwrite it
             navigate("/verified")
             return
