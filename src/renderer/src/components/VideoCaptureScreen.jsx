@@ -5,7 +5,7 @@ import { realtimeCapture, sendVideoToBackend } from "../utils/api"
 import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
-import { setUser, setLoginScreening, setCandidates } from "../features/common/commonSlice"
+import { setUser, setLoginScreening, setCandidates, setScreening } from "../features/common/commonSlice"
 import { trackStage } from "../utils/config"
 import FullscreenError from "./FullScreenError"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
@@ -14,8 +14,8 @@ import { useTranslation } from "react-i18next"
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV FLAGS — flip these to test without hardware or real API
 // ─────────────────────────────────────────────────────────────────────────────
-const USE_DUMMY_FPT = true
-const USE_DUMMY_MEASUREMENTS = true
+const USE_DUMMY_FPT = false
+const USE_DUMMY_MEASUREMENTS = false
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
 // Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
@@ -93,14 +93,31 @@ const DUMMY_FPT_RESPONSES = {
         user_id: "uuid-1",
         name: "Ravi Kumar",
         photo_url: "",
-        grade: "8A",
+        class_section: "8-A",
         school: "DPS Noida",
+        suhi_id: "SUHI_TEST02",
       },
       suhi_id: "SUHI_TEST02",
       class_section: "8-A",
       candidates: [
-        { user_id: "uuid-1", name: "Ravi Kumar", score: 0.74, grade: "8A", school: "DPS Noida" },
-        { user_id: "uuid-2", name: "Ravi Kumar", score: 0.71, grade: "7B", school: "DPS Noida" },
+        {
+          user_id: "uuid-1",
+          name: "Ravi Kumar",
+          score: 0.74,
+          class_section: "8-A",
+          school: "DPS Noida",
+          suhi_id: "SUHI_TEST02",
+          photo_url: "",
+        },
+        {
+          user_id: "uuid-2",
+          name: "Ravi Kumar",
+          score: 0.71,
+          class_section: "7-B",
+          school: "DPS Noida",
+          suhi_id: "SUHI_TEST03",
+          photo_url: "",
+        },
       ],
       screening: {
         session_id: "dummy-session-high-001",

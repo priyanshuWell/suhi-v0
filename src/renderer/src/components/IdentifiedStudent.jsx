@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch, useSelector } from "react-redux"
-import { setUser, setScreening } from "../features/common/commonSlice"
+import { setUser } from "../features/common/commonSlice"
 import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
@@ -9,32 +9,16 @@ import FullscreenError from "./FullScreenError"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
 
-const STEPS = ["name", "grade", "section"]
+const STEPS = ["suhi_id"]
 const RECORD_DURATION_S = 5
 
 const STEP_CONFIG = {
-    name: {
-        label: "What is your name?",
-        hint: "Speak or type your full name",
+    suhi_id: {
+        label: "Enter your SUHI ID",
+        hint: "e.g. SUHI_210S0A642",
         filter: (candidates, value) =>
             candidates.filter((c) =>
-                c.name.toLowerCase().includes(value.trim().toLowerCase())
-            ),
-    },
-    grade: {
-        label: "What is your grade?",
-        hint: "e.g. 8A, 10D",
-        filter: (candidates, value) =>
-            candidates.filter((c) =>
-                c.grade.toLowerCase() === value.trim().toLowerCase()
-            ),
-    },
-    section: {
-        label: "What is your section?",
-        hint: "e.g. A, B, C",
-        filter: (candidates, value) =>
-            candidates.filter((c) =>
-                c.grade.slice(-1).toLowerCase() === value.trim().toLowerCase()
+                c.suhi_id?.trim().toLowerCase() === value.trim().toLowerCase()
             ),
     },
 }
@@ -224,10 +208,11 @@ const IdentifyStudent = () => {
             setLoading(false)
             return
         }
-
+        console.log("matches", matches, filteredCandidates, candidates)
         if (matches.length === 1 || stepIndex === STEPS.length - 1) {
-            dispatch(setUser({ success: true, data: matches[0] }))
-            dispatch(setScreening(null))
+            const matched = matches[0]
+            dispatch(setUser({ success: true, data: matched }))
+            // screening is already set from the face-scan step; don't overwrite it
             navigate("/verified")
             return
         }
