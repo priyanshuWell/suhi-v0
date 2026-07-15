@@ -57,9 +57,9 @@ const SESSION_SEC = 120;
 const BLOCK_SEC = 20;
 const SPAWN_MS = 650;
 const MAX_ALIVE = 7;
-const FRUIT_R_BASE = 0.09; // fraction of playfield height
+const FRUIT_R_BASE = 0.06; // fraction of playfield height
 const BANNER_MS = 1300;
-const GRAVITY = 640;
+const GRAVITY = 380;
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
 const SCREENS = { INSTRUCTION: "INSTRUCTION", COUNTDOWN: "COUNTDOWN", GAME: "GAME", REPORT: "REPORT" };
 
@@ -308,7 +308,7 @@ export default function SmoothieSlashGame() {
           const x0 = 50 + Math.random() * (W - 100);
           const peakY = H * (0.12 + Math.random() * 0.28);
           const vy0 = -Math.sqrt(2 * GRAVITY * (H + 20 - peakY));
-          const vx0 = ((W / 2 - x0) / W) * 120 + (Math.random() - 0.5) * 100;
+          const vx0 = ((W / 2 - x0) / W) * 70 + (Math.random() - 0.5) * 60;
           fruitsRef.current.push({
             id: uid(), code, stageIdx: sIdx, wasPrevTarget: prev.includes(code),
             x: x0, y: H + 20, vx: vx0, vy: vy0,
@@ -372,14 +372,14 @@ export default function SmoothieSlashGame() {
     const base = { code: f.code, y: f.y, rot: f.rot, mode: correct ? "jar" : "out" };
     if (correct) {
       halvesRef.current.push(
-        { ...base, id: uid(), x: f.x - 14, vx: -70, vy: -150, spin: -240, side: "L", jarOff: -12 },
-        { ...base, id: uid(), x: f.x + 14, vx: 70, vy: -170, spin: 240, side: "R", jarOff: 12 },
+        { ...base, id: uid(), x: f.x - 20, vx: -40, vy: -90, spin: -160, side: "L", jarOff: -12 },
+        { ...base, id: uid(), x: f.x + 20, vx: 40, vy: -100, spin: 160, side: "R", jarOff: 12 },
       );
     } else {
       const away = jar ? (f.x < jar.x ? -1 : 1) : (f.x < W / 2 ? -1 : 1);
       halvesRef.current.push(
-        { ...base, id: uid(), x: f.x - 14, vx: away * (240 + Math.random() * 110), vy: -220, spin: -420, side: "L" },
-        { ...base, id: uid(), x: f.x + 14, vx: away * (330 + Math.random() * 110), vy: -160, spin: 420, side: "R" },
+        { ...base, id: uid(), x: f.x - 20, vx: away * (140 + Math.random() * 60), vy: -130, spin: -260, side: "L" },
+        { ...base, id: uid(), x: f.x + 20, vx: away * (180 + Math.random() * 60), vy: -100, spin: 260, side: "R" },
       );
     }
   };
@@ -549,7 +549,7 @@ export default function SmoothieSlashGame() {
             {halvesRef.current.map((h) => (
               <div key={h.id} className="absolute text-5xl pointer-events-none z-10"
                 style={{
-                  fontSize: "12vmax",
+                  fontSize: "5vmax",
                   left: h.x, top: h.y,
                   transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
                   clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
