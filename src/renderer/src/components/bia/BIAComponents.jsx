@@ -127,6 +127,46 @@ const cardPositionStyle = (position) => ({
   transform: "translate(-50%, -50%)",
   ...ARC_POSITIONS[position],
 })
+
+/* ─────────────────────────────────────────────────────────────
+   Resolve which 50kHz/8-electrode dataset to display.
+
+   Priority: full 8-electrode (20kHz+100kHz) > arm 50kHz > leg 50kHz.
+   This mirrors the flow's own priority — runCalculateAndComplete only
+   runs when both 20k+100k succeed and is the richest dataset; arms50k
+   is set whenever arm 50kHz succeeds (Phase 3 fallback paths); leg50k
+   is set whenever leg 50kHz succeeds (Phase 2 / shoes-CTA fallback).
+
+   bia20k_100khz comes straight from the calculateBIA() API response
+   summary, which uses snake_case API field names (body_fat_percentage,
+   moisture_content_kg, ...) — different from the arms50k/leg50k shape
+   already built by mapArmsPayloadToBIAMeasurement/mapLegsPayloadToBIAMeasurement
+   (fatPercentage, waterPercentage, ...). normalizeBiaSummary bridges that
+   so buildBiaMetrics only ever has to read one consistent shape.
+───────────────────────────────────────────────────────────── */
+const normalizeBiaSummary = (summary) => {
+  if (!summary) return null
+  return {
+    fatPercentage: summary.body_fat_percentage ?? summary.fatPercentage ?? null,
+    waterPercentage: summary.moisture_content_kg ?? summary.waterPercentage ?? null,
+    muscleMassKg: summary.muscle_mass_kg ?? summary.muscleMassKg ?? null,
+    boneMassKg: summary.bone_mass_kg ?? summary.boneMassKg ?? null,
+    skeletalMuscleMassKg: summary.skeletal_muscle_mass_kg ?? summary.skeletalMuscleMassKg ?? null,
+    visceralFat: summary.visceral_fat_level ?? summary.visceralFat ?? null,
+    proteinMassKg: summary.protein_mass_kg ?? summary.proteinMassKg ?? null,
+  }
+}
+
+const hasAnyValue = (obj) => !!obj && Object.values(obj).some((v) => v != null)
+
+const resolveBiaSource = (bia20k_100khz, arms50k, leg50k) => {
+  const normalizedBia = normalizeBiaSummary(bia20k_100khz)
+  if (hasAnyValue(normalizedBia)) return { source: "full", data: normalizedBia }
+  if (hasAnyValue(arms50k)) return { source: "arm", data: arms50k }
+  if (hasAnyValue(leg50k)) return { source: "leg", data: leg50k }
+  return { source: null, data: {} }
+}
+
 /* ─────────────────────────────────────────────────────────────
    Single floating metric card
 ───────────────────────────────────────────────────────────── */
@@ -221,6 +261,8 @@ export const BIAComponent = ({
   onNextClick,
   onNextVoiceClick,
   arms50k,
+  leg50k,
+  bia20k_100khz,
   user
 }) => {
   const { t } = useTranslation()
@@ -238,8 +280,8 @@ export const BIAComponent = ({
   const audioRef = useRef(null)
   const videoRef = useRef(null)
   const activeCount = Math.round((progress / 100) * total)
-
-  /* Stop video on complete screens, resume on active screens */
+  console.log("bia check", arms50k, leg50k, bia20k_100khz)
+  /* Stop video50k on complete screens, resume on active screens */
   const COMPLETE_SCREENS = ["whcomplete", "imcomplete"]
   useEffect(() => {
     const video = videoRef.current
@@ -260,13 +302,19 @@ export const BIAComponent = ({
   const biaIntervalRef = useRef(null)
   // Keep a ref to the latest biaMetrics so closures always read fresh data
   const biaMetricsRef = useRef([])
-  const buildBiaMetrics = (arms50k) => [
+
+  /* Resolve which dataset is actually populated: full 8-electrode BIA
+     takes priority, then arm 50kHz, then leg 50kHz. */
+  const { source: biaDataSource, data: resolvedBiaData } =
+    resolveBiaSource(bia20k_100khz, arms50k, leg50k)
+
+  const buildBiaMetrics = (biaData) => [
     {
       key: "hydration",
       label: "Hydration",
       icon: biaHydrationIcon,
-      final: arms50k?.waterPercentage != null
-        ? `${parseFloat(arms50k.waterPercentage).toFixed(1)}%`
+      final: biaData?.waterPercentage != null
+        ? `${parseFloat(biaData.waterPercentage).toFixed(1)}%`
         : "--",
       min: 30,
       max: 80,
@@ -280,8 +328,8 @@ export const BIAComponent = ({
       key: "skeletalMass",
       label: "Skeletal Mass",
       icon: biaSkeletonIcon,
-      final: arms50k?.skeletalMuscleMassKg != null
-        ? `${parseFloat(arms50k.skeletalMuscleMassKg).toFixed(1)} kg`
+      final: biaData?.skeletalMuscleMassKg != null
+        ? `${parseFloat(biaData.skeletalMuscleMassKg).toFixed(1)} kg`
         : "--",
       min: 8,
       max: 20,
@@ -295,8 +343,8 @@ export const BIAComponent = ({
       key: "fatMass",
       label: "Fat Mass",
       icon: biaFatMassIcon,
-      final: arms50k?.fatPercentage != null
-        ? `${parseFloat(arms50k.fatPercentage).toFixed(1)}%`
+      final: biaData?.fatPercentage != null
+        ? `${parseFloat(biaData.fatPercentage).toFixed(1)}%`
         : "--",
       min: 5,
       max: 40,
@@ -310,8 +358,8 @@ export const BIAComponent = ({
       key: "muscleMass",
       label: "Muscle Mass",
       icon: biaMuscleMassIcon,
-      final: arms50k?.muscleMassKg != null
-        ? `${parseFloat(arms50k.muscleMassKg).toFixed(1)} kg`
+      final: biaData?.muscleMassKg != null
+        ? `${parseFloat(biaData.muscleMassKg).toFixed(1)} kg`
         : "--",
       min: 20,
       max: 60,
@@ -325,8 +373,8 @@ export const BIAComponent = ({
       key: "proteinMass",
       label: "Protein Mass",
       icon: proteinMassIcon,
-      final: arms50k?.proteinMassKg != null
-        ? `${arms50k.proteinMassKg} kg`
+      final: biaData?.proteinMassKg != null
+        ? `${biaData.proteinMassKg} kg`
         : "--",
       min: 18,
       max: 70,
@@ -340,8 +388,8 @@ export const BIAComponent = ({
       key: "visceralFat",
       label: "Visceral Fat",
       icon: visceralFatIcon,
-      final: arms50k?.visceralFat != null
-        ? `${arms50k.visceralFat}`
+      final: biaData?.visceralFat != null
+        ? `${biaData.visceralFat}`
         : "--",
       min: 1,
       max: 30,
@@ -382,7 +430,7 @@ export const BIAComponent = ({
     },
   ]
 
-  const biaMetrics = buildBiaMetrics(arms50k)
+  const biaMetrics = buildBiaMetrics(resolvedBiaData)
   // Keep the ref in sync on every render so closures always read fresh data
   biaMetricsRef.current = biaMetrics
 
@@ -427,7 +475,7 @@ export const BIAComponent = ({
       biaIntervalRef.current = null
     }
     const final = {}
-    // Always read from the ref so we get the latest arms50k data
+    // Always read from the ref so we get the latest resolved BIA data
     biaMetricsRef.current.forEach(({ key, final: v }) => { final[key] = v })
     setBiaValues(final)
     setIsSettled(true)
@@ -449,14 +497,16 @@ export const BIAComponent = ({
     }
   }, [screenType])
 
-  /* Re-settle whenever arms50k data arrives/updates on the imcomplete screen.
-     This handles the race where navigate() fires before setMeasuredValues
-     has propagated the new arms50k prop down to this component. */
+  /* Re-settle whenever the resolved BIA data arrives/updates on the
+     imcomplete screen. This handles the race where navigate() fires
+     before setMeasuredValues has propagated arms50k/leg50k/bia20k_100khz
+     down to this component, and also handles late-arriving upgrades
+     (e.g. leg50k shown first, then full bia20k_100khz lands). */
   useEffect(() => {
     if (screenType === "imcomplete") {
       settleValues()
     }
-  }, [arms50k])
+  }, [arms50k, leg50k, bia20k_100khz])
 
 
 

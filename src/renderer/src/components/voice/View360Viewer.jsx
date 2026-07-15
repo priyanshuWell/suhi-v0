@@ -29,7 +29,8 @@ export default function View360Viewer({
     voiceBars: voiceBarsProp,
     isComplete,
     onNext,
-    loading        // ← new: called when user clicks "Next" in the modal
+    onStart,       // ← called when user clicks the Start button (triggers recording)
+    loading        // ← called when user clicks "Next" in the modal
 }) {
     const viewerRef = useRef(null);
     const rafRef = useRef(null);
@@ -328,7 +329,17 @@ export default function View360Viewer({
                             {t("voice.cta_intro")}
                         </p>
                         <BlueGradientButton
-                            onClick={() => setShowCTA(false)}
+                            onClick={() => {
+                                setShowCTA(false);
+                                onStart?.();                     // start recording
+                                // Also kick off the timer right away
+                                if (!interactFiredRef.current) {
+                                    interactFiredRef.current = true; // prevent double-fire on drag
+                                    setHasInteracted(true);
+                                    // NOTE: onFirstInteract NOT called here to avoid a second
+                                    // startRecording() call; recording already started via onStart
+                                }
+                            }}
                             className="px-4 py-2  text-white font-bold text-xl tracking-widest "
                         // style={{
                         //     background: "linear-gradient(135deg, #1a7fd4 0%, #0d4fa8 100%)",

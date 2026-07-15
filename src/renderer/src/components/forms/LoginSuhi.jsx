@@ -9,7 +9,7 @@ import BlackGradientButton from '../ui/BlackGradientButton'
 import KeyboardContainer from '../ui/KeyboardContainer'
 import ErrorAlert from '../ErrorAlert'
 import { loginSuhi, getStudentBySuhi } from '../../utils/api'
-import { setUser, setScreening } from '../../features/common/commonSlice'
+import { setUser, setLoginScreening } from '../../features/common/commonSlice'
 import { getNextRoute } from '../../utils/stageRouter'
 import { useTranslation } from 'react-i18next'
 import { getSessionId } from '../../utils/config'
@@ -89,8 +89,10 @@ const LoginSuhi = () => {
       )
 
       // Save screening if API returns it
+      //  This is the login step — sessionId is locked in here and never
+      // overwritten by later stage-complete calls (BIA, voice, DMIT, etc.)
       if (response.data?.screening) {
-        dispatch(setScreening(response.data?.screening))
+        dispatch(setLoginScreening(response.data?.screening))
       }
 
       retryRef.current = 0

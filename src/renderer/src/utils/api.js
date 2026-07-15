@@ -1,7 +1,5 @@
 import axios from "axios";
-const FPT_API_BASE_URL = "http://127.0.0.1:9000";
-const API_BASE_URL = "http://127.0.0.1:8000";
-const VOICE_API_BASE_URL = "http://127.0.0.1:9100"
+import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL } from "./config";
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -178,11 +176,11 @@ export async function runVoice(payload) {
 }
 
 
-export async function realtimeCapture(kiosk_id=null) {
+export async function realtimeCapture(kiosk_id = null) {
   try {
     const payload = {
-      kiosk_id: "aabbcc44",
-      camera_index: 6,
+      kiosk_id: kiosk_id,                                              // use the passed-in parameter
+      camera_index: parseInt(import.meta.env?.VITE_CAMERA_INDEX ?? 0, 10), // read from env, default 0
       max_seconds: 5,
       quality_threshold: 40
     };
@@ -383,16 +381,26 @@ export async function runFPT(shmPath, kioskId) {
   }
 }
 
-export async function bufferCollection(shmPath, kioskId,user_id) {
+export async function bufferCollection(shm_video_path, user_id, session_id, buffer_type, kiosk_id) {
   try {
-    const payload = {
-      shm_path: shmPath,
-      kiosk_id: kioskId,
+    console.log('🔄 [BUFFER COLLECTION API] Starting buffer collection API call');
+    console.log('📤 [BUFFER COLLECTION API] Payload:', {
+      shm_video_path,
       user_id,
-      buffer_type: "BIA"
+      session_id,
+      buffer_type,
+      kiosk_id
+    });
+
+    const payload = {
+      shm_video_path,
+      user_id,
+      session_id,
+      buffer_type,
+      kiosk_id
     };
 
-    const response = await fetch(`${API_BASE_URL}/video/buffer-collection`, {
+    const response = await fetch(`${API_BASE_URL}/buffer-collection`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -405,12 +413,13 @@ export async function bufferCollection(shmPath, kioskId,user_id) {
     }
 
     const data = await response.json();
+    console.log('✅ [BUFFER COLLECTION API] Buffer collection API response:', data);
     return {
       success: true,
       ...data
     };
   } catch (error) {
-    console.error("Error running FPT:", error);
+    console.error("❌ [BUFFER COLLECTION API] Error calling buffer collection:", error);
     return {
       success: false,
       error: error.message

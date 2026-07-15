@@ -1,14 +1,35 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
+import { useDispatch } from 'react-redux'
+import { setUser, setScreening } from '../../features/common/commonSlice'
 import LoginComponent from '../ui/LoginComponent'
 import fingerprintImg from '../../assets/fingerprint.svg'
 import ArrowDown from '../../assets/ArrowDown.png'
 
-const LoginSuhi = () => {
+const FingerPrintScreen = () => {
   const navigate = useNavigate()
-  const [suhiId, setSuhiId] = useState('')
+  const dispatch = useDispatch()
+  const [status, setStatus] = useState('waiting') // waiting | scanning | success | error
+  const [message, setMessage] = useState('Place your thumb on the fingerprint scanner below the screen.')
 
-  const isButtonDisabled = !suhiId.trim()
+  useEffect(() => {
+    //  Listen for fingerprint scan result from main process via IPC
+    if (!window.api?.onFingerprintResult) return
+    const cleanup = window.api.onFingerprintResult((result) => {
+      if (result?.success) {
+        setStatus('success')
+        setMessage('Fingerprint verified ')
+        dispatch(setUser(result.user))
+        dispatch(setScreening(result.screening))
+        setTimeout(() => navigate('/register'), 800)
+      } else {
+        setStatus('error')
+        setMessage('Fingerprint not recognised. Please try again.')
+        setTimeout(() => setStatus('waiting'), 2000)
+      }
+    })
+    return cleanup
+  }, [dispatch, navigate])
 
   return (
     <>
@@ -41,4 +62,4 @@ const LoginSuhi = () => {
   )
 }
 
-export default LoginSuhi
+export default FingerPrintScreen

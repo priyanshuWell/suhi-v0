@@ -453,13 +453,17 @@ ipcMain.handle("calculate-bia", async (event, payload) => {
       raw: JSON.stringify(bodyComposition),
       finalBia: apiPayload,
       summary: {
-        bodyFatPercent: p3.bodyFatPercentage || 0,
-        muscleMass: p1.muscleMass || 0,
+        fatPercentage: p3.bodyFatPercentage || 0,
+        muscleMassKg: p1.muscleMass || 0,
         bmi: p3.bodyMassIndex || 0,
         visceralFat: p3.visceralFatLevel || 0,
         basalMetabolism: p3.basalMetabolism || 0,
         bodyScore: p3.bodyScore || 0,
-        physicalAge: p3.physicalAge || 0
+        physicalAge: p3.physicalAge || 0,
+        waterPercentage: p1.moistureContent || 0,
+        boneMassKg: p1.boneMass || 0,
+        skeletalMuscleMassKg: p1.skeletalMuscleMass || 0,
+        proteinMassKg: p1.proteinMass || 0,
       }
     }
 
@@ -840,10 +844,22 @@ function convertBIADataToAPIPayload(
 
     // user inputs
     gender: userInputs?.gender == "male" ? 1 : 0,
-    age_years: userInputs?.age || 29,
+    //  Removed silent defaults (29, 170, 70) — surface missing data as null
+    //    so the BIA calculation fails loudly rather than producing wrong results.
+    age_years: (() => {
+      if (!userInputs?.age) { console.error('[BIA CALC] age missing — cannot calculate'); return null; }
+      return userInputs.age;
+    })(),
 
-    final_height_cm: userInputs?.height || 170,
-    final_weight_kg: userInputs?.weight || STD.bodyWeight,
+    final_height_cm: (() => {
+      if (!userInputs?.height) { console.error('[BIA CALC] height missing — cannot calculate'); return null; }
+      return userInputs.height;
+    })(),
+
+    final_weight_kg: (() => {
+      if (!userInputs?.weight) { console.error('[BIA CALC] weight missing — cannot calculate'); return null; }
+      return userInputs.weight;
+    })(),
 
     // impedance
     impedance_20khz_ohm: safeAverage(impedanceData?.impedance20),
