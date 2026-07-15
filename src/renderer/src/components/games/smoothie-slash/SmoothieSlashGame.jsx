@@ -55,9 +55,9 @@ const STAGES = [
 
 const SESSION_SEC = 120;
 const BLOCK_SEC = 20;
-const SPAWN_MS = 900;
-const MAX_ALIVE = 5;
-const FRUIT_R = 52;
+const SPAWN_MS = 650;
+const MAX_ALIVE = 7;
+const FRUIT_R_BASE = 0.09; // fraction of playfield height
 const BANNER_MS = 1300;
 const GRAVITY = 640;
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
@@ -393,7 +393,8 @@ export default function SmoothieSlashGame() {
       const len2 = dx * dx + dy * dy || 1;
       const t = Math.max(0, Math.min(1, ((f.x - p1.x) * dx + (f.y - p1.y) * dy) / len2));
       const cx = p1.x + t * dx, cy = p1.y + t * dy;
-      if (Math.hypot(f.x - cx, f.y - cy) > FRUIT_R) return;
+      const fruitR = (playRef.current?.getBoundingClientRect().height || 800) * FRUIT_R_BASE;
+      if (Math.hypot(f.x - cx, f.y - cy) > fruitR) return;
       f.sliced = true;
       const outcome = logEvent(f, "SLASH", now);
       const correct = outcome === "CS";
@@ -540,7 +541,7 @@ export default function SmoothieSlashGame() {
 
             {fruitsRef.current.map((f) => (
               <div key={f.id} className="absolute text-5xl pointer-events-none z-10"
-                style={{ left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`, filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))" }}>
+                style={{ left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`, filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "8vmax" }}>
                 {FRUITS[f.code].emoji}
               </div>
             ))}
@@ -548,6 +549,7 @@ export default function SmoothieSlashGame() {
             {halvesRef.current.map((h) => (
               <div key={h.id} className="absolute text-5xl pointer-events-none z-10"
                 style={{
+                  fontSize: "12vmax",
                   left: h.x, top: h.y,
                   transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
                   clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
