@@ -15,6 +15,7 @@
 export const STAGE_ROUTE_MAP = {
   bia: '/bia/leg50',
   divide_attention: '/smoothie-slash',
+  smoothie_slash: '/smoothie-slash',
   voice_analysis: '/voice',
   color_blindness: '/colorblindness',
   result: '/bia/result',
