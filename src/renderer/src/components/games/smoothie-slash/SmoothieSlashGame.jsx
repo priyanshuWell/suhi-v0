@@ -3,15 +3,48 @@ import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import bg from '../../../assets/smoothie/bg.jpg';
 import blenderImage from '../../../assets/smoothie/blender.png';
+import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
+import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
+import bgMusic from '../../../assets/audio/smoothie/background2.wav';
 
-/* ── LOCAL TESTING MODE — API calls stubbed out ─────────────────────────
-// import { SmoothieSession, SmoothieSlashBatch, SmoothieSessionComplete } from "../../../utils/api";
-// import { getNextRoute } from "../../../utils/stageRouter";
-   ────────────────────────────────────────────────────────────────────── */
-const SmoothieSession = async () => ({ success: false });
-const SmoothieSlashBatch = async () => ({ success: false });
-const SmoothieSessionComplete = async () => ({ success: false });
-const getNextRoute = () => "/";
+const API = "http://127.0.0.1:8000";
+
+/* POST /smoothie/start → { game_session_id, stage: { stage_id, target_fruits, … } } */
+const apiStart = async (userId, screeningSessionId, kioskId = "KIOSK_001") => {
+  const r = await fetch(`${API}/smoothie/start`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: userId, screening_session_id: screeningSessionId, kiosk_id: kioskId })
+  });
+  if (!r.ok) throw new Error(`start ${r.status}`);
+  return r.json();   // { game_session_id, current_stage, total_stages, stage:{…} }
+};
+
+/* POST /smoothie/stage/complete → { completed_stage, game_completed, next_stage:{…}|null } */
+const apiStageComplete = async (gameSessionId, stageId, startedAt, completedAt, slashes) => {
+  const r = await fetch(`${API}/smoothie/stage/complete`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      game_session_id: gameSessionId,
+      stage_id: stageId,
+      started_at: startedAt,
+      completed_at: completedAt,
+      duration_ms: new Date(completedAt) - new Date(startedAt),
+      slashes,
+    })
+  });
+  if (!r.ok) throw new Error(`stage/complete ${r.status}`);
+  return r.json();   // { completed_stage, game_completed, next_stage }
+};
+
+/* POST /smoothie/game/complete → full metrics object */
+const apiGameComplete = async (gameSessionId) => {
+  const r = await fetch(`${API}/smoothie/game/complete`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ game_session_id: gameSessionId })
+  });
+  if (!r.ok) throw new Error(`game/complete ${r.status}`);
+  return r.json();
+};
 
 const FRUITS = {
   ST: { emoji: "🍓", name: "Strawberry" },
@@ -41,7 +74,7 @@ const MAX_ALIVE = 7;
 const FRUIT_R_BASE = 0.045;   // fraction of playfield height — tune with fontSize below
 const BANNER_MS = 1300;
 const GRAVITY = 380;
-const INTER_PAUSE = 1500;    // ms pause between blocks
+const INTER_PAUSE = 2500;    // ms pause between blocks
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
 const SCREENS = { INSTRUCTION: "INSTRUCTION", COUNTDOWN: "COUNTDOWN", GAME: "GAME", REPORT: "REPORT" };
 
@@ -99,6 +132,7 @@ function computeMetrics(events) {
 export default function SmoothieSlashGame() {
   const navigate = useNavigate();
   const storeUser = useSelector(s => s.common.user);
+  const storeScreening = useSelector(s => s.common.screening);
 
   const [screen, setScreen] = useState(SCREENS.INSTRUCTION);
   const [countdown, setCountdown] = useState(3);
@@ -121,13 +155,15 @@ export default function SmoothieSlashGame() {
   const popsRef = useRef([]);
   const trailRef = useRef([]);
   const eventsRef = useRef([]);
-  const flushedRef = useRef(0);
   const engineRef = useRef({});
   const rafRef = useRef(null);
   const sessionIdRef = useRef(null);
   const nextRouteRef = useRef("/colorblindness");
   const scoreRef = useRef(0);
+  const stageStartedAt = useRef(null);   // ISO string, set on each block start
+  const stageIdRef = useRef(1);      // current backend stage_id
   const pausedRef = useRef(false);   // readable inside rAF loop
+  const bgMusicRef = useRef(null);   // background music Audio instance
 
   /* ── animated banner helper ─────────────────────────────────────────
      Phase 1 (0 ms)   : text appears at center  → bannerAnim = 'center'
@@ -156,41 +192,67 @@ export default function SmoothieSlashGame() {
     }, INTER_PAUSE);
   }, [showBanner]);
 
-  /* ── flush ──────────────────────────────────────────────────────── */
-  const flushEvents = useCallback(async () => {
-    const pending = eventsRef.current.slice(flushedRef.current);
-    if (!pending.length || !sessionIdRef.current) return;
-    flushedRef.current = eventsRef.current.length;
-    const result = await SmoothieSlashBatch(sessionIdRef.current, pending);
-    if (!result?.success) flushedRef.current -= pending.length;
+  /* ── pushStageComplete: send one block's slashes to /smoothie/stage/complete ── */
+  const pushStageComplete = useCallback(async (stageId, startedAt, completedAt, slashes) => {
+    if (!sessionIdRef.current) return null;
+    try {
+      // Shape each slash to match the backend contract
+      const shaped = slashes.map(e => ({
+        fruit_code: e.fruit_code,
+        action: e.action,                  // "SLASH" | "NONE"
+        response_time_ms: e.response_time_ms ?? null,
+        points_awarded: e.points_awarded ?? 0,
+        combo_at_event: e.combo_at_event ?? 0,
+        is_perseverative: e.is_perseverative ?? false,
+        spawned_at: e.spawned_at,
+        resolved_at: e.resolved_at,
+        slash_path: e.slash_path ?? null,
+      }));
+      const res = await apiStageComplete(sessionIdRef.current, stageId, startedAt, completedAt, shaped);
+      console.log("[SmoothieSlash] stage/complete →", res);
+      return res;   // { completed_stage, game_completed, next_stage }
+    } catch (e) {
+      console.warn("[SmoothieSlash] stage/complete failed:", e.message);
+      return null;
+    }
   }, []);
 
-  /* ── event log ──────────────────────────────────────────────────── */
+  /* ── event log — shape matches /smoothie/stage/complete slashes array ── */
   const logEvent = useCallback((f, action, now) => {
     const st = STAGES[f.stageIdx];
     const isTarget = st.targets.includes(f.code);
     const outcome = action === "SLASH" ? (isTarget ? "CS" : "IS") : (isTarget ? "IR" : "CR");
     eventsRef.current.push({
-      slash_id: uid(), stage_id: st.stageId, block_number: f.stageIdx + 1,
-      fruit_code: f.code, is_target: isTarget, was_prev_target: f.wasPrevTarget,
-      action, outcome, is_perseverative: outcome === "IS" && f.wasPrevTarget,
+      /* internal */
+      block_number: f.stageIdx + 1,
+      is_target: isTarget,
+      outcome,
+      /* backend contract */
+      fruit_code: f.code,
+      action,
       response_time_ms: action === "SLASH" ? Math.round(now - f.born) : null,
       points_awarded: action === "SLASH" ? (outcome === "CS" ? PTS.CS : PTS.IS) : 0,
       combo_at_event: engineRef.current.combo,
+      is_perseverative: outcome === "IS" && f.wasPrevTarget,
       spawned_at: new Date(performance.timeOrigin + f.born).toISOString(),
       resolved_at: new Date(performance.timeOrigin + now).toISOString(),
+      slash_path: null,   // gesture trace — can be filled in trySlice if needed
     });
     return outcome;
   }, []);
 
-  /* ── handleStart ────────────────────────────────────────────────── */
+  /* ── handleStart → POST /smoothie/start ────────────────────────── */
   const handleStart = async () => {
     const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-    const screeningSessionId = storeUser?.screening?.session_id || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
+    const screeningSessionId = storeScreening?.sessionId || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
     try {
-      const result = await SmoothieSession(userId, screeningSessionId);
-      if (result?.success) sessionIdRef.current = result?.data?.game_session_id ?? null;
-    } catch (e) { console.warn("[SmoothieSlash] offline:", e?.message); }
+      const data = await apiStart(userId, screeningSessionId);
+      sessionIdRef.current = data.game_session_id;
+      stageIdRef.current = data.stage?.stage_id ?? 1;
+      console.log("[SmoothieSlash] started session:", data.game_session_id, "stage:", data.stage?.stage_id);
+    } catch (e) {
+      console.warn("[SmoothieSlash] /smoothie/start failed — continuing offline:", e.message);
+    }
     setScreen(SCREENS.COUNTDOWN); setCountdown(3);
   };
 
@@ -203,7 +265,7 @@ export default function SmoothieSlashGame() {
 
   const startGame = useCallback(() => {
     fruitsRef.current = []; halvesRef.current = []; popsRef.current = [];
-    trailRef.current = []; eventsRef.current = []; flushedRef.current = 0;
+    trailRef.current = []; eventsRef.current = [];
     pausedRef.current = false;
     engineRef.current = {
       t0: performance.now(), last: performance.now(),
@@ -212,29 +274,69 @@ export default function SmoothieSlashGame() {
     scoreRef.current = 0;
     setScore(0); setFill(0); setStageIdx(0); setTimeLeft(SESSION_SEC);
     setSplash(null); setPaused(false); setScreen(SCREENS.GAME);
+    stageStartedAt.current = new Date().toISOString();
     showBanner(`GET READY — ${STAGES[0].stageName.toUpperCase()}`);
   }, [showBanner]);
 
-  /* ── endGame ────────────────────────────────────────────────────── */
+  /* ── endGame → stage/complete for block 6, then game/complete ───── */
   const endGame = useCallback(async () => {
+    // stop background music
+    if (bgMusicRef.current) {
+      bgMusicRef.current.pause();
+      bgMusicRef.current.currentTime = 0;
+      bgMusicRef.current = null;
+    }
     const now = performance.now();
+    const completedAt = new Date().toISOString();
     fruitsRef.current.filter(f => !f.sliced).forEach(f => logEvent(f, "NONE", now));
     fruitsRef.current = []; halvesRef.current = [];
-    await flushEvents();
+
+    // push final block (block 6) slashes
+    const lastBlock = engineRef.current.stage + 1;
+    const lastSlashes = eventsRef.current.filter(e => e.block_number === lastBlock);
+    await pushStageComplete(stageIdRef.current, stageStartedAt.current, completedAt, lastSlashes);
+
+    // call /smoothie/game/complete to get full metrics
     let rep = null;
     if (sessionIdRef.current) {
       try {
-        const r = await SmoothieSessionComplete(sessionIdRef.current, {
-          final_score: scoreRef.current, max_combo: engineRef.current.maxCombo,
-          ended_at: new Date().toISOString()
-        });
-        if (r?.success) { rep = r?.data ?? null; nextRouteRef.current = getNextRoute(r.screening?.next_stage, "/colorblindness"); }
-      } catch (e) { }
+        rep = await apiGameComplete(sessionIdRef.current);
+        console.log("[SmoothieSlash] game/complete →", rep);
+      } catch (e) {
+        console.warn("[SmoothieSlash] game/complete failed — using local metrics:", e.message);
+      }
     }
+    // local fallback
     if (!rep) rep = computeMetrics(eventsRef.current);
     setBest(b => Math.max(b, scoreRef.current));
-    setReport(rep); setScreen(SCREENS.REPORT);
-  }, [flushEvents, logEvent]);
+    // Normalise: backend returns flat keys; local fallback returns {constructs:{…}, blocks:[…]}
+    const normalised = rep?.divided_attention != null ? {
+      constructs: {
+        divided_attention: rep.divided_attention,
+        selective_attention: rep.selective_attention,
+        cognitive_flexibility: rep.cognitive_flexibility,
+        working_memory: rep.working_memory,
+        processing_speed: rep.processing_speed,
+        sustained_attention: rep.sustained_attention,
+      },
+      blocks: [],   // not returned by game/complete — per-stage bars will show 0
+    } : rep;
+    setReport(normalised); setScreen(SCREENS.REPORT);
+  }, [pushStageComplete, logEvent]);
+
+  /* ── background music: start on mount, stop on unmount ─────────── */
+  useEffect(() => {
+    const bg = new Audio(bgMusic);
+    bg.loop = true;
+    bg.volume = 0.4;
+    bg.play().catch(() => { });
+    bgMusicRef.current = bg;
+    return () => {
+      bg.pause();
+      bg.currentTime = 0;
+      bgMusicRef.current = null;
+    };
+  }, []);
 
   /* ── jar geometry ───────────────────────────────────────────────── */
   const jarPos = () => {
@@ -264,10 +366,19 @@ export default function SmoothieSlashGame() {
 
       const sIdx = Math.min(5, Math.floor(elapsed / BLOCK_SEC));
       if (sIdx !== eng.stage) {
+        const prevStageId = stageIdRef.current;
+        const prevStartedAt = stageStartedAt.current;
+        const completedAt = new Date().toISOString();
+        const prevBlock = eng.stage;
         eng.stage = sIdx; eng.combo = 0; eng.cs = 0;
         setStageIdx(sIdx); setFill(0);
         doBlockPause(sIdx);
-        flushEvents();
+        // send previous block's slashes then update stageId for the new block
+        const blockSlashes = eventsRef.current.filter(e => e.block_number === prevBlock + 1);
+        pushStageComplete(prevStageId, prevStartedAt, completedAt, blockSlashes).then(res => {
+          if (res?.next_stage?.stage_id) stageIdRef.current = res.next_stage.stage_id;
+        });
+        stageStartedAt.current = completedAt;
       }
 
       /* skip physics while paused */
@@ -337,7 +448,7 @@ export default function SmoothieSlashGame() {
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [screen, endGame, logEvent, flushEvents, doBlockPause]);
+  }, [screen, endGame, logEvent, pushStageComplete, doBlockPause]);
 
   /* ── slashing ───────────────────────────────────────────────────── */
   const pointerDown = useRef(false);
@@ -362,6 +473,15 @@ export default function SmoothieSlashGame() {
       );
     }
   };
+  /* ── slice sound helper ─────────────────────────────────────────── */
+  const sliceSounds = useRef([cutSlice1, cutSlice2]);
+  const playSliceSound = useCallback(() => {
+    const src = sliceSounds.current[Math.random() < 0.5 ? 0 : 1];
+    const audio = new Audio(src);
+    audio.volume = 0.65;
+    audio.play().catch(() => { });  // ignore autoplay policy errors
+  }, []);
+
   const trySlice = (p1, p2) => {
     if (pausedRef.current) return;
     const eng = engineRef.current; const now = performance.now();
@@ -375,6 +495,7 @@ export default function SmoothieSlashGame() {
       const fruitR = (playRef.current?.getBoundingClientRect().height || 800) * FRUIT_R_BASE;
       if (Math.hypot(f.x - cx, f.y - cy) > fruitR) return;
       f.sliced = true;
+      playSliceSound();
       const outcome = logEvent(f, "SLASH", now);
       const correct = outcome === "CS";
       spawnHalves(f, correct, W);
@@ -456,83 +577,276 @@ export default function SmoothieSlashGame() {
 
       {/* ── INSTRUCTION ──────────────────────────────────────────── */}
       {screen === SCREENS.INSTRUCTION && (
-        <div className="flex-1 flex flex-col" style={{
-          backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center bottom",
-          minHeight: "100vh", position: "relative"
-        }}>
-          {/* dark overlay so text is readable */}
-          <div className="absolute inset-0" style={{ background: "rgba(10,24,20,.55)", zIndex: 0 }} />
+        <div
+          className="flex-1 flex flex-col items-center justify-center"
+          style={{
+            backgroundImage: `url(${bg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center bottom",
+            minHeight: "100vh",
+            position: "relative",
+          }}
+        >
+          {/* Overlay */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "rgba(10,24,20,.55)",
+              zIndex: 0,
+            }}
+          />
 
-          <div className="relative flex flex-col flex-1 px-6 pt-10 pb-6" style={{ zIndex: 1 }}>
-            {/* header pill */}
-            <div className="flex justify-center mb-5">
-              <span className="font-extrabold tracking-widest px-7 py-3 rounded-full" style={{ fontSize: 18, background: "rgba(30,20,10,.75)", color: "#E8D9BB", letterSpacing: ".22em" }}>
+          <div
+            className="relative flex flex-col justify-center"
+            style={{
+              zIndex: 1,
+              width: "100%",
+              maxWidth: 1180,
+              minHeight: "100vh",
+              padding: "70px 70px 60px",
+              gap: 42,
+            }}
+          >
+            {/* Header */}
+            <div className="flex justify-center">
+              <span
+                className="font-extrabold rounded-full"
+                style={{
+                  fontSize: "clamp(24px,2vw,34px)",
+                  background: "rgba(30,20,10,.75)",
+                  color: "#E8D9BB",
+                  letterSpacing: ".25em",
+                  padding: "18px 48px",
+                }}
+              >
                 FRUIT SLASH KITCHEN
               </span>
             </div>
 
-            {/* title */}
-            <h1 className="display text-center leading-none" style={{ fontSize: "clamp(3.8rem,7vw,6rem)", color: "#F2E8CC", textShadow: "0 4px 12px rgba(0,0,0,.6)" }}>
+            {/* Title */}
+            <h1
+              className="display text-center leading-none"
+              style={{
+                fontSize: "clamp(5rem,8vw,8rem)",
+                color: "#F2E8CC",
+                textShadow: "0 6px 18px rgba(0,0,0,.55)",
+              }}
+            >
               SMOOTHIE SLASH
             </h1>
 
-            {/* rules card */}
-            <div className="mt-6 rounded-3xl p-7" style={{ background: "rgba(25,18,8,.82)", border: "1px solid rgba(255,235,180,.15)" }}>
-              <div className="flex gap-4 mb-6">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold" style={{ background: "#4CAF50", color: "#fff", fontSize: 22 }}>✓</div>
-                <p className="font-semibold leading-snug" style={{ fontSize: 20, color: "#EDE4CE" }}>
-                  Slash <span style={{ color: "#F2B34C", fontWeight: 900 }}>only the fruits</span> shown in the recipe at the top of the screen.
+            {/* Rules */}
+            <div
+              className="rounded-[36px]"
+              style={{
+                background: "rgba(25,18,8,.82)",
+                border: "1px solid rgba(255,235,180,.15)",
+                padding: "40px",
+              }}
+            >
+              {/* Rule 1 */}
+              <div className="flex gap-6 items-start mb-10">
+                <div
+                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                  style={{
+                    width: 78,
+                    height: 78,
+                    background: "#4CAF50",
+                    color: "#fff",
+                    fontSize: 40,
+                    fontWeight: 700,
+                  }}
+                >
+                  ✓
+                </div>
+
+                <p
+                  className="font-semibold leading-snug"
+                  style={{
+                    fontSize: "clamp(30px,2vw,38px)",
+                    color: "#EDE4CE",
+                  }}
+                >
+                  Slash{" "}
+                  <span
+                    style={{
+                      color: "#F2B34C",
+                      fontWeight: 900,
+                    }}
+                  >
+                    only the fruits
+                  </span>{" "}
+                  shown in the recipe at the top of the screen.
                 </p>
               </div>
-              <div className="flex gap-4 mb-6">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold" style={{ background: "#E53935", color: "#fff", fontSize: 22 }}>✕</div>
-                <p className="font-semibold leading-snug" style={{ fontSize: 20, color: "#EDE4CE" }}>
-                  Wrong fruit spoils the blend — <span style={{ color: "#E57373", fontWeight: 900 }}>−2 points</span> per miss.
+
+              {/* Rule 2 */}
+              <div className="flex gap-6 items-start mb-10">
+                <div
+                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                  style={{
+                    width: 78,
+                    height: 78,
+                    background: "#E53935",
+                    color: "#fff",
+                    fontSize: 38,
+                    fontWeight: 700,
+                  }}
+                >
+                  ✕
+                </div>
+
+                <p
+                  className="font-semibold leading-snug"
+                  style={{
+                    fontSize: "clamp(30px,2vw,38px)",
+                    color: "#EDE4CE",
+                  }}
+                >
+                  Wrong fruit spoils the blend —
+                  <span
+                    style={{
+                      color: "#E57373",
+                      fontWeight: 900,
+                    }}
+                  >
+                    {" "}
+                    −2 points
+                  </span>{" "}
+                  per miss.
                 </p>
               </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold" style={{ background: "#7B61FF", color: "#fff", fontSize: 22 }}>↻</div>
-                <p className="font-semibold leading-snug" style={{ fontSize: 20, color: "#EDE4CE" }}>
-                  The recipe <span style={{ color: "#C584F5", fontWeight: 900 }}>changes every 20s</span> — adapt fast and chain combos!
+
+              {/* Rule 3 */}
+              <div className="flex gap-6 items-start">
+                <div
+                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                  style={{
+                    width: 78,
+                    height: 78,
+                    background: "#7B61FF",
+                    color: "#fff",
+                    fontSize: 38,
+                    fontWeight: 700,
+                  }}
+                >
+                  ↻
+                </div>
+
+                <p
+                  className="font-semibold leading-snug"
+                  style={{
+                    fontSize: "clamp(30px,2vw,38px)",
+                    color: "#EDE4CE",
+                  }}
+                >
+                  The recipe{" "}
+                  <span
+                    style={{
+                      color: "#C584F5",
+                      fontWeight: 900,
+                    }}
+                  >
+                    changes every 20 seconds
+                  </span>{" "}
+                  — adapt fast and chain combos!
                 </p>
               </div>
             </div>
 
-            {/* recipe board */}
-            <div className="mt-5 rounded-3xl p-6" style={{ background: "rgba(240,228,196,.92)" }}>
-              <p className="text-center font-extrabold tracking-widest mb-4" style={{ fontSize: 15, color: "#7A5C28", letterSpacing: ".2em" }}>TODAY'S RECIPE BOARD</p>
-              <div className="grid grid-cols-2 gap-3">
-                {STAGES.map(s => (
-                  <div key={s.stageId} className="flex items-center gap-3 rounded-2xl px-4 py-3" style={{ background: "rgba(255,248,230,.9)" }}>
-                    <div className="flex gap-1">
-                      {s.targets.map(c => (
-                        <span key={c} className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "#EFE3C3", fontSize: 22 }}>
+            {/* Recipe Board */}
+            <div
+              className="rounded-[36px]"
+              style={{
+                background: "rgba(240,228,196,.95)",
+                padding: "36px",
+              }}
+            >
+              <p
+                className="text-center font-extrabold mb-8"
+                style={{
+                  fontSize: "clamp(22px,1.6vw,30px)",
+                  color: "#7A5C28",
+                  letterSpacing: ".25em",
+                }}
+              >
+                TODAY'S RECIPE BOARD
+              </p>
+
+              <div className="grid grid-cols-2 gap-5">
+                {STAGES.map((s) => (
+                  <div
+                    key={s.stageId}
+                    className="flex items-center gap-5 rounded-3xl"
+                    style={{
+                      background: "rgba(255,248,230,.9)",
+                      padding: "22px",
+                    }}
+                  >
+                    <div className="flex gap-2">
+                      {s.targets.map((c) => (
+                        <span
+                          key={c}
+                          className="flex items-center justify-center rounded-2xl"
+                          style={{
+                            width: 68,
+                            height: 68,
+                            background: "#EFE3C3",
+                            fontSize: 38,
+                          }}
+                        >
                           {FRUITS[c].emoji}
                         </span>
                       ))}
                     </div>
-                    <span className="font-bold leading-tight" style={{ fontSize: 16, color: "#4A3210" }}>{s.stageName}</span>
+
+                    <span
+                      className="font-bold leading-tight"
+                      style={{
+                        fontSize: "clamp(26px,2vw,34px)",
+                        color: "#4A3210",
+                      }}
+                    >
+                      {s.stageName}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* clock pill */}
-            <div className="flex justify-center mt-5">
-              <span className="font-bold px-7 py-3 rounded-full" style={{ fontSize: 18, background: "rgba(30,20,10,.78)", color: "#E8D9BB" }}>
+            {/* Timer */}
+            <div className="flex justify-center">
+              <span
+                className="font-bold rounded-full"
+                style={{
+                  fontSize: "clamp(26px,2vw,34px)",
+                  background: "rgba(30,20,10,.78)",
+                  color: "#E8D9BB",
+                  padding: "18px 52px",
+                }}
+              >
                 ⏱ 2:00 on the clock · 6 recipes
               </span>
             </div>
 
-            <div className="flex-1" />
-
-            {/* START button */}
-            <button onClick={handleStart} className="display active:scale-95 transition-transform mt-6"
+            {/* Start Button */}
+            <button
+              onClick={handleStart}
+              className="display active:scale-95 transition-transform"
               style={{
-                background: "linear-gradient(180deg,#F5C842,#E8A800)", color: "#2C1A00",
-                boxShadow: "0 8px 0 #A87400", fontWeight: 900, letterSpacing: ".06em",
-                fontSize: 34, padding: "28px 0", borderRadius: 60, width: "100%"
-              }}>
+                background:
+                  "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                color: "#2C1A00",
+                boxShadow: "0 10px 0 #A87400",
+                fontWeight: 900,
+                letterSpacing: ".08em",
+                fontSize: "clamp(44px,3vw,58px)",
+                padding: "34px 0",
+                borderRadius: 70,
+                width: "100%",
+                marginTop: 12,
+              }}
+            >
               START
             </button>
           </div>
@@ -578,11 +892,38 @@ export default function SmoothieSlashGame() {
           </div>
 
           {/* Blender — bigger: 62% wide up to 260px */}
-          <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "2%", width: "min(70%,360px)", aspectRatio: "672/803" }}>
-            <img src={blenderImage} alt="" draggable={false}
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none" />
+          <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "2%", width: "min(62%,260px)", aspectRatio: "672/803" }}>
+            <div className="relative w-[320px] h-[500px]">
+              {/* Liquid */}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  left: 70,
+                  right: 70,
+                  top: 55,
+                  bottom: 95,
+                  borderRadius: "0 0 40px 40px",
+                }}
+              >
+                <div
+                  className="absolute left-0 right-0 bottom-0"
+                  style={{
+                    height: `${fill}%`,
+                    // background: smoothieColor,
+                    transition: "height .3s",
+                  }}
+                />
+              </div>
+
+              {/* Blender PNG */}
+              <img
+                src={blenderImage}
+                className="absolute inset-0 w-full h-full"
+                alt="Blender"
+              />
+            </div>
             <div className="absolute overflow-hidden pointer-events-none"
-              style={{ left: "9%", width: "60%", bottom: "32%", height: "54%", borderRadius: "4px 4px 12px 12px" }}>
+              style={{ left: "24%", width: "60%", bottom: "32%", height: "54%", borderRadius: "4px 4px 12px 12px" }}>
               <div className="absolute bottom-0 inset-x-0 transition-all duration-300"
                 style={{ height: `${fill * 100}%`, background: stage.juice, opacity: 0.85 }} />
               {splashLive && (
@@ -655,16 +996,48 @@ export default function SmoothieSlashGame() {
 
       {/* ── REPORT ───────────────────────────────────────────────── */}
       {screen === SCREENS.REPORT && (
-        <div className="flex-1 flex flex-col overflow-y-auto" style={{
-          backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center bottom",
-          minHeight: "100vh", position: "relative"
-        }}>
-          <div className="absolute inset-0" style={{ background: "rgba(10,24,20,.45)", zIndex: 0 }} />
-          <div className="relative flex flex-col flex-1 px-5 pt-8 pb-6" style={{ zIndex: 1 }}>
+        <div
+          className="flex-1 flex flex-col items-center justify-center"
+          style={{
+            backgroundImage: `url(${bg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center bottom",
+            minHeight: "100vh",
+            position: "relative",
+          }}
+        >
+          {/* Overlay */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: "rgba(10,24,20,.45)",
+              zIndex: 0,
+            }}
+          />
 
-            {/* TIME'S UP pill */}
-            <div className="flex justify-center mb-5">
-              <span className="font-extrabold tracking-widest px-7 py-3 rounded-full flex items-center gap-2" style={{ fontSize: 18, background: "rgba(30,20,10,.82)", color: "#E8D9BB", letterSpacing: ".15em" }}>
+          <div
+            className="relative flex flex-col justify-center"
+            style={{
+              zIndex: 1,
+              width: "100%",
+              maxWidth: 1180,
+              minHeight: "100vh",
+              padding: "70px 70px 60px",
+              gap: 34,
+            }}
+          >
+            {/* TIME'S UP */}
+            <div className="flex justify-center">
+              <span
+                className="font-extrabold rounded-full flex items-center gap-3"
+                style={{
+                  fontSize: "clamp(24px,2vw,34px)",
+                  background: "rgba(30,20,10,.82)",
+                  color: "#E8D9BB",
+                  letterSpacing: ".18em",
+                  padding: "18px 50px",
+                }}
+              >
                 ⏱ TIME'S UP!
               </span>
             </div>
@@ -673,95 +1046,222 @@ export default function SmoothieSlashGame() {
             {(() => {
               const acc = report?.constructs?.divided_attention ?? 0;
               const stars = acc >= 0.85 ? 3 : acc >= 0.65 ? 2 : 1;
+
               return (
-                <div className="flex justify-center gap-3 mb-3">
-                  {[1, 2, 3].map(i => (
-                    <span key={i} style={{ fontSize: 56, filter: i <= stars ? "drop-shadow(0 3px 6px rgba(255,200,0,.7))" : "grayscale(1) opacity(.35)" }}>⭐</span>
+                <div className="flex justify-center gap-5">
+                  {[1, 2, 3].map((i) => (
+                    <span
+                      key={i}
+                      style={{
+                        fontSize: 88,
+                        filter:
+                          i <= stars
+                            ? "drop-shadow(0 5px 12px rgba(255,200,0,.8))"
+                            : "grayscale(1) opacity(.35)",
+                      }}
+                    >
+                      ⭐
+                    </span>
                   ))}
                 </div>
               );
             })()}
 
             {/* Score */}
-            <h2 className="display text-center leading-none" style={{ fontSize: "clamp(3.5rem,8vw,5.5rem)", color: "#F2E8CC", textShadow: "0 4px 12px rgba(0,0,0,.6)" }}>
-              SCORE {score.toLocaleString()}
-            </h2>
-            <p className="text-center font-extrabold mt-2" style={{ fontSize: 17, color: "#C9B88A", letterSpacing: ".18em" }}>BEST {best.toLocaleString()}</p>
+            <div className="text-center">
+              <h2
+                className="display leading-none"
+                style={{
+                  fontSize: "clamp(5rem,8vw,8rem)",
+                  color: "#F2E8CC",
+                  textShadow: "0 6px 18px rgba(0,0,0,.55)",
+                }}
+              >
+                SCORE {score.toLocaleString()}
+              </h2>
 
-            {/* Recipe accuracy card */}
-            <div className="mt-5 rounded-3xl p-6" style={{ background: "rgba(240,228,196,.92)" }}>
+            </div>
+
+            {/* Accuracy Card */}
+            <div
+              className="rounded-[36px]"
+              style={{
+                background: "rgba(240,228,196,.95)",
+                padding: "40px",
+              }}
+            >
               {(() => {
                 const totalAcc = report?.constructs?.divided_attention;
+
                 return (
                   <>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-extrabold tracking-widest" style={{ fontSize: 14, color: "#7A5C28", letterSpacing: ".15em" }}>RECIPES MADE CORRECTLY</span>
-                      <span className="display font-black" style={{ fontSize: 34, color: "#3A2800" }}>{totalAcc != null ? `${Math.round(totalAcc * 100)}%` : "—"}</span>
+                    <div className="flex items-center justify-between mb-5">
+                      <span
+                        className="font-extrabold"
+                        style={{
+                          fontSize: "clamp(22px,1.5vw,28px)",
+                          color: "#7A5C28",
+                          letterSpacing: ".18em",
+                        }}
+                      >
+                        RECIPES MADE CORRECTLY
+                      </span>
+
+                      <span
+                        className="display font-black"
+                        style={{
+                          fontSize: "clamp(46px,3vw,60px)",
+                          color: "#3A2800",
+                        }}
+                      >
+                        {totalAcc != null
+                          ? `${Math.round(totalAcc * 100)}%`
+                          : "—"}
+                      </span>
                     </div>
-                    <div className="rounded-full mb-5" style={{ height: 14, background: "#D9C89A" }}>
-                      <div className="rounded-full h-full" style={{ width: `${Math.round((totalAcc ?? 0) * 100)}%`, background: "#E8A800", transition: "width .6s" }} />
+
+                    <div
+                      className="rounded-full mb-8"
+                      style={{
+                        height: 22,
+                        background: "#D9C89A",
+                      }}
+                    >
+                      <div
+                        className="rounded-full h-full"
+                        style={{
+                          width: `${Math.round((totalAcc ?? 0) * 100)}%`,
+                          background: "#E8A800",
+                          transition: "width .6s",
+                        }}
+                      />
                     </div>
                   </>
                 );
               })()}
 
-              {/* Per-stage rows */}
+              {/* Stage Results */}
               {(() => {
                 const blocks = report?.blocks ?? [];
+
                 return STAGES.map((s, i) => {
                   const b = blocks[i];
                   const acc = b?.acc ?? null;
                   const pct = acc != null ? Math.round(acc * 100) : null;
-                  const color = pct >= 80 ? "#4CAF50" : pct >= 60 ? "#E8A800" : "#E57373";
+
+                  const color =
+                    pct >= 80
+                      ? "#4CAF50"
+                      : pct >= 60
+                        ? "#E8A800"
+                        : "#E57373";
+
                   return (
-                    <div key={s.stageId} className="flex items-center gap-3 mb-4">
-                      <div className="flex gap-1 flex-shrink-0">
-                        {s.targets.map(c => (
-                          <span key={c} className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "#EFE3C3", fontSize: 19 }}>{FRUITS[c].emoji}</span>
+                    <div
+                      key={s.stageId}
+                      className="flex items-center gap-5 mb-6"
+                    >
+                      <div className="flex gap-2 flex-shrink-0">
+                        {s.targets.map((c) => (
+                          <span
+                            key={c}
+                            className="flex items-center justify-center rounded-2xl"
+                            style={{
+                              width: 62,
+                              height: 62,
+                              background: "#EFE3C3",
+                              fontSize: 34,
+                            }}
+                          >
+                            {FRUITS[c].emoji}
+                          </span>
                         ))}
                       </div>
-                      <span className="font-bold flex-shrink-0" style={{ fontSize: 17, color: "#3A2800", minWidth: 120 }}>{s.stageName}</span>
-                      <div className="flex-1 rounded-full" style={{ height: 12, background: "#D9C89A" }}>
-                        <div className="rounded-full h-full transition-all" style={{ width: `${pct ?? 0}%`, background: color }} />
+
+                      <span
+                        className="font-bold"
+                        style={{
+                          fontSize: "clamp(24px,1.8vw,32px)",
+                          color: "#3A2800",
+                          minWidth: 210,
+                        }}
+                      >
+                        {s.stageName}
+                      </span>
+
+                      <div
+                        className="flex-1 rounded-full"
+                        style={{
+                          height: 18,
+                          background: "#D9C89A",
+                        }}
+                      >
+                        <div
+                          className="rounded-full h-full transition-all"
+                          style={{
+                            width: `${pct ?? 0}%`,
+                            background: color,
+                          }}
+                        />
                       </div>
-                      <span className="font-extrabold flex-shrink-0" style={{ fontSize: 17, color: "#3A2800", minWidth: 46, textAlign: "right" }}>{pct != null ? `${pct}%` : "—"}</span>
+
+                      <span
+                        className="font-extrabold"
+                        style={{
+                          fontSize: "clamp(24px,2vw,32px)",
+                          color: "#3A2800",
+                          minWidth: 70,
+                          textAlign: "right",
+                        }}
+                      >
+                        {pct != null ? `${pct}%` : "—"}
+                      </span>
                     </div>
                   );
                 });
               })()}
             </div>
+            {/* Buttons */}
+            <div className="flex flex-col gap-5 mt-3">
+              <button
+                onClick={startGame}
+                className="display active:scale-95 transition-transform"
+                style={{
+                  background:
+                    "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                  color: "#2C1A00",
+                  boxShadow: "0 10px 0 #A87400",
+                  fontWeight: 900,
+                  letterSpacing: ".08em",
+                  fontSize: "clamp(44px,3vw,58px)",
+                  padding: "34px 0",
+                  borderRadius: 70,
+                  width: "100%",
+                }}
+              >
+                PLAY AGAIN
+              </button>
 
-            {/* flavour text */}
-            {(() => {
-              const acc = report?.constructs?.divided_attention ?? 0;
-              const msg = acc >= 0.85 ? "Perfect blend! Clean cuts all round." : acc >= 0.65 ? "Tasty! A few odd fruits snuck into the jug." : "Needs work — watch those distractors!";
-              return (
-                <div className="flex justify-center mt-4">
-                  <span className="font-semibold px-7 py-3 rounded-full text-center" style={{ fontSize: 18, background: "rgba(30,20,10,.78)", color: "#E8D9BB", maxWidth: 500 }}>{msg}</span>
-                </div>
-              );
-            })()}
-
-            <div className="flex-1" />
-
-            {/* PLAY AGAIN */}
-            <button onClick={startGame} className="display active:scale-95 transition-transform mt-6"
-              style={{
-                background: "linear-gradient(180deg,#F5C842,#E8A800)", color: "#2C1A00",
-                boxShadow: "0 8px 0 #A87400", fontWeight: 900, letterSpacing: ".06em",
-                fontSize: 34, padding: "28px 0", borderRadius: 60, width: "100%"
-              }}>
-              PLAY AGAIN
-            </button>
-            <button onClick={() => navigate(nextRouteRef.current)} className="display active:scale-95 transition-transform mt-4"
-              style={{
-                background: "rgba(30,20,10,.75)", color: "#C9B88A", letterSpacing: ".12em",
-                fontWeight: 900, fontSize: 22, padding: "18px 0", borderRadius: 60, width: "100%"
-              }}>
-              MENU
-            </button>
+              <button
+                onClick={() => navigate(nextRouteRef.current)}
+                className="display active:scale-95 transition-transform"
+                style={{
+                  background: "rgba(30,20,10,.75)",
+                  color: "#C9B88A",
+                  letterSpacing: ".14em",
+                  fontWeight: 900,
+                  fontSize: "clamp(28px,2vw,36px)",
+                  padding: "24px 0",
+                  borderRadius: 70,
+                  width: "100%",
+                }}
+              >
+                MENU
+              </button>
+            </div>
           </div>
         </div>
+
       )}
     </div>
   );
