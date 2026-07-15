@@ -194,7 +194,7 @@ export default function SmoothieSlashGame() {
 
   /* ── pushStageComplete: send one block's slashes to /smoothie/stage/complete ── */
   const pushStageComplete = useCallback(async (stageId, startedAt, completedAt, slashes) => {
-    if (!sessionIdRef.current) return null;
+    // NOTE: guard moved below logs so payload is always visible in console
     try {
       // Shape each slash to match the backend contract
       const shaped = slashes.map(e => ({
@@ -208,8 +208,49 @@ export default function SmoothieSlashGame() {
         resolved_at: e.resolved_at,
         slash_path: e.slash_path ?? null,
       }));
+
+      // ── REQUEST log ────────────────────────────────────────────────
+      console.groupCollapsed(`🍉 [SmoothieSlash] stage/complete REQUEST — stage_id: ${stageId}`);
+      console.log("game_session_id :", sessionIdRef.current ?? "(offline — no session)");
+      console.log("stage_id        :", stageId);
+      console.log("started_at      :", startedAt);
+      console.log("completed_at    :", completedAt);
+      console.log("duration_ms     :", new Date(completedAt) - new Date(startedAt));
+      console.log("total slashes   :", shaped.length);
+      console.table(shaped.map(s => ({
+        fruit: s.fruit_code,
+        action: s.action,
+        rt_ms: s.response_time_ms,
+        pts: s.points_awarded,
+        combo: s.combo_at_event,
+        perseverative: s.is_perseverative,
+        spawned_at: s.spawned_at,
+        resolved_at: s.resolved_at,
+      })));
+      console.groupEnd();
+
+      // Skip API call if no session (API offline or /smoothie/start failed)
+      if (!sessionIdRef.current) {
+        console.warn("[SmoothieSlash] stage/complete skipped — no game_session_id (offline mode)");
+        return null;
+      }
+
       const res = await apiStageComplete(sessionIdRef.current, stageId, startedAt, completedAt, shaped);
-      console.log("[SmoothieSlash] stage/complete →", res);
+
+      // ── RESPONSE log ───────────────────────────────────────────────
+      console.groupCollapsed(`✅ [SmoothieSlash] stage/complete RESPONSE — stage_id: ${stageId}`);
+      console.log("completed_stage :", res?.completed_stage);
+      console.log("game_completed  :", res?.game_completed);
+      console.log("next_stage      :", res?.next_stage ?? "—");
+      const cs = shaped.filter(s => s.action === "SLASH" && s.points_awarded > 0).length;
+      const is_ = shaped.filter(s => s.action === "SLASH" && s.points_awarded < 0).length;
+      const cr = shaped.filter(s => s.action === "NONE" && !STAGES.flatMap(st => st.targets).includes(s.fruit_code)).length;
+      const ir = shaped.filter(s => s.action === "NONE").length - cr;
+      const perv = shaped.filter(s => s.is_perseverative).length;
+      console.log("outcomes        :", { CS: cs, IS: is_, CR: cr, IR: ir, perseverative: perv });
+      console.log("raw response    :", res);
+      console.groupEnd();
+
       return res;   // { completed_stage, game_completed, next_stage }
     } catch (e) {
       console.warn("[SmoothieSlash] stage/complete failed:", e.message);
@@ -243,12 +284,12 @@ export default function SmoothieSlashGame() {
 
   /* ── handleStart → POST /smoothie/start ────────────────────────── */
   const handleStart = async () => {
-    const userId = storeUser?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
-    const screeningSessionId = storeScreening?.sessionId || "7f1bc0ab-2a7d-4061-9a8d-3b7ec6700e39";
+    const userId = storeUser?.data?.user_id
+    const screeningSessionId = storeScreening?.sessionId;
     try {
       const data = await apiStart(userId, screeningSessionId);
       sessionIdRef.current = data.game_session_id;
-      stageIdRef.current = data.stage?.stage_id ?? 1;
+      stageIdRef.current = data.stage?.stage_id ?? 0;
       console.log("[SmoothieSlash] started session:", data.game_session_id, "stage:", data.stage?.stage_id);
     } catch (e) {
       console.warn("[SmoothieSlash] /smoothie/start failed — continuing offline:", e.message);
@@ -1038,7 +1079,7 @@ export default function SmoothieSlashGame() {
                   padding: "18px 50px",
                 }}
               >
-                ⏱ TIME'S UP!
+                ⏱ GREAT JOB!
               </span>
             </div>
 
@@ -1224,7 +1265,7 @@ export default function SmoothieSlashGame() {
             {/* Buttons */}
             <div className="flex flex-col gap-5 mt-3">
               <button
-                onClick={startGame}
+                onClick={() => navigate(nextRouteRef.current)}
                 className="display active:scale-95 transition-transform"
                 style={{
                   background:
@@ -1239,24 +1280,7 @@ export default function SmoothieSlashGame() {
                   width: "100%",
                 }}
               >
-                PLAY AGAIN
-              </button>
-
-              <button
-                onClick={() => navigate(nextRouteRef.current)}
-                className="display active:scale-95 transition-transform"
-                style={{
-                  background: "rgba(30,20,10,.75)",
-                  color: "#C9B88A",
-                  letterSpacing: ".14em",
-                  fontWeight: 900,
-                  fontSize: "clamp(28px,2vw,36px)",
-                  padding: "24px 0",
-                  borderRadius: 70,
-                  width: "100%",
-                }}
-              >
-                MENU
+                NEXT
               </button>
             </div>
           </div>
