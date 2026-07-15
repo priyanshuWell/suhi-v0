@@ -16,7 +16,7 @@ const buildProfileImage = (imagePath) => {
 
   if (imagePath.includes(".user_images")) {
     const parts = imagePath.split("/")
-    const userId = parts[parts.length - 2]
+    const userId = parts[parts.length - 2];
 
     return `http://127.0.0.1:5174/user_images/${userId}/latest.jpg`
   }
@@ -82,7 +82,7 @@ export default function RegisterCard() {
     setIsAudioPlaying(false)
   }
 
-  console.log("users", user,screening, nextStage)
+  console.log("users", user, screening, nextStage)
   const navigate = useNavigate()
   const { t } = useTranslation()
 
