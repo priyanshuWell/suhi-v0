@@ -3,9 +3,11 @@ import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import bg from '../../../assets/smoothie/bg.jpg';
 import blenderImage from '../../../assets/smoothie/blender.png';
+import ProgressStage from '../../ProgessStage';
 import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
 import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
 import bgMusic from '../../../assets/audio/smoothie/background2.wav';
+import { getNextRoute } from '../../../utils/stageRouter';
 
 const API = "http://127.0.0.1:8000";
 
@@ -158,7 +160,7 @@ export default function SmoothieSlashGame() {
   const engineRef = useRef({});
   const rafRef = useRef(null);
   const sessionIdRef = useRef(null);
-  const nextRouteRef = useRef("/colorblindness");
+  const nextRouteRef = useRef(null);
   const scoreRef = useRef(0);
   const stageStartedAt = useRef(null);   // ISO string, set on each block start
   const stageIdRef = useRef(1);      // current backend stage_id
@@ -289,7 +291,7 @@ export default function SmoothieSlashGame() {
     try {
       const data = await apiStart(userId, screeningSessionId);
       sessionIdRef.current = data.game_session_id;
-      stageIdRef.current = data.stage?.stage_id ?? 0;
+      stageIdRef.current = data.stage?.stage_id ?? 1;
       console.log("[SmoothieSlash] started session:", data.game_session_id, "stage:", data.stage?.stage_id);
     } catch (e) {
       console.warn("[SmoothieSlash] /smoothie/start failed — continuing offline:", e.message);
@@ -332,10 +334,18 @@ export default function SmoothieSlashGame() {
     fruitsRef.current.filter(f => !f.sliced).forEach(f => logEvent(f, "NONE", now));
     fruitsRef.current = []; halvesRef.current = [];
 
-    // push final block (block 6) slashes
+    // push final block (block 6) slashes — response carries screening.next_stage
     const lastBlock = engineRef.current.stage + 1;
     const lastSlashes = eventsRef.current.filter(e => e.block_number === lastBlock);
-    await pushStageComplete(stageIdRef.current, stageStartedAt.current, completedAt, lastSlashes);
+    const finalRes = await pushStageComplete(stageIdRef.current, stageStartedAt.current, completedAt, lastSlashes);
+
+    // derive next route from screening.next_stage in the final stage/complete response
+    if (finalRes?.screening?.next_stage) {
+      nextRouteRef.current = getNextRoute(finalRes.screening.next_stage, '/voice');
+      console.log('[SmoothieSlash] next route from screening:', nextRouteRef.current);
+    } else {
+      console.warn('[SmoothieSlash] no screening.next_stage in final response — using fallback route:', nextRouteRef.current);
+    }
 
     // call /smoothie/game/complete to get full metrics
     let rep = null;
@@ -395,6 +405,9 @@ export default function SmoothieSlashGame() {
   /* ── game loop ──────────────────────────────────────────────────── */
   useEffect(() => {
     if (screen !== SCREENS.GAME) return;
+    // Reset timing on each mount — guards against React StrictMode double-mount
+    // causing a spurious block-transition on the very first frame
+    engineRef.current.t0 = performance.now();
     engineRef.current.last = performance.now();
     const loop = () => {
       const eng = engineRef.current;
@@ -618,600 +631,224 @@ export default function SmoothieSlashGame() {
 
       {/* ── INSTRUCTION ──────────────────────────────────────────── */}
       {screen === SCREENS.INSTRUCTION && (
-        <div
-          className="flex-1 flex flex-col items-center justify-center"
-          style={{
-            backgroundImage: `url(${bg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center bottom",
-            minHeight: "100vh",
-            position: "relative",
-          }}
-        >
-          {/* Overlay */}
+        <>
+          <ProgressStage current={3} />
           <div
-            className="absolute inset-0"
+            className="flex-1 flex flex-col items-center justify-center"
             style={{
-              background: "rgba(10,24,20,.55)",
-              zIndex: 0,
-            }}
-          />
-
-          <div
-            className="relative flex flex-col justify-center"
-            style={{
-              zIndex: 1,
-              width: "100%",
-              maxWidth: 1180,
+              backgroundImage: `url(${bg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center bottom",
               minHeight: "100vh",
-              padding: "70px 70px 60px",
-              gap: 42,
+              position: "relative",
             }}
           >
-            {/* Header */}
-            <div className="flex justify-center">
-              <span
-                className="font-extrabold rounded-full"
-                style={{
-                  fontSize: "clamp(24px,2vw,34px)",
-                  background: "rgba(30,20,10,.75)",
-                  color: "#E8D9BB",
-                  letterSpacing: ".25em",
-                  padding: "18px 48px",
-                }}
-              >
-                FRUIT SLASH KITCHEN
-              </span>
-            </div>
-
-            {/* Title */}
-            <h1
-              className="display text-center leading-none"
-              style={{
-                fontSize: "clamp(5rem,8vw,8rem)",
-                color: "#F2E8CC",
-                textShadow: "0 6px 18px rgba(0,0,0,.55)",
-              }}
-            >
-              SMOOTHIE SLASH
-            </h1>
-
-            {/* Rules */}
+            {/* Overlay */}
             <div
-              className="rounded-[36px]"
+              className="absolute inset-0"
               style={{
-                background: "rgba(25,18,8,.82)",
-                border: "1px solid rgba(255,235,180,.15)",
-                padding: "40px",
+                background: "rgba(10,24,20,.55)",
+                zIndex: 0,
               }}
-            >
-              {/* Rule 1 */}
-              <div className="flex gap-6 items-start mb-10">
-                <div
-                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
-                  style={{
-                    width: 78,
-                    height: 78,
-                    background: "#4CAF50",
-                    color: "#fff",
-                    fontSize: 40,
-                    fontWeight: 700,
-                  }}
-                >
-                  ✓
-                </div>
+            />
 
-                <p
-                  className="font-semibold leading-snug"
-                  style={{
-                    fontSize: "clamp(30px,2vw,38px)",
-                    color: "#EDE4CE",
-                  }}
-                >
-                  Slash{" "}
-                  <span
-                    style={{
-                      color: "#F2B34C",
-                      fontWeight: 900,
-                    }}
-                  >
-                    only the fruits
-                  </span>{" "}
-                  shown in the recipe at the top of the screen.
-                </p>
-              </div>
-
-              {/* Rule 2 */}
-              <div className="flex gap-6 items-start mb-10">
-                <div
-                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
-                  style={{
-                    width: 78,
-                    height: 78,
-                    background: "#E53935",
-                    color: "#fff",
-                    fontSize: 38,
-                    fontWeight: 700,
-                  }}
-                >
-                  ✕
-                </div>
-
-                <p
-                  className="font-semibold leading-snug"
-                  style={{
-                    fontSize: "clamp(30px,2vw,38px)",
-                    color: "#EDE4CE",
-                  }}
-                >
-                  Wrong fruit spoils the blend —
-                  <span
-                    style={{
-                      color: "#E57373",
-                      fontWeight: 900,
-                    }}
-                  >
-                    {" "}
-                    −2 points
-                  </span>{" "}
-                  per miss.
-                </p>
-              </div>
-
-              {/* Rule 3 */}
-              <div className="flex gap-6 items-start">
-                <div
-                  className="flex items-center justify-center rounded-2xl flex-shrink-0"
-                  style={{
-                    width: 78,
-                    height: 78,
-                    background: "#7B61FF",
-                    color: "#fff",
-                    fontSize: 38,
-                    fontWeight: 700,
-                  }}
-                >
-                  ↻
-                </div>
-
-                <p
-                  className="font-semibold leading-snug"
-                  style={{
-                    fontSize: "clamp(30px,2vw,38px)",
-                    color: "#EDE4CE",
-                  }}
-                >
-                  The recipe{" "}
-                  <span
-                    style={{
-                      color: "#C584F5",
-                      fontWeight: 900,
-                    }}
-                  >
-                    changes every 20 seconds
-                  </span>{" "}
-                  — adapt fast and chain combos!
-                </p>
-              </div>
-            </div>
-
-            {/* Recipe Board */}
             <div
-              className="rounded-[36px]"
+              className="relative flex flex-col justify-center"
               style={{
-                background: "rgba(240,228,196,.95)",
-                padding: "36px",
-              }}
-            >
-              <p
-                className="text-center font-extrabold mb-8"
-                style={{
-                  fontSize: "clamp(22px,1.6vw,30px)",
-                  color: "#7A5C28",
-                  letterSpacing: ".25em",
-                }}
-              >
-                TODAY'S RECIPE BOARD
-              </p>
-
-              <div className="grid grid-cols-2 gap-5">
-                {STAGES.map((s) => (
-                  <div
-                    key={s.stageId}
-                    className="flex items-center gap-5 rounded-3xl"
-                    style={{
-                      background: "rgba(255,248,230,.9)",
-                      padding: "22px",
-                    }}
-                  >
-                    <div className="flex gap-2">
-                      {s.targets.map((c) => (
-                        <span
-                          key={c}
-                          className="flex items-center justify-center rounded-2xl"
-                          style={{
-                            width: 68,
-                            height: 68,
-                            background: "#EFE3C3",
-                            fontSize: 38,
-                          }}
-                        >
-                          {FRUITS[c].emoji}
-                        </span>
-                      ))}
-                    </div>
-
-                    <span
-                      className="font-bold leading-tight"
-                      style={{
-                        fontSize: "clamp(26px,2vw,34px)",
-                        color: "#4A3210",
-                      }}
-                    >
-                      {s.stageName}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Timer */}
-            <div className="flex justify-center">
-              <span
-                className="font-bold rounded-full"
-                style={{
-                  fontSize: "clamp(26px,2vw,34px)",
-                  background: "rgba(30,20,10,.78)",
-                  color: "#E8D9BB",
-                  padding: "18px 52px",
-                }}
-              >
-                ⏱ 2:00 on the clock · 6 recipes
-              </span>
-            </div>
-
-            {/* Start Button */}
-            <button
-              onClick={handleStart}
-              className="display active:scale-95 transition-transform"
-              style={{
-                background:
-                  "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
-                color: "#2C1A00",
-                boxShadow: "0 10px 0 #A87400",
-                fontWeight: 900,
-                letterSpacing: ".08em",
-                fontSize: "clamp(44px,3vw,58px)",
-                padding: "34px 0",
-                borderRadius: 70,
+                zIndex: 1,
                 width: "100%",
-                marginTop: 12,
+                maxWidth: 1180,
+                minHeight: "100vh",
+                padding: "70px 70px 60px",
+                gap: 42,
               }}
             >
-              START
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── COUNTDOWN ────────────────────────────────────────────── */}
-      {screen === SCREENS.COUNTDOWN && (
-        <div className="flex-1 flex items-center justify-center" style={{ background: "linear-gradient(180deg,#123A34,#0E2B26)" }}>
-          <span className="display" style={{ fontSize: 140, color: "#FF9B6A" }}>{countdown === 0 ? "GO!" : countdown}</span>
-        </div>
-      )}
-
-      {/* ── GAME ─────────────────────────────────────────────────── */}
-      {screen === SCREENS.GAME && (
-        <div ref={playRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
-          className="relative flex-1 overflow-hidden cursor-crosshair select-none"
-          style={{ touchAction: "none", minHeight: 480, backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center bottom" }}>
-
-          {/* HUD */}
-          <div className="absolute top-0 inset-x-0 pointer-events-none px-5 pt-5" style={{ zIndex: 20 }}>
-            <div className="flex items-start justify-between">
-              <span className="display text-3xl" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>⏱ {mm}:{ss}</span>
-              <div className="text-right">
-                <p className="display text-base leading-none" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>SCORE</p>
-                <p className="display text-4xl leading-tight" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>{score}</p>
-              </div>
-            </div>
-            <div className="flex flex-col items-center -mt-9">
-              <div className="flex gap-2.5">
-                {stage.targets.map(c => (
-                  <div key={c} className="w-32 h-32 rounded-xl flex items-center justify-center"
-                    style={{ background: "#EFE3C3", boxShadow: "0 2px 5px rgba(0,0,0,.3)", fontSize: "3.5rem" }}>
-                    {FRUITS[c].emoji}
-                  </div>
-                ))}
-              </div>
-              {/* Stage name — static position in HUD; animation handled by bannerStyle */}
-              <p className="display mt-3 tracking-wider" style={{ fontSize: "1.4vmax", color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>
-                {stage.stageName.toUpperCase()}
-              </p>
-            </div>
-          </div>
-
-          {/* Blender — bigger: 62% wide up to 260px */}
-          <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "2%", width: "min(62%,260px)", aspectRatio: "672/803" }}>
-            <div className="relative w-[320px] h-[500px]">
-              {/* Liquid */}
-              <div
-                className="absolute overflow-hidden"
-                style={{
-                  left: 70,
-                  right: 70,
-                  top: 55,
-                  bottom: 95,
-                  borderRadius: "0 0 40px 40px",
-                }}
-              >
-                <div
-                  className="absolute left-0 right-0 bottom-0"
+              {/* Header */}
+              <div className="flex justify-center">
+                <span
+                  className="font-extrabold rounded-full"
                   style={{
-                    height: `${fill}%`,
-                    // background: smoothieColor,
-                    transition: "height .3s",
+                    fontSize: "clamp(24px,2vw,34px)",
+                    background: "rgba(30,20,10,.75)",
+                    color: "#E8D9BB",
+                    letterSpacing: ".25em",
+                    padding: "18px 48px",
                   }}
-                />
+                >
+                  FRUIT SLASH KITCHEN
+                </span>
               </div>
 
-              {/* Blender PNG */}
-              <img
-                src={blenderImage}
-                className="absolute inset-0 w-full h-full"
-                alt="Blender"
-              />
-            </div>
-            <div className="absolute overflow-hidden pointer-events-none"
-              style={{ left: "24%", width: "60%", bottom: "32%", height: "54%", borderRadius: "4px 4px 12px 12px" }}>
-              <div className="absolute bottom-0 inset-x-0 transition-all duration-300"
-                style={{ height: `${fill * 100}%`, background: stage.juice, opacity: 0.85 }} />
-              {splashLive && (
-                <div className="absolute left-1/2 w-16 h-7 rounded-full"
-                  style={{ bottom: `${fill * 100}%`, background: splash.color, opacity: 0.9, animation: "jarSplash .55s ease-out forwards" }} />
-              )}
-            </div>
-            {splashLive && (
-              <div className="absolute w-10 h-5 rounded-full pointer-events-none"
-                style={{ left: "40%", top: "2%", background: splash.color, animation: "mouthSplash .5s ease-out forwards" }} />
-            )}
-          </div>
-
-          {/* Animated stage banner */}
-          {bannerAnim && <div style={bannerStyle}>{bannerText}</div>}
-
-          {/* Inter-block pause overlay — dims the scene */}
-          {paused && (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 25, background: "rgba(10,26,22,.45)", animation: "pauseOverlayIn .3s ease" }}>
-            </div>
-          )}
-
-          {/* Fruits */}
-          {fruitsRef.current.map(f => (
-            <div key={f.id} className="absolute pointer-events-none" style={{
-              zIndex: 10,
-              left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`,
-              filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "6vmax"
-            }}>
-              {FRUITS[f.code].emoji}
-            </div>
-          ))}
-
-          {/* Halves */}
-          {halvesRef.current.map(h => (
-            <div key={h.id} className="absolute pointer-events-none" style={{
-              zIndex: 10,
-              fontSize: "4vmax", left: h.x, top: h.y,
-              transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
-              clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
-              opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
-              filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)"
-            }}>
-              {FRUITS[h.code].emoji}
-            </div>
-          ))}
-
-          {/* Slash trail */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
-            {trailRef.current.length > 1 && (
-              <polyline points={trailRef.current.map(pt => `${pt.x},${pt.y}`).join(" ")}
-                fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-            )}
-          </svg>
-
-          {/* Score pops */}
-          {popsRef.current.map(pp => (
-            <div key={pp.id} className="absolute display pointer-events-none" style={{
-              zIndex: 10,
-              left: pp.x, top: pp.y, animation: "popUp .9s ease-out forwards",
-              fontSize: pp.kind === "combo" ? 15 : 18,
-              color: pp.kind === "bad" ? "#E14B4B" : pp.kind === "combo" ? "#C86BE0" : "#FFD34D",
-              textShadow: "0 2px 3px rgba(0,0,0,.4)"
-            }}>
-              {pp.text}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── REPORT ───────────────────────────────────────────────── */}
-      {screen === SCREENS.REPORT && (
-        <div
-          className="flex-1 flex flex-col items-center justify-center"
-          style={{
-            backgroundImage: `url(${bg})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center bottom",
-            minHeight: "100vh",
-            position: "relative",
-          }}
-        >
-          {/* Overlay */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: "rgba(10,24,20,.45)",
-              zIndex: 0,
-            }}
-          />
-
-          <div
-            className="relative flex flex-col justify-center"
-            style={{
-              zIndex: 1,
-              width: "100%",
-              maxWidth: 1180,
-              minHeight: "100vh",
-              padding: "70px 70px 60px",
-              gap: 34,
-            }}
-          >
-            {/* TIME'S UP */}
-            <div className="flex justify-center">
-              <span
-                className="font-extrabold rounded-full flex items-center gap-3"
-                style={{
-                  fontSize: "clamp(24px,2vw,34px)",
-                  background: "rgba(30,20,10,.82)",
-                  color: "#E8D9BB",
-                  letterSpacing: ".18em",
-                  padding: "18px 50px",
-                }}
-              >
-                ⏱ GREAT JOB!
-              </span>
-            </div>
-
-            {/* Stars */}
-            {(() => {
-              const acc = report?.constructs?.divided_attention ?? 0;
-              const stars = acc >= 0.85 ? 3 : acc >= 0.65 ? 2 : 1;
-
-              return (
-                <div className="flex justify-center gap-5">
-                  {[1, 2, 3].map((i) => (
-                    <span
-                      key={i}
-                      style={{
-                        fontSize: 88,
-                        filter:
-                          i <= stars
-                            ? "drop-shadow(0 5px 12px rgba(255,200,0,.8))"
-                            : "grayscale(1) opacity(.35)",
-                      }}
-                    >
-                      ⭐
-                    </span>
-                  ))}
-                </div>
-              );
-            })()}
-
-            {/* Score */}
-            <div className="text-center">
-              <h2
-                className="display leading-none"
+              {/* Title */}
+              <h1
+                className="display text-center leading-none"
                 style={{
                   fontSize: "clamp(5rem,8vw,8rem)",
                   color: "#F2E8CC",
                   textShadow: "0 6px 18px rgba(0,0,0,.55)",
                 }}
               >
-                SCORE {score.toLocaleString()}
-              </h2>
+                SMOOTHIE SLASH
+              </h1>
 
-            </div>
+              {/* Rules */}
+              <div
+                className="rounded-[36px]"
+                style={{
+                  background: "rgba(25,18,8,.82)",
+                  border: "1px solid rgba(255,235,180,.15)",
+                  padding: "40px",
+                }}
+              >
+                {/* Rule 1 */}
+                <div className="flex gap-6 items-start mb-10">
+                  <div
+                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                    style={{
+                      width: 78,
+                      height: 78,
+                      background: "#4CAF50",
+                      color: "#fff",
+                      fontSize: 40,
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✓
+                  </div>
 
-            {/* Accuracy Card */}
-            <div
-              className="rounded-[36px]"
-              style={{
-                background: "rgba(240,228,196,.95)",
-                padding: "40px",
-              }}
-            >
-              {(() => {
-                const totalAcc = report?.constructs?.divided_attention;
-
-                return (
-                  <>
-                    <div className="flex items-center justify-between mb-5">
-                      <span
-                        className="font-extrabold"
-                        style={{
-                          fontSize: "clamp(22px,1.5vw,28px)",
-                          color: "#7A5C28",
-                          letterSpacing: ".18em",
-                        }}
-                      >
-                        RECIPES MADE CORRECTLY
-                      </span>
-
-                      <span
-                        className="display font-black"
-                        style={{
-                          fontSize: "clamp(46px,3vw,60px)",
-                          color: "#3A2800",
-                        }}
-                      >
-                        {totalAcc != null
-                          ? `${Math.round(totalAcc * 100)}%`
-                          : "—"}
-                      </span>
-                    </div>
-
-                    <div
-                      className="rounded-full mb-8"
+                  <p
+                    className="font-semibold leading-snug"
+                    style={{
+                      fontSize: "clamp(30px,2vw,38px)",
+                      color: "#EDE4CE",
+                    }}
+                  >
+                    Slash{" "}
+                    <span
                       style={{
-                        height: 22,
-                        background: "#D9C89A",
+                        color: "#F2B34C",
+                        fontWeight: 900,
                       }}
                     >
-                      <div
-                        className="rounded-full h-full"
-                        style={{
-                          width: `${Math.round((totalAcc ?? 0) * 100)}%`,
-                          background: "#E8A800",
-                          transition: "width .6s",
-                        }}
-                      />
-                    </div>
-                  </>
-                );
-              })()}
+                      only the fruits
+                    </span>{" "}
+                    shown in the recipe at the top of the screen.
+                  </p>
+                </div>
 
-              {/* Stage Results */}
-              {(() => {
-                const blocks = report?.blocks ?? [];
+                {/* Rule 2 */}
+                <div className="flex gap-6 items-start mb-10">
+                  <div
+                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                    style={{
+                      width: 78,
+                      height: 78,
+                      background: "#E53935",
+                      color: "#fff",
+                      fontSize: 38,
+                      fontWeight: 700,
+                    }}
+                  >
+                    ✕
+                  </div>
 
-                return STAGES.map((s, i) => {
-                  const b = blocks[i];
-                  const acc = b?.acc ?? null;
-                  const pct = acc != null ? Math.round(acc * 100) : null;
+                  <p
+                    className="font-semibold leading-snug"
+                    style={{
+                      fontSize: "clamp(30px,2vw,38px)",
+                      color: "#EDE4CE",
+                    }}
+                  >
+                    Wrong fruit spoils the blend —
+                    <span
+                      style={{
+                        color: "#E57373",
+                        fontWeight: 900,
+                      }}
+                    >
+                      {" "}
+                      −2 points
+                    </span>{" "}
+                    per miss.
+                  </p>
+                </div>
 
-                  const color =
-                    pct >= 80
-                      ? "#4CAF50"
-                      : pct >= 60
-                        ? "#E8A800"
-                        : "#E57373";
+                {/* Rule 3 */}
+                <div className="flex gap-6 items-start">
+                  <div
+                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                    style={{
+                      width: 78,
+                      height: 78,
+                      background: "#7B61FF",
+                      color: "#fff",
+                      fontSize: 38,
+                      fontWeight: 700,
+                    }}
+                  >
+                    ↻
+                  </div>
 
-                  return (
+                  <p
+                    className="font-semibold leading-snug"
+                    style={{
+                      fontSize: "clamp(30px,2vw,38px)",
+                      color: "#EDE4CE",
+                    }}
+                  >
+                    The recipe{" "}
+                    <span
+                      style={{
+                        color: "#C584F5",
+                        fontWeight: 900,
+                      }}
+                    >
+                      changes every 20 seconds
+                    </span>{" "}
+                    — adapt fast and chain combos!
+                  </p>
+                </div>
+              </div>
+
+              {/* Recipe Board */}
+              <div
+                className="rounded-[36px]"
+                style={{
+                  background: "rgba(240,228,196,.95)",
+                  padding: "36px",
+                }}
+              >
+                <p
+                  className="text-center font-extrabold mb-8"
+                  style={{
+                    fontSize: "clamp(22px,1.6vw,30px)",
+                    color: "#7A5C28",
+                    letterSpacing: ".25em",
+                  }}
+                >
+                  TODAY'S RECIPE BOARD
+                </p>
+
+                <div className="grid grid-cols-2 gap-5">
+                  {STAGES.map((s) => (
                     <div
                       key={s.stageId}
-                      className="flex items-center gap-5 mb-6"
+                      className="flex items-center gap-5 rounded-3xl"
+                      style={{
+                        background: "rgba(255,248,230,.9)",
+                        padding: "22px",
+                      }}
                     >
-                      <div className="flex gap-2 flex-shrink-0">
+                      <div className="flex gap-2">
                         {s.targets.map((c) => (
                           <span
                             key={c}
                             className="flex items-center justify-center rounded-2xl"
                             style={{
-                              width: 62,
-                              height: 62,
+                              width: 68,
+                              height: 68,
                               background: "#EFE3C3",
-                              fontSize: 34,
+                              fontSize: 38,
                             }}
                           >
                             {FRUITS[c].emoji}
@@ -1220,52 +857,37 @@ export default function SmoothieSlashGame() {
                       </div>
 
                       <span
-                        className="font-bold"
+                        className="font-bold leading-tight"
                         style={{
-                          fontSize: "clamp(24px,1.8vw,32px)",
-                          color: "#3A2800",
-                          minWidth: 210,
+                          fontSize: "clamp(26px,2vw,34px)",
+                          color: "#4A3210",
                         }}
                       >
                         {s.stageName}
                       </span>
-
-                      <div
-                        className="flex-1 rounded-full"
-                        style={{
-                          height: 18,
-                          background: "#D9C89A",
-                        }}
-                      >
-                        <div
-                          className="rounded-full h-full transition-all"
-                          style={{
-                            width: `${pct ?? 0}%`,
-                            background: color,
-                          }}
-                        />
-                      </div>
-
-                      <span
-                        className="font-extrabold"
-                        style={{
-                          fontSize: "clamp(24px,2vw,32px)",
-                          color: "#3A2800",
-                          minWidth: 70,
-                          textAlign: "right",
-                        }}
-                      >
-                        {pct != null ? `${pct}%` : "—"}
-                      </span>
                     </div>
-                  );
-                });
-              })()}
-            </div>
-            {/* Buttons */}
-            <div className="flex flex-col gap-5 mt-3">
+                  ))}
+                </div>
+              </div>
+
+              {/* Timer */}
+              <div className="flex justify-center">
+                <span
+                  className="font-bold rounded-full"
+                  style={{
+                    fontSize: "clamp(26px,2vw,34px)",
+                    background: "rgba(30,20,10,.78)",
+                    color: "#E8D9BB",
+                    padding: "18px 52px",
+                  }}
+                >
+                  ⏱ 2:00 on the clock · 6 recipes
+                </span>
+              </div>
+
+              {/* Start Button */}
               <button
-                onClick={() => navigate(nextRouteRef.current)}
+                onClick={handleStart}
                 className="display active:scale-95 transition-transform"
                 style={{
                   background:
@@ -1278,15 +900,416 @@ export default function SmoothieSlashGame() {
                   padding: "34px 0",
                   borderRadius: 70,
                   width: "100%",
+                  marginTop: 12,
                 }}
               >
-                NEXT
+                START
               </button>
             </div>
           </div>
-        </div>
+        </>
+      )
+      }
 
-      )}
-    </div>
+      {/* ── COUNTDOWN ────────────────────────────────────────────── */}
+      {
+        screen === SCREENS.COUNTDOWN && (
+          <div className="flex-1 flex items-center justify-center" style={{ background: "linear-gradient(180deg,#123A34,#0E2B26)" }}>
+            <span className="display" style={{ fontSize: 140, color: "#FF9B6A" }}>{countdown === 0 ? "GO!" : countdown}</span>
+          </div>
+        )
+      }
+
+      {/* ── GAME ─────────────────────────────────────────────────── */}
+      {
+        screen === SCREENS.GAME && (
+          <div ref={playRef} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerLeave={onUp}
+            className="relative flex-1 overflow-hidden cursor-crosshair select-none"
+            style={{ touchAction: "none", minHeight: 480, backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center bottom" }}>
+
+            {/* HUD */}
+            <div className="absolute top-0 inset-x-0 pointer-events-none px-5 pt-5" style={{ zIndex: 20 }}>
+              <div className="flex items-start justify-between">
+                <span className="display text-3xl" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>⏱ {mm}:{ss}</span>
+                <div className="text-right">
+                  <p className="display text-base leading-none" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>SCORE</p>
+                  <p className="display text-4xl leading-tight" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>{score}</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-center -mt-9">
+                <div className="flex gap-2.5">
+                  {stage.targets.map(c => (
+                    <div key={c} className="w-32 h-32 rounded-xl flex items-center justify-center"
+                      style={{ background: "#EFE3C3", boxShadow: "0 2px 5px rgba(0,0,0,.3)", fontSize: "3.5rem" }}>
+                      {FRUITS[c].emoji}
+                    </div>
+                  ))}
+                </div>
+                {/* Stage name — static position in HUD; animation handled by bannerStyle */}
+                <p className="display mt-3 tracking-wider" style={{ fontSize: "1.4vmax", color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>
+                  {stage.stageName.toUpperCase()}
+                </p>
+              </div>
+            </div>
+
+            {/* Blender — bigger: 62% wide up to 260px */}
+            <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "2%", width: "min(62%,260px)", aspectRatio: "672/803" }}>
+              <div className="relative w-[320px] h-[500px]">
+                {/* Liquid */}
+                <div
+                  className="absolute overflow-hidden"
+                  style={{
+                    left: 70,
+                    right: 70,
+                    top: 55,
+                    bottom: 95,
+                    borderRadius: "0 0 40px 40px",
+                  }}
+                >
+                  <div
+                    className="absolute left-0 right-0 bottom-0"
+                    style={{
+                      height: `${fill}%`,
+                      // background: smoothieColor,
+                      transition: "height .3s",
+                    }}
+                  />
+                </div>
+
+                {/* Blender PNG */}
+                <img
+                  src={blenderImage}
+                  className="absolute inset-0 w-full h-full"
+                  alt="Blender"
+                />
+              </div>
+              <div className="absolute overflow-hidden pointer-events-none"
+                style={{ left: "24%", width: "60%", bottom: "32%", height: "54%", borderRadius: "4px 4px 12px 12px" }}>
+                <div className="absolute bottom-0 inset-x-0 transition-all duration-300"
+                  style={{ height: `${fill * 100}%`, background: stage.juice, opacity: 0.85 }} />
+                {splashLive && (
+                  <div className="absolute left-1/2 w-16 h-7 rounded-full"
+                    style={{ bottom: `${fill * 100}%`, background: splash.color, opacity: 0.9, animation: "jarSplash .55s ease-out forwards" }} />
+                )}
+              </div>
+              {splashLive && (
+                <div className="absolute w-10 h-5 rounded-full pointer-events-none"
+                  style={{ left: "40%", top: "2%", background: splash.color, animation: "mouthSplash .5s ease-out forwards" }} />
+              )}
+            </div>
+
+            {/* Animated stage banner */}
+            {bannerAnim && <div style={bannerStyle}>{bannerText}</div>}
+
+            {/* Inter-block pause overlay — dims the scene */}
+            {paused && (
+              <div className="absolute inset-0 flex items-center justify-center" style={{ zIndex: 25, background: "rgba(10,26,22,.45)", animation: "pauseOverlayIn .3s ease" }}>
+              </div>
+            )}
+
+            {/* Fruits */}
+            {fruitsRef.current.map(f => (
+              <div key={f.id} className="absolute pointer-events-none" style={{
+                zIndex: 10,
+                left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`,
+                filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "6vmax"
+              }}>
+                {FRUITS[f.code].emoji}
+              </div>
+            ))}
+
+            {/* Halves */}
+            {halvesRef.current.map(h => (
+              <div key={h.id} className="absolute pointer-events-none" style={{
+                zIndex: 10,
+                fontSize: "4vmax", left: h.x, top: h.y,
+                transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
+                clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
+                opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
+                filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)"
+              }}>
+                {FRUITS[h.code].emoji}
+              </div>
+            ))}
+
+            {/* Slash trail */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
+              {trailRef.current.length > 1 && (
+                <polyline points={trailRef.current.map(pt => `${pt.x},${pt.y}`).join(" ")}
+                  fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+              )}
+            </svg>
+
+            {/* Score pops */}
+            {popsRef.current.map(pp => (
+              <div key={pp.id} className="absolute display pointer-events-none" style={{
+                zIndex: 10,
+                left: pp.x, top: pp.y, animation: "popUp .9s ease-out forwards",
+                fontSize: pp.kind === "combo" ? 15 : 18,
+                color: pp.kind === "bad" ? "#E14B4B" : pp.kind === "combo" ? "#C86BE0" : "#FFD34D",
+                textShadow: "0 2px 3px rgba(0,0,0,.4)"
+              }}>
+                {pp.text}
+              </div>
+            ))}
+          </div>
+        )
+      }
+
+      {/* ── REPORT ───────────────────────────────────────────────── */}
+      {
+        screen === SCREENS.REPORT && (
+          <div
+            className="flex-1 flex flex-col items-center justify-center"
+            style={{
+              backgroundImage: `url(${bg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center bottom",
+              minHeight: "100vh",
+              position: "relative",
+            }}
+          >
+            {/* Overlay */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: "rgba(10,24,20,.45)",
+                zIndex: 0,
+              }}
+            />
+
+            <div
+              className="relative flex flex-col justify-center"
+              style={{
+                zIndex: 1,
+                width: "100%",
+                maxWidth: 1180,
+                minHeight: "100vh",
+                padding: "70px 70px 60px",
+                gap: 34,
+              }}
+            >
+              {/* TIME'S UP */}
+              <div className="flex justify-center">
+                <span
+                  className="font-extrabold rounded-full flex items-center gap-3"
+                  style={{
+                    fontSize: "clamp(24px,2vw,34px)",
+                    background: "rgba(30,20,10,.82)",
+                    color: "#E8D9BB",
+                    letterSpacing: ".18em",
+                    padding: "18px 50px",
+                  }}
+                >
+                  ⏱ GREAT JOB!
+                </span>
+              </div>
+
+              {/* Stars */}
+              {(() => {
+                const acc = report?.constructs?.divided_attention ?? 0;
+                const stars = acc >= 0.85 ? 3 : acc >= 0.65 ? 2 : 1;
+
+                return (
+                  <div className="flex justify-center gap-5">
+                    {[1, 2, 3].map((i) => (
+                      <span
+                        key={i}
+                        style={{
+                          fontSize: 88,
+                          filter:
+                            i <= stars
+                              ? "drop-shadow(0 5px 12px rgba(255,200,0,.8))"
+                              : "grayscale(1) opacity(.35)",
+                        }}
+                      >
+                        ⭐
+                      </span>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* Score */}
+              <div className="text-center">
+                <h2
+                  className="display leading-none"
+                  style={{
+                    fontSize: "clamp(5rem,8vw,8rem)",
+                    color: "#F2E8CC",
+                    textShadow: "0 6px 18px rgba(0,0,0,.55)",
+                  }}
+                >
+                  SCORE {score.toLocaleString()}
+                </h2>
+
+              </div>
+
+              {/* Accuracy Card */}
+              <div
+                className="rounded-[36px]"
+                style={{
+                  background: "rgba(240,228,196,.95)",
+                  padding: "40px",
+                }}
+              >
+                {(() => {
+                  const totalAcc = report?.constructs?.divided_attention;
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-5">
+                        <span
+                          className="font-extrabold"
+                          style={{
+                            fontSize: "clamp(22px,1.5vw,28px)",
+                            color: "#7A5C28",
+                            letterSpacing: ".18em",
+                          }}
+                        >
+                          RECIPES MADE CORRECTLY
+                        </span>
+
+                        <span
+                          className="display font-black"
+                          style={{
+                            fontSize: "clamp(46px,3vw,60px)",
+                            color: "#3A2800",
+                          }}
+                        >
+                          {totalAcc != null
+                            ? `${Math.round(totalAcc * 100)}%`
+                            : "—"}
+                        </span>
+                      </div>
+
+                      <div
+                        className="rounded-full mb-8"
+                        style={{
+                          height: 22,
+                          background: "#D9C89A",
+                        }}
+                      >
+                        <div
+                          className="rounded-full h-full"
+                          style={{
+                            width: `${Math.round((totalAcc ?? 0) * 100)}%`,
+                            background: "#E8A800",
+                            transition: "width .6s",
+                          }}
+                        />
+                      </div>
+                    </>
+                  );
+                })()}
+
+                {/* Stage Results */}
+                {(() => {
+                  const blocks = report?.blocks ?? [];
+
+                  return STAGES.map((s, i) => {
+                    const b = blocks[i];
+                    const acc = b?.acc ?? null;
+                    const pct = acc != null ? Math.round(acc * 100) : null;
+
+                    const color =
+                      pct >= 80
+                        ? "#4CAF50"
+                        : pct >= 60
+                          ? "#E8A800"
+                          : "#E57373";
+
+                    return (
+                      <div
+                        key={s.stageId}
+                        className="flex items-center gap-5 mb-6"
+                      >
+                        <div className="flex gap-2 flex-shrink-0">
+                          {s.targets.map((c) => (
+                            <span
+                              key={c}
+                              className="flex items-center justify-center rounded-2xl"
+                              style={{
+                                width: 62,
+                                height: 62,
+                                background: "#EFE3C3",
+                                fontSize: 34,
+                              }}
+                            >
+                              {FRUITS[c].emoji}
+                            </span>
+                          ))}
+                        </div>
+
+                        <span
+                          className="font-bold"
+                          style={{
+                            fontSize: "clamp(24px,1.8vw,32px)",
+                            color: "#3A2800",
+                            minWidth: 210,
+                          }}
+                        >
+                          {s.stageName}
+                        </span>
+
+                        <div
+                          className="flex-1 rounded-full"
+                          style={{
+                            height: 18,
+                            background: "#D9C89A",
+                          }}
+                        >
+                          <div
+                            className="rounded-full h-full transition-all"
+                            style={{
+                              width: `${pct ?? 0}%`,
+                              background: color,
+                            }}
+                          />
+                        </div>
+
+                        <span
+                          className="font-extrabold"
+                          style={{
+                            fontSize: "clamp(24px,2vw,32px)",
+                            color: "#3A2800",
+                            minWidth: 70,
+                            textAlign: "right",
+                          }}
+                        >
+                          {pct != null ? `${pct}%` : "—"}
+                        </span>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+              {/* Buttons */}
+              <div className="flex flex-col gap-5 mt-3">
+                <button
+                  onClick={() => navigate(nextRouteRef.current)}
+                  className="display active:scale-95 transition-transform"
+                  style={{
+                    background:
+                      "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                    color: "#2C1A00",
+                    boxShadow: "0 10px 0 #A87400",
+                    fontWeight: 900,
+                    letterSpacing: ".08em",
+                    fontSize: "clamp(44px,3vw,58px)",
+                    padding: "34px 0",
+                    borderRadius: 70,
+                    width: "100%",
+                  }}
+                >
+                  NEXT
+                </button>
+              </div>
+            </div>
+          </div>
+
+        )
+      }
+    </div >
   );
 }
