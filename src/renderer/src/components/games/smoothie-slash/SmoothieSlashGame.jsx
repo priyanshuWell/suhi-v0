@@ -57,7 +57,7 @@ const SESSION_SEC = 120;
 const BLOCK_SEC = 20;
 const SPAWN_MS = 650;
 const MAX_ALIVE = 7;
-const FRUIT_R_BASE = 0.06; // fraction of playfield height
+const FRUIT_R_BASE = 0.045; // fraction of playfield height
 const BANNER_MS = 1300;
 const GRAVITY = 380;
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
@@ -541,7 +541,7 @@ export default function SmoothieSlashGame() {
 
             {fruitsRef.current.map((f) => (
               <div key={f.id} className="absolute text-5xl pointer-events-none z-10"
-                style={{ left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`, filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "8vmax" }}>
+                style={{ left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`, filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "6vmax" }}>
                 {FRUITS[f.code].emoji}
               </div>
             ))}
@@ -549,7 +549,7 @@ export default function SmoothieSlashGame() {
             {halvesRef.current.map((h) => (
               <div key={h.id} className="absolute text-5xl pointer-events-none z-10"
                 style={{
-                  fontSize: "5vmax",
+                  fontSize: "4vmax",
                   left: h.x, top: h.y,
                   transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
                   clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
