@@ -644,7 +644,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.error(`[BIA DEBUG] Phase 1 DOUBLE FAIL — W:${weightOk} H:${heightOk} — skipping BIA`);
         await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
         console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
-        await saveBuffer('wh_skip');
+       // await saveBuffer('wh_skip');
         // Disconnect ports before navigating away
         console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
         await Promise.allSettled([
@@ -990,7 +990,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (result?.screening) dispatch(setScreening(result.screening));
 
     console.log(`[BIA REC] ⏏️  ${bufferTag} → saveBuffer('${bufferTag}')`);
-    await saveBuffer(bufferTag);
+    //await saveBuffer(bufferTag);
 
     await new Promise((resolve) => { imCompleteResolver.current = resolve; });
     setIsComplete(true);
@@ -1171,7 +1171,7 @@ export default function BIACalculate({ user, onComplete }) {
       screening_session_id: screeningState?.sessionId,
     });
     if (result?.screening) dispatch(setScreening(result.screening));
-    await saveBuffer("noleg_arm_exhausted");
+    //await saveBuffer("noleg_arm_exhausted");
     const route = getNextRoute(result?.screening?.next_stage, '/space-convoy-main');
     console.log('[BIA] No-leg exhausted — navigating to:', route);
     navigate(route);

@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: suhi
+productName: suhi-smooth
 directories:
   buildResources: build
 files:
@@ -11,7 +11,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: suhi-v0
+  executableName: suhi-smooth
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

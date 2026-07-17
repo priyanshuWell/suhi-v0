@@ -490,8 +490,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                             icon={<BrainIconS style={{ width: '100%', height: '100%' }} />}
                             color="#2CEF94"
                             rows={[
-                                { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
-                                { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Developing') },
+                                { label: 'Divided Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
+                                { label: 'Cognitive Flexibility', value: formatLabel(apiReport?.memory?.level, 'Developing') },
                                 { label: 'Learning Style', value: learnerStyleLabel },
                             ]}
                         />
