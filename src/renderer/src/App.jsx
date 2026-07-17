@@ -81,7 +81,7 @@ function App() {
 
           {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
           <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} /> */}
-          {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
+          <Route path='/identify-student' element={<IdentifyStudent />} />
 
         </Route>
 

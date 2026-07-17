@@ -98,7 +98,7 @@ export const StartScreen = () => {
       transition={{ duration: 1, ease: "easeOut" }}
       className="fixed inset-0 w-screen h-screen overflow-hidden bg-black"
     >
-      <style>{CAL_WARN_STYLES}</style>
+      {/* <style>{CAL_WARN_STYLES}</style> */}
 
       {/* Audio */}
       <audio
