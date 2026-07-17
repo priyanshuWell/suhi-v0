@@ -37,7 +37,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
-  const [showHeightError, setShowHeightError] = useState(true);
+  const [showHeightError, setShowHeightError] = useState(false);
   const [heightErrorCountdown, setHeightErrorCountdown] = useState(10);
   const [isComplete, setIsComplete] = useState(false);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
@@ -366,6 +366,18 @@ export default function BIACalculate({ user, onComplete }) {
   ======================= */
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  /**
+   * Races `promise` against a timeout — identical to the withTimeout helper
+   * in measurementUtils.js. Rejects with `errorMessage` if deadline is hit first.
+   */
+  const withTimeout = (promise, timeoutMs, errorMessage) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+      ),
+    ]);
+
   // const clearAllTimeouts = () => {
   //   console.log("[BIA DEBUG] Clearing all timeouts");
   //   if (timeoutRefs.current.global) {
@@ -485,27 +497,43 @@ export default function BIACalculate({ user, onComplete }) {
     return res;
   };
 
+  // Height sensor timeout: 10 seconds to get a stable reading
+  const HEIGHT_SENSOR_TIMEOUT_MS = 10000;
+
   const measureHeight = async () => {
-    console.log("[BIA DEBUG] Starting height measurement...");
-    // setCurrentStatus("Measuring your weight, please stand still!")
+    console.log("[BIA DEBUG] Starting height measurement (10s timeout)...");
     console.log('[MEASUREMENT] Connecting to height port:', PORT_PATHS.HEIGHT);
     await window.api.connectHeightPort(PORT_PATHS.HEIGHT);
-    const res = await window.api.startHeightMeasurement();
-    console.log("[BIA DEBUG] Height result:", res);
 
-    if (!res?.height) {
-      console.error("[BIA DEBUG] Height measurement failed - no height data");
-      throw new Error("Height failed");
+    try {
+      // Race the sensor against a 10-second deadline.
+      // If no stable reading arrives within 10s → throws → heightOk = false
+      // → StandProperlyModal is shown for 10s → auto-retry.
+      const res = await withTimeout(
+        window.api.startHeightMeasurement(),
+        HEIGHT_SENSOR_TIMEOUT_MS,
+        'Height measurement timeout — user may not be standing properly'
+      );
+      console.log("[BIA DEBUG] Height result:", res);
+
+      if (!res?.height) {
+        console.error("[BIA DEBUG] Height measurement failed - no height data");
+        throw new Error("Height failed");
+      }
+
+      resultsRef.current.height = {
+        value: Number(res.height),
+        unit: "cm"
+      };
+      console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
+      dispatch(setHeight(resultsRef.current.height?.value));
+      return res;
+    } catch (err) {
+      // Disconnect port so Attempt 2 can reconnect to a clean state.
+      console.warn('[BIA DEBUG] Height error/timeout — disconnecting port before re-throw:', err.message);
+      await window.api.disconnectHeightPort().catch(() => {});
+      throw err;
     }
-    // storePreliminaryMeasurements(dispatch, res.weight, null);
-
-    resultsRef.current.height = {
-      value: Number(res.height),
-      unit: "cm"
-    };
-    console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
-    dispatch(setHeight(resultsRef.current.height?.value));
-    return res;
   };
   const measureLegImpedance = async () => {
     console.log("[BIA DEBUG] Starting leg impedance 50kHz measurement...");
