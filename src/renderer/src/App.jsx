@@ -27,6 +27,7 @@ import ScreeningLayout from './components/ScreeningLayout'
 import View360Viewer from './components/voice/View360Viewer'
 import Result from './components/bia/Result'
 import BiaReportRouter from './components/bia/BiaReportRouter'
+import IdentifyStudent from './components/IdentifiedStudent'
 import SmoothieSlashGame from './components/games/smoothie-slash/SmoothieSlashGame'
 
 function App() {

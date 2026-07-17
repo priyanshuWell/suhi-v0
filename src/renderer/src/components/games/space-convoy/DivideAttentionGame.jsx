@@ -539,7 +539,8 @@ export default function SpaceConvoy() {
     const sessionId = location.state?.sessionId ?? null;
     const sessionType = location.state?.sessionType ?? "main"; 
     const storeUser = useSelector((state) => state.common.user);  // "practice" | "main"
-    const screeningSessionId = storeUser?.screening?.session_id;
+    const screeningState = useSelector((state) => state.common.screening);
+    const screeningSessionId = screeningState?.sessionId;
     const userId = storeUser?.data?.user_id;
     // pull userId from redux
     //const userId = useSelector((state) => state.auth?.user?.id);

@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron"
+import { app, shell, BrowserWindow, ipcMain,session } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 // import * as biaa from './bia-script'
@@ -12,6 +12,52 @@ import { spawn } from "child_process"
 const loudness = require("loudness")
 
 let mainWindow = null
+
+// ─── Calibration persistence ───────────────────────────────────────────────────
+// Path is resolved lazily after app is ready so app.getPath('userData') works.
+let CALIBRATION_FILE = null
+
+function getCalibrationPath() {
+  if (!CALIBRATION_FILE) {
+    CALIBRATION_FILE = join(app.getPath('userData'), 'calibration.json')
+  }
+  return CALIBRATION_FILE
+}
+
+/** Read calibration.json → push values into biaa.weightCalibration */
+function loadCalibration() {
+  const filePath = getCalibrationPath()
+  try {
+    if (fs.existsSync(filePath)) {
+      const raw = fs.readFileSync(filePath, 'utf-8')
+      const saved = JSON.parse(raw)
+      biaa.weightCalibration.zeroOffset   = saved.zeroOffset   ?? biaa.weightCalibration.zeroOffset
+      biaa.weightCalibration.factor       = saved.factor       ?? biaa.weightCalibration.factor
+      biaa.weightCalibration.calibratedAt = saved.calibratedAt ?? null
+      biaa.weightCalibration.isCalibrated = saved.isCalibrated ?? false
+      console.log('[CAL] Calibration loaded from', filePath, biaa.weightCalibration)
+      return { loaded: true, calibration: { ...biaa.weightCalibration } }
+    } else {
+      console.log('[CAL] No calibration file found — using defaults (not calibrated)')
+      return { loaded: false, calibration: { ...biaa.weightCalibration } }
+    }
+  } catch (err) {
+    console.error('[CAL] Failed to load calibration:', err.message)
+    return { loaded: false, calibration: { ...biaa.weightCalibration } }
+  }
+}
+
+/** Write current biaa.weightCalibration → calibration.json */
+function saveCalibration() {
+  const filePath = getCalibrationPath()
+  try {
+    fs.writeFileSync(filePath, JSON.stringify(biaa.weightCalibration, null, 2), 'utf-8')
+    console.log('[CAL] Calibration saved to', filePath)
+  } catch (err) {
+    console.error('[CAL] Failed to save calibration:', err.message)
+  }
+}
+
 
 // ─── Unity Game process handle ───────────────────────────────────────────────
 let unityProcess = null
@@ -222,6 +268,95 @@ ipcMain.handle("start-weight-measurement", async () => {
     return { success: false, error: error.message }
   }
 })
+
+// ─── Calibration IPC handlers ─────────────────────────────────────────────────
+
+/** Returns current calibration state (isCalibrated, factor, zeroOffset, calibratedAt) */
+ipcMain.handle('get-calibration-status', () => {
+  return { ...biaa.weightCalibration }
+})
+
+/** Silent tare — reads zero offset from empty scale and persists it */
+ipcMain.handle('run-tare', async (_event, portPath) => {
+  try {
+    // Ensure BIA port is connected (optionally connect on demand)
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      if (portPath) {
+        await biaa.connectBiaPort(portPath)
+        await new Promise((r) => setTimeout(r, 600))
+      } else {
+        return { success: false, error: 'BIA port not connected' }
+      }
+    }
+    const cal = await biaa.performTare()
+    saveCalibration()
+    return { success: true, calibration: cal }
+  } catch (err) {
+    console.error('[CAL] run-tare error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
+/** Full calibration — computes calibration factor using a known reference weight and persists */
+ipcMain.handle('run-full-calibration', async (_event, { knownWeightKg, portPath }) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      if (portPath) {
+        await biaa.connectBiaPort(portPath)
+        await new Promise((r) => setTimeout(r, 600))
+      } else {
+        return { success: false, error: 'BIA port not connected' }
+      }
+    }
+    const cal = await biaa.performFullCalibration(knownWeightKg)
+    saveCalibration()
+    return { success: true, calibration: cal }
+  } catch (err) {
+    console.error('[CAL] run-full-calibration error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
+/**
+ * Multi-point calibration — reads stable raw at ONE reference weight and returns per-point factor.
+ * Call for 50 kg and 100 kg separately; average the two factors in the renderer,
+ * then call apply-averaged-factor to persist.
+ */
+ipcMain.handle('run-multipoint-calibration', async (_event, { knownWeightKg, portPath }) => {
+  try {
+    if (!biaa.biaPort || !biaa.biaPort.isOpen) {
+      if (portPath) {
+        await biaa.connectBiaPort(portPath)
+        await new Promise((r) => setTimeout(r, 600))
+      } else {
+        return { success: false, error: 'BIA port not connected' }
+      }
+    }
+    const result = await biaa.performMultiPointCalibration(knownWeightKg)
+    return { success: true, ...result }
+  } catch (err) {
+    console.error('[CAL] run-multipoint-calibration error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
+/**
+ * Apply averaged factor — stores the pre-computed avg factor into weightCalibration and persists to disk.
+ */
+ipcMain.handle('apply-averaged-factor', async (_event, { avgFactor }) => {
+  try {
+    if (typeof avgFactor !== 'number' || avgFactor <= 0) {
+      return { success: false, error: 'Invalid averaged factor' }
+    }
+    const cal = biaa.applyAveragedFactor(avgFactor)
+    saveCalibration()
+    return { success: true, calibration: cal }
+  } catch (err) {
+    console.error('[CAL] apply-averaged-factor error:', err.message)
+    return { success: false, error: err.message }
+  }
+})
+
 ipcMain.handle("start-height-measurement", async () => {
   if (!biaa.heightPort) {
     return { success: false }
@@ -613,7 +748,8 @@ function createWindow() {
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
-      autoplayPolicy: "no-user-gesture-required"
+      autoplayPolicy: "no-user-gesture-required",
+      
     }
   })
 
@@ -639,6 +775,15 @@ function createWindow() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  session.defaultSession.setPermissionRequestHandler(
+    (webContents, permission, callback) => {
+      if (permission === "media") {
+        callback(true)
+      } else {
+        callback(false)
+      }
+    }
+  )
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron")
 
@@ -650,6 +795,11 @@ app.whenReady().then(() => {
   })
 
   createWindow()
+
+  // ── Load calibration from disk ─────────────────────────────────────────────
+  // Must be called after app.getPath('userData') is available (i.e. after app ready).
+  loadCalibration()
+  console.log('[MAIN] Calibration state on startup:', biaa.weightCalibration)
 
   eventBus.on("height:error", (payload) => {
     console.log("[MAIN] Forwarding height error to renderer:", payload)

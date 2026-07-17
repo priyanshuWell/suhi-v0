@@ -911,6 +911,17 @@ let impedance100kHzResults = null
 export let finalweight = null
 export let finalheight = null
 
+// ======================== DYNAMIC CALIBRATION ========================
+// Module-level calibration state — loaded from disk by index.js on startup.
+// Falls back to the original hardcoded values so existing behaviour is preserved
+// if no calibration file exists yet.
+export let weightCalibration = {
+  zeroOffset: 0.0,     // rawWeight subtracted before applying factor
+  factor: 1.53138,     // multiply (rawWeight - zeroOffset) to get kg
+  calibratedAt: null,  // ISO timestamp of last full calibration
+  isCalibrated: false  // false until a real calibration has been performed
+}
+
 const READ_CMD = Buffer.from([0x55, 0xaa, 0x01, 0x01, 0x01])
 
 function verifyChecksum(frame) {
@@ -4358,14 +4369,13 @@ export async function case41_WeightMeasurement() {
         }
 
         // ══════════════════════════════════════════════════════════
-        // APPLY CALIBRATION
+        // APPLY CALIBRATION (dynamic — loaded from calibration.json)
         // ══════════════════════════════════════════════════════════
 
-        const WEIGHT_ZERO_OFFSET = 0.0 // Set from case 15
-        const CALIBRATION_FACTOR =1.53138 // Set from case 15
+        const WEIGHT_ZERO_OFFSET = weightCalibration.zeroOffset   // loaded from disk (default 0.0)
+        const CALIBRATION_FACTOR = weightCalibration.factor        // loaded from disk (default 1.53138)
         const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR
         const calibratedWeight = calibratedWeightCatty;
-        // const calibratedWeight = rawWeight * CALIBRATION_FACTOR;
         // Validate calibrated weight
         if (isNaN(calibratedWeight) || calibratedWeight < 0) {
           emitWeightStatus(0x06) // CALIBRATION_ERROR
@@ -4582,6 +4592,185 @@ export async function case41_WeightMeasurement() {
     console.error(error)
     if (!IS_ELECTRON) showMenu()
   }
+}
+
+// ======================== CALIBRATION FUNCTIONS ========================
+
+/**
+ * Helper: collects stable raw readings from the scale for tare or full calibration.
+ * Waits until consecutive readings stabilize (range < 0.1) or up to 25 attempts.
+ * @param {string} actionName - Name of action for logging ('Tare' or 'Full Calibration')
+ * @returns {Promise<number>} stable raw average reading
+ */
+async function collectStableRawReading(actionName = 'Calibration') {
+  const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
+  const weightQueryCommand   = [0x55, 0x05, 0xa1, 0x00, 0x05]
+  const MAX_ATTEMPTS = 30
+
+  try {
+    await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+    await new Promise((r) => setTimeout(r, 400))
+    await sendBiaCommand(setWeightModeCommand)
+    await new Promise((r) => setTimeout(r, 400))
+  } catch (e) {
+    console.warn(`[CAL] ${actionName}: could not set weight mode:`, e.message)
+  }
+
+  const rawReadings = []
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const data = await sendBiaCommand(weightQueryCommand, { timeout: 4000, verbose: false })
+
+      if (data && data.length >= 14 && data[0] === 0xaa && data[2] === 0xa1) {
+        const statusByte = data[3]
+        const upperNibble = statusByte & 0xF0
+
+        // ✅ Only accept readings when scale reports stable state
+        // 0x51 = weight stable, 0x11 = zero/empty stable
+        // Upper nibble 0x10 or 0x50 = stable; 0x20 = unstable/measuring
+        if (upperNibble !== 0x10 && upperNibble !== 0x50) {
+          console.log(`[CAL] ${actionName} attempt ${attempt}/${MAX_ATTEMPTS}: skipped — status 0x${statusByte.toString(16).toUpperCase()} (not stable yet)`)
+          await new Promise((r) => setTimeout(r, 400))
+          continue
+        }
+
+        const raw = ((data[6] << 8) | data[5]) / 10.0
+
+        if (!isNaN(raw) && raw >= 0) {
+          rawReadings.push(raw)
+          console.log(`[CAL] ${actionName} sample ${rawReadings.length}: ${raw.toFixed(2)} kg (raw) status=0x${statusByte.toString(16).toUpperCase()}`)
+
+          // Need at least 4 stable-status readings before checking range
+          if (rawReadings.length >= 4) {
+            const lastFour = rawReadings.slice(-4)
+            const maxVal = Math.max(...lastFour)
+            const minVal = Math.min(...lastFour)
+            const range = maxVal - minVal
+
+            if (range < 0.1) {
+              const stableAvg = lastFour.reduce((a, b) => a + b, 0) / lastFour.length
+              console.log(`[CAL] ✅ ${actionName}: Stable at ${stableAvg.toFixed(4)} kg (range: ${range.toFixed(3)}) after ${attempt} attempts`)
+              return stableAvg
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn(`[CAL] ${actionName} sample attempt ${attempt} failed:`, e.message)
+    }
+
+    await new Promise((r) => setTimeout(r, 400))
+  }
+
+  if (rawReadings.length === 0) {
+    throw new Error(`${actionName} failed — scale never reached stable state (0x1x or 0x5x status) within ${MAX_ATTEMPTS} attempts`)
+  }
+
+  // Fallback: average of last 5 accepted (stable-status) readings
+  const fallbackSamples = rawReadings.slice(-5)
+  const fallbackAvg = fallbackSamples.reduce((a, b) => a + b, 0) / fallbackSamples.length
+  console.warn(`[CAL] ⚠️ ${actionName}: range never reached < 0.1 within ${MAX_ATTEMPTS} attempts. Using avg of last ${fallbackSamples.length} stable samples: ${fallbackAvg.toFixed(4)}`)
+  return fallbackAvg
+}
+
+/**
+ * performTare — reads the raw sensor value with nothing on the scale until stable,
+ * and stores the result as the zero offset.
+ * Call this on startup (after biaPort is connected) to cancel platform drift.
+ * @returns {object} updated weightCalibration
+ */
+export async function performTare() {
+  console.log('\n[CAL] ── performTare ──')
+  if (!biaPort || !biaPort.isOpen) {
+    throw new Error('BIA port not connected — cannot tare')
+  }
+
+  const avgRaw = await collectStableRawReading('Tare')
+  weightCalibration.zeroOffset = avgRaw
+  console.log(`[CAL] Tare complete. Zero offset = ${avgRaw.toFixed(4)}`)
+  return { ...weightCalibration }
+}
+
+/**
+ * performFullCalibration — places a known reference weight on the scale,
+ * reads raw until stable, then computes calibration factor = knownWeightKg / (rawAvg - zeroOffset).
+ * @param {number} knownWeightKg — The actual weight of the reference object in kg
+ * @returns {object} updated weightCalibration
+ */
+export async function performFullCalibration(knownWeightKg) {
+  console.log(`\n[CAL] ── performFullCalibration (known = ${knownWeightKg} kg) ──`)
+  if (!biaPort || !biaPort.isOpen) {
+    throw new Error('BIA port not connected — cannot calibrate')
+  }
+  if (!knownWeightKg || knownWeightKg <= 0) {
+    throw new Error('Invalid known weight — must be > 0 kg')
+  }
+
+  const avgRaw = await collectStableRawReading('Full Calibration')
+  const netRaw = avgRaw - weightCalibration.zeroOffset
+
+  if (netRaw <= 0) {
+    throw new Error(`Net raw reading (${netRaw.toFixed(3)}) is zero or negative — ensure scale is not empty and tare was run first`)
+  }
+
+  const newFactor = knownWeightKg / netRaw
+  weightCalibration.factor = newFactor
+  weightCalibration.calibratedAt = new Date().toISOString()
+  weightCalibration.isCalibrated = true
+
+  console.log(`[CAL] Full calibration complete.`)
+  console.log(`[CAL]   Raw stable avg: ${avgRaw.toFixed(4)}`)
+  console.log(`[CAL]   Zero offset   : ${weightCalibration.zeroOffset.toFixed(4)}`)
+  console.log(`[CAL]   Net raw       : ${netRaw.toFixed(4)}`)
+  console.log(`[CAL]   Known kg      : ${knownWeightKg}`)
+  console.log(`[CAL]   New factor    : ${newFactor.toFixed(6)}`)
+  return { ...weightCalibration }
+}
+
+/**
+ * performMultiPointCalibration — reads a stable raw value for ONE reference weight
+ * and returns the computed factor for that point WITHOUT saving to disk.
+ * Call for each reference weight (e.g. 50 kg, 100 kg), then average the results
+ * and persist using the returned factor.
+ *
+ * @param {number} knownWeightKg — The actual weight of the reference object in kg
+ * @returns {{ factor: number, rawAvg: number, netRaw: number }} per-point calibration data
+ */
+export async function performMultiPointCalibration(knownWeightKg) {
+  console.log(`\n[CAL] ── performMultiPointCalibration (known = ${knownWeightKg} kg) ──`)
+  if (!biaPort || !biaPort.isOpen) {
+    throw new Error('BIA port not connected — cannot calibrate')
+  }
+  if (!knownWeightKg || knownWeightKg <= 0) {
+    throw new Error('Invalid known weight — must be > 0 kg')
+  }
+
+  const avgRaw = await collectStableRawReading(`Cal-${knownWeightKg}kg`)
+  const netRaw = avgRaw - weightCalibration.zeroOffset
+
+  if (netRaw <= 0) {
+    throw new Error(
+      `Net raw reading (${netRaw.toFixed(3)}) is zero or negative at ${knownWeightKg} kg — ensure tare was run first and weight is on the scale`
+    )
+  }
+
+  const factor = knownWeightKg / netRaw
+  console.log(`[CAL] Point ${knownWeightKg} kg: rawAvg=${avgRaw.toFixed(4)}, netRaw=${netRaw.toFixed(4)}, factor=${factor.toFixed(6)}`)
+  return { factor, rawAvg: avgRaw, netRaw }
+}
+
+/**
+ * applyAveragedFactor — stores the pre-computed averaged factor into
+ * weightCalibration and marks the device as calibrated.
+ * @param {number} avgFactor
+ */
+export function applyAveragedFactor(avgFactor) {
+  weightCalibration.factor = avgFactor
+  weightCalibration.calibratedAt = new Date().toISOString()
+  weightCalibration.isCalibrated = true
+  console.log(`[CAL] Averaged factor applied: ${avgFactor.toFixed(6)}`)
+  return { ...weightCalibration }
 }
 
 // Show menu

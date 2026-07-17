@@ -1,124 +1,405 @@
 import React, { useEffect, useState } from "react"
 import video2 from "../assets/avatar2.mp4"
-import { data, useNavigate } from "react-router"
-import { recordFromOpenCameras } from "../utils/recordSession"
-import { getVideoDuration, getKioskId, getSessionId } from "../utils/config"
-import { realtimeCapture, runFPT, sendVideoToBackend } from "../utils/api"
+import { useNavigate } from "react-router"
+import { realtimeCapture, sendVideoToBackend } from "../utils/api"
 import { measureWeightAndHeight } from "../utils/measurementUtils"
 import { storeFptMeasurements } from "../utils/measurementRedux"
-import { useDispatch, useSelector } from "react-redux"
-import { setUser, setLoginScreening } from "../features/common/commonSlice"
-import { BIAMeasurementStage } from "../utils/api"
-import { trackStage } from "../utils/config"
-import ErrorAlert from "./ErrorAlert"
+import { useDispatch } from "react-redux"
+import { setUser, setLoginScreening, setCandidates, setScreening } from "../features/common/commonSlice"
+import { getKioskId, trackStage } from "../utils/config"
+import FullscreenError from "./FullScreenError"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { useTranslation } from "react-i18next"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DEV FLAGS — flip these to test without hardware or real API
+// ─────────────────────────────────────────────────────────────────────────────
 const USE_DUMMY_FPT = false
+const USE_DUMMY_MEASUREMENTS = false
+
+// Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
+// Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
+const DUMMY_FPT_SCENARIO = "HIGH_MULTIPLE"
+
+// Measurement scenario to simulate (USE_DUMMY_MEASUREMENTS = true)
+// Only matters when DUMMY_FPT_SCENARIO = "NO_FACE"
+// Options: "WEIGHT_AND_SHORT" | "WEIGHT_AND_TALL" | "WEIGHT_NO_HEIGHT" | "NOTHING"
+const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_AND_TALL"
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dummy FPT responses — real API shape: everything under .data
+// ─────────────────────────────────────────────────────────────────────────────
+const DUMMY_FPT_RESPONSES = {
+  NO_FACE: {
+    success: true,
+    message: "No face detected",
+    data: {
+      face_detected: false,
+      confidence_band: null,
+      matched_student: null,
+      candidates: [],
+      score: null,
+      multiple_matches: false,
+    },
+  },
+  LOW_CONFIDENCE: {
+    success: true,
+    message: "Low confidence",
+    data: {
+      face_detected: true,
+      confidence_band: "LOW",
+      matched_student: null,
+      candidates: [],
+      score: 0.28,
+      multiple_matches: false,
+    },
+  },
+  AVERAGE_SINGLE: {
+    success: true,
+    message: "Student recognized",
+    data: {
+      face_detected: true,
+      confidence_band: "AVERAGE",
+      score: 0.61,
+      multiple_matches: false,
+      matched_student: {
+        user_id: "uuid-single",
+        name: "Ravi Kumar",
+        photo_url: "",
+        grade: "8A",
+        school: "DPS Noida",
+      },
+      suhi_id: "SUHI_TEST01",
+      class_section: "8-A",
+      candidates: [],
+      screening: {
+        session_id: "dummy-session-avg-001",
+        is_resumed: false,
+        resume_count: 0,
+        next_stage: { stage_key: "bia", display_name: "BIA", stage_order: 1 },
+        completed_stages: ["login"],
+      },
+    },
+  },
+  HIGH_MULTIPLE: {
+    success: true,
+    message: "Student recognized",
+    data: {
+      face_detected: true,
+      confidence_band: "HIGH",
+      score: 0.74,
+      multiple_matches: true,
+      matched_student: {
+        user_id: "uuid-1",
+        name: "Ravi Kumar",
+        photo_url: "",
+        class_section: "8-A",
+        school: "DPS Noida",
+        suhi_id: "SUHI_TEST02",
+      },
+      suhi_id: "SUHI_TEST02",
+      class_section: "8-A",
+      candidates: [
+        {
+          user_id: "uuid-1",
+          name: "Ravi Kumar",
+          score: 0.74,
+          class_section: "8-A",
+          school: "DPS Noida",
+          suhi_id: "SUHI_TEST02",
+          photo_url: "",
+        },
+        {
+          user_id: "uuid-2",
+          name: "Ravi Kumar",
+          score: 0.71,
+          class_section: "7-B",
+          school: "DPS Noida",
+          suhi_id: "SUHI_TEST03",
+          photo_url: "",
+        },
+      ],
+      screening: {
+        session_id: "dummy-session-high-001",
+        is_resumed: false,
+        resume_count: 0,
+        next_stage: { stage_key: "bia", display_name: "BIA", stage_order: 1 },
+        completed_stages: ["login"],
+      },
+    },
+  },
+  VERY_HIGH_SINGLE: {
+    success: true,
+    message: "Student recognized",
+    data: {
+      face_detected: true,
+      confidence_band: "VERY_HIGH",
+      score: 0.91,
+      multiple_matches: false,
+      matched_student: {
+        user_id: "uuid-vh",
+        name: "Priya Sharma",
+        photo_url: "",
+        grade: "9C",
+        school: "DPS Noida",
+      },
+      suhi_id: "SUHI_TEST03",
+      class_section: "9-C",
+      candidates: [],
+      screening: {
+        session_id: "dummy-session-vh-001",
+        is_resumed: false,
+        resume_count: 0,
+        next_stage: { stage_key: "bia", display_name: "BIA", stage_order: 1 },
+        completed_stages: ["login"],
+      },
+    },
+  },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dummy measurement scenarios — simulates hardware output
+// weight: kg (null = not standing on scale)
+// height: cm (null = not detected by sensor)
+// ─────────────────────────────────────────────────────────────────────────────
+const DUMMY_MEASUREMENTS = {
+  // Case 1: weight & height <= 120 → "not eligible" → SUHI ID after 5s
+  WEIGHT_AND_SHORT: { weight: 25, height: 110, errors: {} },
+
+  // Case 2: weight & height >= 120 → "clean camera" → re-attempt x2 → SUHI ID
+  WEIGHT_AND_TALL: { weight: 55, height: 155, errors: {} },
+
+  // Case 3: weight & !height → "stand properly" → re-attempt x2 → home
+  WEIGHT_NO_HEIGHT: { weight: 55, height: null, errors: { height: "Height sensor timeout" } },
+
+  // Case 4: !weight & !height → "step onto kiosk" → home after 5s
+  NOTHING: { weight: null, height: null, errors: { weight: "No weight", height: "No height" } },
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error config for each face-not-detected measurement case
+// ─────────────────────────────────────────────────────────────────────────────
+
+const getMeasurements = async () => {
+  const MEASUREMENT_TIMEOUT = 8000
+
+  if (USE_DUMMY_MEASUREMENTS) {
+    return DUMMY_MEASUREMENTS[DUMMY_MEASUREMENT_SCENARIO]
+  }
+
+  try {
+    const ports = await window.api?.getPorts?.()
+
+    if (!ports || ports.length < 1) {
+      return null
+    }
+
+    return await measureWeightAndHeight(
+      ports,
+      MEASUREMENT_TIMEOUT
+    )
+  } catch (err) {
+    console.error("Measurement error:", err)
+    return null
+  }
+}
+const getFaceNotDetectedError = (measurements) => {
+  const hasWeight = !!measurements?.weight
+  const hasHeight = !!measurements?.height
+  const heightVal = measurements?.height ?? 0
+
+  // weight & height present but height <= 120 → child / not eligible
+  if (hasWeight && hasHeight && heightVal <= 120) {
+    return {
+      key: "not_eligible",
+      title: "Not eligible for kiosk",
+      description: "You are not eligible for the kiosk. Please try with your SUHI ID.",
+      redirectTo: "/login-suhi",
+      redirectLabel: "Going to SUHI ID login",
+      autoRedirectDelay: 5000,
+      maxAttempts: 1,
+    }
+  }
+
+  // weight & height present, height >= 120 → face alignment issue
+  if (hasWeight && hasHeight && heightVal >= 120) {
+    return {
+      key: "align_face",
+      title: "Align your face",
+      description: "Make sure the camera is clean and align your face properly.",
+      redirectTo: "/login-suhi",
+      redirectLabel: "Going to SUHI ID login",
+      autoRedirectDelay: 5000,
+      maxAttempts: 3,
+    }
+  }
+
+  // weight detected but no height → not standing straight / facing camera
+  if (hasWeight && !hasHeight) {
+    return {
+      key: "stand_properly",
+      title: "Stand properly",
+      description: "Make sure you are standing properly and facing the camera.",
+      redirectTo: "/welcome",
+      redirectLabel: "Going to home",
+      autoRedirectDelay: 5000,
+      maxAttempts: 3,
+    }
+  }
+
+  // nothing detected → not on kiosk at all
+  return {
+    key: "not_on_kiosk",
+    title: "Step onto the kiosk",
+    description: "Make sure you are standing on the kiosk and facing the camera.",
+    redirectTo: "/welcome",
+    redirectLabel: "Going to home",
+    autoRedirectDelay: 5000,
+    maxAttempts: 1,
+  }
+}
+
+const HIGH_CONFIDENCE_BANDS = ["AVERAGE", "HIGH", "VERY_HIGH"]
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Component
+// ─────────────────────────────────────────────────────────────────────────────
 const VideoCaptureScreen = () => {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const [isVerify, setIsVerify] = useState(false)
-  const [phase, setPhase] = useState("")
-  const [status, setStatus] = useState("Initializing...")
-  const [showError, setShowError] = useState(false)
-  const [attemptCount, setAttemptCount] = useState(0)
-  const attemptCountRef = React.useRef(0)
-  const [shouldRetry, setShouldRetry] = useState(false)
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const dispatch = useDispatch()
+
+  const [status, setStatus] = useState("Initializing...")
+  const [isVerify, setIsVerify] = useState(false)
+  const [fullscreenError, setFullscreenError] = useState(null)
+  const [shouldRetry, setShouldRetry] = useState(false)
+
+  const attemptCountRef = React.useRef(0)
   const audioRef = React.useRef(null)
   const measurementStartedRef = React.useRef(false)
   const measurementPromiseRef = React.useRef(null)
   const trackingDoneRef = React.useRef(false)
-  const hasStartedRef = React.useRef(false)
-  const STAGES = {
-    FACE_SCAN: "FACE_SCAN"
+
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+
+  const STAGES = { FACE_SCAN: "FACE_SCAN" }
+  const STATUS_KEYS = { SUCCESS: "SUCCESS", ERROR: "ERROR" }
+
+  // ─── Decision tree ───────────────────────────────────────────────────────
+  const handleFptDecision = (fptResponse, measurements) => {
+    // Real API wraps everything in .data — extract it
+    const data = fptResponse?.data ?? {}
+    const {
+      face_detected,
+      confidence_band,
+      matched_student,
+      multiple_matches,
+      candidates,
+      screening,
+    } = data;
+
+    // ── Branch A: Face NOT detected ────────────────────────────────────────
+    if (!face_detected) {
+      const errorConfig = getFaceNotDetectedError(measurements)
+      const hasRetries = errorConfig.maxAttempts > 1
+      const retriesLeft = attemptCountRef.current < errorConfig.maxAttempts - 1
+      console.log("Face not detected")
+      trackStage(STAGES.FACE_SCAN, STATUS_KEYS.ERROR, {
+        weight_kg: measurements?.weight,
+        height_cm: measurements?.height,
+      }, "Face not detected")
+
+      if (hasRetries && retriesLeft) {
+        attemptCountRef.current += 1
+
+        setFullscreenError({
+          ...errorConfig,
+          showRetry: true,
+          showDescription: false,
+          onRetry: () => {
+            measurementStartedRef.current = false
+            measurementPromiseRef.current = null
+            trackingDoneRef.current = false
+
+            setFullscreenError(null)
+            setShouldRetry((prev) => !prev)
+          },
+        })
+
+        return true
+      } else {
+        // Out of retries or single-attempt case — show full description now
+        setFullscreenError({ ...errorConfig, showRetry: false, showDescription: true })
+      }
+
+      return true
+    }
+
+    // ── Branch B: LOW confidence or no matched student ─────────────────────
+    if (confidence_band === "LOW" || !matched_student) {
+      trackStage(STAGES.FACE_SCAN, STATUS_KEYS.ERROR, {
+        weight_kg: measurements?.weight,
+        height_cm: measurements?.height,
+      }, `Low confidence or no match: ${confidence_band}`)
+      navigate("/login-suhi")
+      return true
+    }
+
+    // ── Branch C: Good confidence, single match ────────────────────────────
+    if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && !multiple_matches) {
+      dispatch(setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } }))
+      dispatch(setLoginScreening(screening))
+
+      trackStage(STAGES.FACE_SCAN, STATUS_KEYS.SUCCESS, {
+        weight_kg: measurements?.weight,
+        height_cm: measurements?.height,
+      }, null, null, matched_student?.user_id)
+
+      setIsVerify(true)
+      navigate("/verified")
+      return true
+    }
+
+    // ── Branch D: Good confidence, multiple matches ────────────────────────
+    if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && multiple_matches) {
+      dispatch(setCandidates(candidates ?? []))
+      // Also store the top matched_student and screening for later
+      dispatch(setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } }))
+      dispatch(setLoginScreening(screening))
+
+      trackStage(STAGES.FACE_SCAN, STATUS_KEYS.SUCCESS, {
+        weight_kg: measurements?.weight,
+        height_cm: measurements?.height,
+      }, null, null, null)
+
+      navigate("/identify-student")
+      return true
+    }
+
+    return false // unhandled — caller will fallback
   }
 
-  const STATUS = {
-    SUCCESS: "SUCCESS",
-    ERROR: "ERROR"
-  }
-
-  const dummyFptSuccessResponse = {
-    success: true,
-    student_status: "REGISTERED",
-    buffer_id: "dummy_buffer_id_123",
-    user_id: "e6688f32-f9de-48fb-bfc9-e8815109d518",
-    name: "Priyanshu"
-  }
-  const MAX_ATTEMPTS = 2
-
+  // ─── Main effect ─────────────────────────────────────────────────────────
   useEffect(() => {
-    //   if (hasStartedRef.current) return;
-    // hasStartedRef.current = true;
     const run = async () => {
       try {
         setStatus("Preparing...")
         await playAudio()
         await new Promise((r) => setTimeout(r, 1000))
 
-        const videoDuration = getVideoDuration()
-        const kioskId = getKioskId()
-        const sessionId = getSessionId()
-
-        setStatus(`Recording for ${videoDuration / 1000} seconds...`)
+        //const MEASUREMENT_TIMEOUT = 5000
 
         // Start measurements in background (non-blocking)
-        // Use 20-second timeout to prevent infinite waiting if user not on sensors
-        const MEASUREMENT_TIMEOUT = 8000 // 0 seconds
-
-        if (!measurementStartedRef.current) {
-          measurementStartedRef.current = true
-
-          measurementPromiseRef.current = (async () => {
-            try {
-              const ports = await window.api?.getPorts?.()
-              if (!ports || ports.length < 1) return null
-
-              return await measureWeightAndHeight(ports, MEASUREMENT_TIMEOUT)
-            } catch (err) {
-              console.error("Measurement error:", err)
-              return null
-            }
-          })()
-        }
-
-        // Record video
-        // const recordings = await recordFromOpenCameras(videoDuration);
-        // console.log("recordings", recordings);
-
-        // if (!recordings || recordings.length === 0) {
-        //   throw new Error("No recordings captured");
-        // }
-
-        // setStatus("Uploading video...");
-
-        // const videoToSend =
-        //   recordings.find((r) => r.role === "CENTER") || recordings[0];
-
-        // console.log(`Sending ${videoToSend.role} video to backend...`);
-
-        // const storeResponse = await sendVideoToBackend(videoToSend);
-        // console.log("Store response:", storeResponse);
-
-        // const shmPath = storeResponse?.data?.shm_path;
-
-        // if (!storeResponse?.success || !shmPath) {
-        //   throw new Error("Failed to store video or shm_path not received");
-        // }
+        measurementPromiseRef.current = getMeasurements()
 
         setStatus("Processing scan and measurements...")
-
-        console.log("Running realtime capture + measurements in parallel")
 
         let fptResponse
         let measurements
 
         if (USE_DUMMY_FPT) {
-          console.log("Using dummy FPT response...")
-          fptResponse = dummyFptSuccessResponse
-          // Still wait for measurements if they're running
+          console.log(`[VIDEO CAPTURE] FPT scenario: ${DUMMY_FPT_SCENARIO}`)
+          fptResponse = DUMMY_FPT_RESPONSES[DUMMY_FPT_SCENARIO]
           measurements = await measurementPromiseRef.current
         } else {
           // Await both face capture and weight/height measurements in parallel
@@ -128,115 +409,27 @@ const VideoCaptureScreen = () => {
           ])
         }
 
-        console.log("FPT response:", fptResponse)
-        console.log("Measurement results:", measurements)
+        console.log("[VIDEO CAPTURE] fptResponse:", fptResponse)
+        console.log("[VIDEO CAPTURE] measurements:", measurements)
 
-        // -- Handle Measurements First (so they are available for tracking/display) --
+        // Store measurements
         if (measurements && !trackingDoneRef.current) {
           trackingDoneRef.current = true
-          console.log("[VIDEO CAPTURE] Storing measurements:", measurements)
-
-          // Store measurements even if some failed
           if (measurements.weight || measurements.height) {
             storeFptMeasurements(dispatch, measurements.weight, measurements.height)
-            console.log("[VIDEO CAPTURE] Measurements saved!")
-          }
-
-          // Handle measurement errors for tracking
-          if (measurements.errors && Object.keys(measurements.errors).length > 0) {
-            let errorMessage = ""
-            const hasWeightError = !!measurements.errors.weight
-            const hasHeightError = !!measurements.errors.height
-
-            if (hasWeightError && hasHeightError) {
-              errorMessage = "Failed to get weight and height measurement"
-            } else if (hasWeightError) {
-              errorMessage = "Failed to get weight measurement"
-            } else if (hasHeightError) {
-              errorMessage = "Failed to get height measurement"
-            } else {
-              errorMessage = "User is not standing on the platform"
-            }
-            console.warn("[VIDEO CAPTURE] Measurement warning:", errorMessage)
-
-            // Note: We'll track the error stage ONLY if FPT also fails or after we know FPT status
           }
         }
 
-        // -- Handle Face Recognition Result --
-        const isFailed = !fptResponse.success || fptResponse.data?.student_status !== "REGISTERED"
-
-        // Check if user is not registered - redirect directly to login
-        if (fptResponse.success && fptResponse.data?.student_status === "NOT_REGISTERED") {
-          setShowError(true)
-          setPhase("ERROR")
-          setStatus("User not registered. Redirecting to login...")
-          throw new Error("User not registered")
+        const handled = handleFptDecision(fptResponse, measurements)
+        if (!handled) {
+          console.warn("[VIDEO CAPTURE] Unhandled fptResponse, falling back to login-suhi")
+          navigate("/login-suhi")
         }
 
-        if (isFailed) {
-          attemptCountRef.current += 1
-          setAttemptCount(attemptCountRef.current)
-          setShowError(true)
-          setPhase("ERROR")
-          if (attemptCountRef.current < MAX_ATTEMPTS) {
-            setStatus("Face not recognized. Retrying...")
-          } else {
-            setStatus("Face not recognized. Maximum attempts reached.")
-          }
-
-          // Track failure with measurements if available
-          trackStage(
-            STAGES.FACE_SCAN,
-            STATUS.ERROR,
-            {
-              weight_kg: measurements?.weight,
-              height_cm: measurements?.height
-            },
-            fptResponse.error || "Face not recognized",
-            fptResponse?.data?.buffer_id,
-            fptResponse?.data?.user_id
-          )
-
-          throw new Error(fptResponse.error || "Face not recognized")
-        }
-
-        // Success case - Face recognition successful
-        dispatch(setUser(fptResponse))
-        // realtime/capture is the login step — sessionId is locked in here
-        // and never overwritten by later stage-complete calls.
-        dispatch(setLoginScreening(fptResponse.screening || null))
-        setStatus("Verification successful!")
-        setIsVerify(true)
         stopAudio()
-
-        // Track success to backend
-        trackStage(
-          STAGES.FACE_SCAN,
-          STATUS.SUCCESS,
-          {
-            weight_kg: measurements?.weight,
-            height_cm: measurements?.height
-          },
-          null,
-          fptResponse?.data?.buffer_id,
-          fptResponse?.data?.user_id
-        )
-
-        await new Promise((r) => setTimeout(r, 500))
-
-        // Let RegisterCard handle the actual routing via its handleYesClick,
-        // so we just navigate to /verified first
-        navigate("/verified")
       } catch (error) {
-        console.error("Error in video capture flow:", error)
-        setPhase("ERROR")
-
-        // Only set status if it's not already set
-        if (!status.includes("Face not recognized")) {
-          setStatus(`Error: ${error.message}`)
-          setShowError(true)
-        }
+        console.error("[VIDEO CAPTURE] Error:", error)
+        setStatus(`Error: ${error.message}`)
         stopAudio()
       }
     }
@@ -244,35 +437,14 @@ const VideoCaptureScreen = () => {
     run()
   }, [navigate, shouldRetry])
 
-  const handleErrorClose = () => {
-    setShowError(false)
-  }
-
-  const handleRetry = () => {
-    setShowError(false)
-    // Redirect to login if user is not registered or max attempts reached
-    if (status.includes("not registered") || attemptCountRef.current >= MAX_ATTEMPTS) {
-      navigate("/login-suhi")
-    } else {
-      // Retry in-place by toggling shouldRetry
-      setShouldRetry((prev) => !prev)
-    }
-  }
+  // ─── Audio ───────────────────────────────────────────────────────────────
   const playAudio = async () => {
     const audioPath = await getAudioForCurrentLanguage("camera_scan")
     if (audioPath && audioRef.current) {
       audioRef.current.src = audioPath
       setIsAudioPlaying(true)
-      audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err)
-        setIsAudioPlaying(false)
-      })
-      return true
-    } else if (!audioPath) {
-      console.log("No audio for camera_scan in current language")
-      return false
+      audioRef.current.play().catch(() => setIsAudioPlaying(false))
     }
-    return false
   }
 
   const stopAudio = () => {
@@ -283,107 +455,38 @@ const VideoCaptureScreen = () => {
     }
   }
 
-  const handleAudioEnd = () => {
-    setIsAudioPlaying(false)
-  }
-
+  // ─── Render ──────────────────────────────────────────────────────────────
   return (
-    <div
-      className="
-        fixed inset-0
-        w-screen h-screen
-        overflow-hidden
-        bg-black
-      "
-    >
-      {/* Audio Element */}
-      <audio ref={audioRef} onEnded={handleAudioEnd} onPlay={() => setIsAudioPlaying(true)}>
+    <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+      <audio ref={audioRef} onEnded={() => setIsAudioPlaying(false)} onPlay={() => setIsAudioPlaying(true)}>
         Your browser does not support the audio element.
       </audio>
-      {/* Avatar Video */}
-      <div
-        className="
-          border-0
-          rounded-2xl
-          absolute inset-0
-          flex items-center justify-center
-          z-10
-          pointer-events-none
-        "
-      >
+
+      {/* Avatar video */}
+      <div className="border-0 rounded-2xl absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
         <video
           src={video2}
-          autoPlay
-          muted
-          loop
-          playsInline
-          className="
-            rounded-2xl
-            w-full h-full
-            object-contain
-            max-w-[97vw]
-            max-h-[97vh]
-            will-change-transform
-          "
+          autoPlay muted loop playsInline
+          className="rounded-2xl w-full h-full object-contain max-w-[97vw] max-h-[97vh] will-change-transform"
         />
       </div>
-      {/* <div
-        className="
-        // w-full h-full
-    absolute 
-    flex flex-col items-center
-    z-20
-    bg-black/10
-    pointer-events-none
 
-  "
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 357 357"
-          className="w-[18%] max-w-[300px] opacity-65"
-        >
-          <path
-            d="M82.3233 342.979C82.3233 346.618 83.7687 350.107 86.3415 352.68C88.9142 355.253 92.4036 356.698 96.0421 356.698H260.667C264.306 356.698 267.795 355.253 270.368 352.68C272.94 350.107 274.386 346.618 274.386 342.979C274.386 339.341 272.94 335.852 270.368 333.279C267.795 330.706 264.306 329.261 260.667 329.261H96.0421C92.4036 329.261 88.9142 330.706 86.3415 333.279C83.7687 335.852 82.3233 339.341 82.3233 342.979ZM355.652 183.602C354.614 186.109 352.857 188.252 350.601 189.76C348.345 191.268 345.693 192.073 342.98 192.073H274.386V233.229C274.386 236.868 272.94 240.357 270.368 242.93C267.795 245.503 264.306 246.948 260.667 246.948H96.0421C92.4036 246.948 88.9142 245.503 86.3415 242.93C83.7687 240.357 82.3233 236.868 82.3233 233.229V192.073H13.7296C11.0147 192.075 8.3602 191.272 6.10217 189.765C3.84415 188.257 2.08412 186.114 1.04489 183.606C0.0056589 181.098 -0.266036 178.338 0.264199 175.675C0.794435 173.013 2.10276 170.567 4.02354 168.648L168.649 4.02347C169.923 2.74796 171.436 1.73605 173.101 1.04568C174.767 0.355286 176.552 -3.05176e-05 178.355 -3.05176e-05C180.157 -3.05176e-05 181.943 0.355286 183.608 1.04568C185.273 1.73605 186.786 2.74796 188.061 4.02347L352.686 168.648C354.604 170.568 355.909 173.013 356.437 175.675C356.965 178.337 356.692 181.095 355.652 183.602ZM96.0421 274.386H260.667C264.306 274.386 267.795 275.831 270.368 278.404C272.94 280.977 274.386 284.466 274.386 288.104C274.386 291.743 272.94 295.232 270.368 297.805C267.795 300.378 264.306 301.823 260.667 301.823H96.0421C92.4036 301.823 88.9142 300.378 86.3415 297.805C83.7687 295.232 82.3233 291.743 82.3233 288.104C82.3233 284.466 83.7687 280.977 86.3415 278.404C88.9142 275.831 92.4036 274.386 96.0421 274.386Z"
-            fill="white"
-          />
-        </svg>
-        <h1 className="text-white text-2xl mt-3 font-semibold opacity-75">
-          Look at the top Camera
-        </h1>
-      </div> */}
-
-      {/* Status Indicator
-      {!showError && (
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center z-20">
-          <div className="bg-black bg-opacity-75 px-6 py-3 rounded-lg">
-            <p className={`text-lg font-medium ${
-              phase === "ERROR" ? "text-red-500" :
-              isVerify ? "text-green-500" : "text-white"
-            }`}>
-              {status}
-            </p>
-          </div>
-        </div>
-      )} */}
-
-      {/* Error Alert Component */}
-      <ErrorAlert
-        title={status.includes("not registered") ? t("videoCapture.error_unregistered_title") : t("videoCapture.error_unrecognized_title")}
-        description={
-          status.includes("not registered")
-            ? t("videoCapture.error_unregistered_desc")
-            : attemptCount < MAX_ATTEMPTS
-              ? t("videoCapture.error_unrecognized_retry_desc")
-              : t("videoCapture.error_unrecognized_max_desc")
-        }
-        visible={showError}
-        onClose={handleErrorClose}
-        onRetry={handleRetry}
-        autoRetryDelay={
-          status.includes("not registered") ? 3000 : attemptCount < MAX_ATTEMPTS ? 4000 : 3000
-        }
-      />
+      {/* Fullscreen error — face not detected cases */}
+      {fullscreenError && (
+        <FullscreenError
+          title={fullscreenError.title}
+          description={fullscreenError.description}
+          showDescription={fullscreenError.showDescription ?? true}
+          redirectLabel={fullscreenError.redirectLabel}
+          autoRedirectDelay={fullscreenError.autoRedirectDelay}
+          showRetry={fullscreenError.showRetry}
+          onRetry={fullscreenError.onRetry}
+          onRedirect={() => {
+            setFullscreenError(null)
+            navigate(fullscreenError.redirectTo)
+          }}
+        />
+      )}
     </div>
   )
 }
