@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron"
+import { app, shell, BrowserWindow, ipcMain, nativeImage } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 // import * as biaa from './bia-script'
@@ -602,6 +602,8 @@ ipcMain.handle('save-recording', async (event, request) => {
 //case41_WeightMeasurement
 function createWindow() {
   // Create the browser window.
+  const iconPath = join(__dirname, '../../resources/icon.png')
+  const icon = nativeImage.createFromPath(iconPath)
   mainWindow = new BrowserWindow({
     // width: 1014,
     // height: 1773,
@@ -610,6 +612,7 @@ function createWindow() {
     show: false,
     autoHideMenuBar: false,
     fullscreen:false,
+    icon,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,

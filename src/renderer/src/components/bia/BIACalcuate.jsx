@@ -37,6 +37,8 @@ export default function BIACalculate({ user, onComplete }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
+  const [showHeightError, setShowHeightError] = useState(false);
+  const [heightErrorCountdown, setHeightErrorCountdown] = useState(10);
   const [isComplete, setIsComplete] = useState(false);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
   const [shoesCtaStep, setShoesCtaStep] = useState(null);
@@ -364,6 +366,18 @@ export default function BIACalculate({ user, onComplete }) {
   ======================= */
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
+  /**
+   * Races `promise` against a timeout — identical to the withTimeout helper
+   * in measurementUtils.js. Rejects with `errorMessage` if deadline is hit first.
+   */
+  const withTimeout = (promise, timeoutMs, errorMessage) =>
+    Promise.race([
+      promise,
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+      ),
+    ]);
+
   // const clearAllTimeouts = () => {
   //   console.log("[BIA DEBUG] Clearing all timeouts");
   //   if (timeoutRefs.current.global) {
@@ -384,6 +398,28 @@ export default function BIACalculate({ user, onComplete }) {
     });
     return sleep(duration).then(() => {
       setErrorState(null);
+    });
+  };
+
+  /**
+   * Shows the animated "Stand Properly" modal for 10 seconds with a live countdown,
+   * then hides it and resolves — caller then retries height measurement.
+   */
+  const showHeightErrorModal = () => {
+    console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
+    setHeightErrorCountdown(10);
+    setShowHeightError(true);
+    return new Promise((resolve) => {
+      let count = 10;
+      const tick = setInterval(() => {
+        count -= 1;
+        setHeightErrorCountdown(count);
+        if (count <= 0) {
+          clearInterval(tick);
+          setShowHeightError(false);
+          resolve();
+        }
+      }, 1000);
     });
   };
 
@@ -461,27 +497,44 @@ export default function BIACalculate({ user, onComplete }) {
     return res;
   };
 
+  // Height sensor timeout: 10 seconds to get a stable reading
+
+  const HEIGHT_SENSOR_TIMEOUT_MS = 8000;
+
   const measureHeight = async () => {
-    console.log("[BIA DEBUG] Starting height measurement...");
-    // setCurrentStatus("Measuring your weight, please stand still!")
+    console.log("[BIA DEBUG] Starting height measurement (10s timeout)...");
     console.log('[MEASUREMENT] Connecting to height port:', PORT_PATHS.HEIGHT);
     await window.api.connectHeightPort(PORT_PATHS.HEIGHT);
-    const res = await window.api.startHeightMeasurement();
-    console.log("[BIA DEBUG] Height result:", res);
 
-    if (!res?.height) {
-      console.error("[BIA DEBUG] Height measurement failed - no height data");
-      throw new Error("Height failed");
+    try {
+      // Race the sensor against a 10-second deadline.
+      // If no stable reading arrives within 10s → throws → heightOk = false
+      // → StandProperlyModal is shown for 10s → auto-retry.
+      const res = await withTimeout(
+        window.api.startHeightMeasurement(),
+        HEIGHT_SENSOR_TIMEOUT_MS,
+        'Height measurement timeout — user may not be standing properly'
+      );
+      console.log("[BIA DEBUG] Height result:", res);
+
+      if (!res?.height) {
+        console.error("[BIA DEBUG] Height measurement failed - no height data");
+        throw new Error("Height failed");
+      }
+
+      resultsRef.current.height = {
+        value: Number(res.height),
+        unit: "cm"
+      };
+      console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
+      dispatch(setHeight(resultsRef.current.height?.value));
+      return res;
+    } catch (err) {
+      // Disconnect port so Attempt 2 can reconnect to a clean state.
+      console.warn('[BIA DEBUG] Height error/timeout — disconnecting port before re-throw:', err.message);
+      await window.api.disconnectHeightPort().catch(() => {});
+      throw err;
     }
-    // storePreliminaryMeasurements(dispatch, res.weight, null);
-
-    resultsRef.current.height = {
-      value: Number(res.height),
-      unit: "cm"
-    };
-    console.log(`[BIA DEBUG] Height stored: ${res.height} cm`);
-    dispatch(setHeight(resultsRef.current.height?.value));
-    return res;
   };
   const measureLegImpedance = async () => {
     console.log("[BIA DEBUG] Starting leg impedance 50kHz measurement...");
@@ -598,11 +651,18 @@ export default function BIACalculate({ user, onComplete }) {
     let { weightOk, heightOk } = await attemptWH();
 
     if (!weightOk || !heightOk) {
-      const msg = !weightOk ? ERROR_MESSAGES.weight : ERROR_MESSAGES.height;
-      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk} — showing error, retrying in 10s`);
-      setErrorState({ title: msg, canRetry: false });
-      await sleep(3000);
-      setErrorState(null);
+      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk}`);
+
+      if (!heightOk) {
+        // Height failed → show animated "Stand Properly" modal for 10 seconds
+        console.warn('[BIA DEBUG] Height failed — showing StandProperly modal for 10s');
+        await showHeightErrorModal();
+      } else {
+        // Only weight failed → show generic error for 3s
+        setErrorState({ title: ERROR_MESSAGES.weight, canRetry: false });
+        await sleep(3000);
+        setErrorState(null);
+      }
 
       // --- Attempt 2 (auto retry) ---
       console.log("[BIA DEBUG] Phase 1 — Attempt 2 (auto-retry): W+H parallel");
@@ -613,7 +673,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.error(`[BIA DEBUG] Phase 1 DOUBLE FAIL — W:${weightOk} H:${heightOk} — skipping BIA`);
         await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
         console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
-        await saveBuffer('wh_skip');
+       // await saveBuffer('wh_skip');
         // Disconnect ports before navigating away
         console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
         await Promise.allSettled([
@@ -959,7 +1019,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (result?.screening) dispatch(setScreening(result.screening));
 
     console.log(`[BIA REC] ⏏️  ${bufferTag} → saveBuffer('${bufferTag}')`);
-    await saveBuffer(bufferTag);
+    //await saveBuffer(bufferTag);
 
     await new Promise((resolve) => { imCompleteResolver.current = resolve; });
     setIsComplete(true);
@@ -1140,7 +1200,7 @@ export default function BIACalculate({ user, onComplete }) {
       screening_session_id: screeningState?.sessionId,
     });
     if (result?.screening) dispatch(setScreening(result.screening));
-    await saveBuffer("noleg_arm_exhausted");
+    //await saveBuffer("noleg_arm_exhausted");
     const route = getNextRoute(result?.screening?.next_stage, '/space-convoy-main');
     console.log('[BIA] No-leg exhausted — navigating to:', route);
     navigate(route);
@@ -1434,7 +1494,7 @@ export default function BIACalculate({ user, onComplete }) {
       // ✅ Ask backend for next stage instead of hardcoding /voice
       const flowExceptionComplete = await BIAComplete({
         session_id: storeUser?.data?.buffer_id,
-        screening_session_id: screening?.sessionId,
+        screening_session_id: screeningState?.sessionId,
       });
       if (flowExceptionComplete?.screening) {
         dispatch(setScreening(flowExceptionComplete.screening));
@@ -1506,6 +1566,11 @@ export default function BIACalculate({ user, onComplete }) {
         onClose={() => setErrorState(null)}
         onRetry={undefined}
       />
+
+      {/* Stand Properly Modal — shown when height measurement fails */}
+      {showHeightError && (
+        <StandProperlyModal countdown={heightErrorCountdown} />
+      )}
 
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
       {shoesCtaStep === 'ctaA' && (
@@ -1640,3 +1705,147 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
   );
 };
 
+
+/* ── Stand Properly Modal — animated height error prompt ────────── */
+const StandProperlyModal = ({ countdown }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '32px',
+        animation: 'standProperlyFadeIn 0.4s ease',
+      }}>
+
+        {/* Animated silhouette figure */}
+        <div style={{ position: 'relative', width: '180px', height: '260px' }}>
+          {/* Glow ring behind figure */}
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(139,195,229,0.18) 0%, transparent 70%)',
+            animation: 'standGlowPulse 2s ease-in-out infinite',
+          }} />
+
+          {/* SVG standing figure */}
+          <svg viewBox="0 0 120 200" width="180" height="260" xmlns="http://www.w3.org/2000/svg"
+            style={{ filter: 'drop-shadow(0 0 18px rgba(139,195,229,0.7))', animation: 'standBobble 2.5s ease-in-out infinite' }}>
+            {/* Head */}
+            <circle cx="60" cy="22" r="16" fill="#8BC3E5" opacity="0.95" />
+            {/* Neck */}
+            <rect x="54" y="36" width="12" height="10" rx="4" fill="#8BC3E5" opacity="0.9" />
+            {/* Body */}
+            <rect x="38" y="44" width="44" height="58" rx="10" fill="#5aacd8" opacity="0.85" />
+            {/* Left arm */}
+            <rect x="18" y="48" width="22" height="10" rx="5" fill="#8BC3E5" opacity="0.8"
+              style={{ transformOrigin: '38px 53px', animation: 'armSwingLeft 2.5s ease-in-out infinite' }} />
+            {/* Right arm */}
+            <rect x="80" y="48" width="22" height="10" rx="5" fill="#8BC3E5" opacity="0.8"
+              style={{ transformOrigin: '82px 53px', animation: 'armSwingRight 2.5s ease-in-out infinite' }} />
+            {/* Left leg */}
+            <rect x="42" y="100" width="14" height="60" rx="7" fill="#8BC3E5" opacity="0.85" />
+            {/* Right leg */}
+            <rect x="64" y="100" width="14" height="60" rx="7" fill="#8BC3E5" opacity="0.85" />
+            {/* Left foot */}
+            <ellipse cx="49" cy="163" rx="12" ry="6" fill="#5aacd8" opacity="0.9" />
+            {/* Right foot */}
+            <ellipse cx="71" cy="163" rx="12" ry="6" fill="#5aacd8" opacity="0.9" />
+
+            {/* Posture alignment arrows — pointing up on each side */}
+            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite' }}>
+              <polygon points="10,90 16,110 4,110" fill="#FFD700" opacity="0.85" />
+              <rect x="11" y="110" width="6" height="30" rx="3" fill="#FFD700" opacity="0.75" />
+            </g>
+            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite 0.3s' }}>
+              <polygon points="110,90 116,110 104,110" fill="#FFD700" opacity="0.85" />
+              <rect x="105" y="110" width="6" height="30" rx="3" fill="#FFD700" opacity="0.75" />
+            </g>
+          </svg>
+        </div>
+
+        {/* Instruction text */}
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{
+            color: '#8BC3E5',
+            fontSize: '2.4rem',
+            fontFamily: 'Anta, sans-serif',
+            margin: 0,
+            letterSpacing: '0.02em',
+            textShadow: '0 0 20px rgba(139,195,229,0.6)',
+          }}>
+            Stand Straight &amp; Still
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.7)',
+            fontFamily: 'Anta, sans-serif',
+            fontSize: '1.2rem',
+            marginTop: '8px',
+          }}>
+            Keep your arms at your sides and look forward
+          </p>
+        </div>
+
+        {/* Countdown ring */}
+        <div style={{ position: 'relative', width: '80px', height: '80px' }}>
+          <svg viewBox="0 0 80 80" width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(139,195,229,0.15)" strokeWidth="6" />
+            <circle
+              cx="40" cy="40" r="34"
+              fill="none"
+              stroke="#8BC3E5"
+              strokeWidth="6"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 34}`}
+              strokeDashoffset={`${2 * Math.PI * 34 * (countdown / 10)}`}
+              style={{ transition: 'stroke-dashoffset 0.9s linear', filter: 'drop-shadow(0 0 8px #8BC3E5)' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#8BC3E5',
+            fontSize: '1.6rem',
+            fontFamily: 'Anta, sans-serif',
+            fontWeight: 'bold',
+          }}>
+            {countdown}
+          </div>
+        </div>
+
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Anta, sans-serif', fontSize: '1rem', margin: 0 }}>
+          Retrying in {countdown}s…
+        </p>
+      </div>
+
+      {/* Keyframe animations injected via a style tag */}
+      <style>{`
+        @keyframes standProperlyFadeIn {
+          from { opacity: 0; transform: scale(0.92); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes standGlowPulse {
+          0%, 100% { opacity: 0.4; transform: scale(1); }
+          50%       { opacity: 1;   transform: scale(1.15); }
+        }
+        @keyframes standBobble {
+          0%, 100% { transform: translateY(0px); }
+          50%       { transform: translateY(-8px); }
+        }
+        @keyframes armSwingLeft {
+          0%, 100% { transform: rotate(0deg); }
+          50%       { transform: rotate(-15deg); }
+        }
+        @keyframes armSwingRight {
+          0%, 100% { transform: rotate(0deg); }
+          50%       { transform: rotate(15deg); }
+        }
+        @keyframes arrowPulse {
+          0%, 100% { opacity: 0.5; transform: translateY(0px); }
+          50%       { opacity: 1;   transform: translateY(-6px); }
+        }
+      `}</style>
+    </div>
+  );
+};

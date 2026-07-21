@@ -27,6 +27,7 @@ import ScreeningLayout from './components/ScreeningLayout'
 import View360Viewer from './components/voice/View360Viewer'
 import Result from './components/bia/Result'
 import BiaReportRouter from './components/bia/BiaReportRouter'
+import SmoothieSlashGame from './components/games/smoothie-slash/SmoothieSlashGame'
 
 function App() {
   // Play looping background music on all routes except voice & game sections
@@ -57,7 +58,9 @@ function App() {
 
         {/* Routes WITHOUT the progress bar */}
         <Route path="/" element={<SplashScreen />} />
+        <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
         <Route path='/welcome' element={<StartScreen />} />
+        {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
         <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path='/divide-attention' element={<DivideAttentionGame />} />
@@ -73,11 +76,12 @@ function App() {
           <Route path='/voice' element={<VoiceAnalysis />} />
           <Route path="/fingerprint" element={<FingerPrintScreen />} />
           <Route path="/colorblindness" element={<ColorBlindPlate />} />
+          {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
 
-          <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
-          <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} />
+          {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
+          <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} /> */}
           {/* <Route path='/identify-student' element={<IdentifyStudent />} /> */}
-         
+
         </Route>
 
       </Routes>

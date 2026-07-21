@@ -4,8 +4,8 @@ out
 .DS_Store
 .eslintcache
 *.log*
-/build
 /graph-output
 /scripts
 /.agent
 /src/Divided_Attention
+build-v0

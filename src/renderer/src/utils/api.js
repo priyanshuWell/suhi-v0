@@ -793,3 +793,7 @@ export const cloudToLocalSync = async () => {
     throw error;
   }
 };
+export const SmoothieSession = async (userId, screeningSessionId) => { }
+export const SmoothieSlashBatch = async (gameSessionId, events) => { }
+export const SmoothieSessionComplete = async (gameSessionId, payload) => { }
+export const SmoothieSessionAbandon = async (gameSessionId) => { }
