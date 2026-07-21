@@ -1,5 +1,6 @@
-appId: com.electron.app
+appId: com.suhi.smooth
 productName: suhi-smooth
+icon: build/icons/512x512.png
 directories:
   buildResources: build
 files:
@@ -28,9 +29,8 @@ mac:
 dmg:
   artifactName: ${name}-${version}.${ext}
 linux:
+  icon: build/icons/512x512.png
   target:
-    - AppImage
-    - snap
     - deb
   maintainer: electronjs.org
   category: Utility
