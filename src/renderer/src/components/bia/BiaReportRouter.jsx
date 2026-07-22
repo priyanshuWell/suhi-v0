@@ -11,7 +11,7 @@ export const hasValue = (obj) =>
 
 export const hasAnyVitals = (d) =>
     hasValue(d?.heart_rate) ||
-    hasValue(d?.blood_pressure) ||
+    // hasValue(d?.blood_pressure) ||
     hasValue(d?.facial_emotion) ||
     hasValue(d?.breathing_rate)
 const BiaReportRouter = () => {

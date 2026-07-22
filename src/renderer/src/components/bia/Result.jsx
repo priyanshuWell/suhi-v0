@@ -170,11 +170,11 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         { label: 'Heart Rate', value: `${apiReport.vitals.heart_rate} bpm` },
         apiReport?.vitals?.breathing_rate != null && apiReport?.vitals?.breathing_rate != 0.0 &&
         { label: 'Breathing Rate', value: `${apiReport.vitals.breathing_rate} breaths/min` },
-        (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
-        {
-            label: 'Blood Pressure',
-            value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg`,
-        },
+        //  (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
+        // {
+        //     label: 'Blood Pressure',
+        //     value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg`,
+        // },
         { label: 'Stress', value: apiReport?.vitals?.stress, },
     ].filter(Boolean)
 
@@ -226,7 +226,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             heart_rate: null,
             breathing_rate: null,
             stress: "Low",
-            blood_pressure: null,
+            // blood_pressure: null,
         },
         emotion: { label: 'Calm' },
     }
@@ -253,7 +253,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             heart_rate: api?.vitals?.heart_rate ?? fallbackPartialJson.vitals.heart_rate,
             breathing_rate: api?.vitals?.breathing_rate ?? fallbackPartialJson.vitals.breathing_rate,
             stress: api?.vitals?.stress ?? fallbackPartialJson.vitals.stress,
-            blood_pressure: api?.vitals?.blood_pressure ?? fallbackPartialJson.vitals.blood_pressure,
+            // blood_pressure: api?.vitals?.blood_pressure ?? fallbackPartialJson.vitals.blood_pressure,
         },
         emotion: api?.emotion ?? fallbackPartialJson.emotion,
     })
@@ -301,11 +301,11 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                 heart_rate: d?.heart_rate?.heart_rate != null ? Math.round(d.heart_rate.heart_rate) : null,
                 breathing_rate: d?.breathing_rate?.breathing_rate != null ? Math.round(d.breathing_rate.breathing_rate) : null,
                 stress: d?.heart_rate?.stress_category ?? null,
-                blood_pressure: d?.blood_pressure ? {
-                    systolic: d.blood_pressure.systolic != null ? Math.round(d.blood_pressure.systolic) : null,
-                    diastolic: d.blood_pressure.diastolic != null ? Math.round(d.blood_pressure.diastolic) : null,
-                    category: d.blood_pressure.category ?? null,
-                } : null,
+                // blood_pressure: d?.blood_pressure ? {
+                //     systolic: d.blood_pressure.systolic != null ? Math.round(d.blood_pressure.systolic) : null,
+                //     diastolic: d.blood_pressure.diastolic != null ? Math.round(d.blood_pressure.diastolic) : null,
+                //     category: d.blood_pressure.category ?? null,
+                // } : null,
             },
             // backend key is `facial_emotion.dominant_emotion`, not `emotion.label`
             emotion: d?.facial_emotion?.masked_emotion ? { label: d.facial_emotion.masked_emotion } : null,
@@ -490,8 +490,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                             icon={<BrainIconS style={{ width: '100%', height: '100%' }} />}
                             color="#2CEF94"
                             rows={[
-                                { label: 'Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
-                                { label: 'Memory', value: formatLabel(apiReport?.memory?.level, 'Developing') },
+                                { label: 'Divided Attention', value: formatLabel(apiReport?.attention?.level, 'Good') },
+                                { label: 'Cognitive Flexibility', value: formatLabel(apiReport?.memory?.level, 'Developing') },
                                 { label: 'Learning Style', value: learnerStyleLabel },
                             ]}
                         />

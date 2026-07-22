@@ -1,6 +1,6 @@
 {
-  "name": "suhi",
-  "version": "1.0.5",
+  "name": "suhi-smooth",
+  "version": "1.0.6",
   "description": "suhi application",
   "main": "./out/main/index.js",
   "author": "SUHI",
@@ -51,6 +51,7 @@
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "sharp": "^0.35.3",
     "vite": "^7.2.6"
   }
 }
