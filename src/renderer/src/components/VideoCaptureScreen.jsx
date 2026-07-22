@@ -293,10 +293,12 @@ const VideoCaptureScreen = () => {
       face_detected,
       confidence_band,
       matched_student,
-      multiple_matches,
       candidates,
       screening,
     } = data;
+
+    // Force single-match path — Branch D (identify-student) is disabled
+    const multiple_matches = false
 
     // ── Branch A: Face NOT detected ────────────────────────────────────────
     if (!face_detected) {
@@ -345,7 +347,7 @@ const VideoCaptureScreen = () => {
       return true
     }
 
-    // ── Branch C: Good confidence, single match ────────────────────────────
+    // ── Branch C: Good confidence, single match ──────────────────────────── 
     if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && !multiple_matches) {
       dispatch(setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } }))
       dispatch(setLoginScreening(screening))
