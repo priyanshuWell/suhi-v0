@@ -26,7 +26,7 @@ export const IMPEDANCE_ERROR_CODES = {
     nextStep: 'Continue with measurement',
     userMessage: "Oops, couldn't get body composition analysis. Hold on, we will try once again"
   },
-    0x01: {
+  0x01: {
     code: 'ELECTRODE',
     severity: 'ERROR',
     message: 'Ensure your are holding electrodes properly',
@@ -903,6 +903,7 @@ const IMPEDANCE_MODES = {
 // ======================== HEIGHT MEASUREMENT ========================
 const STABILITY_COUNT = 10
 const STABILITY_THRESHOLD = 2
+const STABILITY_SD_THRESHOLD = 1.0
 export let stableReadings = []
 export let isMeasurementStopped = false
 let heightBuffer = Buffer.alloc(0)
@@ -941,10 +942,13 @@ function checkStability(value) {
     stableReadings.shift()
   }
 
-  const max = Math.max(...stableReadings)
-  const min = Math.min(...stableReadings)
+  if (stableReadings.length < STABILITY_COUNT) return false
 
-  return max - min <= STABILITY_THRESHOLD
+  const n = stableReadings.length
+  const mean = stableReadings.reduce((a, b) => a + b, 0) / n
+  const variance = stableReadings.reduce((a, b) => a + (b - mean) ** 2, 0) / n
+  const sd = Math.sqrt(variance)
+  return sd <= STABILITY_SD_THRESHOLD
 }
 
 // ======================== BIA FUNCTIONS ========================
@@ -981,7 +985,7 @@ function createCommand(commandByte, dataBytes = []) {
 // ============================================================================
 
 // 1. Generate the Tx Command for Legs (0xD1)
- export function createLegsBodyCompositionCommand(gender, height, age, weight, impedance) {
+export function createLegsBodyCompositionCommand(gender, height, age, weight, impedance) {
   const buffer = Buffer.alloc(12);
 
   buffer[0] = 0x55;
@@ -1032,15 +1036,15 @@ export function parseLegsBodyComposition(data) {
     },
     // NEW: Extracted Ranges for UI display (Min ~ Max)
     standards: {
-      fatPercentage: [data[9]/10, read16(10)/10, read16(12)/10, read16(14)/10], // Low, Normal, High, Very High
-      bmi: [read16(18)/10, read16(20)/10],    // Min, Max
-      subcutaneousFat: [read16(33)/10, read16(35)/10],
-      boneMass: [data[39]/10, data[40]/10],
-      waterPercentage: [read16(45)/10, read16(47)/10], // e.g., 55.0, 65.0
+      fatPercentage: [data[9] / 10, read16(10) / 10, read16(12) / 10, read16(14) / 10], // Low, Normal, High, Very High
+      bmi: [read16(18) / 10, read16(20) / 10],    // Min, Max
+      subcutaneousFat: [read16(33) / 10, read16(35) / 10],
+      boneMass: [data[39] / 10, data[40] / 10],
+      waterPercentage: [read16(45) / 10, read16(47) / 10], // e.g., 55.0, 65.0
       visceralFat: [data[50], data[51]],
-      skeletalMuscle: [read16(54)/10, read16(56)/10],
-      protein: [read16(59)/10, read16(60)/10],
-      muscleMass: [read16(65)/10, read16(67)/10],
+      skeletalMuscle: [read16(54) / 10, read16(56) / 10],
+      protein: [read16(59) / 10, read16(60) / 10],
+      muscleMass: [read16(65) / 10, read16(67) / 10],
       bmr: read16(24) // Standard BMR
     },
     evaluation: {
@@ -1064,7 +1068,7 @@ export function parseLegsBodyComposition(data) {
 }
 
 // 3. Parse into Raw Packages Format
- function parseLegsBodyCompositionRawPackages(data) {
+function parseLegsBodyCompositionRawPackages(data) {
   if (data[0] !== 0xaa || data[2] !== 0xd1) {
     return null;
   }
@@ -1141,15 +1145,15 @@ export function parseArmsBodyComposition(data) {
     },
     // NEW: Extracted Ranges for UI display (Min ~ Max)
     standards: {
-      fatPercentage: [data[9]/10, read16(10)/10, read16(12)/10, read16(14)/10], // Low, Normal, High, Very High
-      bmi: [read16(18)/10, read16(20)/10],    // Min, Max
-      subcutaneousFat: [read16(33)/10, read16(35)/10],
-      boneMass: [data[39]/10, data[40]/10],
-      waterPercentage: [read16(45)/10, read16(47)/10], // e.g., 55.0, 65.0
+      fatPercentage: [data[9] / 10, read16(10) / 10, read16(12) / 10, read16(14) / 10], // Low, Normal, High, Very High
+      bmi: [read16(18) / 10, read16(20) / 10],    // Min, Max
+      subcutaneousFat: [read16(33) / 10, read16(35) / 10],
+      boneMass: [data[39] / 10, data[40] / 10],
+      waterPercentage: [read16(45) / 10, read16(47) / 10], // e.g., 55.0, 65.0
       visceralFat: [data[50], data[51]],
-      skeletalMuscle: [read16(54)/10, read16(56)/10],
-      protein: [read16(59)/10, read16(60)/10], // Note: Check if 1 or 2 bytes. Usually 2.
-      muscleMass: [read16(65)/10, read16(67)/10],
+      skeletalMuscle: [read16(54) / 10, read16(56) / 10],
+      protein: [read16(59) / 10, read16(60) / 10], // Note: Check if 1 or 2 bytes. Usually 2.
+      muscleMass: [read16(65) / 10, read16(67) / 10],
       bmr: read16(24) // Standard BMR
     },
     evaluation: {
@@ -1175,16 +1179,16 @@ export function parseArmsBodyComposition(data) {
 async function executeArmsBodyComposition(userProfile, impedanceVal) {
   try {
     const { gender = 1, height = 172, age = 24, weight = 62.1 } = userProfile;
-    
+
     // Command uses D2 (Arms)
     // IMPORTANT: impedanceVal for arms (e.g. 845) goes here
     const command = createArmsBodyCompositionCommand(gender, height, age, weight, impedanceVal);
 
     console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
-    
+
     // Send command and let the global listener parse the Rx response
     await sendBiaCommand(command, { timeout: 5000, verbose: true });
-    
+
     return true;
   } catch (error) {
     console.error(`❌ Failed to request Arms body composition:`, error);
@@ -1564,17 +1568,17 @@ export function collectLegsBodyCompositionOnce(timeout = 8000) {
       reject(new Error("Legs BIA timeout"))
     }, timeout)
 
-  const onData = (data) => {
-  if (data[0] === 0xaa && data[2] === 0xd1) {
-    clearTimeout(timer)
-    biaPort.off("data", onData)
+    const onData = (data) => {
+      if (data[0] === 0xaa && data[2] === 0xd1) {
+        clearTimeout(timer)
+        biaPort.off("data", onData)
 
-    const parsed = parseLegsBodyComposition(data)
-    // const raw = parseLegsBodyCompositionRawPackages(data)
+        const parsed = parseLegsBodyComposition(data)
+        // const raw = parseLegsBodyCompositionRawPackages(data)
 
-    resolve({ parsed })
-  }
-}
+        resolve({ parsed })
+      }
+    }
 
     biaPort.on("data", onData)
   })
@@ -1781,34 +1785,34 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
       }
 
       // Body Composition response parsing 8 electrode
-        if (data[0] === 0xaa && data[2] === 0xd0) {
-          try {
-            processBodyCompositionResponse(data);
-          } catch (error) {
-            console.error('Error parsing 8-electrode body composition:', error);
-          }
+      if (data[0] === 0xaa && data[2] === 0xd0) {
+        try {
+          processBodyCompositionResponse(data);
+        } catch (error) {
+          console.error('Error parsing 8-electrode body composition:', error);
         }
-        // 4-Electrode Parsing (Legs D1 & Arms D2)
-        if (data[0] === 0xaa && (data[2] === 0xd1 || data[2] === 0xd2)) {
-          try {
-            const modeName = data[2] === 0xd1 ? 'Legs' : 'Arms';
-            const parseFunc = data[2] === 0xd1 ? parseLegsBodyComposition : parseArmsBodyComposition;
-            // const rawFunc = data[2] === 0xd1 ? parseLegsBodyCompositionRawPackages : parseArmsBodyCompositionRawPackages;
-  
-            const parsedComp = parseFunc(data);
-            // const rawPackages = rawFunc(data);q
-  
-            if (parsedComp) {
-              console.log(`\n✅ ${modeName} Body Composition Data (Parsed):`);
-              console.log(JSON.stringify(parsedComp, null, 2));              
-              // Send to Frontend:
-              const eventName = data[2] === 0xd1 ? EVENTS.LEGS_COMP_COMPLETE : EVENTS.ARMS_COMP_COMPLETE;
-              eventBus.emit(eventName, { parsed: parsedComp }); 
-            }
-          } catch (error) {
-            console.error('Error parsing 4-electrode body composition:', error);
+      }
+      // 4-Electrode Parsing (Legs D1 & Arms D2)
+      if (data[0] === 0xaa && (data[2] === 0xd1 || data[2] === 0xd2)) {
+        try {
+          const modeName = data[2] === 0xd1 ? 'Legs' : 'Arms';
+          const parseFunc = data[2] === 0xd1 ? parseLegsBodyComposition : parseArmsBodyComposition;
+          // const rawFunc = data[2] === 0xd1 ? parseLegsBodyCompositionRawPackages : parseArmsBodyCompositionRawPackages;
+
+          const parsedComp = parseFunc(data);
+          // const rawPackages = rawFunc(data);q
+
+          if (parsedComp) {
+            console.log(`\n✅ ${modeName} Body Composition Data (Parsed):`);
+            console.log(JSON.stringify(parsedComp, null, 2));
+            // Send to Frontend:
+            const eventName = data[2] === 0xd1 ? EVENTS.LEGS_COMP_COMPLETE : EVENTS.ARMS_COMP_COMPLETE;
+            eventBus.emit(eventName, { parsed: parsedComp });
           }
+        } catch (error) {
+          console.error('Error parsing 4-electrode body composition:', error);
         }
+      }
       // heightWaitingForResponse = false;
       if (!IS_ELECTRON) showMenu()
     })
@@ -1931,6 +1935,7 @@ export async function height_measurement() {
     isMeasurementStopped = false
     heightCompleted = false
     stableReadings = []
+    heightBuffer = Buffer.alloc(0)
     finalheight = null
 
     emitHeightStatus(0x00) // INFO
@@ -1942,7 +1947,7 @@ export async function height_measurement() {
 
         try {
           heightPort?.close() // intentional close
-        } catch {}
+        } catch { }
 
         return resolve({
           success: true,
@@ -2171,14 +2176,15 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           }
 
           /* ---------- SUCCESS ---------- */
-          if (stableReadings.length >= STABILITY_COUNT) {
-            finalheight = calculatedHeight
-            heightCompleted = true
-            isMeasurementStopped = true
+          const meanDistance =
+            stableReadings.reduce((a, b) => a + b, 0) / stableReadings.length
+          finalheight = 196.3 - meanDistance / 10
 
-            emitHeightStatus(0x04, calculatedHeight) // STABLE / ACCEPT
-            return
-          }
+          heightCompleted = true
+          isMeasurementStopped = true
+
+          emitHeightStatus(0x04, finalheight) // STABLE / ACCEPT
+          return
         }
       } catch (err) {
         if (heightCompleted) return
@@ -2541,7 +2547,7 @@ export async function case38_20kHzImpedanceQuery() {
 
         console.log('------statusResult-------')
         console.log(statusResult)
-       // Track errors
+        // Track errors
         if (!results.errorCounts[statusCode]) {
           results.errorCounts[statusCode] = 0
         }
@@ -2673,7 +2679,7 @@ export async function case39_100kHzImpedanceQuery() {
   try {
     // Step 1: Stop current test
     console.log('   Stopping previous measurement...')
-//Step 1: Stop current test
+    //Step 1: Stop current test
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -3518,8 +3524,8 @@ export async function case40b_ArmImpedance50kHz() {
             }
             results.statusCodes[measurementStatus]++
 
-            emitArmStatus(measurementStatus,{
-              frequency:"50khzArm",
+            emitArmStatus(measurementStatus, {
+              frequency: "50khzArm",
               attempt
             })
 
@@ -4175,6 +4181,10 @@ function interpretMeasurementStatus(statusByte) {
 }
 
 //weight case
+const WEIGHT_STABILITY_COUNT = 5      // window size
+const WEIGHT_CV_THRESHOLD = 0.01   // 1% coefficient of variation
+const WEIGHT_SD_CEILING = 0.15   // kg — absolute guard
+const WEIGHT_MIN_VALID = 1.0    // kg — aligned with UNDERLOAD
 export async function case41_WeightMeasurement() {
   try {
     // ====================================================================
@@ -4205,54 +4215,27 @@ export async function case41_WeightMeasurement() {
     // ====================================================================
 
     const isStableWeight = (measurements) => {
-      if (measurements.length < 4) return false
+      if (measurements.length < WEIGHT_STABILITY_COUNT) return false
 
-      // 1. QUICK EXIT: CHECK FOR 4 CONSISTENT READINGS
-      const lastThree = measurements.slice(-4)
-      const weights3 = lastThree.map((m) => m.calibratedWeight)
+      const window = measurements
+        .slice(-WEIGHT_STABILITY_COUNT)
+        .map((m) => m.calibratedWeight)
 
-      // Ignore low weights
-      if (weights3.some((w) => w < 0.5)) return false
+      // every sample in the window must be a real load
+      if (window.some((w) => w < WEIGHT_MIN_VALID)) return false
 
-      // Check max difference is minimal (< 0.1kg)
-      const maxW = Math.max(...weights3)
-      const minW = Math.min(...weights3)
-      const range = maxW - minW
-
-      if (range < 0.1) {
-        console.log(
-          `\n✅ 4 Stable readings detected: ${weights3[weights3.length - 1].toFixed(2)} kg (Range: ${range.toFixed(3)}kg). Stopping early.`
-        )
-        return true
-      }
-
-      // 2. STANDARD VARIATION CHECK (Original Logic)
-      if (measurements.length < 5) return false
-
-      // Get the last 5 measurements
-      const lastFive = measurements.slice(-5)
-
-      // Ensure all measurements have valid weight
-      let validMeasurements = lastFive.filter(
-        (m) => m && m.calibratedWeight !== undefined && m.calibratedWeight > 0.5
-      )
-
-      if (validMeasurements.length < 5) return false
-
-      // Calculate weight variations
-      let weights = validMeasurements.map((m) => m.calibratedWeight)
-      const maxWeight = Math.max(...weights)
-      const minWeight = Math.min(...weights)
-      const weightVariation = (maxWeight - minWeight) / maxWeight
+      const n = window.length
+      const mean = window.reduce((a, b) => a + b, 0) / n
+      const variance = window.reduce((a, w) => a + (w - mean) ** 2, 0) / n
+      const sd = Math.sqrt(variance)
+      const cv = sd / mean
 
       console.log('Weight Stability Check:')
-      console.log(`Weights: [${weights.map((w) => w.toFixed(2)).join(', ')} kg]`)
-      console.log(`Weight Variation: ${(weightVariation * 100).toFixed(2)}%`)
-      measurements.statusCode = 0x03
-      // Stability criteria: within 5% variation
-      return weightVariation < 0.05
-    }
+      console.log(`   Window: [${window.map((w) => w.toFixed(2)).join(', ')}] kg`)
+      console.log(`   Mean: ${mean.toFixed(3)} kg | SD: ${sd.toFixed(4)} kg | CV: ${(cv * 100).toFixed(3)}%`)
 
+      return cv <= WEIGHT_CV_THRESHOLD && sd <= WEIGHT_SD_CEILING
+    }
     // ====================================================================
     // SETUP COMMANDS
     // ====================================================================
@@ -4484,11 +4467,8 @@ export async function case41_WeightMeasurement() {
         // CHECK FOR STABILITY
         // ══════════════════════════════════════════════════════════
 
-        if (calibratedWeight > 0.5) {
-          // Only check stability for valid weights
+        if (calibratedWeight >= WEIGHT_MIN_VALID) {
           if (isStableWeight(weightResults.measurements)) {
-            console.log('------neetu------')
-            console.log(weightResults.measurements)
             console.log('\n Stable weight measurement detected!')
             break
           }
@@ -4545,18 +4525,15 @@ export async function case41_WeightMeasurement() {
       // Calculate statistics
       const validMeasurements = weightResults.measurements.filter((m) => m.statusCode === 0x03)
 
-      if (validMeasurements.length > 0) {
-        const weights = validMeasurements.map((m) => m.calibratedWeight)
-        const avgWeight = weights.reduce((a, b) => a + b, 0) / weights.length
-        const maxWeight = Math.max(...weights)
-        const minWeight = Math.min(...weights)
+      if (validMeasurements.length >= WEIGHT_STABILITY_COUNT) {
+        const stableWindow = validMeasurements
+          .slice(-WEIGHT_STABILITY_COUNT)
+          .map((m) => m.calibratedWeight)
 
-        console.log(`\n   Average: ${avgWeight.toFixed(2)} kg`)
-        console.log(`   Range: ${minWeight.toFixed(2)} - ${maxWeight.toFixed(2)} kg`)
+        finalweight =
+          stableWindow.reduce((a, b) => a + b, 0) / stableWindow.length
 
-        const finalMeasurement = weightResults.measurements[weightResults.measurements.length - 1]
-        console.log(`\n✅ FINAL WEIGHT: ${finalMeasurement.calibratedWeight.toFixed(2)} kg`)
-        finalweight = finalMeasurement.calibratedWeight
+        console.log(`\n FINAL WEIGHT: ${finalweight.toFixed(2)} kg`)
       } else {
         console.log('\n No valid stable measurements collected')
       }
@@ -4580,7 +4557,7 @@ export async function case41_WeightMeasurement() {
     if (!IS_ELECTRON) showMenu()
 
     const finalResult = {
-      success: true,
+      success: finalweight > 0,
       weight: finalweight
     }
     console.log(`\n📤 Sending Final Result to UI:`, finalResult)
@@ -4604,7 +4581,7 @@ export async function case41_WeightMeasurement() {
  */
 async function collectStableRawReading(actionName = 'Calibration') {
   const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
-  const weightQueryCommand   = [0x55, 0x05, 0xa1, 0x00, 0x05]
+  const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
   const MAX_ATTEMPTS = 30
 
   try {
