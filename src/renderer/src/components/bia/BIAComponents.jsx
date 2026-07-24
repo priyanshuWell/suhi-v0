@@ -552,7 +552,7 @@ export const BIAComponent = ({
   const handleAudioEnd = () => { setIsAudioPlaying(false) }
 
   const getAudioPath = (type) => {
-    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, im: impedanceAudio, imcomplete: im_completeAudio }
+    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, hold: impedanceAudio, im: impedanceAudio, imcomplete: im_completeAudio }
     return audioMap[type] || standstraightAudio
   }
 
