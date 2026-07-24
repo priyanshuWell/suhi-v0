@@ -919,7 +919,7 @@ export let weightCalibration = {
   zeroOffset: 0.0,     // rawWeight subtracted before applying factor
   factor: 1.53138,     // multiply (rawWeight - zeroOffset) to get kg
   calibratedAt: null,  // ISO timestamp of last full calibration
-  isCalibrated: false  // false until a real calibration has been performed
+  isCalibrated: true // false until a real calibration has been performed
 }
 
 const READ_CMD = Buffer.from([0x55, 0xaa, 0x01, 0x01, 0x01])
