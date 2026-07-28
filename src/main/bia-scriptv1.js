@@ -3,6 +3,24 @@ import { SerialPort } from 'serialport'
 import readline from 'readline'
 import { BrowserWindow } from 'electron'
 import { eventBus, EVENTS } from './eventbus'
+import { logger } from './logger'
+import {
+  IMPEDANCE_ERROR_CODES,
+  WEIGHT_ERROR_CODES,
+  HEIGHT_ERROR_CODES,
+  FREQUENCIES,
+  IMPEDANCE_MODES,
+  STABILITY_COUNT,
+  STABILITY_THRESHOLD,
+  STABILITY_SD_THRESHOLD,
+  WEIGHT_STABILITY_COUNT,
+  WEIGHT_CV_THRESHOLD,
+  WEIGHT_SD_CEILING,
+  WEIGHT_MIN_VALID,
+} from './bia/constants'
+import { ImprovedImpedanceStatusHandler } from './bia/statusHandler'
+import { runImpedanceMeasurementLoop }    from './bia/impedanceLoop'
+import { onPortError, onPortClose }       from './bia/portRecovery'
 export let serialPort = null
 export let heightPort = null
 export let biaPort = null
@@ -12,733 +30,12 @@ let heightCompleted = false
 let weightCompleted = false
 
 // ================================================================
-// GLOBAL ERROR HANDLER - BMH05108 PROTOCOL
+// ERROR CODE MAPS — imported from ./bia/constants and re-exported
 // ================================================================
-
-export const IMPEDANCE_ERROR_CODES = {
-  0x00: {
-    code: 'NULL',
-    severity: 'INFO',
-    message: 'BIA_NULL - Null state',
-    description: 'Device has not received measurement request',
-    action: 'INFO',
-    canRetry: false,
-    nextStep: 'Continue with measurement',
-    userMessage: "Oops, couldn't get body composition analysis. Hold on, we will try once again"
-  },
-  0x01: {
-    code: 'ELECTRODE',
-    severity: 'ERROR',
-    message: 'Ensure your are holding electrodes properly',
-    description: 'Device detected electrode contact problem',
-    action: 'RETRY',
-    canRetry: false,
-    nextStep: 'Stop measurement and check electrodes',
-    userMessage: 'Please ensure you are barefoot, and holding the hand rails firmly',
-    causes: [
-      'Electrode not properly connected',
-      'Loose electrode contact',
-      'Poor skin contact',
-      'Broken electrode pad'
-    ],
-    solutions: [
-      '1. Inspect all electrodes visually',
-      '2. Reseat each electrode firmly',
-      '3. Clean electrode pads with alcohol',
-      '4. Check for bent pins/connectors',
-      '5. Try replacement electrode pads',
-      '6. Restart measurement'
-    ]
-  },
-  0x02: {
-    code: 'MEASURE',
-    severity: 'INFO',
-    message: 'BIA_MEASURE - Measurement in progress',
-    description: 'Device is currently measuring - wait for completion',
-    action: 'WAIT',
-    canRetry: false,
-    nextStep: 'Wait for measurement to complete',
-    userMessage: 'Measurement in progress... Please wait',
-    waitTime: 3000
-  },
-  0x03: {
-    code: 'SUCCESS',
-    severity: 'SUCCESS',
-    message: 'BIA_SUCCESS - Measurement successful',
-    description: 'Device measurement completed successfully',
-    action: 'ACCEPT',
-    canRetry: false,
-    nextStep: 'Accept measurement and continue',
-    userMessage: 'Impedance measurement successful',
-    expectation: 'Data is valid and ready to use'
-  },
-  0x04: {
-    code: 'ERROR_RANGER',
-    severity: 'ERROR',
-    message: 'BIA_ERROR_RANGER - Impedance out of range (10-1600Ω)',
-    description: 'Measured value is outside acceptable range',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 3,
-    waitBeforeRetry: 2000,
-    nextStep: 'Retry measurement with corrected conditions',
-    userMessage:
-      'MEASUREMENT OUT OF RANGE | Impedance value is outside valid range\n   • Check electrode contact quality\n   • Verify skin contact\n   • Adjust electrode placement',
-    issues: [
-      'Impedance too low (short circuit)',
-      'Impedance too high (poor contact)',
-      'Invalid measurement'
-    ],
-    solutions: [
-      '1. Check electrode contact pressure',
-      '2. Ensure skin is clean and slightly moist',
-      '3. Reposition electrodes if needed',
-      '4. Apply conductive gel if dry',
-      '5. Dry skin if wet',
-      '6. Retry measurement'
-    ]
-  },
-  0x05: {
-    code: 'ERROR_REPEAT',
-    severity: 'ERROR',
-    message: 'BIA_ERROR_REPEAT - Abnormal data detected',
-    description: 'Device detected abnormal data, measurement failed',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 3,
-    waitBeforeRetry: 2000,
-    nextStep: 'Retry the impedance measurement',
-    userMessage: "Oops, couldn't get body scan data. Hold on, we will try once again!",
-    issues: [
-      'Electrode connection lost during measurement',
-      'User moved during measurement',
-      'Sensor malfunction'
-    ],
-    solutions: [
-      '1. Ensure user is still for measurement',
-      '2. Check all electrode connections',
-      '3. Retry measurement',
-      '4. If persists, restart device'
-    ]
-  },
-  0x06: {
-    code: 'USER_EXIT',
-    severity: 'INFO',
-    message: 'BIA_USER_EXIT - User stopped measurement',
-    description: 'User cancelled the measurement',
-    action: 'CANCEL',
-    canRetry: false,
-    nextStep: 'Can retry measurement anytime',
-    userMessage: 'Measurement cancelled by user',
-    expectation: 'Ready to restart measurement'
-  }
-}
-
-export const WEIGHT_ERROR_CODES = {
-  0x00: {
-    code: 'NULL',
-    severity: 'INFO',
-    message: 'WEIGHT_NULL - Null state',
-    description: 'Scale has not received measurement request',
-    action: 'INFO',
-    canRetry: false,
-    nextStep: 'Continue with weight measurement',
-    userMessage: 'Stand straight, weight measurement in progess...'
-  },
-  0x01: {
-    code: 'ZERO_POINT',
-    severity: 'WARNING',
-    message: 'WEIGHT IS ZERO DETECTED',
-    description: 'Scale is currently empty or reading zero.',
-    action: 'WAIT',
-    canRetry: false,
-    nextStep: 'Accept zero reading (empty scale confirmed)',
-    userMessage: 'Step on the scale and stand still',
-    expectation: 'No weight on scale'
-  },
-  0x02: {
-    code: 'UNSTABLE',
-    severity: 'WARNING',
-    message: 'WEIGHT_UNSTABLE - Unstable reading',
-    description: 'Weight reading is fluctuating',
-    action: 'WAIT',
-    canRetry: false,
-    nextStep: 'Wait for weight to stabilize',
-    userMessage: 'Weight reading is unstable, please stand still...',
-    waitTime: 2000,
-    causes: [
-      'User moving on scale',
-      'Scale still settling',
-      'Wind or vibration',
-      'Scale needs stabilization'
-    ],
-    solutions: [
-      '1. Keep user still on scale',
-      '2. Wait 2-3 seconds for settling',
-      '3. Ensure scale is on level surface',
-      '4. Remove any vibration sources',
-      '5. Retry measurement'
-    ]
-  },
-  0x03: {
-    code: 'STABLE',
-    severity: 'SUCCESS',
-    message: 'WEIGHT_STABLE - Stable weight reading',
-    description: 'Weight measurement is stable and valid',
-    action: 'ACCEPT',
-    canRetry: false,
-    nextStep: 'Accept weight measurement and continue',
-    userMessage: 'Weight measurement stable and valid',
-    expectation: 'Data is valid and ready to use'
-  },
-  0x04: {
-    code: 'OVERLOAD',
-    severity: 'ERROR',
-    message: 'WEIGHT_OVERLOAD - Scale overloaded',
-    description: 'Measured weight exceeds scale maximum capacity',
-    action: 'ABORT',
-    canRetry: false,
-    nextStep: 'Remove weight and retry',
-    userMessage: 'SCALE OVERLOADED! Remove weight from scale and Retry measurement',
-    maxCapacity: 150, // kg
-    issues: ['Weight exceeds 150 kg', 'Multiple people on scale', 'Scale needs recalibration'],
-    solutions: [
-      '1. Remove all weight from scale',
-      '2. Check if weight is within 0-150 kg range',
-      '3. Ensure only one person on scale',
-      '4. Wait for scale to zero',
-      '5. Retry measurement',
-      '6. If persists, recalibrate scale'
-    ]
-  },
-  0x05: {
-    code: 'UNDERLOAD',
-    severity: 'WARNING',
-    message: 'WEIGHT_UNDERLOAD - Weight too low',
-    description: 'Measured weight is below minimum threshold',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 2,
-    waitBeforeRetry: 1500,
-    nextStep: 'Retry measurement after weight stabilization',
-    userMessage: 'WEIGHT TOO LOW|Ensure proper contact with scale',
-    minThreshold: 1.0, // kg
-    issues: ['User not properly on scale', 'Poor contact with scale', 'Scale needs zeroing'],
-    solutions: [
-      '1. Ensure user stands firmly on scale',
-      '2. Check all feet contact scale platform',
-      '3. Wait 2-3 seconds for settling',
-      '4. Remove shoes if very light',
-      '5. Retry measurement'
-    ]
-  },
-  0x06: {
-    code: 'CALIBRATION_ERROR',
-    severity: 'ERROR',
-    message: 'WEIGHT_CALIBRATION_ERROR - Calibration mismatch',
-    description: 'Calibration factor appears incorrect',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 1,
-    waitBeforeRetry: 1000,
-    nextStep: 'Retry measurement, consider recalibration',
-    userMessage:
-      'CALIBRATION ERROR\n   • Reading seems incorrect\n   • Please retry measurement\n   • If persistent, run calibration',
-    issues: ['Calibration factor incorrect', 'Scale has drifted', 'Temperature change'],
-    solutions: [
-      '1. Retry measurement on empty scale (should be 0 kg)',
-      '2. Retry with known weight',
-      '3. If reading is off, run calibration (case 15)',
-      '4. Check scale is on level surface',
-      '5. Contact support if persists'
-    ]
-  },
-  0x07: {
-    code: 'SENSOR_ERROR',
-    severity: 'CRITICAL',
-    message: 'WEIGHT_SENSOR_ERROR - Sensor malfunction',
-    description: 'Scale sensor is not responding correctly',
-    action: 'ABORT',
-    canRetry: false,
-    nextStep: 'Check scale hardware, may need service',
-    userMessage:
-      'SCALE SENSOR ERROR\n   • Scale sensor not responding\n   • Hardware may be faulty\n   • Contact support or service scale',
-    issues: ['Sensor disconnected', 'Sensor malfunction', 'Scale hardware failure'],
-    solutions: [
-      '1. Check power to scale',
-      '2. Verify USB/serial connection',
-      '3. Restart scale (power cycle)',
-      '4. Restart software',
-      '5. If persists, scale needs service'
-    ]
-  },
-  0x08: {
-    code: 'TIMEOUT',
-    severity: 'ERROR',
-    message: 'WEIGHT_TIMEOUT - Measurement timeout',
-    description: 'Scale did not respond to measurement query',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 3,
-    waitBeforeRetry: 2000,
-    nextStep: 'Retry measurement',
-    userMessage: 'Be On Scale! Retrying measurement',
-    issues: ['Serial connection interrupted', 'Scale unresponsive', 'Communication error'],
-    solutions: [
-      '1. Check USB/serial cable connection',
-      '2. Check scale power LED',
-      '3. Restart scale',
-      '4. Retry measurement',
-      '5. Restart software if persists'
-    ]
-  },
-  0x09: {
-    code: 'PORT_ERROR',
-    severity: 'CRITICAL',
-    message: 'WEIGHT_PORT_ERROR - Port not connected',
-    description: 'Weight port (scale) is not connected',
-    action: 'ABORT',
-    canRetry: false,
-    nextStep: 'Connect scale and select measurement again',
-    userMessage:
-      'SCALE NOT CONNECTED\n   • Please connect scale via USB/Serial\n   • Check connection in menu option 3\n   • Try again after connecting',
-    issues: ['USB cable disconnected', 'Serial port not opened', 'Scale powered off'],
-    solutions: [
-      '1. Check USB cable is connected to scale',
-      '2. Check USB cable is connected to computer',
-      '3. Power on the scale',
-      '4. Select option 3 to connect weight scale',
-      '5. Verify connection shows "connected"',
-      '6. Then retry measurement'
-    ]
-  },
-  0x0a: {
-    code: 'INVALID_RESPONSE',
-    severity: 'ERROR',
-    message: 'WEIGHT_INVALID_RESPONSE - Invalid response format',
-    description: 'Scale responded but with invalid data format',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 2,
-    waitBeforeRetry: 1000,
-    nextStep: 'Retry measurement',
-    userMessage: 'Scale sent invalid data, Retrying measurement...',
-    issues: ['Data corruption', 'Serial communication error', 'Scale firmware issue'],
-    solutions: [
-      '1. Retry measurement',
-      '2. Check USB cable quality',
-      '3. Restart scale',
-      '4. Update scale firmware if available',
-      '5. Contact support if persists'
-    ]
-  }
-}
-
-export const HEIGHT_ERROR_CODES = {
-  0x00: {
-    code: 'NULL',
-    severity: 'INFO',
-    message: 'HEIGHT_NULL - Null state',
-    description: 'Height sensor has not received measurement request',
-    action: 'INFO',
-    canRetry: false,
-    nextStep: 'Now we are measuring your height, please stand still!',
-    userMessage: 'Measurement ready to start!'
-  },
-  0x01: {
-    code: 'OUT_OF_RANGE_LOW',
-    severity: 'ERROR',
-    message: 'HEIGHT_OUT_OF_RANGE_LOW - Height too low',
-    description: 'Height is below minimum range (< 80 cm)',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 2,
-    waitBeforeRetry: 1500,
-    nextStep: 'Check user height and retry',
-    userMessage: 'HEIGHT OUT OF RANGE (TOO LOW)',
-    minHeight: 80, // cm
-    issues: [
-      'User not standing straight',
-      'Sensor not aligned',
-      'Child measurement (< 80 cm normal)',
-      'Sensor malfunction'
-    ],
-    solutions: [
-      '1. Ask user to stand straight',
-      '2. Ensure feet are flat on ground',
-      '3. Check sensor is at correct height',
-      '4. Check sensor alignment',
-      '5. Retry measurement',
-      '6. If user is child, this is normal'
-    ]
-  },
-  0x02: {
-    code: 'OUT_OF_RANGE_HIGH',
-    severity: 'ERROR',
-    message: 'HEIGHT_OUT_OF_RANGE_HIGH - Height too high',
-    description: 'Height exceeds maximum range (> 250 cm)',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 2,
-    waitBeforeRetry: 1500,
-    nextStep: 'Check user height and retry',
-    userMessage: 'HEIGHT OUT OF RANGE (TOO HIGH)',
-    maxHeight: 250, // cm
-    issues: ['User standing on object', 'Sensor misaligned', 'Sensor malfunction', 'False reading'],
-    solutions: [
-      '1. Ask user to step down if on anything',
-      '2. Check user standing on flat ground',
-      '3. Check sensor is properly aligned',
-      '4. Verify height is realistic',
-      '5. Retry measurement',
-      '6. Check for obstructions'
-    ]
-  },
-  0x03: {
-    code: 'UNSTABLE',
-    severity: 'WARNING',
-    message: 'HEIGHT_UNSTABLE - Unstable reading',
-    description: 'Height reading is fluctuating',
-    action: 'WAIT',
-    canRetry: false,
-    nextStep: 'Wait for reading to stabilize',
-    userMessage: 'We are measuring your Height, Please wait...',
-    waitTime: 2000,
-    causes: ['User moving', 'Sensor settling', 'Vibrations', 'Air currents affecting sensor'],
-    solutions: [
-      '1. Ask user to stand still',
-      '2. Remove any moving objects',
-      '3. Avoid air vents or fans',
-      '4. Wait 2-3 seconds',
-      '5. Retry measurement'
-    ]
-  },
-  0x04: {
-    code: 'STABLE',
-    severity: 'SUCCESS',
-    message: 'HEIGHT_STABLE - Stable height reading',
-    description: 'Height measurement is stable and valid',
-    action: 'ACCEPT',
-    canRetry: false,
-    nextStep: 'Accept height measurement and continue',
-    userMessage: '✅ Height measurement stable and valid',
-    expectation: 'Data is valid and ready to use'
-  },
-  0x05: {
-    code: 'SENSOR_ERROR',
-    severity: 'CRITICAL',
-    message: 'HEIGHT_SENSOR_ERROR - Sensor malfunction',
-    description: 'Height sensor is not responding correctly',
-    action: 'ABORT',
-    canRetry: false,
-    nextStep: 'Check sensor hardware, may need service',
-    userMessage:
-      ' HEIGHT SENSOR ERROR\n   • Sensor not responding\n   • Hardware may be faulty\n   • Contact support or service sensor',
-    issues: ['Sensor disconnected', 'Sensor malfunction', 'Hardware failure'],
-    solutions: [
-      '1. Check power to sensor',
-      '2. Verify USB/serial connection',
-      '3. Check sensor cable',
-      '4. Restart sensor',
-      '5. If persists, sensor needs service'
-    ]
-  },
-  0x06: {
-    code: 'CALIBRATION_ERROR',
-    severity: 'ERROR',
-    message: 'HEIGHT_CALIBRATION_ERROR - Calibration mismatch',
-    description: 'Height sensor calibration appears incorrect',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 1,
-    waitBeforeRetry: 1000,
-    nextStep: 'Retry measurement, consider recalibration',
-    userMessage:
-      'CALIBRATION ERROR\n   • Reading seems incorrect\n   • Please retry measurement\n   • If persistent, recalibrate sensor',
-    issues: ['Calibration offset incorrect', 'Sensor has drifted', 'Temperature change'],
-    solutions: [
-      '1. Retry measurement',
-      '2. Use reference height to verify',
-      '3. If off, recalibrate sensor',
-      '4. Check sensor is vertical',
-      '5. Contact support if persists'
-    ]
-  },
-  0x07: {
-    code: 'TIMEOUT',
-    severity: 'ERROR',
-    message: 'MEASUREMENT_TIMEOUT - Measurement timeout',
-    description: 'Height sensor did not respond to query',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 3,
-    waitBeforeRetry: 2000,
-    nextStep: 'Retry measurement',
-    userMessage: 'Sensor did not respond | Measurement timeout',
-    issues: ['Serial connection interrupted', 'Sensor unresponsive', 'Communication error'],
-    solutions: [
-      '1. Check USB/serial cable',
-      '2. Check sensor power LED',
-      '3. Restart sensor',
-      '4. Retry measurement',
-      '5. Restart software if persists'
-    ]
-  },
-  0x08: {
-    code: 'PORT_ERROR',
-    severity: 'CRITICAL',
-    message: 'HEIGHT_PORT_ERROR - Port not connected',
-    description: 'Height sensor port is not connected',
-    action: 'ABORT',
-    canRetry: false,
-    nextStep: 'Connect height sensor and select measurement again',
-    userMessage:
-      '❌ HEIGHT SENSOR NOT CONNECTED\n   • Please connect height sensor via USB/Serial\n   • Check connection in menu option 2\n   • Try again after connecting',
-    issues: ['USB cable disconnected', 'Serial port not opened', 'Sensor powered off'],
-    solutions: [
-      '1. Check USB cable is connected to sensor',
-      '2. Check USB cable is connected to computer',
-      '3. Power on the height sensor',
-      '4. Select option 2 to connect height sensor',
-      '5. Verify connection shows "connected"',
-      '6. Then retry measurement'
-    ]
-  },
-  0x09: {
-    code: 'INVALID_RESPONSE',
-    severity: 'ERROR',
-    message: 'HEIGHT_INVALID_RESPONSE - Invalid response format',
-    description: 'Sensor responded but with invalid data format',
-    action: 'RETRY',
-    canRetry: true,
-    maxRetries: 2,
-    waitBeforeRetry: 1000,
-    nextStep: 'Retry measurement',
-    userMessage:
-      ' INVALID RESPONSE\n   • Sensor sent invalid data\n   • May be communication error\n   • Retrying measurement',
-    issues: ['Data corruption', 'Serial communication error', 'Sensor firmware issue'],
-    solutions: [
-      '1. Retry measurement',
-      '2. Check USB cable quality',
-      '3. Restart sensor',
-      '4. Update sensor firmware if available',
-      '5. Contact support if persists'
-    ]
-  },
-  0x0a: {
-    code: 'OBSTACLE_DETECTED',
-    severity: 'WARNING',
-    message: 'HEIGHT_OBSTACLE - Obstacle detected',
-    description: 'Object detected in sensor measurement path',
-    action: 'RETRY',
-    canRetry: false,
-    nextStep: 'Remove obstacle and retry',
-    userMessage:
-      '⚠️ OBSTACLE DETECTED\n   • Something blocking sensor\n   • Clear the measurement area\n   • Ensure user can stand freely\n   • Retry measurement',
-    issues: ['Object in measurement path', 'User holding something', 'Close to wall or object'],
-    solutions: [
-      '1. Remove any objects near sensor',
-      '2. Ask user not to hold items',
-      '3. Ensure adequate space',
-      '4. Check sensor has clear view',
-      '5. Retry measurement'
-    ]
-  }
-}
-
-class ImprovedImpedanceStatusHandler {
-  /**
-   * Handle impedance status code with comprehensive error information
-   */
-  static handleImpedanceStatus(statusCode, attemptNumber = 1) {
-    try {
-      // Validate status code
-      if (!IMPEDANCE_ERROR_CODES[statusCode]) {
-        return this.handleUnknownStatus(statusCode)
-      }
-
-      const errorInfo = IMPEDANCE_ERROR_CODES[statusCode]
-
-      // Display error information
-      this.displayErrorInfo(errorInfo, attemptNumber)
-
-      // Return decision object
-      return {
-        code: statusCode,
-        ...errorInfo,
-        decision: this.makeDecision(errorInfo, attemptNumber)
-      }
-    } catch (error) {
-      console.error('Error handling impedance status:', error.message)
-      return {
-        code: statusCode,
-        error: error.message,
-        action: 'ERROR'
-      }
-    }
-  }
-
-  /**
-   * Display formatted error information
-   */
-  static displayErrorInfo(errorInfo, attemptNumber) {
-    console.log('\n' + '='.repeat(70))
-    console.log(` ${errorInfo.message}`)
-    console.log('='.repeat(70))
-
-    // Show severity
-    const severityEmoji = {
-      CRITICAL: '❌',
-      ERROR: '❌',
-      WARNING: '⚠️',
-      INFO: 'ℹ️',
-      SUCCESS: '✅'
-    }
-
-    console.log(`\nSeverity: ${severityEmoji[errorInfo.severity]} ${errorInfo.severity}`)
-    console.log(
-      `Status Code: 0x${errorInfo.code.charCodeAt(0).toString(16).toUpperCase()} (${errorInfo.code})`
-    )
-
-    if (attemptNumber > 1) {
-      console.log(`Attempt: ${attemptNumber}`)
-    }
-
-    // Show description
-    console.log(`\nDescription: ${errorInfo.description}`)
-
-    // Show user-friendly message
-    if (errorInfo.userMessage) {
-      console.log(`\nMessage:\n${errorInfo.userMessage}`)
-    }
-
-    // Show causes if critical or error
-    if (errorInfo.severity === 'CRITICAL' || errorInfo.severity === 'ERROR') {
-      if (errorInfo.causes && errorInfo.causes.length > 0) {
-        console.log(`\n Possible Causes:`)
-        errorInfo.causes.forEach((cause, idx) => {
-          console.log(`   ${idx + 1}. ${cause}`)
-        })
-      }
-
-      if (errorInfo.solutions && errorInfo.solutions.length > 0) {
-        console.log(`\n✅ Recommended Solutions:`)
-        errorInfo.solutions.forEach((solution) => {
-          console.log(`   ${solution}`)
-        })
-      }
-    }
-
-    // Show next step
-    console.log(`\nNext Step: ${errorInfo.nextStep}`)
-
-    if (errorInfo.canRetry) {
-      console.log(`   Retry Capability: YES (Max ${errorInfo.maxRetries} attempts)`)
-      console.log(`   Wait Before Retry: ${errorInfo.waitBeforeRetry / 1000} seconds`)
-    }
-
-    console.log('\n' + '='.repeat(70) + '\n')
-  }
-
-  /**
-   * Handle unknown status code
-   */
-  static handleUnknownStatus(statusCode) {
-    console.log(`\nUNKNOWN IMPEDANCE STATUS: 0x${statusCode.toString(16).toUpperCase()}`)
-    console.log(`This status code is not recognized in the protocol.`)
-    console.log(`Please check device documentation or verify the response data.\n`)
-
-    return {
-      code: statusCode,
-      severity: 'ERROR',
-      message: `Unknown impedance status: 0x${statusCode.toString(16).toUpperCase()}`,
-      action: 'ERROR',
-      canRetry: false,
-      decision: {
-        shouldRetry: false,
-        shouldAbort: true,
-        isCritical: true
-      }
-    }
-  }
-
-  /**
-   * Make decision based on error code
-   */
-  static makeDecision(errorInfo, attemptNumber) {
-    return {
-      shouldRetry: errorInfo.canRetry,
-      shouldAbort: errorInfo.action === 'ABORT' || errorInfo.action === 'CANCEL',
-      shouldWait: errorInfo.action === 'WAIT',
-      shouldAccept: errorInfo.action === 'ACCEPT',
-      isCritical: errorInfo.severity === 'CRITICAL',
-      isSuccess: errorInfo.severity === 'SUCCESS',
-      waitTime: errorInfo.waitTime || errorInfo.waitBeforeRetry || 0,
-      maxRetriesReached: attemptNumber >= errorInfo.maxRetries,
-      action: errorInfo.action,
-      attemptNumber: attemptNumber
-    }
-  }
-
-  /**
-   * Handle retry logic
-   */
-  static async handleRetry(statusCode, currentAttempt, maxAttempts) {
-    const errorInfo = IMPEDANCE_ERROR_CODES[statusCode]
-
-    if (!errorInfo || !errorInfo.canRetry) {
-      return {
-        shouldRetry: false,
-        reason: 'Retry not allowed for this error'
-      }
-    }
-
-    if (currentAttempt >= maxAttempts) {
-      return {
-        shouldRetry: false,
-        reason: `Maximum retry attempts (${maxAttempts}) reached`
-      }
-    }
-
-    const waitTime = errorInfo.waitBeforeRetry || 2000
-
-    console.log(`\nRetrying measurement in ${waitTime / 1000} seconds...`)
-    console.log(`   Attempt ${currentAttempt + 1} of ${maxAttempts}`)
-
-    await new Promise((resolve) => setTimeout(resolve, waitTime))
-
-    return {
-      shouldRetry: true,
-      nextAttempt: currentAttempt + 1,
-      waitTime: waitTime
-    }
-  }
-
-  /**
-   * Display error statistics
-   */
-  static displayErrorStatistics(errorCounts) {
-    console.log('\n' + '='.repeat(70))
-    console.log('ERROR STATISTICS')
-    console.log('='.repeat(70))
-
-    let totalErrors = 0
-    const sortedCodes = Object.keys(errorCounts).sort()
-
-    sortedCodes.forEach((code) => {
-      const count = errorCounts[code]
-      if (count > 0) {
-        const errorInfo = IMPEDANCE_ERROR_CODES[code]
-        const message = errorInfo ? errorInfo.code : `Unknown (0x${code})`
-        console.log(`   0x${code}: ${message.padEnd(20)} - ${count} occurrence(s)`)
-        totalErrors += count
-      }
-    })
-
-    console.log(`\nTotal Errors: ${totalErrors}`)
-    console.log('='.repeat(70) + '\n')
-  }
-}
+export { IMPEDANCE_ERROR_CODES } from './bia/constants'
+export { WEIGHT_ERROR_CODES }    from './bia/constants'
+export { HEIGHT_ERROR_CODES }    from './bia/constants'
+// ImprovedImpedanceStatusHandler is imported from './bia/statusHandler' above
 
 class BIAError extends Error {
   constructor(message, severity = 'ERROR', code = null) {
@@ -880,30 +177,8 @@ const rl = readline.createInterface({
   output: process.stdout
 })
 
-const FREQUENCIES = {
-  FIVE_KHZ: 0x01,
-  TEN_KHZ: 0x02,
-  TWENTY_KHZ: 0x03,
-  TWENTY_FIVE_KHZ: 0x04,
-  FIFTY_KHZ: 0x05,
-  HUNDRED_KHZ: 0x06,
-  TWO_HUNDRED_KHZ: 0x07,
-  TWO_FIFTY_KHZ: 0x08,
-  FIVE_HUNDRED_KHZ: 0x09
-}
-
-const IMPEDANCE_MODES = {
-  STOP_TEST: 0x00,
-  EIGHT_ELECTRODE_SINGLE: 0x01,
-  FOUR_ELECTRODE_LEGS: 0x02,
-  FOUR_ELECTRODE_ARMS: 0x03,
-  EIGHT_ELECTRODE_DUAL: 0x04
-}
-
+// FREQUENCIES, IMPEDANCE_MODES, STABILITY_* — imported from './bia/constants' above
 // ======================== HEIGHT MEASUREMENT ========================
-const STABILITY_COUNT = 10
-const STABILITY_THRESHOLD = 2
-const STABILITY_SD_THRESHOLD = 1.0
 export let stableReadings = []
 export let isMeasurementStopped = false
 let heightBuffer = Buffer.alloc(0)
@@ -1489,26 +764,32 @@ export function parseBodyCompositionResponse(data) {
 let bodyCompositionPackages = {}
 let totalPackages = 0
 
-export function collectBodyCompositionOnce(timeout = 8000) {
+const BC_COLLECT_TIMEOUT_MS = 8000
+
+export function collectBodyCompositionOnce(timeout = BC_COLLECT_TIMEOUT_MS) {
   return new Promise((resolve, reject) => {
     let packages = {}
     let totalPackages = 0
-    let lastPackageTime = Date.now()
+    let resolved = false
+
+    const cleanup = () => {
+      clearTimeout(timer)
+      biaPort.off('data', onData)
+    }
 
     const timer = setTimeout(() => {
-      biaPort.off('data', onData)
+      if (resolved) return
+      resolved = true
+      cleanup()
       reject(new Error('BIA response timeout'))
     }, timeout)
 
     const checkCompletion = () => {
       if (totalPackages === 0) return false
-
-      let receivedCount = 0
       for (let i = 1; i <= totalPackages; i++) {
-        if (packages[i]) receivedCount++
+        if (!packages[i]) return false
       }
-
-      return receivedCount === totalPackages
+      return true
     }
 
     const onData = (data) => {
@@ -1522,40 +803,18 @@ export function collectBodyCompositionOnce(timeout = 8000) {
       }
 
       packages[parsed.currentPackage] = parsed.data
-      lastPackageTime = Date.now()
 
-      if (checkCompletion()) {
-        clearTimeout(timer)
-        biaPort.off('data', onData)
+      if (checkCompletion() && !resolved) {
+        resolved = true
+        cleanup()
 
         const ordered = {}
         for (let i = 1; i <= totalPackages; i++) {
-          if (packages[i]) {
-            ordered[`package${i}`] = packages[i]
-          }
+          if (packages[i]) ordered[`package${i}`] = packages[i]
         }
-
         resolve(ordered)
       }
     }
-
-    // Secondary timeout for delayed packages (e.g., if one package is slow)
-    const delayedTimeout = setInterval(() => {
-      if (checkCompletion()) {
-        clearInterval(delayedTimeout)
-        clearTimeout(timer)
-        biaPort.off('data', onData)
-
-        const ordered = {}
-        for (let i = 1; i <= totalPackages; i++) {
-          if (packages[i]) {
-            ordered[`package${i}`] = packages[i]
-          }
-        }
-
-        resolve(ordered)
-      }
-    }, 500)
 
     biaPort.on('data', onData)
   })
@@ -1748,9 +1007,12 @@ function parseImpedanceResponse(data) {
 
 // Connect to BIA port
 export async function connectBiaPort(portPath, baudRate = 38400) {
+  let intentionalClose = false
   try {
     if (biaPort && biaPort.isOpen) {
+      intentionalClose = true
       await new Promise((resolve) => biaPort.close(resolve))
+      intentionalClose = false
     }
 
     biaPort = new SerialPort({
@@ -1768,17 +1030,11 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
       }
 
       const hex = Buffer.from(data).toString('hex').toUpperCase()
-      const bytes = Array.from(data)
+       const bytes = Array.from(data)
         .map((b) => '0x' + b.toString(16).padStart(2, '0').toUpperCase())
         .join(', ')
-
-      console.log(`\n${'='.repeat(60)}`)
-      console.log(`BIA RESPONSE RECEIVED`)
-      console.log(`${'='.repeat(60)}`)
-      //  console.log(`Time: ${new Date().toLocaleTimeString()}`);
-      console.log(`Length: ${data.length} bytes`)
-      console.log(`Hex: ${hex}`)
-      console.log(`Bytes: [${bytes}]`)
+      logger.debug('BIA', `RX ${data.length}B: ${hex}`)
+      logger.debug('BIA bytes', bytes)
 
       if (data[1] === 0xb1 || data[1] === 0xb0) {
         parseImpedanceResponse(data)
@@ -1789,7 +1045,7 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
         try {
           processBodyCompositionResponse(data);
         } catch (error) {
-          console.error('Error parsing 8-electrode body composition:', error);
+          logger.error('BIA', 'Error parsing 8-electrode body composition', error.message)
         }
       }
       // 4-Electrode Parsing (Legs D1 & Arms D2)
@@ -1797,45 +1053,36 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
         try {
           const modeName = data[2] === 0xd1 ? 'Legs' : 'Arms';
           const parseFunc = data[2] === 0xd1 ? parseLegsBodyComposition : parseArmsBodyComposition;
-          // const rawFunc = data[2] === 0xd1 ? parseLegsBodyCompositionRawPackages : parseArmsBodyCompositionRawPackages;
 
           const parsedComp = parseFunc(data);
-          // const rawPackages = rawFunc(data);q
 
           if (parsedComp) {
-            console.log(`\n✅ ${modeName} Body Composition Data (Parsed):`);
-            console.log(JSON.stringify(parsedComp, null, 2));
-            // Send to Frontend:
+            logger.info('BIA', `${modeName} body composition received`)
             const eventName = data[2] === 0xd1 ? EVENTS.LEGS_COMP_COMPLETE : EVENTS.ARMS_COMP_COMPLETE;
             eventBus.emit(eventName, { parsed: parsedComp });
           }
         } catch (error) {
-          console.error('Error parsing 4-electrode body composition:', error);
+          logger.error('BIA', 'Error parsing 4-electrode body composition', error.message)
         }
       }
-      // heightWaitingForResponse = false;
       if (!IS_ELECTRON) showMenu()
     })
 
-    // biaPort.on('error', (err) => {
-    //     handleError('SERIAL_ERROR', `BIA Serial Error: ${err.message}`, 'ERROR');
-    // });
     biaPort.on('error', (err) => {
-      // if (weightCompleted) return;
-      console.error(`❌ Weight port error: ${err.message}`)
-      let errorInfo
-      if (err.message.includes('Permission denied')) {
-        errorInfo = WEIGHT_ERROR_CODES[0x08] // PORT_ERROR
-      } else {
-        errorInfo = WEIGHT_ERROR_CODES[0x05] // SENSOR_ERROR
-      }
-
+      logger.error('BIA', 'Port error', err.message)
       eventBus.emit('weight:error', {
         source: 'WEIGHT',
         osError: err.message,
-        ...errorInfo
+        ...(err.message.includes('Permission denied') ? WEIGHT_ERROR_CODES[0x08] : WEIGHT_ERROR_CODES[0x05])
       })
       isMeasurementStopped = true
+      // Phase 3: schedule reconnect with exponential backoff
+      onPortError(err, 'BIA', () => connectBiaPort(portPath, baudRate))
+    })
+
+    biaPort.on('close', () => {
+      logger.warn('BIA', 'Port closed')
+      onPortClose('BIA', () => connectBiaPort(portPath, baudRate), intentionalClose)
     })
 
     return new Promise((resolve, reject) => {
@@ -1845,12 +1092,12 @@ export async function connectBiaPort(portPath, baudRate = 38400) {
 
       biaPort.on('open', () => {
         clearTimeout(timeout)
-        console.log(`✅ BIA Connected to ${portPath} at ${baudRate} baud`)
+        logger.info('BIA', `Connected to ${portPath} at ${baudRate} baud`)
         resolve()
       })
     })
   } catch (error) {
-    console.error('❌ BIA Connection failed:', error.message)
+    logger.error('BIA', 'Connection failed', error.message)
     throw error
   }
 }
@@ -1874,7 +1121,6 @@ function emitHeightStatus(statusCode, height = null) {
 
 export function emitWeightStatus(statusCode, weight = null) {
   const info = handleWeightStatus(statusCode, weight)
-  console.log('INFFFFFFFFFFFFFFFFF', info)
   if (!info) return
 
   eventBus.emit(info.action === 'ABORT' ? EVENTS.WEIGHT_ERROR : EVENTS.WEIGHT_STATUS, {
@@ -1983,10 +1229,13 @@ export async function height_measurement() {
 
 // Connect to Height port
 export async function connectHeightPort(portPath, baudRate = 9600) {
+  let intentionalClose = false
   try {
     // Close existing port
     if (heightPort && heightPort.isOpen) {
+      intentionalClose = true
       await new Promise((resolve) => heightPort.close(resolve))
+      intentionalClose = false
     }
 
     // Create new port
@@ -1998,128 +1247,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
       parity: 'none'
     })
 
-    // ====================================================================
-    // DATA HANDLER WITH ERROR CHECKING
-    // ====================================================================
 
-    // heightPort.on('data', (data) => {
-    //     try {
-    //         if (isMeasurementStopped) return;
-
-    //         heightBuffer = Buffer.concat([heightBuffer, data]);
-
-    //         while (heightBuffer.length >= 7) {
-    //             const start = heightBuffer.indexOf(Buffer.from([0x55, 0xaa]));
-
-    //             // No frame found
-    //             if (start === -1) {
-    //                 heightBuffer = Buffer.alloc(0);
-    //                 return;
-    //             }
-
-    //             // Frame incomplete
-    //             if (heightBuffer.length - start < 7) return;
-
-    //             const frame = heightBuffer.slice(start, start + 7);
-    //             heightBuffer = heightBuffer.slice(start + 7);
-
-    //             // ══════════════════════════════════════════════════════
-    //             // CHECKSUM VERIFICATION
-    //             // ══════════════════════════════════════════════════════
-
-    //             if (!verifyChecksum(frame)) {
-    //                 console.log('❌ Checksum verification failed');
-    //                 const err = handleHeightStatus(0x09); // INVALID_RESPONSE
-    //                 continue;
-    //             }
-
-    //             // ══════════════════════════════════════════════════════
-    //             // PARSE DISTANCE & CALCULATE HEIGHT
-    //             // ══════════════════════════════════════════════════════
-
-    //             try {
-    //                 const distance = parseDistance(frame);
-
-    //                 // Validate distance
-    //                 if (distance < 0 || distance > 3000) {
-    //                     handleHeightStatus(0x09);  // INVALID_RESPONSE
-    //                     console.log(`❌ Invalid distance: ${distance} mm`);
-    //                     continue;
-    //                 }
-
-    //                 const distanceCm = distance / 10;
-    //                 const calculatedHeight = 194 - distanceCm;
-
-    //                 // ════════════════════════════════════════════════════
-    //                 // VALIDATE HEIGHT RANGE
-    //                 // ════════════════════════════════════════════════════
-
-    //                 let statusCode = 0x04;  // Default STABLE
-
-    //                 if (calculatedHeight < 80) {
-    //                     statusCode = 0x01;  // OUT_OF_RANGE_LOW
-    //                 } else if (calculatedHeight > 250) {
-    //                     statusCode = 0x02;  // OUT_OF_RANGE_HIGH
-    //                 }
-
-    //                 // Show error if out of range
-    //                 if (statusCode !== 0x04) {
-    //                     emitHeightStatus(0x04, calculatedHeight);
-    //                     isMeasurementStopped = true;
-    //                     heightPort.close();
-    //                     console.log('\n❌ Height measurement stopped (out of range)');
-    //                     stableReadings = [];
-    //                    if(!IS_ELECTRON) showMenu();
-    //                     return;
-    //                 }
-
-    //                 finalheight = calculatedHeight;
-
-    //                 console.log(`\n${'='.repeat(60)}`);
-    //                 console.log('📏 HEIGHT MEASUREMENT');
-    //                 console.log(`${'='.repeat(60)}`);
-    //                 console.log(`Distance: ${distance} mm (${distanceCm.toFixed(1)} cm)`);
-    //                 console.log(`Calculated Height: ${calculatedHeight.toFixed(1)} cm`);
-
-    //                 // ════════════════════════════════════════════════════
-    //                 // CHECK STABILITY
-    //                 // ════════════════════════════════════════════════════
-
-    //                 if (checkStability(distance)) {
-    //                     if (stableReadings.length >= STABILITY_COUNT) {
-    //                         emitHeightStatus(0x04, calculatedHeight);  // STABLE success
-    //                         console.log(`\n${'='.repeat(60)}`);
-    //                         console.log(`✅ STABLE HEIGHT FOUND: ${calculatedHeight.toFixed(1)} cm`);
-    //                         console.log(`${'='.repeat(60)}\n`);
-
-    //                         isMeasurementStopped = true;
-    //                         heightPort.close();
-    //                         console.log('🛑 Height measurement stopped.\n');
-    //                         stableReadings = [];
-    //                         showMenu();
-    //                         return;
-    //                     }
-    //                 } else {
-    //                    emitHeightStatus(0x03);   // UNSTABLE
-    //                     console.log(`   Readings: ${stableReadings.length}/${STABILITY_COUNT}`);
-    //                     console.log(`${'='.repeat(60)}\n`);
-    //                 }
-
-    //             } catch (parseError) {
-    //                emitHeightStatus(0x09);  // INVALID_RESPONSE
-    //                 console.error(`❌ Parse error: ${parseError.message}`);
-    //                 continue;
-    //             }
-    //         }
-
-    //     } catch (error) {
-    //         console.error(`❌ Data handler error: ${error.message}`);
-    //        emitHeightStatus(0x05);  // SENSOR_ERROR
-    //         isMeasurementStopped = true;
-    //         heightPort.close();
-    //         return {success:false}
-    //     }
-    // });
     heightPort.on('data', (data) => {
       if (isMeasurementStopped || heightCompleted) return
 
@@ -2200,28 +1328,20 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
 
     heightPort.on('error', (err) => {
       if (heightCompleted) return
-      console.error(`❌ Height port error: ${err.message}`)
-      let errorInfo
-      if (err.message.includes('Permission denied')) {
-        errorInfo = HEIGHT_ERROR_CODES[0x08] // PORT_ERROR
-      } else {
-        errorInfo = HEIGHT_ERROR_CODES[0x05] // SENSOR_ERROR
-      }
-
+      logger.error('Height', 'Port error', err.message)
       eventBus.emit('height:error', {
         source: 'HEIGHT',
         osError: err.message,
-        ...errorInfo
+        ...(err.message.includes('Permission denied') ? HEIGHT_ERROR_CODES[0x08] : HEIGHT_ERROR_CODES[0x05])
       })
       isMeasurementStopped = true
+      // Phase 3: schedule reconnect
+      onPortError(err, 'HEIGHT', () => connectHeightPort(portPath, baudRate))
     })
 
-    // ====================================================================
-    // CLOSE HANDLER
-    // ====================================================================
-
     heightPort.on('close', () => {
-      console.log('⚠️ Height port closed')
+      logger.warn('Height', 'Port closed')
+      onPortClose('HEIGHT', () => connectHeightPort(portPath, baudRate), intentionalClose)
     })
 
     // ====================================================================
@@ -2230,24 +1350,19 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
 
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        if (heightPort) {
-          heightPort.close()
-        }
+        if (heightPort) heightPort.close()
         reject(new Error('Connection timeout (10 seconds)'))
       }, 10000)
 
       heightPort.on('open', () => {
         clearTimeout(timeout)
-        console.log(`✅ Height Connected to ${portPath} at ${baudRate} baud`)
+        logger.info('Height', `Connected to ${portPath} at ${baudRate} baud`)
         resolve()
       })
 
       heightPort.on('error', (err) => {
         clearTimeout(timeout)
-        resolve({
-          success: false,
-          handleByEvent: false
-        })
+        resolve({ success: false, handleByEvent: false })
       })
     })
   } catch (error) {
@@ -2471,11 +1586,9 @@ export async function case38_20kHzImpedanceQuery() {
   console.log('\n=== CASE 38: 20 kHz Impedance Measurement ===\n')
   try {
     // Step 1: Stop current test
-    // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-    // await new Promise((resolve) => setTimeout(resolve, 500))
+    
     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
     await new Promise((resolve) => setTimeout(resolve, 500))
-    console.log('priyanshu after stop command')
     // Step 2: Set impedance mode for 8-electrode 20 kHz
     // await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x03, 0xf1])
     // await new Promise((resolve) => setTimeout(resolve, 500))
@@ -2527,7 +1640,7 @@ export async function case38_20kHzImpedanceQuery() {
           timeout: 5000,
           verbose: true
         })
-        console.log('priyanshu response data', responseData)
+
 
         //Handle impedance status
         const statusCode = responseData[4]
@@ -4181,10 +3294,8 @@ function interpretMeasurementStatus(statusByte) {
 }
 
 //weight case
-const WEIGHT_STABILITY_COUNT = 5      // window size
-const WEIGHT_CV_THRESHOLD = 0.01   // 1% coefficient of variation
-const WEIGHT_SD_CEILING = 0.15   // kg — absolute guard
-const WEIGHT_MIN_VALID = 1.0    // kg — aligned with UNDERLOAD
+// WEIGHT_STABILITY_COUNT, WEIGHT_CV_THRESHOLD, WEIGHT_SD_CEILING, WEIGHT_MIN_VALID
+// — imported from './bia/constants' above
 export async function case41_WeightMeasurement() {
   try {
     // ====================================================================

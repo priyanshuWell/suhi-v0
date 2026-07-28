@@ -25,11 +25,9 @@ export const BUFFER_COLLECTION_STEPS = [
     routes: ['/colorblindness', '/colorblindness/quiz'],
   },
   {
-    bufferType: 'SPACE_CONVOY',
+    bufferType: 'SMOOTH_SLASH_GAME',
     routes: [
-      '/space-convoy-main',
-      '/divide-attention',
-      '/space-convoy-complete',
+      '/smoothie-slash'
     ],
   },
 ];

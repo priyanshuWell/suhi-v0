@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { getNextRoute } from "../utils/stageRouter"
+import { IMAGE_SERVER_URL } from "../utils/config"
 
 
 const buildProfileImage = (imagePath) => {
@@ -18,7 +19,7 @@ const buildProfileImage = (imagePath) => {
     const parts = imagePath.split("/")
     const userId = parts[parts.length - 2];
 
-    return `http://127.0.0.1:5174/user_images/${userId}/latest.jpg`
+    return `${IMAGE_SERVER_URL}/user_images/${userId}/latest.jpg`
   }
 
   if (imagePath.includes(".images")) {
@@ -27,7 +28,7 @@ const buildProfileImage = (imagePath) => {
         imagePath.lastIndexOf("/") + 1
       )
 
-    return `http://127.0.0.1:5174/images/${folderName}/original.jpg`
+    return `${IMAGE_SERVER_URL}/images/${folderName}/original.jpg`
   }
 
   return profilepic
@@ -36,22 +37,18 @@ export default function RegisterCard() {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
   const nextStage = screening?.nextStage || null
-  console.log("nextStage:", nextStage)
   // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
   const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
 
   // safer extraction
   const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1)
 
-  console.log("imagePath:", imagePath)
-  console.log("folderName:", folderName)
-
   const [isAudioPlaying, setIsAudioPlaying] = useState(false)
   const audioRef = React.useRef(null)
 
   const profileImageSrc = buildProfileImage(imagePath)
 
-  console.log("profileImageSrc:", profileImageSrc)
+
   useEffect(() => {
     // Play audio when component mounts
     playAudio();
@@ -82,7 +79,7 @@ export default function RegisterCard() {
     setIsAudioPlaying(false)
   }
 
-  console.log("users", user, screening, nextStage)
+
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -96,7 +93,7 @@ export default function RegisterCard() {
     stopAudio()
     // Use the next_stage from the backend (stored in Redux during login)
     const nextRoute = getNextRoute(nextStage, '/bia/leg50')
-    console.log('[RegisterCard] navigating to next stage:', nextRoute)
+
     navigate(nextRoute)
   }
 

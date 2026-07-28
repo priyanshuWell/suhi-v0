@@ -11,9 +11,7 @@ const ROUTE_TO_STEP = [
   // Step 2 — Body Scan (BIA)
   { prefix: '/bia', step: 2 },
   // Step 3 — Cognitive Game
-  { prefix: '/space-convoy-complete', step: 3 },
-  { prefix: '/space-convoy-main', step: 3 },
-  { prefix: '/divide-attention', step: 3 },
+  { prefix: '/smoothie-slash', step: 3 },
   // Step 4 — Vision
   { prefix: '/colorblindness/quiz', step: 5 },
   { prefix: '/colorblindness', step: 5 },

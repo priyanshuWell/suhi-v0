@@ -7,6 +7,7 @@ import Eye_Icon from '../../assets/bia/Eye_Icon.svg'
 import { useNavigate } from 'react-router'
 import { useSelector } from 'react-redux'
 import axios from "axios"
+import { API_BASE_URL } from '../../utils/config'
 import BodyConstitution from './BodyConstitution'
 import droplet from '../../assets/droplet.png'
 import { useTranslation } from 'react-i18next'
@@ -256,7 +257,7 @@ const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
 
     const fetchBiometricReport = async () => {
         try {
-            const res = await axios.post('http://localhost:8000/report/', {
+            const res = await axios.post(`${API_BASE_URL}/report/`, {
                 user_id: storeUser?.data?.user_id,
                 session_id: storeUser?.screening?.session_id,
                 screening_session_id: storeUser?.screening?.session_id,

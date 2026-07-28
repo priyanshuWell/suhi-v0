@@ -1,7 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, nativeImage,session } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
-// import * as biaa from './bia-script'
 import * as biaa from "./bia-scriptv1"
 import { eventBus } from "./eventbus"
 import fs from "fs"
@@ -438,25 +437,39 @@ ipcMain.handle("calculate-leg-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" }
     }
     const { height, weight, age, gender, impedanceVal } = payload
-    // const genderCode = gender === "male" ? 1 : 0
-
- const genderCode = 0;    
- const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
+    const genderCode = gender?.toLowerCase() === 'male' ? 1 : 0
+    const command = biaa.createLegsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
     console.log(`\n📡 Requesting Legs Body Composition (Impedance: ${impedanceVal}Ω)...`);
 
-    // Wait for the result that the global connectBiaPort data listener will emit
+    // Wait for the result that the global connectBiaPort data listener will emit.
+    // Named handler so we can remove it from eventBus if sendBiaCommand throws.
+    let resultResolved = false
+    let resultHandler = null
     const resultPromise = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Legs BIA timeout")), 8000);
-      eventBus.once("leg:calc:result", (data) => {
-        clearTimeout(timer);
-        resolve(data);
-      });
-    });
+      const timer = setTimeout(() => {
+        if (resultResolved) return
+        eventBus.off('leg:calc:result', resultHandler)
+        reject(new Error('Legs BIA timeout'))
+      }, 8000)
+      resultHandler = (data) => {
+        if (resultResolved) return
+        resultResolved = true
+        clearTimeout(timer)
+        resolve(data)
+      }
+      eventBus.once('leg:calc:result', resultHandler)
+    })
 
-    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
+    try {
+      await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true })
+    } catch (cmdErr) {
+      // sendBiaCommand failed — clean up the dangling once-listener immediately
+      eventBus.off('leg:calc:result', resultHandler)
+      throw cmdErr
+    }
 
-    const result = await resultPromise;
+    const result = await resultPromise
     return { success: true, data: result }
 
   } catch (error) {
@@ -471,24 +484,37 @@ ipcMain.handle("calculate-arm-bia", async (event, payload) => {
       return { success: false, error: "BIA port not connected" }
     }
     const { height, weight, age, gender, impedanceVal } = payload
-    // const genderCode = gender === "male" ? 1 : 0
-     const genderCode = 0;
+    const genderCode = gender?.toLowerCase() === 'male' ? 1 : 0
     const command = biaa.createArmsBodyCompositionCommand(genderCode, Math.round(height), Math.round(age), weight, impedanceVal);
 
     console.log(`\n📡 Requesting Arms Body Composition (Impedance: ${impedanceVal}Ω)...`);
 
-    // Wait for the result that the global connectBiaPort data listener will emit
+    // Named handler so we can remove it from eventBus if sendBiaCommand throws.
+    let resultResolved = false
+    let resultHandler = null
     const resultPromise = new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Arms BIA timeout")), 8000);
-      eventBus.once("arm:calc:result", (data) => {
-        clearTimeout(timer);
-        resolve(data);
-      });
-    });
+      const timer = setTimeout(() => {
+        if (resultResolved) return
+        eventBus.off('arm:calc:result', resultHandler)
+        reject(new Error('Arms BIA timeout'))
+      }, 8000)
+      resultHandler = (data) => {
+        if (resultResolved) return
+        resultResolved = true
+        clearTimeout(timer)
+        resolve(data)
+      }
+      eventBus.once('arm:calc:result', resultHandler)
+    })
 
-    await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true });
+    try {
+      await biaa.sendBiaCommand(command, { timeout: 5000, verbose: true })
+    } catch (cmdErr) {
+      eventBus.off('arm:calc:result', resultHandler)
+      throw cmdErr
+    }
 
-    const result = await resultPromise;
+    const result = await resultPromise
     return { success: true, data: result }
 
   } catch (error) {

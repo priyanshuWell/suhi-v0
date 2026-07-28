@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { getRgbCameraConstraints } from '../utils/getRgbCamera';
-import { rotateStream90 } from '../components/dmit/NewDmit';
+import { rotateStream90 } from '../utils/rotateStream90';
 import { sendVideoToBackend } from '../utils/api';
 import {
   registerPageRecordingRelease,

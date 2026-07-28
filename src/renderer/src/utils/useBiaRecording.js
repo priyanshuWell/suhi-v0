@@ -1,7 +1,7 @@
 import { useRef, useCallback ,useEffect} from "react";
 import { bufferCollection, sendVideoToBackend } from "./api";
 import { getRgbCameraConstraints } from "./getRgbCamera";
-import { rotateStream90 } from "../components/dmit/NewDmit";
+import { rotateStream90 } from "../utils/rotateStream90";
 import { getKioskId } from "./config";
 
 /**

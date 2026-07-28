@@ -26,8 +26,7 @@ export const VIDEO_CONFIG = {
   // Can be adjusted based on requirements (5000ms = 5 seconds, 7000ms = 7 seconds, etc.)
   BUFFER_DURATION_MS: 5000,
   
-  // API endpoints
-  API_BASE_URL: "http://127.0.0.1:8000",
+  // API endpoints — use the top-level API_BASE_URL constant for the base URL
   STORE_VIDEO_ENDPOINT: "/video/store",
   RUN_FPT_ENDPOINT: "/video/run-fpt",
   

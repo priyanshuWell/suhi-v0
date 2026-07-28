@@ -1,7 +1,7 @@
 import { bufferCollection, sendVideoToBackend } from './api';
 import { getRgbCameraConstraints } from './getRgbCamera';
 import { getKioskId } from './config';
-import { rotateStream90 } from '../components/dmit/NewDmit';
+import { rotateStream90 } from './rotateStream90';
 import { BUFFER_COLLECTION_MAX_MS, getStepForPath } from './bufferCollectionRoutes';
 
 const CHUNK_MS = 1000;

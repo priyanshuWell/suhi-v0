@@ -8,8 +8,9 @@ import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
 import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
 import bgMusic from '../../../assets/audio/smoothie/background2.wav';
 import { getNextRoute } from '../../../utils/stageRouter';
+import { API_BASE_URL } from '../../../utils/config';
 
-const API = "http://127.0.0.1:8000";
+const API = API_BASE_URL;
 
 /* POST /smoothie/start → { game_session_id, stage: { stage_id, target_fruits, … } } */
 const apiStart = async (userId, screeningSessionId, kioskId = "KIOSK_001") => {

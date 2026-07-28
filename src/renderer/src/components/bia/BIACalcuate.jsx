@@ -25,15 +25,15 @@ import textbgframe from "../../assets/textbgframe.svg";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
 import AreYouThereModal from "./AreYouThereModal";
+import { StandProperlyModal } from "./StandProperlyModal";
+import { ContinueWithShoesModal } from "./ContinueWithShoesModal";
+import { PressStartModal } from "./PressStartModal";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const storeUser = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
-
-  // const { updateMetadata, clearMetadata } = useBackgroundCamera();
-
   // Base state
   const [ports, setPorts] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
@@ -53,18 +53,12 @@ export default function BIACalculate({ user, onComplete }) {
   // Stores next_stage from BIAComplete API response for use in handleImNextClick
   const biaNextStageRef = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
-    height: "-- cm",
-    weight: "-- kg",
+    height: null,
+    weight: null,
     arms50k: {},
     leg50k: {},
     bia20k_100khz: {}
   });
-  const [displayValues, setDisplayValues] = useState({
-    height: null,
-    weight: null,
-  });
-
-
   // Phase tracking (removed attempt counters - now using parameters)
   const [currentPhase, setCurrentPhase] = useState('init'); // init, leg, wh, arm, impedance, complete
   const resultsRef = useRef({
@@ -279,85 +273,13 @@ export default function BIACalculate({ user, onComplete }) {
       }
     };
 
-    // ARM ERROR: Check if user is holding electrodes
-    // const handleArmError = (payload) => {
-    //   console.error("[BIA DEBUG] ARM ERROR received from main:", payload);
-    //   console.error(`[BIA DEBUG] Arm attempt: ${payload.attempt}, code: ${payload.code}`);
-
-    //   // Track attempt
-    //   if (payload.attempt) {
-    //     attemptTracking.current.arm = payload.attempt;
-    //   }
-
-    //   // ✅ ACTIVE ERROR TRIGGERING: Show error immediately when threshold exceeded
-    //   if (payload.attempt >= ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
-    //     if (payload.code === 'ELECTRODE') {
-    //       console.error(`[BIA DEBUG] ⚠️ Arm ELECTRODE error at attempt ${payload.attempt} - TRIGGERING ERROR NOW!`);
-    //       errorTriggered.current.arm = true;
-
-    //       // Show error immediately
-    //       (async () => {
-    //         console.log("[BIA DEBUG] Showing arm electrode error");
-    //         await showError(ERROR_MESSAGES.armImpedance, 5000);
-    //       })();
-    //     }
-    //   }
-    // };
-
-    // // WEIGHT ERROR
-    // const handleWeightError = (payload) => {
-    //   console.error("[BIA DEBUG] WEIGHT ERROR received from main:", payload);
-    // };
-
-    // // HEIGHT ERROR
-    // const handleHeightError = async (payload) => {
-    //   console.error("[BIA DEBUG] HEIGHT ERROR received from main:", payload);
-    //   await showError(ERROR_MESSAGES.HEIGHT_PORT_NOT_CONNECTED, 3000);
-    //   console.log("[BIA REC] ⏏️  Height port error → saveBuffer('height_port_error')");
-    //   await saveBuffer("height_port_error");
-    //   const heightErrorComplete = await BIAComplete({
-    //     session_id: storeUser?.data?.buffer_id,
-    //     screening_session_id: storeUser?.screening?.session_id
-    //   });
-    //   if (heightErrorComplete?.screening) {
-    //     dispatch(setScreening(heightErrorComplete.screening));
-    //   }
-    //   const heightErrorRoute = getNextRoute(heightErrorComplete?.screening?.next_stage, '/voice');
-    //   console.log('[BIA] handleHeightError — navigating to:', heightErrorRoute);
-    //   navigate(heightErrorRoute);
-
-    //   // Track attempt for height (continuous polling)
-    //   if (payload.attempt) {
-    //     attemptTracking.current.height = payload.attempt;
-    //   }
-    // };
-
-    // // IMPEDANCE ERROR (20kHz / 100kHz)
-    // const handleImpedanceError = (payload) => {
-    //   console.error("[BIA DEBUG] IMPEDANCE ERROR received from main:", payload);
-    //   console.error(`[BIA DEBUG] Impedance attempt: ${payload.attempt}, frequency: ${payload.frequency}`);
-
-    //   // Track attempts
-    //   if (payload.attempt) {
-    //     if (payload.frequency === 20) {
-    //       attemptTracking.current.impedance20 = payload.attempt;
-    //     } else if (payload.frequency === 100) {
-    //       attemptTracking.current.impedance100 = payload.attempt;
-    //     }
-    //   }
-    // };
 
     // Subscribe to events
     const unsubs = [
-      // window.api?.onLegError?.(handleLegError),
       window.api?.onLegStatus?.(handleStatus),
-      // window.api?.onArmError?.(handleArmError),
       window.api?.onArmStatus?.(handleStatus),
-      // window.api?.onWeightError?.(handleWeightError),
       window.api?.onWeightStatus?.(handleStatus),
-      // window.api?.onHeightError?.(handleHeightError),
       window.api?.onHeightStatus?.(handleStatus),
-      // window.api?.onImpedanceError?.(handleImpedanceError),
       window.api?.onImpedanceStatus?.(handleStatus),
       // 4-electrode BIA calculation results
       window.api?.onLegCalcResult?.((payload) => {
@@ -371,7 +293,6 @@ export default function BIACalculate({ user, onComplete }) {
     return () => {
       console.log("[BIA DEBUG] Cleaning up event listeners...");
       unsubs.forEach(unsub => unsub?.());
-      // clearAllTimeouts();
     };
   }, []);
 
@@ -393,17 +314,6 @@ export default function BIACalculate({ user, onComplete }) {
       ),
     ]);
 
-  // const clearAllTimeouts = () => {
-  //   console.log("[BIA DEBUG] Clearing all timeouts");
-  //   if (timeoutRefs.current.global) {
-  //     clearTimeout(timeoutRefs.current.global);
-  //     timeoutRefs.current.global = null;
-  //   }
-  //   if (timeoutRefs.current.step) {
-  //     clearTimeout(timeoutRefs.current.step);
-  //     timeoutRefs.current.step = null;
-  //   }
-  // };
 
   const showError = (message, duration = 5000) => {
     console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
@@ -437,14 +347,6 @@ export default function BIACalculate({ user, onComplete }) {
       }, 1000);
     });
   };
-
-  // const updatePhaseState = (phase, status, error = null) => {
-  //   updateMetadata(`phase_${phase}`, {
-  //     status,
-  //     timestamp: new Date().toISOString(),
-  //     error
-  //   });
-  // };
 
   /**
    * Shows the barefoot CTA modal and pauses the flow.
@@ -574,30 +476,17 @@ export default function BIACalculate({ user, onComplete }) {
 
   const measureArmImpedance = async (attemptCount) => {
     console.log("[BIA DEBUG] Starting arm impedance 50kHz measurement...");
-    // updatePhaseState('arm', 'in_progress');
-    // setCurrentStatus("Please hold the hand rails firmly!");
     const res = await window.api.startArmImpedance50kHz();
     console.log("[BIA DEBUG] Arm impedance result:", res);
 
     if (!res?.success) {
       console.error("[BIA DEBUG] Arm impedance failed");
-      // updatePhaseState('arm', 'failed', 'Arm impedance failed');
       await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "Arm impedance measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       throw new Error("Arm impedance failed");
 
     }
 
-    /*
-    
-    
-    */
 
-    // resultsRef.current.arms50k = {
-    //   fatPercentage: res.body_fat_percentage ?? "20",
-    //   waterPercentage: res.moisture_content_kg ?? "55",
-    //   muscleMassKg: res.muscle_mass_kg ?? "30",
-    //   boneMassKg: res.bone_mass_kg ?? "10",
-    // };
     setMeasuredValues((prev) => ({
       ...prev,
       arms50k: resultsRef.current.arms50k,
@@ -611,23 +500,18 @@ export default function BIACalculate({ user, onComplete }) {
       attempts: res.attempts
     };
     console.log(`[BIA DEBUG] Arm impedance stored: ${res.measurement.impedance.value} ${res.measurement.impedance.unit}`);
-    // updatePhaseState('arm', 'success');
     return res;
   };
 
   const measureImpedance = async (freq, attemptCount) => {
     console.log(`[BIA DEBUG] Starting impedance ${freq}kHz measurement...`);
-    // updatePhaseState(`impedance${freq}`, 'in_progress');
-    // setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     console.log(`[BIA DEBUG] Impedance ${freq}kHz result:`, res);
 
     if (!res?.success) {
       console.error(`[BIA DEBUG] Impedance ${freq}kHz failed`);
-      // updatePhaseState(`impedance${freq}`, 'failed', `Impedance ${freq}kHz failed`);
       await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "8 electrode impedance measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       throw new Error("Arm impedance failed");
-      // throw new Error(`Impedance ${freq}kHz failed`);
     }
 
     resultsRef.current.impedance[freq === "20" ? "k20" : "k100"] = {
@@ -637,7 +521,6 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
     console.log(`[BIA DEBUG] Impedance ${freq}kHz stored: avg=${res.impedance.avg.toFixed(1)}Ω`);
-    // updatePhaseState(`impedance${freq}`, 'success');
     return res;
   };
 
@@ -709,10 +592,11 @@ export default function BIACalculate({ user, onComplete }) {
 
     // --- Both W+H succeeded ---
     console.log("[BIA DEBUG] Phase 1 SUCCESS — W+H both measured");
-    setDisplayValues({
+    setMeasuredValues((prev) => ({
+      ...prev,
       height: resultsRef.current?.height?.value ?? null,
       weight: resultsRef.current?.weight?.value ?? null,
-    });
+    }));
     await trackStage(STAGES.WH_FINAL, STATUS.SUCCESS, {
       weight_kg: resultsRef.current?.weight?.value,
       height_cm: resultsRef.current?.height?.value,
@@ -850,115 +734,7 @@ export default function BIACalculate({ user, onComplete }) {
      PHASE 3: ARM IMPEDANCE + 20kHz + 100kHz
      - If any fails, retry from arm impedance
   ======================= */
-  // const runPhase3_Impedance = async (attemptCount = 0) => {
-  //   console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS ==========");
-  //   console.log(`[BIA DEBUG] Phase 3 attempt: ${attemptCount + 1}/${MAX_RETRIES}`);
-  //   setCurrentPhase('arm');
 
-  //   // Check if we've exhausted retries BEFORE attempting
-  //   if (attemptCount >= MAX_RETRIES) {
-  //     console.error(`[BIA DEBUG] Phase 3 EXHAUSTED all ${MAX_RETRIES} retries - redirecting to /smoothie-slash`);
-  //     //await showError(ERROR_MESSAGES.maxRetryReached, 4000);
-  //     await BIAComplete({
-  //       session_id: storeUser?.data?.buffer_id,
-  //       screening_session_id: screeningState?.sessionId
-  //     });
-  //     console.log("[BIA REC] ⏏️  Phase 3 — arm/impedance max retries exhausted → saveBuffer('arm_max_retry')");
-  //     await saveBuffer("arm_max_retry");
-  //     navigate("/bia/imcomplete");
-  //     return;
-  //   }
-
-  //   // Reset attempt tracking and error flags for arm and impedance
-  //   attemptTracking.current.arm = 0;
-  //   attemptTracking.current.impedance20 = 0;
-  //   attemptTracking.current.impedance100 = 0;
-  //   errorTriggered.current.arm = false;
-  //   errorTriggered.current.impedance20 = false;
-  //   errorTriggered.current.impedance100 = false;
-  //   console.log("[BIA DEBUG] Reset arm/impedance attempt tracking and error flags");
-
-  //   // Navigate to impedance screen
-  //   navigate("/bia/im");
-  //   await sleep(8000);
-
-  //   try {
-  //     // Arm Impedance 50kHz
-  //     const res = await measureArmImpedance(attemptCount);
-  //     await sleep(800);
-  //     console.log("[BIA DEBUG] Arm impedance SUCCESS");
-  //     await trackStage(STAGES.ARM_50KHZ, STATUS.SUCCESS, { impedance_data: { impedance_50khz_ohm: resultsRef.current.armImpedance.impedance } }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-
-  //     // Calculate Arm BIA immediately after arm impedance
-  //     await calculateAndStoreArmBIA(attemptCount);
-
-  //     if (resultsRef.current.isShoesContinued) {
-  //       console.log("[BIA DEBUG] Shoes continued - skipping frequency measurements, showing imcomplete screen");
-  //       navigate("/bia/imcomplete");
-  //       const shoesCompleteResult = await BIAComplete({
-  //         session_id: storeUser?.data?.buffer_id,
-  //         screening_session_id: screeningState?.sessionId
-  //       });
-  //       // Cache next_stage from BIAComplete for the shoes path
-  //       biaNextStageRef.current = shoesCompleteResult?.screening?.next_stage ?? null;
-  //       console.log('[BIA] Shoes path BIAComplete next_stage captured:', biaNextStageRef.current);
-  //       if (shoesCompleteResult?.screening) {
-  //         dispatch(setScreening(shoesCompleteResult.screening));
-  //       }
-  //       console.log("[BIA REC] 🏁 Shoes path — stopping and sending recording via stopAndSend()");
-  //       await stopAndSend(); // ✅ Stop recording before navigating away
-  //       await new Promise((resolve) => { imCompleteResolver.current = resolve; });
-  //       setIsComplete(true);
-  //       const shoesNextRoute = getNextRoute(shoesCompleteResult?.screening?.next_stage, '/smoothie-slash');
-  //       console.log('[BIA] runPhase3 shoes path — navigating to:', shoesNextRoute);
-  //       navigate(shoesNextRoute);
-  //       return;
-  //     }
-  //     // Impedance 20kHz
-  //     await measureImpedance("20", attemptCount);
-  //     // await trackStage(STAGES.IMPEDANCE_20KHZ, STATUS.SUCCESS, { impedance20: resultsRef.current.impedance.k20 }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-  //     await sleep(1500);
-  //     console.log("[BIA DEBUG] Impedance 20kHz SUCCESS");
-
-
-  //     // Impedance 100kHz
-  //     await measureImpedance("100", attemptCount);
-
-  //     // Track combined Impedances
-  //     if (resultsRef.current.impedance.k20 && resultsRef.current.impedance.k100) {
-  //       await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.SUCCESS, {
-  //         impedance_data: {
-  //           impedance_20khz_ohm: resultsRef.current.impedance.k20.avg,
-  //           impedance_100khz_ohm: resultsRef.current.impedance.k100.avg
-  //         }
-  //       }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
-  //     }
-  //     console.log("[BIA DEBUG] Impedance 100kHz SUCCESS");
-
-  //     // All impedance measurements success
-  //     console.log("[BIA DEBUG] Phase 3 COMPLETE - All impedance measurements done");
-  //     await runCalculateAndComplete();
-
-  //   } catch (impedanceError) {
-  //     console.error("[BIA DEBUG] Phase 3 FAILED:", impedanceError.message);
-
-  //     // Track Error for Consolidated Impedances
-  //     await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {
-
-  //     }, impedanceError.message, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-
-  //     // Reset arm and impedance results to retry from arm
-  //     resultsRef.current.armImpedance = null;
-  //     resultsRef.current.impedance = { k20: null, k100: null };
-
-  //     // Retry with incremented attempt count
-  //     console.log(`[BIA DEBUG] Phase 3 retry ${attemptCount + 2}/${MAX_RETRIES} - resetting arm/impedance results...`);
-  //     if (attemptCount === 0) {
-  //       await showError(ERROR_MESSAGES.armImpedance, 3000);
-  //     }
-  //     await runPhase3_Impedance(attemptCount + 1);
-  //   }
-  // };
   const runPhase3_Impedance = async () => {
     console.log("[BIA DEBUG] ========== PHASE 3: IMPEDANCE MEASUREMENTS (revised) ==========");
     setCurrentPhase('arm');
@@ -1034,7 +810,7 @@ export default function BIACalculate({ user, onComplete }) {
     if (result?.screening) dispatch(setScreening(result.screening));
 
     console.log(`[BIA REC] ⏏️  ${bufferTag} → saveBuffer('${bufferTag}')`);
-    //await saveBuffer(bufferTag);
+
 
     await new Promise((resolve) => { imCompleteResolver.current = resolve; });
     setIsComplete(true);
@@ -1565,8 +1341,8 @@ export default function BIACalculate({ user, onComplete }) {
         screenConfig={screenConfig}
         isComplete={isComplete}
         onVideoEnd={handleVideoEnd}
-        heightValue={displayValues.height}
-        weightValue={displayValues.weight}
+        heightValue={measuredValues.height}
+        weightValue={measuredValues.weight}
         onNextVoiceClick={handleImNextClick}
         onNextClick={handleWhNextClick}
         arms50k={measuredValues.arms50k}
@@ -1593,6 +1369,7 @@ export default function BIACalculate({ user, onComplete }) {
         <ContinueWithShoesModal
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
+          t={t}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1621,247 +1398,3 @@ export default function BIACalculate({ user, onComplete }) {
     </>
   );
 }
-
-
-/* ── CTA A: Continue with shoes? ─────────────────────────────────── */
-const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
-  const [remaining, setRemaining] = React.useState(10);
-  const firedRef = React.useRef(false);
-  const intervalRef = React.useRef(null);
-
-  const fireNo = () => {
-    if (firedRef.current) return;
-    firedRef.current = true;
-    clearInterval(intervalRef.current);
-    onNo?.();
-  };
-  const fireYes = () => {
-    if (firedRef.current) return;
-    firedRef.current = true;
-    clearInterval(intervalRef.current);
-    onYes?.();
-  };
-
-  React.useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setRemaining((p) => {
-        if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
-        return p - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="relative w-screen" style={{ filter: 'drop-shadow(0px 0px 40px rgba(139,195,229,0.4))' }}>
-        <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
-        <div className="absolute flex flex-col items-center justify-center gap-8"
-          style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
-          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Do you want to continue with shoes?
-          </h2>
-          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
-          <div className="flex gap-10">
-            <button onClick={fireNo}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200">
-              🦶 No
-            </button>
-            <button onClick={fireYes}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
-              👟 Yes
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
-  const [remaining, setRemaining] = React.useState(timeoutSecs);
-  const firedRef = React.useRef(false);
-  const intervalRef = React.useRef(null);
-
-  const fireStart = () => {
-    if (firedRef.current) return;
-    firedRef.current = true;
-    clearInterval(intervalRef.current);
-    onStart?.();
-  };
-
-  React.useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setRemaining((p) => {
-        if (p <= 1) { clearInterval(intervalRef.current); return 0; }
-        return p - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, []);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="relative w-screen" style={{ filter: 'drop-shadow(0px 0px 40px rgba(139,195,229,0.4))' }}>
-        <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
-        <div className="absolute flex flex-col items-center justify-center gap-8"
-          style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
-          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Remove your socks and shoes,<br />then press Start.
-          </h2>
-          <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
-          <button onClick={fireStart}
-            className="w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
-            Start
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-/* ── Stand Properly Modal — animated height error prompt ────────── */
-const StandProperlyModal = ({ countdown }) => {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '32px',
-        animation: 'standProperlyFadeIn 0.4s ease',
-      }}>
-
-        {/* Animated silhouette figure */}
-        <div style={{ position: 'relative', width: '180px', height: '260px' }}>
-          {/* Glow ring behind figure */}
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139,195,229,0.18) 0%, transparent 70%)',
-            animation: 'standGlowPulse 2s ease-in-out infinite',
-          }} />
-
-          {/* SVG standing figure */}
-          <svg viewBox="0 0 120 200" width="180" height="260" xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: 'drop-shadow(0 0 18px rgba(139,195,229,0.7))', animation: 'standBobble 2.5s ease-in-out infinite' }}>
-            {/* Head */}
-            <circle cx="60" cy="22" r="16" fill="#8BC3E5" opacity="0.95" />
-            {/* Neck */}
-            <rect x="54" y="36" width="12" height="10" rx="4" fill="#8BC3E5" opacity="0.9" />
-            {/* Body */}
-            <rect x="38" y="44" width="44" height="58" rx="10" fill="#5aacd8" opacity="0.85" />
-            {/* Left arm */}
-            <rect x="18" y="48" width="22" height="10" rx="5" fill="#8BC3E5" opacity="0.8"
-              style={{ transformOrigin: '38px 53px', animation: 'armSwingLeft 2.5s ease-in-out infinite' }} />
-            {/* Right arm */}
-            <rect x="80" y="48" width="22" height="10" rx="5" fill="#8BC3E5" opacity="0.8"
-              style={{ transformOrigin: '82px 53px', animation: 'armSwingRight 2.5s ease-in-out infinite' }} />
-            {/* Left leg */}
-            <rect x="42" y="100" width="14" height="60" rx="7" fill="#8BC3E5" opacity="0.85" />
-            {/* Right leg */}
-            <rect x="64" y="100" width="14" height="60" rx="7" fill="#8BC3E5" opacity="0.85" />
-            {/* Left foot */}
-            <ellipse cx="49" cy="163" rx="12" ry="6" fill="#5aacd8" opacity="0.9" />
-            {/* Right foot */}
-            <ellipse cx="71" cy="163" rx="12" ry="6" fill="#5aacd8" opacity="0.9" />
-
-            {/* Posture alignment arrows — pointing up on each side */}
-            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite' }}>
-              <polygon points="10,90 16,110 4,110" fill="#FFD700" opacity="0.85" />
-              <rect x="11" y="110" width="6" height="30" rx="3" fill="#FFD700" opacity="0.75" />
-            </g>
-            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite 0.3s' }}>
-              <polygon points="110,90 116,110 104,110" fill="#FFD700" opacity="0.85" />
-              <rect x="105" y="110" width="6" height="30" rx="3" fill="#FFD700" opacity="0.75" />
-            </g>
-          </svg>
-        </div>
-
-        {/* Instruction text */}
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{
-            color: '#8BC3E5',
-            fontSize: '2.4rem',
-            fontFamily: 'Anta, sans-serif',
-            margin: 0,
-            letterSpacing: '0.02em',
-            textShadow: '0 0 20px rgba(139,195,229,0.6)',
-          }}>
-            Stand Straight &amp; Still
-          </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.7)',
-            fontFamily: 'Anta, sans-serif',
-            fontSize: '1.2rem',
-            marginTop: '8px',
-          }}>
-            Keep your arms at your sides and look forward
-          </p>
-        </div>
-
-        {/* Countdown ring */}
-        <div style={{ position: 'relative', width: '80px', height: '80px' }}>
-          <svg viewBox="0 0 80 80" width="80" height="80" style={{ transform: 'rotate(-90deg)' }}>
-            <circle cx="40" cy="40" r="34" fill="none" stroke="rgba(139,195,229,0.15)" strokeWidth="6" />
-            <circle
-              cx="40" cy="40" r="34"
-              fill="none"
-              stroke="#8BC3E5"
-              strokeWidth="6"
-              strokeLinecap="round"
-              strokeDasharray={`${2 * Math.PI * 34}`}
-              strokeDashoffset={`${2 * Math.PI * 34 * (countdown / 10)}`}
-              style={{ transition: 'stroke-dashoffset 0.9s linear', filter: 'drop-shadow(0 0 8px #8BC3E5)' }}
-            />
-          </svg>
-          <div style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#8BC3E5',
-            fontSize: '1.6rem',
-            fontFamily: 'Anta, sans-serif',
-            fontWeight: 'bold',
-          }}>
-            {countdown}
-          </div>
-        </div>
-
-        <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Anta, sans-serif', fontSize: '1rem', margin: 0 }}>
-          Retrying in {countdown}s…
-        </p>
-      </div>
-
-      {/* Keyframe animations injected via a style tag */}
-      <style>{`
-        @keyframes standProperlyFadeIn {
-          from { opacity: 0; transform: scale(0.92); }
-          to   { opacity: 1; transform: scale(1); }
-        }
-        @keyframes standGlowPulse {
-          0%, 100% { opacity: 0.4; transform: scale(1); }
-          50%       { opacity: 1;   transform: scale(1.15); }
-        }
-        @keyframes standBobble {
-          0%, 100% { transform: translateY(0px); }
-          50%       { transform: translateY(-8px); }
-        }
-        @keyframes armSwingLeft {
-          0%, 100% { transform: rotate(0deg); }
-          50%       { transform: rotate(-15deg); }
-        }
-        @keyframes armSwingRight {
-          0%, 100% { transform: rotate(0deg); }
-          50%       { transform: rotate(15deg); }
-        }
-        @keyframes arrowPulse {
-          0%, 100% { opacity: 0.5; transform: translateY(0px); }
-          50%       { opacity: 1;   transform: translateY(-6px); }
-        }
-      `}</style>
-    </div>
-  );
-};
