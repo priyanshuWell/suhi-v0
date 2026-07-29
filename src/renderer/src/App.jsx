@@ -29,31 +29,15 @@ import Result from './components/bia/Result'
 import BiaReportRouter from './components/bia/BiaReportRouter'
 import SmoothieSlashGame from './components/games/smoothie-slash/SmoothieSlashGame'
 import IdentifyStudent from './components/IdentifiedStudent'
+import AutoIdleRedirect from './components/AutoIdleRedirect'
 
 function App() {
   // Play looping background music on all routes except voice & game sections
   useBackgroundAudio()
-  // useEffect(() => {
-  //   const doSync = async () => {
-  //     try {
-  //       console.log('🔄 Starting cloud-to-local sync...')
-  //       const data = await cloudToLocalSync()
-  //       console.log('✅ Sync success:', data)
-  //     } catch (err) {
-  //       console.error('❌ Sync failed:', err?.message || err)
-  //     }
-  //   }
 
-  //   doSync()
-  // }, [])
-  /*
-  bia -> bia/wh -> bia/imcomplete
-  voice -> /voice
-  colorblindness -> /colorblindness -> /colorblindness/quiz
-  space-convoy -> /space-convoy-main - /space-convoy-demo  ->  /divide-attention -> /space-convoy-complete
-  */
   return (
     <>
+      <AutoIdleRedirect timeoutMs={120000} promptBeforeMs={10000} redirectTo="/welcome" />
       <BufferCollectionManager />
       <Routes>
 
