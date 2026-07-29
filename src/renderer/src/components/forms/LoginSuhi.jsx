@@ -75,7 +75,7 @@ const LoginSuhi = () => {
       }
 
       if (!response.success || !response.data) {
-        throw new Error('Student is not available. Please check your SUHI ID')
+        throw new Error('Invalid SUHI ID. Please contact your SUHI Kiosk Coordinator for assistance.')
       }
 
       // Save student data
@@ -157,6 +157,20 @@ const LoginSuhi = () => {
                 {error}
               </p>
             )}
+
+            {/* Don't know SuHI ID button */}
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(t('loginSuhi.ask_teacher'))
+                  setShowErrorAlert(true)
+                }}
+                className="text-white/60 text-sm underline hover:text-white transition-colors"
+              >
+                {t('loginSuhi.dont_know_id', "Don't know your SuHi ID?")}
+              </button>
+            </div>
           </div>
         </div>
       </div>

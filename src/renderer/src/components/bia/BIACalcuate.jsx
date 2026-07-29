@@ -110,15 +110,18 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Error messages map
   const ERROR_MESSAGES = {
-    legImpedance_noWeight: "Please step on the platform barefoot",
+    legImpedance_noWeight: "Stand fully on the platform and stay still",
     legImpedance_hasWeight: "Please make sure you are barefoot",
-    weight: "Please step on the platform barefoot",
-    height: "Please stand straight & still",
-    armImpedance: "Please hold the rods firmly",
-    impedance20: "Please be barefoot and hold the rods firmly",
-    impedance100: "Please be barefoot and hold the rods firmly",
-    maxRetryReached: "Maximum retries reached. redirecting to dmit.",
-    HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected"
+    weight: "Stand fully on the platform and stay still",
+    height: "Stay still, I am measuring your height",
+    armImpedance: "Hold both handles firmly with your palm to continue the scan",
+    armRetry: "We're trying again. Keep holding the handles firmly",
+    handAndBody: "Keep both hands on the handles and stay still",
+    impedance20: "Hold the handles firmly and keep still",
+    impedance100: "Hold the handles firmly and keep still",
+    maxRetryReached: "I couldn't get stable readings, moving to next scan",
+    HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected",
+    legImpedanceMissing: "Please remove your shoes and socks for a complete scan"
   };
 
   const screenConfig = {
@@ -1107,13 +1110,13 @@ export default function BIACalculate({ user, onComplete }) {
     const ok1 = await tryArm50kHz("Arm-v1-attempt-1", 0);
     if (ok1) return true;
 
-    // Attempt 2 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    // Attempt 2 — show retry-specific error first
+    await showError(ERROR_MESSAGES.armRetry, 3000);
     const ok2 = await tryArm50kHz("Arm-v1-attempt-2", 1);
     if (ok2) return true;
 
-    // Attempt 3 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    // Attempt 3 — show hand+body error first
+    await showError(ERROR_MESSAGES.handAndBody, 3000);
     const ok3 = await tryArm50kHz("Arm-v1-attempt-3", 2);
     return ok3;
   };
@@ -1146,7 +1149,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Show error before attempt 2
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 3000);
 
     // Attempt 2
     const ok2 = await try20kHz("20kHz-retry-2");
@@ -1193,7 +1196,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 2 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 3000);
     const ok2 = await tryArm50kHz("NoLeg-arm-attempt-2", 1);
     if (ok2) {
       await finishWithImcomplete("noleg_arm50k_success_retry2");
@@ -1201,7 +1204,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 3 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.handAndBody, 3000);
     const ok3 = await tryArm50kHz("NoLeg-arm-attempt-3", 2);
     if (ok3) {
       await finishWithImcomplete("noleg_arm50k_success_retry3");
@@ -1659,7 +1662,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Do you want to continue with shoes?
+            It looks like you have your shoes/socks on.<br />Would you like to continue with them?
           </h2>
           <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
           <div className="flex gap-10">
@@ -1708,7 +1711,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Remove your socks and shoes,<br />then press Start.
+            Remove your socks and shoes,<br />then press Start when you're ready.
           </h2>
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
           <button onClick={fireStart}
@@ -1799,7 +1802,7 @@ const StandProperlyModal = ({ countdown }) => {
             fontSize: '1.2rem',
             marginTop: '8px',
           }}>
-            Keep your arms at your sides and look forward
+            Stay still, I am measuring your height
           </p>
         </div>
 

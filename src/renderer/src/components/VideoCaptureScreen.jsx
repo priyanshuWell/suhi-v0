@@ -212,8 +212,8 @@ const getFaceNotDetectedError = (measurements) => {
   if (hasWeight && hasHeight && heightVal <= 120) {
     return {
       key: "not_eligible",
-      title: "Not eligible for kiosk",
-      description: "You are not eligible for the kiosk. Please try with your SUHI ID.",
+      title: "Sorry, I am not able to scan your face",
+      description: "Don't Worry, lets try SUHI ID instead.",
       redirectTo: "/login-suhi",
       redirectLabel: "Going to SUHI ID login",
       autoRedirectDelay: 5000,
@@ -225,8 +225,8 @@ const getFaceNotDetectedError = (measurements) => {
   if (hasWeight && hasHeight && heightVal >= 120) {
     return {
       key: "align_face",
-      title: "Align your face",
-      description: "Make sure the camera is clean and align your face properly.",
+      title: "Sorry, I couldn't scan your face",
+      description: "Please face the camera, ensure nothing is blocking it, and try again.",
       redirectTo: "/login-suhi",
       redirectLabel: "Going to SUHI ID login",
       autoRedirectDelay: 5000,
@@ -238,8 +238,21 @@ const getFaceNotDetectedError = (measurements) => {
   if (hasWeight && !hasHeight) {
     return {
       key: "stand_properly",
-      title: "Stand properly",
-      description: "Make sure you are standing properly and facing the camera.",
+      title: "Sorry, something went wrong",
+      description: "Please stand with your feet aligned on the footprints, look directly at the camera, and try again.",
+      redirectTo: "/welcome",
+      redirectLabel: "Going to home",
+      autoRedirectDelay: 5000,
+      maxAttempts: 3,
+    }
+  }
+
+  // Face not detected + Weight not detected (but height detected)
+  if (!hasWeight && hasHeight) {
+    return {
+      key: "no_weight_has_height",
+      title: "Sorry, something went wrong",
+      description: "Please stand with your feet aligned, face the camera, and try again.",
       redirectTo: "/welcome",
       redirectLabel: "Going to home",
       autoRedirectDelay: 5000,
@@ -250,8 +263,8 @@ const getFaceNotDetectedError = (measurements) => {
   // nothing detected → not on kiosk at all
   return {
     key: "not_on_kiosk",
-    title: "Step onto the kiosk",
-    description: "Make sure you are standing on the kiosk and facing the camera.",
+    title: "Oops! I couldn't detect you",
+    description: "Please try again.",
     redirectTo: "/welcome",
     redirectLabel: "Going to home",
     autoRedirectDelay: 5000,

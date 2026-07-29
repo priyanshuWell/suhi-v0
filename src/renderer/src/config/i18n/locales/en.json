@@ -37,11 +37,11 @@
   },
   "videoCapture": {
     "instruction": "Look at the top Camera",
-    "error_unregistered_title": "face Not Registered",
-    "error_unregistered_desc": "User is not registered in the system.\nRedirecting to manual login...",
-    "error_unrecognized_title": "Face Not Recognized",
-    "error_unrecognized_retry_desc": "No face detected OR Multiple faces detected.\nRetrying......",
-    "error_unrecognized_max_desc": "Maximum attempts reached\nReturning to login screen..."
+    "error_unregistered_title": "Sorry, I am not able to scan your face",
+    "error_unregistered_desc": "Don't Worry, lets try SUHI ID instead.",
+    "error_unrecognized_title": "Sorry, I couldn't scan your face",
+    "error_unrecognized_retry_desc": "Please face the camera, ensure nothing is blocking it, and try again.",
+    "error_unrecognized_max_desc": "Please stand with your feet aligned on the footprints, look directly at the camera, and try again."
   },
   "colorBlindness": {
     "title": "Color Vision Scan",
@@ -162,12 +162,44 @@
     "title": "Log in using your ID or fingerprint",
     "id_label": "Suhi ID",
     "verifying": "Verifying...",
-    "login_failed": "Login Failed",
-    "student_not_found": "Student not found. Redirecting..."
+    "login_failed": "Invalid SUHI ID",
+    "student_not_found": "Invalid SUHI ID. Please contact your SUHI Kiosk Coordinator for assistance.",
+    "ask_teacher": "Please ask your teacher for your SuHi ID and try again.",
+    "dont_know_id": "Don't know your SuHi ID?"
   },
-  "audio": {
-    "playing": "Playing…",
-    "replay": "Replay Instructions",
-    "listenFirst": "Please listen to the instructions first"
+  "errors": {
+    "face_not_detected_short": "Sorry, I am not able to scan your face",
+    "face_not_detected_short_desc": "Don't Worry, lets try SUHI ID instead.",
+    "face_not_detected_camera": "Sorry, I couldn't scan your face",
+    "face_not_detected_camera_desc": "Please face the camera, ensure nothing is blocking it, and try again.",
+    "face_height_not_detected": "Sorry, something went wrong",
+    "face_height_not_detected_desc": "Please stand with your feet aligned on the footprints, look directly at the camera, and try again.",
+    "face_all_not_detected": "Oops! I couldn't detect you",
+    "face_all_not_detected_desc": "Please try again.",
+    "face_weight_not_detected": "Sorry, something went wrong",
+    "face_weight_not_detected_desc": "Please stand with your feet aligned, face the camera, and try again.",
+    "identity_rejected": "Let's try another way",
+    "identity_rejected_desc": "Please log in using your SuHi ID.",
+    "session_timeout": "You have been logged out",
+    "session_timeout_desc": "Tap start to begin again.",
+    "hw_not_detected": "Please make sure you are standing on the kiosk with your feet aligned with the footprints on the platform.",
+    "face_missing_prompt": "Please stand facing the screen.",
+    "no_user_detected": "Are you still there?",
+    "weight_not_detected": "Stand fully on the platform and stay still.",
+    "face_missing_weight": "Sorry, I couldn't complete the scan.",
+    "face_missing_weight_desc": "Please stand on the footprints, look directly at the camera, and try again.",
+    "height_not_detected": "Stay still, I am measuring your height",
+    "shoes_prompt": "It looks like you have your shoes/socks on.",
+    "shoes_prompt_desc": "For the most accurate results, we recommend removing them.",
+    "press_start_ready": "Press 'Start' once you are ready.",
+    "inactivity_redirect": "I am unable to detect any activity. Redirecting to Homescreen.",
+    "leg_impedance_missing": "Please remove your shoes and socks for a complete scan.",
+    "bia_initial": "Hold both handles firmly until the scan is complete.",
+    "bia_impedance_not_detected": "Hold the handles firmly and keep still.",
+    "bia_retry": "We're trying again. Keep holding the handles firmly.",
+    "bia_hand_not_detected": "Hold both handles firmly with your palm to continue the scan.",
+    "bia_hand_body_not_detected": "Keep both hands on the handles and stay still.",
+    "bia_rods_incorrect": "Hold both handles firmly to continue the scan.",
+    "bia_max_retries": "I couldn't get stable readings, moving to next scan."
   }
 }

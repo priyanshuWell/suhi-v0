@@ -346,13 +346,13 @@ const IdentifyStudent = () => {
             {/* Fullscreen error */}
             {noMatchError && (
                 <FullscreenError
-                    title="Student not found"
-                    description="We couldn't find a match. Please try again."
+                    title="Let's try another way"
+                    description="Please log in using your SuHi ID."
                     showDescription={true}
-                    redirectLabel="Going to home"
+                    redirectLabel="Going to SUHI ID login"
                     autoRedirectDelay={5000}
                     showRetry={false}
-                    onRedirect={() => { setNoMatchError(false); navigate("/welcome") }}
+                    onRedirect={() => { setNoMatchError(false); navigate("/login-suhi") }}
                 />
             )}
         </>
