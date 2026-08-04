@@ -2156,18 +2156,18 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           }
 
           const distanceCm = distance / 10
-          const calculatedHeight = 196.3 - distanceCm
+          const calculatedHeight = 192.7 - distanceCm
 
           /* ---------- RANGE CHECK ---------- */
-          if (calculatedHeight < 80) {
-            emitHeightStatus(0x01, calculatedHeight) // TOO LOW
-            continue
-          }
+          // if (calculatedHeight < 80) {
+          //   emitHeightStatus(0x01, calculatedHeight) // TOO LOW
+          //   continue
+          // }
 
-          if (calculatedHeight > 250) {
-            emitHeightStatus(0x02, calculatedHeight) // TOO HIGH
-            continue
-          }
+          // if (calculatedHeight > 250) {
+          //   emitHeightStatus(0x02, calculatedHeight) // TOO HIGH
+          //   continue
+          // }
 
           /* ---------- STABILITY CHECK ---------- */
           if (!checkStability(distance)) {
@@ -2176,9 +2176,10 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           }
 
           /* ---------- SUCCESS ---------- */
-          const meanDistance =
-            stableReadings.reduce((a, b) => a + b, 0) / stableReadings.length
-          finalheight = 196.3 - meanDistance / 10
+          // const meanDistance =
+          //   stableReadings.reduce((a, b) => a + b, 0) / stableReadings.length
+          // finalheight = 196.3 - meanDistance / 10
+          finalheight = calculatedHeight
 
           heightCompleted = true
           isMeasurementStopped = true
