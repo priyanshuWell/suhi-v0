@@ -1,0 +1,22 @@
+<svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
+  <defs>
+    <filter id="trailGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="b" />
+      <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+    </filter>
+  </defs>
+  {Object.values(trailRef.current.reduce((acc, pt) => {
+    (acc[pt.sid] ??= { sid: pt.sid, color: pt.color, pts: [] }).pts.push(pt);
+    return acc;
+  }, {})).map(s => s.pts.length > 1 && (
+    <g key={s.sid}>
+      <polyline points={s.pts.map(p => `${p.x},${p.y}`).join(" ")}
+        fill="none" stroke={s.color} strokeWidth="9"
+        strokeLinecap="round" strokeLinejoin="round"
+        filter="url(#trailGlow)" opacity="0.9" />
+      <polyline points={s.pts.map(p => `${p.x},${p.y}`).join(" ")}
+        fill="none" stroke="rgba(255,255,255,.95)" strokeWidth="3"
+        strokeLinecap="round" strokeLinejoin="round" />
+    </g>
+  ))}
+</svg>

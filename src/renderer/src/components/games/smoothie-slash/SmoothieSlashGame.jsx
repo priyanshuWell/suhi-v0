@@ -1,17 +1,43 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
-import bg from '../../../assets/smoothie/bg.jpg';
-import blenderImage from '../../../assets/smoothie/blender.png';
+import { motion, motionValue, AnimatePresence } from "framer-motion";
+import scoreFrame from '../../../assets/smoothie/score-frame.png';
+import timeFrame from '../../../assets/smoothie/time-frame.png';
+import bg from '../../../assets/smoothie/bg2.png';
+import blenderImage from '../../../assets/smoothie/blenderImage.svg';
 import ProgressStage from '../../ProgessStage';
 import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
 import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
+import beAwareImg from '../../../assets/smoothie/intro/intro_step1.png';
+import howToDoImg from '../../../assets/smoothie/intro/intro_step2.png';
+import howToPlayImg from '../../../assets/smoothie/intro/intro_step3.png';
 import bgMusic from '../../../assets/audio/smoothie/background2.wav';
+import banana from '../../../assets/smoothie/fruits/banana.png';
+import blueberry from '../../../assets/smoothie/fruits/blueberry.png';
+import coconut from '../../../assets/smoothie/fruits/coconut.png';
+import kiwi from '../../../assets/smoothie/fruits/kivi.png';
+import mango from '../../../assets/smoothie/fruits/mango.png';
+import orange from '../../../assets/smoothie/fruits/orange.png';
+import pineapple from '../../../assets/smoothie/fruits/pineapple.png';
+import strawberry from '../../../assets/smoothie/fruits/strawberry.png';
+import blueberryCut from '../../../assets/smoothie/fruits/blueberry_cut.png';
+import bananaCut from '../../../assets/smoothie/fruits/banana_cut.png';
+import coconutCut from '../../../assets/smoothie/fruits/coconut_cut.png';
+import kiwiCut from '../../../assets/smoothie/fruits/kivi_cut.png';
+import mangoCut from '../../../assets/smoothie/fruits/mango_cut.png';
+import orangeCut from '../../../assets/smoothie/fruits/orange_cut.png';
+import pineappleCut from '../../../assets/smoothie/fruits/pineapple_cut.png';
+import strawberryCut from '../../../assets/smoothie/fruits/strawberry_cut.png';
+import splashDrop1 from '../../../assets/smoothie/splash1.svg';
+import splashDrop2 from '../../../assets/smoothie/splash2.svg';
+// jarFilled import removed — liquid fill handles the full-jar visual
 import { getNextRoute } from '../../../utils/stageRouter';
+import scrollFrame from '../../../assets/smoothie/scroll-frame.png';
 
 const API = "http://127.0.0.1:8000";
 
-/* POST /smoothie/start → { game_session_id, stage: { stage_id, target_fruits, … } } */
+/* POST `/smoothie/start → { game_session_id, stage: { stage_id, target_fruits, … } } */
 const apiStart = async (userId, screeningSessionId, kioskId = "KIOSK_001") => {
   const r = await fetch(`${API}/smoothie/start`, {
     method: "POST", headers: { "Content-Type": "application/json" },
@@ -49,14 +75,14 @@ const apiGameComplete = async (gameSessionId) => {
 };
 
 const FRUITS = {
-  ST: { emoji: "🍓", name: "Strawberry" },
-  BA: { emoji: "🍌", name: "Banana" },
-  BL: { emoji: "🫐", name: "Blueberry" },
-  OR: { emoji: "🍊", name: "Orange" },
-  MA: { emoji: "🥭", name: "Mango" },
-  KI: { emoji: "🥝", name: "Kiwi" },
-  CO: { emoji: "🥥", name: "Coconut" },
-  PI: { emoji: "🍍", name: "Pineapple" },
+  ST: { img: strawberry, cutImg: strawberryCut, name: "Strawberry" },
+  BA: { img: banana, cutImg: bananaCut, name: "Banana" },
+  BL: { img: blueberry, cutImg: blueberryCut, name: "Blueberry" },
+  OR: { img: orange, cutImg: orangeCut, name: "Orange" },
+  MA: { img: mango, cutImg: mangoCut, name: "Mango" },
+  KI: { img: kiwi, cutImg: kiwiCut, name: "Kiwi" },
+  CO: { img: coconut, cutImg: coconutCut, name: "Coconut" },
+  PI: { img: pineapple, cutImg: pineappleCut, name: "Pineapple" },
 };
 const ALL_CODES = Object.keys(FRUITS);
 
@@ -68,6 +94,11 @@ const STAGES = [
   { stageId: 5, stageCode: "GREEN_MACHINE", stageName: "Green Machine", targets: ["KI", "BA", "ST"], juice: "#9CC95A" },
   { stageId: 6, stageCode: "BLUE_LAGOON", stageName: "Blue Lagoon", targets: ["BL", "KI", "CO"], juice: "#7E9BD0" },
 ];
+function bannerYOffset(playRef, state) {
+  const h = playRef.current?.getBoundingClientRect().height || 800;
+  const targetPct = state === "settle" ? 22 : 45;   // mirrors old bannerAnim states
+  return (targetPct - 50) / 100 * h;
+}
 
 const SESSION_SEC = 120;
 const BLOCK_SEC = 20;
@@ -77,11 +108,26 @@ const FRUIT_R_BASE = 0.045;   // fraction of playfield height — tune with font
 const BANNER_MS = 1300;
 const GRAVITY = 380;
 const INTER_PAUSE = 2500;    // ms pause between blocks
+const BANNER_CLEAR_MS = 1500;   // ms pause between blocks
+const BANNER_SETTLE_HOLD_MS = 900;  // how long it sits still at "settle" before clearing
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
 const SCREENS = { INSTRUCTION: "INSTRUCTION", COUNTDOWN: "COUNTDOWN", GAME: "GAME", REPORT: "REPORT" };
 
+/* ── jar liquid geometry ─────────────────────────────────────────────
+   These MUST match the inset values on the liquid <div> in the JSX.
+   They are the single source of truth for where the juice surface is,
+   so physics (landing tests) and rendering (splash, ripples, sinking
+   halves) all agree.                                                  */
+const LIQ_TOP = 0.25;      // liquid area starts 24% down the jar
+const LIQ_BOTTOM = 0.20;   // …and ends 12% up from the bottom
+const LIQ_INSET_X = 0.22;  // left/right inset of the liquid area
+const FRUITS_TO_FILL = 10; // correct fruits needed to fill the jar
+
 const uid = () => Math.random().toString(36).slice(2, 9);
 const clamp01 = v => (v == null || !isFinite(v) ? null : Math.max(0, Math.min(1, v)));
+
+/* Surface height as a fraction of jar height, for CSS `top` values */
+const surfaceTopPct = fill => (LIQ_TOP + (1 - fill) * (1 - LIQ_TOP - LIQ_BOTTOM)) * 100;
 
 /* ── metric engine ──────────────────────────────────────────────────── */
 function computeMetrics(events) {
@@ -129,13 +175,23 @@ function computeMetrics(events) {
     }
   };
 }
+const TRAIL_COLORS = ["#FF6B9D", "#4DD0E1", "#FFD34D", "#B388FF", "#69F0AE", "#FF8A65"];
+
+/* generated once so bubbles don't re-randomise every frame */
+const BUBBLES = Array.from({ length: 7 }, (_, i) => ({
+  id: i,
+  x: 12 + Math.random() * 76,
+  s: 4 + Math.random() * 7,
+  dur: 1.8 + Math.random() * 1.8,
+  delay: Math.random() * 2,
+}));
 
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function SmoothieSlashGame() {
   const navigate = useNavigate();
   const storeUser = useSelector(s => s.common.user);
   const storeScreening = useSelector(s => s.common.screening);
-
+  const rippleRef = useRef([]);
   const [screen, setScreen] = useState(SCREENS.INSTRUCTION);
   const [countdown, setCountdown] = useState(3);
   const [score, setScore] = useState(0);
@@ -144,18 +200,20 @@ export default function SmoothieSlashGame() {
   const [paused, setPaused] = useState(false);   // inter-block pause flag
   const [bannerAnim, setBannerAnim] = useState(null); // null | 'center' | 'settle'
   const [bannerText, setBannerText] = useState("");
+  const [bannerFruits, setBannerFruits] = useState([]); // fruit codes shown inside the banner
   const [fill, setFill] = useState(0);
   const [splash, setSplash] = useState(null);
   const [best, setBest] = useState(0);
   const [report, setReport] = useState(null);
   const [, forceTick] = useState(0);
-
+  const [introStep, setIntroStep] = useState(0);
   const playRef = useRef(null);
   const jarRef = useRef(null);
   const fruitsRef = useRef([]);
   const halvesRef = useRef([]);
   const popsRef = useRef([]);
   const trailRef = useRef([]);
+  const splashDropsRef = useRef([]);
   const eventsRef = useRef([]);
   const engineRef = useRef({});
   const rafRef = useRef(null);
@@ -166,6 +224,14 @@ export default function SmoothieSlashGame() {
   const stageIdRef = useRef(1);      // current backend stage_id
   const pausedRef = useRef(false);   // readable inside rAF loop
   const bgMusicRef = useRef(null);   // background music Audio instance
+  const fillRef = useRef(0);         // mirror of `fill` — readable inside rAF loop
+  const [pulse, setPulse] = useState(0);
+
+  /* setFill + keep the ref in sync. Always use this, never setFill directly. */
+  const applyFill = useCallback((v) => {
+    fillRef.current = v;
+    setFill(v);
+  }, []);
 
   /* ── animated banner helper ─────────────────────────────────────────
      Phase 1 (0 ms)   : text appears at center  → bannerAnim = 'center'
@@ -175,9 +241,17 @@ export default function SmoothieSlashGame() {
   const showBanner = useCallback((text) => {
     setBannerText(text);
     setBannerAnim("center");
-    setTimeout(() => setBannerAnim("settle"), 900);
-    setTimeout(() => setBannerAnim(null), 1500);
+    // setTimeout(() => setBannerAnim("settle"), 900);
+    // setTimeout(() => {
+    //   setBannerAnim(null);
+    //   setBannerFruits([]);   // clear fruits in the same timeout that clears the banner
+    // }, BANNER_CLEAR_MS);
   }, []);
+
+  const showStageBanner = useCallback((sIdx) => {
+    setBannerFruits(STAGES[sIdx].targets);
+    showBanner(`GET READY — ${STAGES[sIdx].stageName.toUpperCase()}`);
+  }, [showBanner]);
 
   /* ── inter-block pause ──────────────────────────────────────────────
      Clears all live fruits, shows the banner animation, resumes after
@@ -185,14 +259,16 @@ export default function SmoothieSlashGame() {
   const doBlockPause = useCallback((newSIdx) => {
     fruitsRef.current = [];
     halvesRef.current = [];
+    splashDropsRef.current = [];
+    rippleRef.current = [];
     pausedRef.current = true;
     setPaused(true);
-    showBanner(`GET READY — ${STAGES[newSIdx].stageName.toUpperCase()}`);
+    showStageBanner(newSIdx);
     setTimeout(() => {
       pausedRef.current = false;
       setPaused(false);
     }, INTER_PAUSE);
-  }, [showBanner]);
+  }, [showStageBanner]);
 
   /* ── pushStageComplete: send one block's slashes to /smoothie/stage/complete ── */
   const pushStageComplete = useCallback(async (stageId, startedAt, completedAt, slashes) => {
@@ -309,17 +385,18 @@ export default function SmoothieSlashGame() {
   const startGame = useCallback(() => {
     fruitsRef.current = []; halvesRef.current = []; popsRef.current = [];
     trailRef.current = []; eventsRef.current = [];
+    splashDropsRef.current = []; rippleRef.current = [];
     pausedRef.current = false;
     engineRef.current = {
       t0: performance.now(), last: performance.now(),
       lastSpawn: 0, combo: 0, maxCombo: 0, stage: 0, cs: 0
     };
     scoreRef.current = 0;
-    setScore(0); setFill(0); setStageIdx(0); setTimeLeft(SESSION_SEC);
+    setScore(0); applyFill(0); setStageIdx(0); setTimeLeft(SESSION_SEC);
     setSplash(null); setPaused(false); setScreen(SCREENS.GAME);
     stageStartedAt.current = new Date().toISOString();
-    showBanner(`GET READY — ${STAGES[0].stageName.toUpperCase()}`);
-  }, [showBanner]);
+    showStageBanner(0);
+  }, [showStageBanner, applyFill]);
 
   /* ── endGame → stage/complete for block 6, then game/complete ───── */
   const endGame = useCallback(async () => {
@@ -377,30 +454,40 @@ export default function SmoothieSlashGame() {
 
   /* ── background music: start on mount, stop on unmount ─────────── */
   useEffect(() => {
-    const bg = new Audio(bgMusic);
-    bg.loop = true;
-    bg.volume = 0.4;
-    bg.play().catch(() => { });
-    bgMusicRef.current = bg;
+    const bgm = new Audio(bgMusic);
+    bgm.loop = true;
+    bgm.volume = 0.4;
+    bgm.play().catch(() => { });
+    bgMusicRef.current = bgm;
     return () => {
-      bg.pause();
-      bg.currentTime = 0;
+      bgm.pause();
+      bgm.currentTime = 0;
       bgMusicRef.current = null;
     };
   }, []);
 
-  /* ── jar geometry ───────────────────────────────────────────────── */
-  const jarPos = () => {
+  /* ── jar geometry ───────────────────────────────────────────────────
+     Returns playfield-relative coordinates. `surfaceY` is the y of the
+     juice surface and RISES as the jar fills, so halves land on the
+     liquid rather than at a fixed point near the rim.                  */
+  const jarGeom = useCallback((fillNow = fillRef.current) => {
     const p = playRef.current?.getBoundingClientRect();
     const j = jarRef.current?.getBoundingClientRect();
     if (!p || !j) return null;
+    const left = j.left - p.left;
+    const top = j.top - p.top;
+    const innerTop = top + j.height * LIQ_TOP;
+    const innerBottom = top + j.height * (1 - LIQ_BOTTOM);
+    const innerH = innerBottom - innerTop;
     return {
-      x: j.left - p.left + j.width * 0.40,
-      y: j.top - p.top + j.height * 0.08,
-      w: j.width * 0.66,
-      counterY: j.top - p.top + j.height * 0.72,
+      x: left + j.width * 0.5,                    // liquid area is centred
+      w: j.width * (1 - LIQ_INSET_X * 2),
+      top: innerTop,
+      bottom: innerBottom,
+      surfaceY: innerBottom - innerH * fillNow,
+      counterY: top + j.height * 0.72,
     };
-  };
+  }, []);
 
   /* ── game loop ──────────────────────────────────────────────────── */
   useEffect(() => {
@@ -412,7 +499,9 @@ export default function SmoothieSlashGame() {
     const loop = () => {
       const eng = engineRef.current;
       const now = performance.now();
-      const dt = Math.min(0.04, (now - eng.last) / 1000);
+      const dtRaw = Math.min(0.04, (now - eng.last) / 1000);
+      eng.smoothDt = eng.smoothDt ? eng.smoothDt * 0.85 + dtRaw * 0.15 : dtRaw;
+      const dt = eng.smoothDt;
       eng.last = now;
       const elapsed = (now - eng.t0) / 1000;
       if (elapsed >= SESSION_SEC) { endGame(); return; }
@@ -425,7 +514,7 @@ export default function SmoothieSlashGame() {
         const completedAt = new Date().toISOString();
         const prevBlock = eng.stage;
         eng.stage = sIdx; eng.combo = 0; eng.cs = 0;
-        setStageIdx(sIdx); setFill(0);
+        setStageIdx(sIdx); applyFill(0);
         doBlockPause(sIdx);
         // send previous block's slashes then update stageId for the new block
         const blockSlashes = eventsRef.current.filter(e => e.block_number === prevBlock + 1);
@@ -438,7 +527,7 @@ export default function SmoothieSlashGame() {
       /* skip physics while paused */
       if (!pausedRef.current) {
         const p = playRef.current?.getBoundingClientRect();
-        const jar = jarPos();
+        const jar = jarGeom();
         if (p && jar) {
           const W = p.width, H = p.height;
           const alive = fruitsRef.current.filter(f => !f.sliced);
@@ -463,6 +552,7 @@ export default function SmoothieSlashGame() {
               x: x0, y: H + 20, vx: vx0, vy: vy0,
               rot: Math.random() * 360, spin: (Math.random() - 0.5) * 200,
               born: now, sliced: false,
+              mx: motionValue(x0), my: motionValue(H + 20), mr: motionValue(0)
             });
           }
           fruitsRef.current.forEach(f => {
@@ -470,60 +560,121 @@ export default function SmoothieSlashGame() {
             f.vy += GRAVITY * dt; f.x += f.vx * dt; f.y += f.vy * dt; f.rot += f.spin * dt;
             if (f.x < 28) { f.x = 28; f.vx = Math.abs(f.vx); }
             if (f.x > W - 28) { f.x = W - 28; f.vx = -Math.abs(f.vx); }
-            if (f.y > H + 60 && f.vy > 0) { logEvent(f, "NONE", now); f.gone = true; }
+            if (f.y > H + 60 && f.vy > 0) { logEvent(f, "NONE", now); f.gone = true; };
+            f.mx.set(f.x); f.my.set(f.y); f.mr.set(f.rot);
           });
           fruitsRef.current = fruitsRef.current.filter(f => !f.gone && !f.sliced);
 
           halvesRef.current.forEach(h => {
             if (h.rest) { if (now - h.rest > 600) h.gone = true; return; }
+            if (h.landed) return;   // frozen in the liquid, animated by the renderer
             if (h.mode === "jar") {
               const tx = jar.x + h.jarOff;
               h.vx += (tx - h.x) * 14 * dt; h.vx *= 1 - Math.min(1, 2.5 * dt);
               h.vy += GRAVITY * 1.2 * dt; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.spin * dt;
-              if (h.y >= jar.y) {
-                h.gone = true; eng.cs += 0.5;
-                setFill(Math.min(1, eng.cs / 10));
+              h.mx.set(h.x); h.my.set(h.y); h.mr.set(h.rot);
+              // land on the juice surface, which rises with `fill`
+              if (h.y >= jar.surfaceY) {
+                h.landed = true;
+                h.landT0 = now;
+                h.landX = h.x;              // freeze position at point of impact
+                h.landY = jar.surfaceY;     // freeze surface height at impact
+                eng.cs += 0.5;              // two halves == one fruit
+                const newFill = Math.min(1, eng.cs / FRUITS_TO_FILL);
+                applyFill(newFill);
+                setPulse(p => p + 1);
                 setSplash({ t0: now, color: STAGES[eng.stage].juice });
+                rippleRef.current.push({ id: uid(), t0: now, x: h.x, y: jar.surfaceY });
+                if (newFill >= 0.5) {
+                  for (let k = 0; k < 3; k++) {
+                    splashDropsRef.current.push({
+                      id: uid(), t0: now + k * 40,
+                      variant: Math.random() < 0.5 ? splashDrop1 : splashDrop2,
+                      dx: (Math.random() - 0.5) * 140,
+                      rot: (Math.random() - 0.5) * 40,
+                      scale: 0.5 + Math.random() * 0.4,
+                    });
+                  }
+                }
               }
             } else {
               h.vy += GRAVITY * dt; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.spin * dt;
+              h.mx.set(h.x); h.my.set(h.y); h.mr.set(h.rot);
               const outside = Math.abs(h.x - jar.x) > jar.w / 2 + 18;
               if (h.y >= jar.counterY && h.vy > 0 && outside) { h.y = jar.counterY; h.rest = now; }
               if (h.y > H + 120) h.gone = true;
             }
           });
-          halvesRef.current = halvesRef.current.filter(h => !h.gone);
+          halvesRef.current = halvesRef.current.filter(h => {
+            if (h.landed) return now - h.landT0 < 500;      // sink animation duration
+            return !h.gone && now - h.spawnT0 < 4000;       // spawnT0 is set in spawnHalves
+          });
         }
       }
       popsRef.current = popsRef.current.filter(pp => now - pp.t0 < 900);
       trailRef.current = trailRef.current.filter(pt => now - pt.t < 260);
-      forceTick(v => v + 1);
+      splashDropsRef.current = splashDropsRef.current.filter(d => now - d.t0 < 700);
+      rippleRef.current = rippleRef.current.filter(r => now - r.t0 < 500);
+      const prevCounts = eng.prevCounts ?? {};
+      const counts = {
+        fruits: fruitsRef.current.length,
+        halves: halvesRef.current.length,
+        pops: popsRef.current.length,
+        trail: trailRef.current.length,
+        drops: splashDropsRef.current.length,
+        ripples: rippleRef.current.length,
+      };
+      const changed = Object.keys(counts).some(k => counts[k] !== prevCounts[k]);
+      eng.prevCounts = counts;
+      if (changed) forceTick(v => v + 1);
       rafRef.current = requestAnimationFrame(loop);
+
+
     };
+
     rafRef.current = requestAnimationFrame(loop);
+
     return () => cancelAnimationFrame(rafRef.current);
-  }, [screen, endGame, logEvent, pushStageComplete, doBlockPause]);
+  }, [screen, endGame, logEvent, pushStageComplete, doBlockPause, jarGeom, applyFill]);
 
   /* ── slashing ───────────────────────────────────────────────────── */
   const pointerDown = useRef(false);
   const lastPt = useRef(null);
+  const strokeRef = useRef(null);
+  const trailColorIdx = useRef(0);
   const getPt = e => {
     const r = playRef.current.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now() };
   };
-  const spawnHalves = (f, correct, W) => {
-    const jar = jarPos();
-    const base = { code: f.code, y: f.y, rot: f.rot, mode: correct ? "jar" : "out" };
+  const spawnHalves = (f, correct, W, now) => {
+    const jar = jarGeom();
+    const base = {
+      code: f.code, y: f.y, rot: f.rot,
+      spawnT0: now,
+      mode: correct ? "jar" : "out",
+    };
     if (correct) {
       halvesRef.current.push(
-        { ...base, id: uid(), x: f.x - 20, vx: -40, vy: -90, spin: -160, side: "L", jarOff: -12 },
-        { ...base, id: uid(), x: f.x + 20, vx: 40, vy: -100, spin: 160, side: "R", jarOff: 12 },
+        {
+          ...base, id: uid(), x: f.x - 20, vx: -40, vy: -90, spin: -160, side: "L", jarOff: -12,
+          mx: motionValue(f.x - 20), my: motionValue(f.y), mr: motionValue(f.rot)
+        },
+        {
+          ...base, id: uid(), x: f.x + 20, vx: 40, vy: -100, spin: 160, side: "R", jarOff: 12,
+          mx: motionValue(f.x + 20), my: motionValue(f.y), mr: motionValue(f.rot)
+        },
       );
     } else {
       const away = jar ? (f.x < jar.x ? -1 : 1) : (f.x < W / 2 ? -1 : 1);
       halvesRef.current.push(
-        { ...base, id: uid(), x: f.x - 20, vx: away * (140 + Math.random() * 60), vy: -130, spin: -260, side: "L" },
-        { ...base, id: uid(), x: f.x + 20, vx: away * (180 + Math.random() * 60), vy: -100, spin: 260, side: "R" },
+        {
+          ...base, id: uid(), x: f.x - 20, vx: away * (140 + Math.random() * 60), vy: -130, spin: -260, side: "L",
+          mx: motionValue(f.x - 20), my: motionValue(f.y), mr: motionValue(f.rot)
+        },
+        {
+          ...base, id: uid(), x: f.x + 20, vx: away * (180 + Math.random() * 60), vy: -100, spin: 260, side: "R",
+          mx: motionValue(f.x + 20), my: motionValue(f.y), mr: motionValue(f.rot)
+        },
       );
     }
   };
@@ -552,7 +703,7 @@ export default function SmoothieSlashGame() {
       playSliceSound();
       const outcome = logEvent(f, "SLASH", now);
       const correct = outcome === "CS";
-      spawnHalves(f, correct, W);
+      spawnHalves(f, correct, W, now);
       if (correct) {
         eng.combo += 1; eng.maxCombo = Math.max(eng.maxCombo, eng.combo);
         let pts = PTS.CS;
@@ -569,7 +720,16 @@ export default function SmoothieSlashGame() {
       }
     });
   };
-  const onDown = e => { if (screen !== SCREENS.GAME) return; pointerDown.current = true; lastPt.current = getPt(e); trailRef.current.push(lastPt.current); };
+  const onDown = e => {
+    if (screen !== SCREENS.GAME) return;
+    pointerDown.current = true;
+    const color = TRAIL_COLORS[trailColorIdx.current++ % TRAIL_COLORS.length];
+    strokeRef.current = { sid: uid(), color };
+    const pt = getPt(e);
+    lastPt.current = pt;
+    // inside onMove, replace: trailRef.current.push(pnt);
+    trailRef.current.push({ ...pt, sid: strokeRef.current?.sid, color: strokeRef.current?.color });
+  };
   const onMove = e => {
     if (!pointerDown.current || screen !== SCREENS.GAME) return;
     const pnt = getPt(e); trailRef.current.push(pnt);
@@ -584,6 +744,14 @@ export default function SmoothieSlashGame() {
   const ss = String(timeLeft % 60).padStart(2, "0");
   const splashLive = splash && performance.now() - splash.t0 < 550;
   const constructs = report?.constructs ?? {};
+  const jarSurfaceY = jarGeom()?.surfaceY ?? 0;   // playfield-relative, for ripples/halves
+  const surfaceTop = `${surfaceTopPct(fill)}%`;   // jar-relative, for splash art
+  // Bug 3 & 4 fix — derive real accuracy from report instead of hard-coded 40 / undefined STAGE_RESULTS
+  const overallPct = Math.round((report?.constructs?.divided_attention ?? 0) * 100);
+  const stageAccuracy = (report?.blocks ?? []).reduce((acc, b) => {
+    acc[b.b] = { accuracyPct: Math.round((b.acc ?? 0) * 100) };
+    return acc;
+  }, {});
 
   /* Banner CSS — three states:
      'center'  → big, dead-centre of playfield
@@ -592,21 +760,28 @@ export default function SmoothieSlashGame() {
   const bannerStyle = bannerAnim === "center" ? {
     position: "absolute", left: "50%", top: "45%",
     transform: "translate(-50%,-50%) scale(1)",
-    fontSize: "2.2vmax", padding: "14px 36px",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+    fontSize: "2.2vmax", padding: "18px 40px",
     background: "rgba(35,22,10,.88)", color: "#F7EFDF",
-    borderRadius: 20, whiteSpace: "nowrap", zIndex: 30,
+    borderRadius: 20, zIndex: 30,
     transition: "all 0.9s cubic-bezier(.4,0,.2,1)",
     pointerEvents: "none",
   } : bannerAnim === "settle" ? {
     position: "absolute", left: "50%", top: "22%",
     transform: "translate(-50%,-50%) scale(0.78)",
-    fontSize: "2.2vmax", padding: "14px 36px",
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+    fontSize: "2.2vmax", padding: "18px 40px",
     background: "rgba(35,22,10,.82)", color: "#F7EFDF",
-    borderRadius: 20, whiteSpace: "nowrap", zIndex: 30,
+    borderRadius: 20, zIndex: 30,
     transition: "all 0.9s cubic-bezier(.4,0,.2,1)",
     pointerEvents: "none",
   } : { display: "none" };
 
+  const INTRO_SLIDES = [
+    { type: "image", src: beAwareImg, alt: "Be aware" },
+    { type: "image", src: howToDoImg, alt: "How to do" },
+    { type: "image", src: howToPlayImg, alt: "How to play" },
+  ];
   const CONSTRUCT_META = [
     ["divided_attention", "Divided Attention"],
     ["selective_attention", "Selective Attention"],
@@ -638,278 +813,156 @@ export default function SmoothieSlashGame() {
             style={{
               backgroundImage: `url(${bg})`,
               backgroundSize: "cover",
-              backgroundPosition: "center bottom",
+              backgroundPosition: "center",
               minHeight: "100vh",
               position: "relative",
             }}
           >
-            {/* Overlay */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: "rgba(10,24,20,.55)",
-                zIndex: 0,
-              }}
-            />
+            <div className="absolute inset-0" style={{ background: "rgba(8,4,20,.4)", zIndex: 0 }} />
 
             <div
-              className="relative flex flex-col justify-center"
-              style={{
-                zIndex: 1,
-                width: "100%",
-                maxWidth: 1180,
-                minHeight: "100vh",
-                padding: "70px 70px 60px",
-                gap: 42,
-              }}
+              className="relative flex flex-col items-center"
+              style={{ zIndex: 1, width: "100%", minHeight: "100vh", padding: "48px 24px 56px", gap: 30 }}
             >
-              {/* Header */}
-              <div className="flex justify-center">
-                <span
-                  className="font-extrabold rounded-full"
-                  style={{
-                    fontSize: "clamp(24px,2vw,34px)",
-                    background: "rgba(30,20,10,.75)",
-                    color: "#E8D9BB",
-                    letterSpacing: ".25em",
-                    padding: "18px 48px",
-                  }}
-                >
-                  FRUIT SLASH KITCHEN
-                </span>
-              </div>
-
-              {/* Title */}
-              <h1
-                className="display text-center leading-none"
-                style={{
-                  fontSize: "clamp(5rem,8vw,8rem)",
-                  color: "#F2E8CC",
-                  textShadow: "0 6px 18px rgba(0,0,0,.55)",
-                }}
-              >
-                SMOOTHIE SLASH
-              </h1>
-
-              {/* Rules */}
+              {/* Slide */}
               <div
-                className="rounded-[36px]"
-                style={{
-                  background: "rgba(25,18,8,.82)",
-                  border: "1px solid rgba(255,235,180,.15)",
-                  padding: "40px",
-                }}
+                className="flex-1 flex items-center justify-center w-full"
+                style={{ minHeight: 0 }}
               >
-                {/* Rule 1 */}
-                <div className="flex gap-6 items-start mb-10">
+                {INTRO_SLIDES[introStep].type === "image" ? (
+                  <img
+                    src={INTRO_SLIDES[introStep].src}
+                    alt={INTRO_SLIDES[introStep].alt}
+                    style={{
+                      width: "100%",
+                      maxHeight: "72vh",
+                      objectFit: "contain",
+                      borderRadius: 32,
+                      boxShadow: "0 24px 60px rgba(0,0,0,.55)",
+                    }}
+                  />
+                ) : (
                   <div
-                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
+                    className="rounded-[36px] w-full"
                     style={{
-                      width: 78,
-                      height: 78,
-                      background: "#4CAF50",
-                      color: "#fff",
-                      fontSize: 40,
-                      fontWeight: 700,
+                      background: "linear-gradient(180deg,rgba(46,26,74,.95),rgba(24,14,42,.95))",
+                      border: "1px solid rgba(200,160,245,.25)",
+                      padding: "34px 30px",
+                      boxShadow: "0 24px 60px rgba(0,0,0,.55)",
                     }}
                   >
-                    ✓
-                  </div>
-
-                  <p
-                    className="font-semibold leading-snug"
-                    style={{
-                      fontSize: "clamp(30px,2vw,38px)",
-                      color: "#EDE4CE",
-                    }}
-                  >
-                    Slash{" "}
-                    <span
-                      style={{
-                        color: "#F2B34C",
-                        fontWeight: 900,
-                      }}
+                    <p
+                      className="text-center font-extrabold mb-7"
+                      style={{ fontSize: "clamp(20px,1.8vw,28px)", color: "#E8D9F7", letterSpacing: ".22em" }}
                     >
-                      only the fruits
-                    </span>{" "}
-                    shown in the recipe at the top of the screen.
-                  </p>
-                </div>
-
-                {/* Rule 2 */}
-                <div className="flex gap-6 items-start mb-10">
-                  <div
-                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
-                    style={{
-                      width: 78,
-                      height: 78,
-                      background: "#E53935",
-                      color: "#fff",
-                      fontSize: 38,
-                      fontWeight: 700,
-                    }}
-                  >
-                    ✕
-                  </div>
-
-                  <p
-                    className="font-semibold leading-snug"
-                    style={{
-                      fontSize: "clamp(30px,2vw,38px)",
-                      color: "#EDE4CE",
-                    }}
-                  >
-                    Wrong fruit spoils the blend —
-                    <span
-                      style={{
-                        color: "#E57373",
-                        fontWeight: 900,
-                      }}
-                    >
-                      {" "}
-                      −2 points
-                    </span>{" "}
-                    per miss.
-                  </p>
-                </div>
-
-                {/* Rule 3 */}
-                <div className="flex gap-6 items-start">
-                  <div
-                    className="flex items-center justify-center rounded-2xl flex-shrink-0"
-                    style={{
-                      width: 78,
-                      height: 78,
-                      background: "#7B61FF",
-                      color: "#fff",
-                      fontSize: 38,
-                      fontWeight: 700,
-                    }}
-                  >
-                    ↻
-                  </div>
-
-                  <p
-                    className="font-semibold leading-snug"
-                    style={{
-                      fontSize: "clamp(30px,2vw,38px)",
-                      color: "#EDE4CE",
-                    }}
-                  >
-                    The recipe{" "}
-                    <span
-                      style={{
-                        color: "#C584F5",
-                        fontWeight: 900,
-                      }}
-                    >
-                      changes every 20 seconds
-                    </span>{" "}
-                    — adapt fast and chain combos!
-                  </p>
-                </div>
-              </div>
-
-              {/* Recipe Board */}
-              <div
-                className="rounded-[36px]"
-                style={{
-                  background: "rgba(240,228,196,.95)",
-                  padding: "36px",
-                }}
-              >
-                <p
-                  className="text-center font-extrabold mb-8"
-                  style={{
-                    fontSize: "clamp(22px,1.6vw,30px)",
-                    color: "#7A5C28",
-                    letterSpacing: ".25em",
-                  }}
-                >
-                  TODAY'S RECIPE BOARD
-                </p>
-
-                <div className="grid grid-cols-2 gap-5">
-                  {STAGES.map((s) => (
-                    <div
-                      key={s.stageId}
-                      className="flex items-center gap-5 rounded-3xl"
-                      style={{
-                        background: "rgba(255,248,230,.9)",
-                        padding: "22px",
-                      }}
-                    >
-                      <div className="flex gap-2">
-                        {s.targets.map((c) => (
-                          <span
-                            key={c}
-                            className="flex items-center justify-center rounded-2xl"
-                            style={{
-                              width: 68,
-                              height: 68,
-                              background: "#EFE3C3",
-                              fontSize: 38,
-                            }}
-                          >
-                            {FRUITS[c].emoji}
+                      TODAY'S RECIPE BOARD
+                    </p>
+                    <div className="grid grid-cols-2 gap-4">
+                      {STAGES.map(s => (
+                        <div
+                          key={s.stageId}
+                          className="flex items-center gap-3 rounded-2xl"
+                          style={{ background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.12)", padding: "14px" }}
+                        >
+                          <div className="flex gap-1.5">
+                            {s.targets.map(c => (
+                              <span key={c} className="flex items-center justify-center rounded-xl" style={{ width: 44, height: 44, background: "rgba(255,255,255,.12)" }}>
+                                <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "72%", height: "72%", objectFit: "contain" }} />
+                              </span>
+                            ))}
+                          </div>
+                          <span className="font-bold" style={{ fontSize: "clamp(15px,1.2vw,19px)", color: "#EDE4F5" }}>
+                            {s.stageName}
                           </span>
-                        ))}
-                      </div>
-
-                      <span
-                        className="font-bold leading-tight"
-                        style={{
-                          fontSize: "clamp(26px,2vw,34px)",
-                          color: "#4A3210",
-                        }}
-                      >
-                        {s.stageName}
-                      </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
 
-              {/* Timer */}
-              <div className="flex justify-center">
-                <span
-                  className="font-bold rounded-full"
-                  style={{
-                    fontSize: "clamp(26px,2vw,34px)",
-                    background: "rgba(30,20,10,.78)",
-                    color: "#E8D9BB",
-                    padding: "18px 52px",
-                  }}
-                >
-                  ⏱ 2:00 on the clock · 6 recipes
-                </span>
+              {/* Dots */}
+              <div className="flex gap-3">
+                {INTRO_SLIDES.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setIntroStep(i)}
+                    aria-label={`Go to slide ${i + 1}`}
+                    style={{
+                      width: i === introStep ? 30 : 10,
+                      height: 10,
+                      borderRadius: 99,
+                      background: i === introStep ? "#F5C842" : "rgba(255,255,255,.35)",
+                      border: "none",
+                      cursor: "pointer",
+                      transition: "all .25s",
+                    }}
+                  />
+                ))}
               </div>
 
-              {/* Start Button */}
-              <button
-                onClick={handleStart}
-                className="display active:scale-95 transition-transform"
-                style={{
-                  background:
-                    "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
-                  color: "#2C1A00",
-                  boxShadow: "0 10px 0 #A87400",
-                  fontWeight: 900,
-                  letterSpacing: ".08em",
-                  fontSize: "clamp(44px,3vw,58px)",
-                  padding: "34px 0",
-                  borderRadius: 70,
-                  width: "100%",
-                  marginTop: 12,
-                }}
-              >
-                START
-              </button>
+              {/* Nav */}
+              <div className="flex gap-4 w-full">
+                {introStep > 0 && (
+                  <button
+                    onClick={() => setIntroStep(s => s - 1)}
+                    className="display active:scale-95 transition-transform"
+                    style={{
+                      flex: 1,
+                      background: "rgba(255,255,255,.12)",
+                      color: "#F0E6C8",
+                      border: "1px solid rgba(255,255,255,.25)",
+                      borderRadius: 60,
+                      padding: "20px 0",
+                      fontSize: "clamp(20px,1.8vw,26px)",
+                      fontWeight: 800,
+                    }}
+                  >
+                    BACK
+                  </button>
+                )}
+                {introStep < INTRO_SLIDES.length - 1 ? (
+                  <button
+                    onClick={() => setIntroStep(s => s + 1)}
+                    className="display active:scale-95 transition-transform"
+                    style={{
+                      flex: 2,
+                      background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                      color: "#2C1A00",
+                      boxShadow: "0 10px 0 #A87400",
+                      fontWeight: 900,
+                      letterSpacing: ".08em",
+                      fontSize: "clamp(24px,2.2vw,32px)",
+                      padding: "22px 0",
+                      borderRadius: 60,
+                    }}
+                  >
+                    NEXT
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleStart}
+                    className="display active:scale-95 transition-transform"
+                    style={{
+                      flex: 2,
+                      background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                      color: "#2C1A00",
+                      boxShadow: "0 10px 0 #A87400",
+                      fontWeight: 900,
+                      letterSpacing: ".08em",
+                      fontSize: "clamp(28px,2.4vw,36px)",
+                      padding: "22px 0",
+                      borderRadius: 60,
+                    }}
+                  >
+                    START
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </>
-      )
-      }
+      )}
 
       {/* ── COUNTDOWN ────────────────────────────────────────────── */}
       {
@@ -928,78 +981,228 @@ export default function SmoothieSlashGame() {
             style={{ touchAction: "none", minHeight: 480, backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center bottom" }}>
 
             {/* HUD */}
-            <div className="absolute top-0 inset-x-0 pointer-events-none px-5 pt-5" style={{ zIndex: 20 }}>
-              <div className="flex items-start justify-between">
-                <span className="display text-3xl" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>⏱ {mm}:{ss}</span>
-                <div className="text-right">
-                  <p className="display text-base leading-none" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>SCORE</p>
-                  <p className="display text-4xl leading-tight" style={{ color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>{score}</p>
-                </div>
-              </div>
-              <div className="flex flex-col items-center -mt-9">
-                <div className="flex gap-2.5">
-                  {stage.targets.map(c => (
-                    <div key={c} className="w-32 h-32 rounded-xl flex items-center justify-center"
-                      style={{ background: "#EFE3C3", boxShadow: "0 2px 5px rgba(0,0,0,.3)", fontSize: "3.5rem" }}>
-                      {FRUITS[c].emoji}
-                    </div>
-                  ))}
-                </div>
-                {/* Stage name — static position in HUD; animation handled by bannerStyle */}
-                <p className="display mt-3 tracking-wider" style={{ fontSize: "1.4vmax", color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>
-                  {stage.stageName.toUpperCase()}
-                </p>
-              </div>
-            </div>
+            <div className="absolute top-0 inset-x-0 pointer-events-none" style={{ zIndex: 20 }}>
 
-            {/* Blender — bigger: 62% wide up to 260px */}
-            <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "2%", width: "min(62%,260px)", aspectRatio: "672/803" }}>
-              <div className="relative w-[320px] h-[500px]">
-                {/* Liquid */}
-                <div
-                  className="absolute overflow-hidden"
-                  style={{
-                    left: 70,
-                    right: 70,
-                    top: 55,
-                    bottom: 95,
-                    borderRadius: "0 0 40px 40px",
-                  }}
-                >
-                  <div
-                    className="absolute left-0 right-0 bottom-0"
-                    style={{
-                      height: `${fill}%`,
-                      // background: smoothieColor,
-                      transition: "height .3s",
-                    }}
-                  />
-                </div>
+              {/* TIME — fully independent, position anywhere via top/left */}
+              <div
+                className="absolute flex items-center justify-center"
+                style={{
+                  top: "40px",
+                  left: "18px",
+                  width: "min(16vw, 180px)",
+                  aspectRatio: "286/304",
+                  backgroundImage: `url(${timeFrame})`,
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  paddingTop: "1%",
+                  zIndex: 22,
+                }}
+              >
 
-                {/* Blender PNG */}
-                <img
-                  src={blenderImage}
-                  className="absolute inset-0 w-full h-full"
-                  alt="Blender"
-                />
+                <span className="display font-black text-white text-2xl">
+                  {mm}:{ss}
+                </span>
               </div>
-              <div className="absolute overflow-hidden pointer-events-none"
-                style={{ left: "24%", width: "60%", bottom: "32%", height: "54%", borderRadius: "4px 4px 12px 12px" }}>
-                <div className="absolute bottom-0 inset-x-0 transition-all duration-300"
-                  style={{ height: `${fill * 100}%`, background: stage.juice, opacity: 0.85 }} />
-                {splashLive && (
-                  <div className="absolute left-1/2 w-16 h-7 rounded-full"
-                    style={{ bottom: `${fill * 100}%`, background: splash.color, opacity: 0.9, animation: "jarSplash .55s ease-out forwards" }} />
-                )}
+
+              {/* SCORE — fully independent, position anywhere via top/right */}
+              <div
+                className="absolute flex flex-col items-center justify-center"
+                style={{
+                  top: "40px",
+                  right: "18px",
+                  width: "min(16vw, 180px)",
+                  aspectRatio: "256/290",
+                  backgroundImage: `url(${scoreFrame})`,
+                  backgroundSize: "100% 100%",
+                  backgroundRepeat: "no-repeat",
+                  paddingTop: "6%",
+                  zIndex: 22,
+                }}
+              >
+                <span className="display font-extrabold text-md text-amber-200 leading-none" >SCORE</span>
+                <span className="display font-black text-white text-2xl leading-tight">
+                  {score}
+                </span>
               </div>
-              {splashLive && (
-                <div className="absolute w-10 h-5 rounded-full pointer-events-none"
-                  style={{ left: "40%", top: "2%", background: splash.color, animation: "mouthSplash .5s ease-out forwards" }} />
+
+              {/* Target-fruit chips + stage name — hidden while banner is animating
+                  (the banner itself shows the fruits during the transition) */}
+              {!bannerAnim && (
+                <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "90px", zIndex: 21 }}>
+                  <div className="flex gap-2.5">
+                    {stage.targets.map(c => (
+                      <div key={c} className="w-32 h-32 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.3)", backdropFilter: "blur(2px)", boxShadow: "0 4px 10px rgba(0,0,0,.35)" }}>
+                        <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "68%", height: "68%", objectFit: "contain" }} />
+                      </div>
+                    ))}
+                  </div>
+                  <p className="display mt-3 tracking-wider" style={{ fontSize: "1.4vmax", color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)" }}>
+                    {stage.stageName.toUpperCase()}
+                  </p>
+                </div>
               )}
             </div>
 
-            {/* Animated stage banner */}
-            {bannerAnim && <div style={bannerStyle}>{bannerText}</div>}
+            {/* Blender / Jar */}
+            <div ref={jarRef} className="absolute left-1/2 -translate-x-1/2" style={{ zIndex: 5, bottom: "13%", width: "min(72%,260px)", aspectRatio: "672/803" }}>
+
+              {/* Jar / blender art — sits at zIndex 1 (behind the liquid layer).
+                  The blenderImage is a fully-opaque raster PNG so the liquid must
+                  render ON TOP of it with mix-blend-mode: multiply to tint through. */}
+              <div key={pulse} className="absolute inset-0" style={{ animation: "jarNudge .28s ease-out", zIndex: 1 }}>
+                <img src={blenderImage} className="w-full h-full" alt="Blender" />
+              </div>
+
+              {/* Liquid — zIndex 2 (above the jar art), mix-blend-mode: multiply so the
+                  juice colour tints the opaque jar image rather than sitting behind it.
+                  Inset values here MUST match LIQ_TOP / LIQ_BOTTOM / LIQ_INSET_X above. */}
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  left: `${LIQ_INSET_X * 100}%`, right: `${LIQ_INSET_X * 100}%`,
+                  top: `${LIQ_TOP * 100}%`, bottom: `${LIQ_BOTTOM * 100}%`,
+                  borderRadius: "0 0 22px 22px",
+                  zIndex: 2,
+                  mixBlendMode: "multiply",
+                }}
+              >
+                <div
+                  className="absolute left-0 right-0 bottom-0"
+                  style={{
+                    height: `${fill * 100}%`,
+                    background: `linear-gradient(180deg, ${stage.juice}BB 0%, ${stage.juice}EE 40%, ${stage.juice} 100%)`,
+                    transition: "height .5s cubic-bezier(.34,1.56,.64,1)",
+                    boxShadow: "inset 0 6px 10px rgba(255,255,255,.25), inset 0 -4px 14px rgba(0,0,0,.18)",
+                  }}
+                >
+                  {/* two counter-drifting ellipses = sloshing surface */}
+                  <div className="absolute" style={{
+                    left: "-25%", right: "-25%", top: -9, height: 18, borderRadius: "50%",
+                    background: stage.juice, filter: "brightness(1.1)",
+                    animation: "slosh 2.6s ease-in-out infinite",
+                  }} />
+                  <div className="absolute" style={{
+                    left: "-25%", right: "-25%", top: -6, height: 13, borderRadius: "50%",
+                    background: "rgba(255,255,255,.35)", filter: "blur(1px)",
+                    animation: "slosh 2.6s ease-in-out infinite reverse",
+                  }} />
+                  {BUBBLES.map(b => (
+                    <div key={b.id} className="absolute" style={{
+                      left: `${b.x}%`, bottom: 0, width: b.s, height: b.s,
+                      borderRadius: "50%", background: "rgba(255,255,255,.35)",
+                      animation: `rise ${b.dur}s linear ${b.delay}s infinite`,
+                    }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Rim splash pop when a fruit lands — anchored to the juice surface */}
+              {splashLive && fill < 1 && (
+                <div
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: "50%", top: surfaceTop, width: "36%", height: 28,
+                    transform: "translate(-50%,-50%)",
+                    background: splash.color, borderRadius: "50%",
+                    opacity: 0.9, animation: "jarSplash .55s ease-out forwards",
+                    zIndex: 3,
+                  }}
+                />
+              )}
+
+              {/* Outward juice-drop particles once half-full+ */}
+              {splashDropsRef.current.map(d => {
+                const age = performance.now() - d.t0;
+                if (age < 0) return null;
+                const p = Math.min(1, age / 650);
+                return (
+                  <img
+                    key={d.id}
+                    src={d.variant}
+                    alt=""
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `calc(50% + ${d.dx}px)`,
+                      top: surfaceTop,
+                      width: 60 * d.scale,
+                      transform: `translate(-50%,-60%) translateY(${-40 * p}px) rotate(${d.rot}deg)`,
+                      opacity: 1 - p,
+                      zIndex: 4,
+                    }}
+                  />
+                );
+              })}
+              <style>{`@keyframes slosh { 0%,100%{transform:translateX(-6%) rotate(-1.2deg)} 50%{transform:translateX(6%) rotate(1.2deg)} }
+@keyframes rise  { 0%{transform:translateY(0) scale(.6);opacity:0} 15%{opacity:.7} 100%{transform:translateY(-100%) scale(1.1);opacity:0} }
+@keyframes jarNudge { 0%{transform:translateY(0)} 30%{transform:translateY(3px) scale(1.015,.985)} 100%{transform:translateY(0)} }`}</style>
+            </div>
+
+            {/* Animated stage banner — position driven entirely by transform (y), not top,
+    so the browser never has to recompute layout mid-spring */}
+            <AnimatePresence>
+              {bannerAnim && (
+                <motion.div
+                  key="stage-banner"
+                  initial={{ opacity: 0, scale: 0.7, y: bannerYOffset(playRef, "center") }}
+                  animate={{
+                    opacity: 1,
+                    scale: bannerAnim === "settle" ? 0.78 : 1,
+                    y: bannerYOffset(playRef, bannerAnim),
+                  }}
+                  exit={{ opacity: 0, scale: 0.6 }}
+                  transition={{
+                    opacity: { duration: 0.25 },
+                    scale: { type: "spring", stiffness: 220, damping: 24 },
+                    y: { type: "spring", stiffness: 120, damping: 22 },
+                  }}
+                  onAnimationComplete={() => {
+                    if (bannerAnim === "center") {
+                      setBannerAnim("settle");                 // only NOW, once center truly finished
+                    } else if (bannerAnim === "settle") {
+                      setTimeout(() => {                        // this is a deliberate static hold, not mid-motion
+                        setBannerAnim(null);
+                        setBannerFruits([]);
+                      }, BANNER_SETTLE_HOLD_MS);
+                    }
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: "32%",              // fixed anchor — never animated, so no layout cost
+                    left: "50%",
+                    x: "-50%",
+                    willChange: "transform", // hints the browser to composite this on the GPU layer
+                    display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                    zIndex: 30,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {bannerFruits.length > 0 && (
+                    <div className="flex gap-2.5">
+                      {bannerFruits.map(c => (
+                        <div
+                          key={c}
+                          className="w-32 h-32 rounded-2xl flex items-center justify-center"
+                          style={{
+                            background: "rgba(255,255,255,.14)",
+                            border: "1px solid rgba(255,255,255,.3)",
+                            backdropFilter: "blur(2px)",
+                            boxShadow: "0 4px 10px rgba(0,0,0,.35)",
+                          }}
+                        >
+                          <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "68%", height: "68%", objectFit: "contain" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p
+                    className="display tracking-wider text-center"
+                    style={{ fontSize: "1.4vmax", color: "#F0E6C8", textShadow: "0 2px 3px rgba(0,0,0,.35)", whiteSpace: "nowrap" }}
+                  >
+                    {bannerText}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Inter-block pause overlay — dims the scene */}
             {paused && (
@@ -1009,35 +1212,89 @@ export default function SmoothieSlashGame() {
 
             {/* Fruits */}
             {fruitsRef.current.map(f => (
-              <div key={f.id} className="absolute pointer-events-none" style={{
+              <motion.div key={f.id} className="absolute pointer-events-none" style={{
                 zIndex: 10,
-                left: f.x, top: f.y, transform: `translate(-50%,-50%) rotate(${f.rot}deg)`,
-                filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", fontSize: "6vmax"
+                left: f.mx, top: f.my, rotate: f.mr,
+                x: "-50%", y: "-50%",
+                filter: "drop-shadow(0 4px 4px rgba(0,0,0,.25))", width: "6vmax", height: "6vmax"
               }}>
-                {FRUITS[f.code].emoji}
-              </div>
+                <img src={FRUITS[f.code].img} alt={FRUITS[f.code].name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+              </motion.div>
             ))}
+
+            {/* Surface ripples — playfield-relative, so they sit on the juice, not offset by the jar */}
+            {rippleRef.current.map(r => {
+              const p = Math.min(1, (performance.now() - r.t0) / 500);
+              return (
+                <div key={r.id} className="absolute pointer-events-none" style={{
+                  left: r.x, top: r.y ?? jarSurfaceY,
+                  transform: `translate(-50%,-50%) scale(${0.3 + p * 1.6})`,
+                  width: 70, height: 18, borderRadius: "50%",
+                  border: `2px solid ${stage.juice}`,
+                  opacity: 0.6 * (1 - p),
+                  zIndex: 11,
+                }} />
+              );
+            })}
 
             {/* Halves */}
-            {halvesRef.current.map(h => (
-              <div key={h.id} className="absolute pointer-events-none" style={{
-                zIndex: 10,
-                fontSize: "4vmax", left: h.x, top: h.y,
-                transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
-                clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
-                opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
-                filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)"
-              }}>
-                {FRUITS[h.code].emoji}
-              </div>
-            ))}
+            {halvesRef.current.map(h => {
+              if (h.landed) {
+                const age = performance.now() - h.landT0;
+                const p = Math.min(1, age / 500);                    // 0 → 1 over the sink duration
+                const squash = 1 - 0.35 * Math.min(1, age / 120);    // quick squash on first ~120ms
+                const sinkY = 14 * p;                                // drifts down into the liquid
+                const fade = 1 - p;
+                return (
+                  <motion.div key={h.id} className="absolute pointer-events-none" style={{
+                    zIndex: 10,
+                    width: "5vmax", height: "5vmax",
+                    left: h.mx, top: h.my, rotate: h.mr,
+                    x: "-50%", y: "-50%",
+                    clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
+                    opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
+                    filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)",
+                  }}>
+                    <img src={FRUITS[h.code].cutImg} alt={FRUITS[h.code].name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                  </motion.div>
+                );
+              }
+              return (
+                <div key={h.id} className="absolute pointer-events-none" style={{
+                  zIndex: 10,
+                  width: "5vmax", height: "5vmax", left: h.x, top: h.y,
+                  transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
+                  clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
+                  opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
+                  filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)",
+                }}>
+                  <img src={FRUITS[h.code].cutImg} alt={FRUITS[h.code].name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                </div>
+              );
+            })}
 
-            {/* Slash trail */}
+            {/* Slash trail — per-stroke coloured glow, grouped by stroke id */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 10 }}>
-              {trailRef.current.length > 1 && (
-                <polyline points={trailRef.current.map(pt => `${pt.x},${pt.y}`).join(" ")}
-                  fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
-              )}
+              <defs>
+                <filter id="trailGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="5" result="b" />
+                  <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                </filter>
+              </defs>
+              {Object.values(trailRef.current.reduce((acc, pt) => {
+                (acc[pt.sid] ??= { sid: pt.sid, color: pt.color, pts: [] }).pts.push(pt);
+                return acc;
+              }, {})).map(s => s.pts.length > 1 && (
+                <g key={s.sid}>
+                  <polyline points={s.pts.map(p => `${p.x},${p.y}`).join(" ")}
+                    fill="none" stroke={s.color} strokeWidth="9"
+                    strokeLinecap="round" strokeLinejoin="round"
+                    filter="url(#trailGlow)" opacity="0.9" />
+                  <polyline points={s.pts.map(p => `${p.x},${p.y}`).join(" ")}
+                    fill="none" stroke="rgba(255,255,255,.95)" strokeWidth="3"
+                    strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              ))}
             </svg>
 
             {/* Score pops */}
@@ -1057,259 +1314,89 @@ export default function SmoothieSlashGame() {
       }
 
       {/* ── REPORT ───────────────────────────────────────────────── */}
-      {
-        screen === SCREENS.REPORT && (
+      {screen === SCREENS.REPORT && (
+        <div
+          className="flex-1 flex items-center justify-center px-4 py-6"
+          style={{ backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "100vh" }}
+        >
           <div
-            className="flex-1 flex flex-col items-center justify-center"
+            className="relative w-full"
             style={{
-              backgroundImage: `url(${bg})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center bottom",
-              minHeight: "100vh",
-              position: "relative",
+              maxWidth: 720,
+              aspectRatio: "1495/1247",
+              backgroundImage: `url(${scrollFrame})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
             }}
           >
-            {/* Overlay */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: "rgba(10,24,20,.45)",
-                zIndex: 0,
-              }}
-            />
+            {/* Content positioned as % of the scroll's inner writable area */}
+            <div className="absolute" style={{ left: "16%", right: "10%", top: "13%", bottom: "10%" }}>
 
-            <div
-              className="relative flex flex-col justify-center"
-              style={{
-                zIndex: 1,
-                width: "100%",
-                maxWidth: 1180,
-                minHeight: "100vh",
-                padding: "70px 70px 60px",
-                gap: 34,
-              }}
-            >
-              {/* TIME'S UP */}
-              <div className="flex justify-center">
-                <span
-                  className="font-extrabold rounded-full flex items-center gap-3"
-                  style={{
-                    fontSize: "clamp(24px,2vw,34px)",
-                    background: "rgba(30,20,10,.82)",
-                    color: "#E8D9BB",
-                    letterSpacing: ".18em",
-                    padding: "18px 50px",
-                  }}
-                >
-                  ⏱ GREAT JOB!
+              {/* Header row */}
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="font-extrabold text-white" style={{ fontSize: "clamp(15px,2vw,22px)" }}>
+                  RECIPES MADE CORRECTLY
+                </h2>
+                <span className="font-extrabold text-white" style={{ fontSize: "clamp(17px,2.2vw,24px)" }}>
+                  {overallPct}%
                 </span>
               </div>
 
-              {/* Stars */}
-              {(() => {
-                const acc = report?.constructs?.divided_attention ?? 0;
-                const stars = acc >= 0.85 ? 3 : acc >= 0.65 ? 2 : 1;
-
-                return (
-                  <div className="flex justify-center gap-5">
-                    {[1, 2, 3].map((i) => (
-                      <span
-                        key={i}
-                        style={{
-                          fontSize: 88,
-                          filter:
-                            i <= stars
-                              ? "drop-shadow(0 5px 12px rgba(255,200,0,.8))"
-                              : "grayscale(1) opacity(.35)",
-                        }}
-                      >
-                        ⭐
-                      </span>
-                    ))}
-                  </div>
-                );
-              })()}
-
-              {/* Score */}
-              <div className="text-center">
-                <h2
-                  className="display leading-none"
+              {/* Overall bar */}
+              <div className="w-full rounded-full mb-5" style={{ height: 12, background: "rgba(255,255,255,.9)" }}>
+                <div
+                  className="h-full rounded-full"
                   style={{
-                    fontSize: "clamp(5rem,8vw,8rem)",
-                    color: "#F2E8CC",
-                    textShadow: "0 6px 18px rgba(0,0,0,.55)",
+                    width: `${overallPct}%`,
+                    background: "linear-gradient(90deg,#B77BFF,#8E3FE8)",
+                    transition: "width .4s ease-out",
                   }}
-                >
-                  SCORE {score.toLocaleString()}
-                </h2>
-
+                />
               </div>
 
-              {/* Accuracy Card */}
-              <div
-                className="rounded-[36px]"
-                style={{
-                  background: "rgba(240,228,196,.95)",
-                  padding: "40px",
-                }}
-              >
-                {(() => {
-                  const totalAcc = report?.constructs?.divided_attention;
-
+              {/* Per-stage rows */}
+              <div className="flex flex-col gap-2.5">
+                {STAGES.map(s => {
+                  const pct = stageAccuracy[s.stageId]?.accuracyPct ?? 0;
+                  const barColor = pct >= 80 ? "#5DD62C" : pct >= 50 ? "#F5A623" : "#E8443C";
                   return (
-                    <>
-                      <div className="flex items-center justify-between mb-5">
-                        <span
-                          className="font-extrabold"
-                          style={{
-                            fontSize: "clamp(22px,1.5vw,28px)",
-                            color: "#7A5C28",
-                            letterSpacing: ".18em",
-                          }}
-                        >
-                          RECIPES MADE CORRECTLY
-                        </span>
-
-                        <span
-                          className="display font-black"
-                          style={{
-                            fontSize: "clamp(46px,3vw,60px)",
-                            color: "#3A2800",
-                          }}
-                        >
-                          {totalAcc != null
-                            ? `${Math.round(totalAcc * 100)}%`
-                            : "—"}
-                        </span>
-                      </div>
-
-                      <div
-                        className="rounded-full mb-8"
-                        style={{
-                          height: 22,
-                          background: "#D9C89A",
-                        }}
-                      >
-                        <div
-                          className="rounded-full h-full"
-                          style={{
-                            width: `${Math.round((totalAcc ?? 0) * 100)}%`,
-                            background: "#E8A800",
-                            transition: "width .6s",
-                          }}
-                        />
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {/* Stage Results */}
-                {(() => {
-                  const blocks = report?.blocks ?? [];
-
-                  return STAGES.map((s, i) => {
-                    const b = blocks[i];
-                    const acc = b?.acc ?? null;
-                    const pct = acc != null ? Math.round(acc * 100) : null;
-
-                    const color =
-                      pct >= 80
-                        ? "#4CAF50"
-                        : pct >= 60
-                          ? "#E8A800"
-                          : "#E57373";
-
-                    return (
-                      <div
-                        key={s.stageId}
-                        className="flex items-center gap-5 mb-6"
-                      >
-                        <div className="flex gap-2 flex-shrink-0">
-                          {s.targets.map((c) => (
-                            <span
-                              key={c}
-                              className="flex items-center justify-center rounded-2xl"
-                              style={{
-                                width: 62,
-                                height: 62,
-                                background: "#EFE3C3",
-                                fontSize: 34,
-                              }}
-                            >
-                              {FRUITS[c].emoji}
-                            </span>
-                          ))}
-                        </div>
-
-                        <span
-                          className="font-bold"
-                          style={{
-                            fontSize: "clamp(24px,1.8vw,32px)",
-                            color: "#3A2800",
-                            minWidth: 210,
-                          }}
-                        >
-                          {s.stageName}
-                        </span>
-
-                        <div
-                          className="flex-1 rounded-full"
-                          style={{
-                            height: 18,
-                            background: "#D9C89A",
-                          }}
-                        >
+                    <div key={s.stageId} className="flex items-center gap-2.5">
+                      <div className="flex gap-1 shrink-0">
+                        {s.targets.map(c => (
                           <div
-                            className="rounded-full h-full transition-all"
-                            style={{
-                              width: `${pct ?? 0}%`,
-                              background: color,
-                            }}
-                          />
-                        </div>
-
-                        <span
-                          className="font-extrabold"
-                          style={{
-                            fontSize: "clamp(24px,2vw,32px)",
-                            color: "#3A2800",
-                            minWidth: 70,
-                            textAlign: "right",
-                          }}
-                        >
-                          {pct != null ? `${pct}%` : "—"}
-                        </span>
+                            key={c}
+                            className="flex items-center justify-center rounded-lg"
+                            style={{ width: 38, height: 38, background: "rgba(255,255,255,.16)" }}
+                          >
+                            <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "78%", height: "78%", objectFit: "contain" }} />
+                          </div>
+                        ))}
                       </div>
-                    );
-                  });
-                })()}
-              </div>
-              {/* Buttons */}
-              <div className="flex flex-col gap-5 mt-3">
-                <button
-                  onClick={() => navigate(nextRouteRef.current)}
-                  className="display active:scale-95 transition-transform"
-                  style={{
-                    background:
-                      "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
-                    color: "#2C1A00",
-                    boxShadow: "0 10px 0 #A87400",
-                    fontWeight: 900,
-                    letterSpacing: ".08em",
-                    fontSize: "clamp(44px,3vw,58px)",
-                    padding: "34px 0",
-                    borderRadius: 70,
-                    width: "100%",
-                  }}
-                >
-                  NEXT
-                </button>
+                      <span className="font-bold text-white flex-1" style={{ fontSize: "clamp(12px,1.3vw,16px)" }}>
+                        {s.stageName}
+                      </span>
+                      <div className="flex flex-col items-end shrink-0" style={{ width: 100 }}>
+                        <span className="font-extrabold text-white mb-0.5" style={{ fontSize: 12 }}>{pct}%</span>
+                        <div className="w-full rounded-full" style={{ height: 6, background: "rgba(255,255,255,.9)" }}>
+                          <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
 
-        )
-      }
+            {/* Banner text — sits over the ribbon art at the bottom of the scroll */}
+            <div
+              className="absolute w-full text-center font-bold text-white"
+              style={{ bottom: "6%", left: 0, fontSize: "clamp(12px,1.4vw,17px)" }}
+            >
+              Blend smarter, score higher.
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 }
