@@ -1361,7 +1361,7 @@ export default function SmoothieSlashGame() {
       {/* ── REPORT ───────────────────────────────────────────────── */}
       {screen === SCREENS.REPORT && (
         <div
-          className="flex-1 flex flex-col items-center gap-10 pt-48"
+          className="flex-1 flex flex-col items-center gap-10 pt-80"
           style={{ backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "100vh" }}
         >
           {/* Stars */}
@@ -1448,7 +1448,7 @@ export default function SmoothieSlashGame() {
               </div>
             </div>
 
-            <div className="absolute w-full text-center font-bold text-white" style={{ bottom: "6.5%", left: 0, fontSize: "clamp(14px,1.8vw,20px)" }}>
+            <div className="absolute w-full text-center font-bold text-white" style={{ bottom: "10.5%", left: 0, fontSize: "clamp(30px,3.8vw,40px)" }}>
               Blend smarter, score higher.
             </div>
           </div>
