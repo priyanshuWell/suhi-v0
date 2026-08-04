@@ -863,7 +863,7 @@ export default function SmoothieSlashGame() {
 
             <div
               className="relative flex flex-col items-center"
-              style={{ zIndex: 1, width: "100%", minHeight: "100vh", padding: "48px 24px 56px", gap: 30 }}
+              style={{ zIndex: 1, width: "100%", height: "100%", padding: "32px 24px 32px", gap: 20 }}
             >
               {/* Slide */}
               <div
@@ -876,7 +876,7 @@ export default function SmoothieSlashGame() {
                     alt={INTRO_SLIDES[introStep].alt}
                     style={{
                       width: "100%",
-                      maxHeight: "72vh",
+                      maxHeight: "60vh",
                       objectFit: "contain",
                       borderRadius: 32,
                       boxShadow: "0 24px 60px rgba(0,0,0,.55)",
