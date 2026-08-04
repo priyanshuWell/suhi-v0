@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { motion, motionValue, AnimatePresence } from "framer-motion";
 import scoreFrame from '../../../assets/smoothie/score-frame.png';
+import scoreboardFrame from '../../../assets/smoothie/score-board.png';
 import timeFrame from '../../../assets/smoothie/time-frame.png';
 import bg from '../../../assets/smoothie/bg2.png';
 import blenderImage from '../../../assets/smoothie/blenderImage.svg';
@@ -74,6 +75,18 @@ const apiGameComplete = async (gameSessionId) => {
   return r.json();
 };
 
+function Star({ filled }) {
+  return (
+    <svg width="52" height="52" viewBox="0 0 24 24" style={{ filter: "drop-shadow(0 2px 3px rgba(0,0,0,.35))" }}>
+      <path
+        d="M12 2.5l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.9-6.3 3.9 1.7-7-5.4-4.7 7.1-.6z"
+        fill={filled ? "#F5C842" : "#9C97B0"}
+        stroke={filled ? "#C98A00" : "#6E6884"}
+        strokeWidth="0.6"
+      />
+    </svg>
+  );
+}
 const FRUITS = {
   ST: { img: strawberry, cutImg: strawberryCut, name: "Strawberry" },
   BA: { img: banana, cutImg: bananaCut, name: "Banana" },
@@ -226,6 +239,15 @@ export default function SmoothieSlashGame() {
   const bgMusicRef = useRef(null);   // background music Audio instance
   const fillRef = useRef(0);         // mirror of `fill` — readable inside rAF loop
   const [pulse, setPulse] = useState(0);
+
+  /* ── handleNext — same pattern as VoiceAnalysis ─────────────────────
+     Prefers the route cached by endGame (set from the API response).
+     Falls back to getNextRoute with the Redux screening state.          */
+  const handleNext = useCallback(() => {
+    const route = nextRouteRef.current ?? getNextRoute(storeScreening?.nextStage, '/voice');
+    console.log('[SmoothieSlash] handleNext — navigating to:', route);
+    navigate(route);
+  }, [navigate, storeScreening]);
 
   /* setFill + keep the ref in sync. Always use this, never setFill directly. */
   const applyFill = useCallback((v) => {
@@ -619,14 +641,19 @@ export default function SmoothieSlashGame() {
       const counts = {
         fruits: fruitsRef.current.length,
         halves: halvesRef.current.length,
-        pops: popsRef.current.length,
+        /* pops excluded — they don't affect physics, score flush handles their render */
         trail: trailRef.current.length,
         drops: splashDropsRef.current.length,
         ripples: rippleRef.current.length,
       };
       const changed = Object.keys(counts).some(k => counts[k] !== prevCounts[k]);
       eng.prevCounts = counts;
-      if (changed) forceTick(v => v + 1);
+      /* Always flush score display; batch with forceTick when other counts changed too */
+      if (changed || eng.prevScore !== scoreRef.current) {
+        eng.prevScore = scoreRef.current;
+        setScore(scoreRef.current);
+        if (changed) forceTick(v => v + 1);
+      }
       rafRef.current = requestAnimationFrame(loop);
 
 
@@ -648,6 +675,7 @@ export default function SmoothieSlashGame() {
   };
   const spawnHalves = (f, correct, W, now) => {
     const jar = jarGeom();
+    /* All halves get motionValues so their x/y/rot updates bypass React's render path */
     const base = {
       code: f.code, y: f.y, rot: f.rot,
       spawnT0: now,
@@ -678,13 +706,24 @@ export default function SmoothieSlashGame() {
       );
     }
   };
-  /* ── slice sound helper ─────────────────────────────────────────── */
-  const sliceSounds = useRef([cutSlice1, cutSlice2]);
+  /* ── slice sound helper — pre-pool Audio instances to avoid GC spikes ── */
+  const POOL_SIZE = 4;
+  const sliceSoundPools = useRef(null);
+  if (!sliceSoundPools.current) {
+    sliceSoundPools.current = [
+      Array.from({ length: POOL_SIZE }, () => { const a = new Audio(cutSlice1); a.volume = 0.65; return a; }),
+      Array.from({ length: POOL_SIZE }, () => { const a = new Audio(cutSlice2); a.volume = 0.65; return a; }),
+    ];
+  }
+  const poolIdx = useRef([0, 0]);
   const playSliceSound = useCallback(() => {
-    const src = sliceSounds.current[Math.random() < 0.5 ? 0 : 1];
-    const audio = new Audio(src);
-    audio.volume = 0.65;
-    audio.play().catch(() => { });  // ignore autoplay policy errors
+    const bank = Math.random() < 0.5 ? 0 : 1;
+    const pool = sliceSoundPools.current[bank];
+    const idx = poolIdx.current[bank];
+    const audio = pool[idx];
+    audio.currentTime = 0;
+    audio.play().catch(() => { });
+    poolIdx.current[bank] = (idx + 1) % POOL_SIZE;
   }, []);
 
   const trySlice = (p1, p2) => {
@@ -711,11 +750,12 @@ export default function SmoothieSlashGame() {
           pts += PTS.COMBO_BONUS;
           popsRef.current.push({ id: uid(), x: f.x, y: f.y - 54, t0: now, text: `${eng.combo} COMBO +${PTS.COMBO_BONUS}`, kind: "combo" });
         }
-        scoreRef.current += pts; setScore(scoreRef.current);
+        scoreRef.current += pts;
+        /* score display is flushed in the rAF loop — no extra re-render here */
         popsRef.current.push({ id: uid(), x: f.x, y: f.y - 26, t0: now, text: `+${PTS.CS}`, kind: "good" });
       } else {
         eng.combo = 0;
-        scoreRef.current = Math.max(0, scoreRef.current + PTS.IS); setScore(scoreRef.current);
+        scoreRef.current = Math.max(0, scoreRef.current + PTS.IS);
         popsRef.current.push({ id: uid(), x: f.x, y: f.y - 26, t0: now, text: "-2  WRONG!", kind: "bad" });
       }
     });
@@ -752,7 +792,8 @@ export default function SmoothieSlashGame() {
     acc[b.b] = { accuracyPct: Math.round((b.acc ?? 0) * 100) };
     return acc;
   }, {});
-
+  // Maps overall accuracy % to a 0–3 star rating for the results screen
+  const starCount = overallPct >= 90 ? 3 : overallPct >= 60 ? 2 : overallPct >= 30 ? 1 : 0;
   /* Banner CSS — three states:
      'center'  → big, dead-centre of playfield
      'settle'  → small, slides to top-centre below recipe chips
@@ -1260,16 +1301,19 @@ export default function SmoothieSlashGame() {
                 );
               }
               return (
-                <div key={h.id} className="absolute pointer-events-none" style={{
+                /* Use motion.div + motionValues so position/rotation updates stay on the
+                   GPU compositor path and never trigger a React layout pass              */
+                <motion.div key={h.id} className="absolute pointer-events-none" style={{
                   zIndex: 10,
-                  width: "5vmax", height: "5vmax", left: h.x, top: h.y,
-                  transform: `translate(-50%,-50%) rotate(${h.rot}deg)`,
+                  width: "5vmax", height: "5vmax",
+                  left: h.mx, top: h.my, rotate: h.mr,
+                  x: "-50%", y: "-50%",
                   clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
                   opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
                   filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)",
                 }}>
                   <img src={FRUITS[h.code].cutImg} alt={FRUITS[h.code].name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
-                </div>
+                </motion.div>
               );
             })}
 
@@ -1313,37 +1357,59 @@ export default function SmoothieSlashGame() {
         )
       }
 
+
       {/* ── REPORT ───────────────────────────────────────────────── */}
       {screen === SCREENS.REPORT && (
         <div
-          className="flex-1 flex items-center justify-center px-4 py-6"
+          className="flex-1 flex flex-col items-center gap-10 pt-48"
           style={{ backgroundImage: `url(${bg})`, backgroundSize: "cover", backgroundPosition: "center", minHeight: "100vh" }}
         >
+          {/* Stars */}
+          <div className="flex gap-3">
+            <Star filled={starCount >= 1} />
+            <Star filled={starCount >= 2} />
+            <Star filled={starCount >= 3} />
+          </div>
+
+          {/* Score board */}
+          <div
+            className="relative flex flex-col items-center justify-center w-full"
+            style={{
+              maxWidth: 460,
+              aspectRatio: "620/300",
+              backgroundImage: `url(${scoreboardFrame})`,
+              backgroundSize: "100% 100%",
+              backgroundRepeat: "no-repeat",
+            }}
+          >
+            <span className="display font-black" style={{ fontSize: "clamp(34px,6vw,56px)", color: "#F5C842", textShadow: "0 3px 4px rgba(0,0,0,.5)" }}>
+              {score}
+            </span>
+          </div>
+
+          {/* Scroll */}
           <div
             className="relative w-full"
             style={{
-              maxWidth: 720,
+              maxWidth: 980,
               aspectRatio: "1495/1247",
               backgroundImage: `url(${scrollFrame})`,
               backgroundSize: "100% 100%",
               backgroundRepeat: "no-repeat",
             }}
           >
-            {/* Content positioned as % of the scroll's inner writable area */}
-            <div className="absolute" style={{ left: "16%", right: "10%", top: "13%", bottom: "10%" }}>
+            <div className="absolute" style={{ left: "17%", right: "12%", top: "12%", bottom: "13%" }}>
 
-              {/* Header row */}
               <div className="flex items-center justify-between mb-2">
-                <h2 className="font-extrabold text-white" style={{ fontSize: "clamp(15px,2vw,22px)" }}>
+                <h2 className="font-extrabold text-white" style={{ fontSize: "clamp(20px,2.6vw,32px)" }}>
                   RECIPES MADE CORRECTLY
                 </h2>
-                <span className="font-extrabold text-white" style={{ fontSize: "clamp(17px,2.2vw,24px)" }}>
+                <span className="font-extrabold text-white" style={{ fontSize: "clamp(22px,3vw,34px)" }}>
                   {overallPct}%
                 </span>
               </div>
 
-              {/* Overall bar */}
-              <div className="w-full rounded-full mb-5" style={{ height: 12, background: "rgba(255,255,255,.9)" }}>
+              <div className="w-full rounded-full mb-6" style={{ height: 18, background: "rgba(255,255,255,.9)" }}>
                 <div
                   className="h-full rounded-full"
                   style={{
@@ -1354,30 +1420,25 @@ export default function SmoothieSlashGame() {
                 />
               </div>
 
-              {/* Per-stage rows */}
-              <div className="flex flex-col gap-2.5">
+              <div className="flex flex-col gap-3.5">
                 {STAGES.map(s => {
                   const pct = stageAccuracy[s.stageId]?.accuracyPct ?? 0;
                   const barColor = pct >= 80 ? "#5DD62C" : pct >= 50 ? "#F5A623" : "#E8443C";
                   return (
-                    <div key={s.stageId} className="flex items-center gap-2.5">
-                      <div className="flex gap-1 shrink-0">
+                    <div key={s.stageId} className="flex items-center gap-3">
+                      <div className="flex gap-1.5 shrink-0">
                         {s.targets.map(c => (
-                          <div
-                            key={c}
-                            className="flex items-center justify-center rounded-lg"
-                            style={{ width: 38, height: 38, background: "rgba(255,255,255,.16)" }}
-                          >
+                          <div key={c} className="flex items-center justify-center rounded-xl" style={{ width: 58, height: 58, background: "rgba(255,255,255,.16)" }}>
                             <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "78%", height: "78%", objectFit: "contain" }} />
                           </div>
                         ))}
                       </div>
-                      <span className="font-bold text-white flex-1" style={{ fontSize: "clamp(12px,1.3vw,16px)" }}>
+                      <span className="font-bold text-white flex-1" style={{ fontSize: "clamp(15px,1.9vw,22px)" }}>
                         {s.stageName}
                       </span>
-                      <div className="flex flex-col items-end shrink-0" style={{ width: 100 }}>
-                        <span className="font-extrabold text-white mb-0.5" style={{ fontSize: 12 }}>{pct}%</span>
-                        <div className="w-full rounded-full" style={{ height: 6, background: "rgba(255,255,255,.9)" }}>
+                      <div className="flex flex-col items-end shrink-0" style={{ width: 150 }}>
+                        <span className="font-extrabold text-white mb-1" style={{ fontSize: "clamp(15px,1.7vw,19px)" }}>{pct}%</span>
+                        <div className="w-full rounded-full" style={{ height: 10, background: "rgba(255,255,255,.9)" }}>
                           <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
                         </div>
                       </div>
@@ -1387,14 +1448,28 @@ export default function SmoothieSlashGame() {
               </div>
             </div>
 
-            {/* Banner text — sits over the ribbon art at the bottom of the scroll */}
-            <div
-              className="absolute w-full text-center font-bold text-white"
-              style={{ bottom: "6%", left: 0, fontSize: "clamp(12px,1.4vw,17px)" }}
-            >
+            <div className="absolute w-full text-center font-bold text-white" style={{ bottom: "6.5%", left: 0, fontSize: "clamp(14px,1.8vw,20px)" }}>
               Blend smarter, score higher.
             </div>
           </div>
+
+          {/* NEXT */}
+          <button
+            onClick={handleNext}
+            className="display active:scale-95 transition-transform"
+            style={{
+              background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+              color: "#2C1A00",
+              boxShadow: "0 10px 0 #A87400",
+              fontWeight: 900,
+              letterSpacing: ".08em",
+              fontSize: "clamp(22px,2.2vw,30px)",
+              padding: "25px 160px",
+              borderRadius: 60,
+            }}
+          >
+            NEXT
+          </button>
         </div>
       )}
     </div >
