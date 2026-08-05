@@ -863,7 +863,7 @@ export default function SmoothieSlashGame() {
 
             <div
               className="relative flex flex-col items-center"
-              style={{ zIndex: 1, width: "100%", height: "100%", padding: "32px 24px 32px", gap: 20 }}
+              style={{ zIndex: 1, width: "100%", minHeight: "85vh", padding: "32px 24px 14px", gap: 20 }}
             >
               {/* Slide */}
               <div
@@ -876,7 +876,7 @@ export default function SmoothieSlashGame() {
                     alt={INTRO_SLIDES[introStep].alt}
                     style={{
                       width: "100%",
-                      maxHeight: "60vh",
+                      maxHeight: "75vh",
                       objectFit: "contain",
                       borderRadius: 32,
                       boxShadow: "0 24px 60px rgba(0,0,0,.55)",
@@ -1282,18 +1282,18 @@ export default function SmoothieSlashGame() {
             {halvesRef.current.map(h => {
               if (h.landed) {
                 const age = performance.now() - h.landT0;
-                const p = Math.min(1, age / 500);                    // 0 → 1 over the sink duration
-                const squash = 1 - 0.35 * Math.min(1, age / 120);    // quick squash on first ~120ms
-                const sinkY = 14 * p;                                // drifts down into the liquid
+                const p = Math.min(1, age / 500);
+                const squash = 1 - 0.35 * Math.min(1, age / 120);
+                const sinkY = 14 * p;
                 const fade = 1 - p;
                 return (
                   <motion.div key={h.id} className="absolute pointer-events-none" style={{
                     zIndex: 10,
                     width: "5vmax", height: "5vmax",
                     left: h.mx, top: h.my, rotate: h.mr,
-                    x: "-50%", y: "-50%",
+                    x: "-50%", y: `calc(-50% + ${sinkY}px)`, scaleY: squash,
                     clipPath: h.side === "L" ? "inset(0 52% 0 0)" : "inset(0 0 0 52%)",
-                    opacity: h.rest ? Math.max(0, 1 - (performance.now() - h.rest) / 600) : 1,
+                    opacity: fade,
                     filter: h.mode === "out" ? "grayscale(.45) brightness(.9)" : "brightness(1.1)",
                   }}>
                     <img src={FRUITS[h.code].cutImg} alt={FRUITS[h.code].name} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
