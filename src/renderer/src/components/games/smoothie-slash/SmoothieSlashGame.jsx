@@ -32,9 +32,9 @@ import pineappleCut from '../../../assets/smoothie/fruits/pineapple_cut.png';
 import strawberryCut from '../../../assets/smoothie/fruits/strawberry_cut.png';
 import splashDrop1 from '../../../assets/smoothie/splash1.svg';
 import splashDrop2 from '../../../assets/smoothie/splash2.svg';
-// jarFilled import removed — liquid fill handles the full-jar visual
 import { getNextRoute } from '../../../utils/stageRouter';
 import scrollFrame from '../../../assets/smoothie/scroll-frame.png';
+import splashCrownMask from '../../../assets/smoothie/splash-crown-mask.png';
 
 const API = "http://127.0.0.1:8000";
 
@@ -100,11 +100,11 @@ const FRUITS = {
 const ALL_CODES = Object.keys(FRUITS);
 
 const STAGES = [
-  { stageId: 1, stageCode: "BERRY_BLAST", stageName: "Berry Blast", targets: ["ST", "BA", "BL"], juice: "#E86A8A" },
-  { stageId: 2, stageCode: "SUNRISE_CITRUS", stageName: "Sunrise Citrus", targets: ["OR", "MA", "KI"], juice: "#F5A94B" },
-  { stageId: 3, stageCode: "COCO_LOCO", stageName: "Coco Loco", targets: ["CO", "BA", "PI"], juice: "#EFE7D6" },
+  { stageId: 1, stageCode: "BERRY_BLAST", stageName: "Berry Blast", targets: ["ST", "BA", "BL"], juice: "#931621" },
+  { stageId: 2, stageCode: "SUNRISE_CITRUS", stageName: "Sunrise Citrus", targets: ["OR", "MA", "KI"], juice: "#B5864C" },
+  { stageId: 3, stageCode: "COCO_LOCO", stageName: "Coco Loco", targets: ["CO", "BA", "PI"], juice: "#C8AA8F" },
   { stageId: 4, stageCode: "ISLAND_GOLD", stageName: "Island Gold", targets: ["PI", "MA", "OR"], juice: "#F2B34C" },
-  { stageId: 5, stageCode: "GREEN_MACHINE", stageName: "Green Machine", targets: ["KI", "BA", "ST"], juice: "#9CC95A" },
+  { stageId: 5, stageCode: "GREEN_MACHINE", stageName: "Green Machine", targets: ["KI", "BA", "ST"], juice: "#448A5A" },
   { stageId: 6, stageCode: "BLUE_LAGOON", stageName: "Blue Lagoon", targets: ["BL", "KI", "CO"], juice: "#7E9BD0" },
 ];
 function bannerYOffset(playRef, state) {
@@ -126,16 +126,14 @@ const BANNER_SETTLE_HOLD_MS = 900;  // how long it sits still at "settle" before
 const PTS = { CS: 15, IS: -2, COMBO_BONUS: 20, COMBO_EVERY: 5 };
 const SCREENS = { INSTRUCTION: "INSTRUCTION", COUNTDOWN: "COUNTDOWN", GAME: "GAME", REPORT: "REPORT" };
 
-/* ── jar liquid geometry ─────────────────────────────────────────────
-   These MUST match the inset values on the liquid <div> in the JSX.
-   They are the single source of truth for where the juice surface is,
-   so physics (landing tests) and rendering (splash, ripples, sinking
-   halves) all agree.                                                  */
-const LIQ_TOP = 0.25;      // liquid area starts 24% down the jar
-const LIQ_BOTTOM = 0.20;   // …and ends 12% up from the bottom
-const LIQ_INSET_X = 0.22;  // left/right inset of the liquid area
-const FRUITS_TO_FILL = 10; // correct fruits needed to fill the jar
+const LIQ_TOP = 0.158;
+const LIQ_RIGHT = 0.266;
+const LIQ_BOTTOM = 0.328;
+const LIQ_LEFT = 0.194;   // pushes the body left-of-center in the art
+const FRUITS_TO_FILL = 7;
 
+// traced from the actual glass interior silhouette in blenderImage.svg
+const JAR_CLIP_PATH = "polygon(12% 0%, 88% 0%, 95% 5%, 100% 22%, 100% 70%, 96% 90%, 86% 100%, 14% 100%, 4% 90%, 0% 70%, 0% 22%, 5% 5%)";
 const uid = () => Math.random().toString(36).slice(2, 9);
 const clamp01 = v => (v == null || !isFinite(v) ? null : Math.max(0, Math.min(1, v)));
 
@@ -239,6 +237,8 @@ export default function SmoothieSlashGame() {
   const bgMusicRef = useRef(null);   // background music Audio instance
   const fillRef = useRef(0);         // mirror of `fill` — readable inside rAF loop
   const [pulse, setPulse] = useState(0);
+  const overflowDripsRef = useRef([]);
+  const splashCrownRef = useRef([]);;
 
   /* ── handleNext — same pattern as VoiceAnalysis ─────────────────────
      Prefers the route cached by endGame (set from the API response).
@@ -283,6 +283,8 @@ export default function SmoothieSlashGame() {
     halvesRef.current = [];
     splashDropsRef.current = [];
     rippleRef.current = [];
+    splashCrownRef.current = [];
+    overflowDripsRef.current = [];
     pausedRef.current = true;
     setPaused(true);
     showStageBanner(newSIdx);
@@ -408,6 +410,8 @@ export default function SmoothieSlashGame() {
     fruitsRef.current = []; halvesRef.current = []; popsRef.current = [];
     trailRef.current = []; eventsRef.current = [];
     splashDropsRef.current = []; rippleRef.current = [];
+    splashCrownRef.current = [];
+    overflowDripsRef.current = [];
     pausedRef.current = false;
     engineRef.current = {
       t0: performance.now(), last: performance.now(),
@@ -498,12 +502,15 @@ export default function SmoothieSlashGame() {
     if (!p || !j) return null;
     const left = j.left - p.left;
     const top = j.top - p.top;
+    const innerLeft = left + j.width * LIQ_LEFT;
+    const innerRight = left + j.width * (1 - LIQ_RIGHT);
+    const innerW = innerRight - innerLeft;
     const innerTop = top + j.height * LIQ_TOP;
     const innerBottom = top + j.height * (1 - LIQ_BOTTOM);
     const innerH = innerBottom - innerTop;
     return {
-      x: left + j.width * 0.5,                    // liquid area is centred
-      w: j.width * (1 - LIQ_INSET_X * 2),
+      x: innerLeft + innerW * 0.5,   // true centre of the GLASS interior, not the whole jar image
+      w: innerW,
       top: innerTop,
       bottom: innerBottom,
       surfaceY: innerBottom - innerH * fillNow,
@@ -607,17 +614,35 @@ export default function SmoothieSlashGame() {
                 setPulse(p => p + 1);
                 setSplash({ t0: now, color: STAGES[eng.stage].juice });
                 rippleRef.current.push({ id: uid(), t0: now, x: h.x, y: jar.surfaceY });
-                if (newFill >= 0.5) {
-                  for (let k = 0; k < 3; k++) {
-                    splashDropsRef.current.push({
-                      id: uid(), t0: now + k * 40,
-                      variant: Math.random() < 0.5 ? splashDrop1 : splashDrop2,
-                      dx: (Math.random() - 0.5) * 140,
-                      rot: (Math.random() - 0.5) * 40,
-                      scale: 0.5 + Math.random() * 0.4,
-                    });
-                  }
+
+                // jar is already full — this fruit's juice has nowhere to go but over the rim
+                splashCrownRef.current.push({
+                  id: uid(), t0: now,
+                  dx: h.x - jar.x,          // pixel offset from jar centre — same scale as jarRef
+                  scale: 1.1 + Math.random() * 0.7,
+                  flip: Math.random() < 0.5,
+                });
+
+                // NEW — overflow spill once the jar is already full
+                if (eng.cs > FRUITS_TO_FILL) {
+                  const side = Math.random() < 0.5 ? -1 : 1;
+                  overflowDripsRef.current.push({
+                    id: uid(), t0: now, side,
+                    xOff: side * (10 + Math.random() * 18),
+                    dur: 850 + Math.random() * 450,
+                  });
                 }
+                // if (newFill >= 0.5) {
+                //   for (let k = 0; k < 3; k++) {
+                //     splashDropsRef.current.push({
+                //       id: uid(), t0: now + k * 40,
+                //       variant: Math.random() < 0.5 ? splashDrop1 : splashDrop2,
+                //       dx: (Math.random() - 0.5) * 140,
+                //       rot: (Math.random() - 0.5) * 40,
+                //       scale: 0.5 + Math.random() * 0.4,
+                //     });
+                //   }
+                // }
               }
             } else {
               h.vy += GRAVITY * dt; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.spin * dt;
@@ -633,10 +658,13 @@ export default function SmoothieSlashGame() {
           });
         }
       }
+      //clean up
       popsRef.current = popsRef.current.filter(pp => now - pp.t0 < 900);
       trailRef.current = trailRef.current.filter(pt => now - pt.t < 260);
       splashDropsRef.current = splashDropsRef.current.filter(d => now - d.t0 < 700);
       rippleRef.current = rippleRef.current.filter(r => now - r.t0 < 500);
+      overflowDripsRef.current = overflowDripsRef.current.filter(d => now - d.t0 < d.dur + 300);
+      splashCrownRef.current = splashCrownRef.current.filter(c => now - c.t0 < 620);
       const prevCounts = eng.prevCounts ?? {};
       const counts = {
         fruits: fruitsRef.current.length,
@@ -645,6 +673,8 @@ export default function SmoothieSlashGame() {
         trail: trailRef.current.length,
         drops: splashDropsRef.current.length,
         ripples: rippleRef.current.length,
+        crowns: splashCrownRef.current.length,
+        drips: overflowDripsRef.current.length,
       };
       const changed = Object.keys(counts).some(k => counts[k] !== prevCounts[k]);
       eng.prevCounts = counts;
@@ -1093,50 +1123,105 @@ export default function SmoothieSlashGame() {
               <div key={pulse} className="absolute inset-0" style={{ animation: "jarNudge .28s ease-out", zIndex: 1 }}>
                 <img src={blenderImage} className="w-full h-full" alt="Blender" />
               </div>
-
-              {/* Liquid — zIndex 2 (above the jar art), mix-blend-mode: multiply so the
-                  juice colour tints the opaque jar image rather than sitting behind it.
-                  Inset values here MUST match LIQ_TOP / LIQ_BOTTOM / LIQ_INSET_X above. */}
+              {splashCrownRef.current.map(c => {
+                const age = performance.now() - c.t0;
+                const p = Math.min(1, age / 620);
+                const burst = p < 0.35 ? p / 0.35 : 1;
+                const fade = p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4;
+                const riseY = -18 * burst - 4 * Math.max(0, p - 0.35);
+                const s = 0.85 + burst * 0.3;
+                const sx = c.flip ? -s : s;
+                return (
+                  <div key={c.id} className="absolute pointer-events-none" style={{
+                    left: `calc(50% + ${c.dx}px)`,
+                    top: surfaceTop,
+                    width: 70 * c.scale, height: 56 * c.scale,
+                    transform: `translate(-50%, calc(-70% + ${riseY}px)) scale(${sx}, ${s})`,
+                    opacity: fade * 0.95,
+                    backgroundColor: stage.juice,
+                    WebkitMaskImage: `url(${splashCrownMask})`, maskImage: `url(${splashCrownMask})`,
+                    WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                    WebkitMaskSize: "contain", maskSize: "contain",
+                    WebkitMaskPosition: "center bottom", maskPosition: "center bottom",
+                    filter: "drop-shadow(0 2px 3px rgba(0,0,0,.25))",
+                    zIndex: 6,
+                  }} />
+                );
+              })}
+              {overflowDripsRef.current.map(d => {
+                const age = performance.now() - d.t0;
+                const p = Math.min(1, age / d.dur);
+                const len = 100 * p;
+                const fade = age > d.dur ? Math.max(0, 1 - (age - d.dur) / 300) : 1;
+                return (
+                  <div key={d.id} className="absolute pointer-events-none" style={{
+                    left: `calc(50% + ${d.xOff}px)`, top: "15%",
+                    width: 6, height: len, borderRadius: "0 0 50% 50%",
+                    background: `linear-gradient(180deg, ${stage.juice}00, ${stage.juice}E6 35%, ${stage.juice} 100%)`,
+                    opacity: fade, transform: "translateX(-50%)", zIndex: 5,
+                    boxShadow: `0 2px 4px ${stage.juice}55`,
+                  }} />
+                );
+              })}
               <div
                 className="absolute overflow-hidden"
                 style={{
-                  left: `${LIQ_INSET_X * 100}%`, right: `${LIQ_INSET_X * 100}%`,
+                  left: `${LIQ_LEFT * 100}%`, right: `${LIQ_RIGHT * 100}%`,
                   top: `${LIQ_TOP * 100}%`, bottom: `${LIQ_BOTTOM * 100}%`,
-                  borderRadius: "0 0 22px 22px",
+                  clipPath: JAR_CLIP_PATH,
+                  WebkitClipPath: JAR_CLIP_PATH,
                   zIndex: 2,
-                  mixBlendMode: "multiply",
                 }}
               >
+                {/* juice body — opaque now that it's masked to the real glass shape, so colour reads properly */}
                 <div
                   className="absolute left-0 right-0 bottom-0"
                   style={{
                     height: `${fill * 100}%`,
-                    background: `linear-gradient(180deg, ${stage.juice}BB 0%, ${stage.juice}EE 40%, ${stage.juice} 100%)`,
+                    background: `
+      radial-gradient(ellipse 70% 40% at 50% 0%, ${stage.juice}FF 0%, transparent 65%),
+      linear-gradient(180deg, ${stage.juice}E8 0%, ${stage.juice} 22%, ${stage.juice}F5 55%, ${stage.juice}D6 100%)
+    `,
                     transition: "height .5s cubic-bezier(.34,1.56,.64,1)",
-                    boxShadow: "inset 0 6px 10px rgba(255,255,255,.25), inset 0 -4px 14px rgba(0,0,0,.18)",
+                    boxShadow: "inset 0 8px 14px rgba(255,255,255,.22), inset 0 -12px 22px rgba(0,0,0,.32), inset 16px 0 24px rgba(0,0,0,.18), inset -16px 0 24px rgba(0,0,0,.18)",
                   }}
                 >
-                  {/* two counter-drifting ellipses = sloshing surface */}
-                  <div className="absolute" style={{
-                    left: "-25%", right: "-25%", top: -9, height: 18, borderRadius: "50%",
-                    background: stage.juice, filter: "brightness(1.1)",
-                    animation: "slosh 2.6s ease-in-out infinite",
+                  {/* foam speckle — breaks up the flat color near the surface */}
+                  <div className="absolute inset-x-0 top-0" style={{
+                    height: "38%",
+                    backgroundImage: "radial-gradient(circle, rgba(255,255,255,.28) 1px, transparent 1.8px)",
+                    backgroundSize: "9px 9px", opacity: 0.6, mixBlendMode: "overlay",
                   }} />
-                  <div className="absolute" style={{
-                    left: "-25%", right: "-25%", top: -6, height: 13, borderRadius: "50%",
-                    background: "rgba(255,255,255,.35)", filter: "blur(1px)",
-                    animation: "slosh 2.6s ease-in-out infinite reverse",
-                  }} />
+
+                  {/* undulating crest instead of a flat ellipse */}
+                  <svg viewBox="0 0 200 26" preserveAspectRatio="none" className="absolute" style={{ left: "-8%", width: "116%", top: -15, height: 28, overflow: "visible" }}>
+                    <path fill={stage.juice} opacity="0.95">
+                      <animate attributeName="d" dur="2.4s" repeatCount="indefinite" values="
+        M0,16 Q20,6 40,16 T80,16 T120,16 T160,16 T200,16 V26 H0 Z;
+        M0,16 Q20,24 40,16 T80,16 T120,16 T160,16 T200,16 V26 H0 Z;
+        M0,16 Q20,6 40,16 T80,16 T120,16 T160,16 T200,16 V26 H0 Z" />
+                    </path>
+                    <path fill="rgba(255,255,255,.3)" opacity="0.8">
+                      <animate attributeName="d" dur="2.4s" repeatCount="indefinite" begin="-0.6s" values="
+        M0,18 Q20,10 40,18 T80,18 T120,18 T160,18 T200,18 V26 H0 Z;
+        M0,18 Q20,24 40,18 T80,18 T120,18 T160,18 T200,18 V26 H0 Z;
+        M0,18 Q20,10 40,18 T80,18 T120,18 T160,18 T200,18 V26 H0 Z" />
+                    </path>
+                  </svg>
+
                   {BUBBLES.map(b => (
-                    <div key={b.id} className="absolute" style={{
-                      left: `${b.x}%`, bottom: 0, width: b.s, height: b.s,
-                      borderRadius: "50%", background: "rgba(255,255,255,.35)",
-                      animation: `rise ${b.dur}s linear ${b.delay}s infinite`,
-                    }} />
+                    <div key={b.id} className="absolute" style={{ left: `${b.x}%`, bottom: 0, width: b.s, height: b.s, borderRadius: "50%", background: "rgba(255,255,255,.4)", animation: `rise ${b.dur}s linear ${b.delay}s infinite` }} />
                   ))}
                 </div>
-              </div>
 
+                {/* static glass sheen, always on top of the juice — this is what lets the "front pane" reflection
+      still read even once the jar is full, instead of the liquid just hiding it */}
+                <div className="absolute inset-0 pointer-events-none" style={{
+                  background: "linear-gradient(115deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 16%, rgba(255,255,255,0) 70%, rgba(255,255,255,.22) 100%)",
+                  mixBlendMode: "screen",
+                  opacity: 0.5,
+                }} />
+              </div>
               {/* Rim splash pop when a fruit lands — anchored to the juice surface */}
               {splashLive && fill < 1 && (
                 <div
@@ -1175,7 +1260,9 @@ export default function SmoothieSlashGame() {
               })}
               <style>{`@keyframes slosh { 0%,100%{transform:translateX(-6%) rotate(-1.2deg)} 50%{transform:translateX(6%) rotate(1.2deg)} }
 @keyframes rise  { 0%{transform:translateY(0) scale(.6);opacity:0} 15%{opacity:.7} 100%{transform:translateY(-100%) scale(1.1);opacity:0} }
-@keyframes jarNudge { 0%{transform:translateY(0)} 30%{transform:translateY(3px) scale(1.015,.985)} 100%{transform:translateY(0)} }`}</style>
+@keyframes jarNudge { 0%{transform:translateY(0)} 30%{transform:translateY(3px) scale(1.015,.985)} 100%{transform:translateY(0)} }
+@keyframes surfaceGlint { 0%,100%{transform:translateX(0) scaleX(1);opacity:.55} 50%{transform:translateX(160%) scaleX(1.3);opacity:.3} }
+@keyframes liquidWobble { 0%,100%{transform:scaleX(1) scaleY(1)} 50%{transform:scaleX(1.008) scaleY(.995)} }`}</style>
             </div>
 
             {/* Animated stage banner — position driven entirely by transform (y), not top,
