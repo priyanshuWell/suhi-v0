@@ -96,18 +96,18 @@ const FRUITS = {
   OR: { img: orange, cutImg: orangeCut, name: "Orange" },
   MA: { img: mango, cutImg: mangoCut, name: "Mango" },
   KI: { img: kiwi, cutImg: kiwiCut, name: "Kiwi" },
-  CO: { img: apple, cutImg: appleCut, name: "Apple" },
+  AP: { img: apple, cutImg: appleCut, name: "Apple" },
   PI: { img: pineapple, cutImg: pineappleCut, name: "Pineapple" },
 };
 const ALL_CODES = Object.keys(FRUITS);
 
 const STAGES = [
-  { stageId: 1, stageCode: "GALAXY_SWIRL", stageName: "Galaxy Swirl", targets: ["ST", "BA", "BL"], juice: "#931621" },
-  { stageId: 2, stageCode: "TROPICAL_TREASURE", stageName: "Tropical Treasure", targets: ["OR", "MA", "KI"], juice: "#B5864C" },
-  { stageId: 3, stageCode: "SUNRISE_SPLASH", stageName: "Sunrise Splash", targets: ["AP", "BA", "PI"], juice: "#C8AA8F" },
-  { stageId: 4, stageCode: "FROZEN_SKY", stageName: "Frozen Sky", targets: ["PI", "MA", "OR"], juice: "#F2B34C" },
-  { stageId: 5, stageCode: "JUNGLE_JUMP", stageName: "Jungle Jump", targets: ["KI", "BA", "ST"], juice: "#448A5A" },
-  { stageId: 6, stageCode: "RAINBOW_BURST", stageName: "Rainbow Burst ", targets: ["BL", "KI", "AP"], juice: "#7E9BD0" },
+  { stageId: 1, stageCode: "GALAXY_SWIRL", stageName: "Galaxy Swirl", targets: ["BA", "ST", "BL"], juice: "#931621" },
+  { stageId: 2, stageCode: "TROPICAL_TREASURE", stageName: "Tropical Treasure", targets: ["AP", "KI", "MA"], juice: "#B5864C" },
+  { stageId: 3, stageCode: "SUNRISE_SPLASH", stageName: "Sunrise Splash", targets: ["BA", "ST", "OR"], juice: "#C8AA8F" },
+  { stageId: 4, stageCode: "FROZEN_SKY", stageName: "Frozen Sky", targets: ["BL", "AP", "PI"], juice: "#F2B34C" },
+  { stageId: 5, stageCode: "JUNGLE_JUMP", stageName: "Jungle Jump", targets: ["BA", "KI", "MA"], juice: "#448A5A" },
+  { stageId: 6, stageCode: "RAINBOW_BURST", stageName: "Rainbow Burst ", targets: ["ST", "BL", "OR"], juice: "#7E9BD0" },
 ];
 function bannerYOffset(playRef, state) {
   const h = playRef.current?.getBoundingClientRect().height || 800;
