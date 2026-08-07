@@ -35,6 +35,8 @@ import splashDrop2 from '../../../assets/smoothie/splash2.svg';
 import { getNextRoute } from '../../../utils/stageRouter';
 import scrollFrame from '../../../assets/smoothie/scroll-frame.png';
 import splashCrownMask from '../../../assets/smoothie/splash-crown-mask.png';
+import apple from '../../../assets/smoothie/fruits/apple.png';
+import appleCut from '../../../assets/smoothie/fruits/apple_cut.png';
 
 const API = "http://127.0.0.1:8000";
 
@@ -94,18 +96,18 @@ const FRUITS = {
   OR: { img: orange, cutImg: orangeCut, name: "Orange" },
   MA: { img: mango, cutImg: mangoCut, name: "Mango" },
   KI: { img: kiwi, cutImg: kiwiCut, name: "Kiwi" },
-  CO: { img: coconut, cutImg: coconutCut, name: "Coconut" },
+  CO: { img: apple, cutImg: appleCut, name: "Apple" },
   PI: { img: pineapple, cutImg: pineappleCut, name: "Pineapple" },
 };
 const ALL_CODES = Object.keys(FRUITS);
 
 const STAGES = [
-  { stageId: 1, stageCode: "BERRY_BLAST", stageName: "Berry Blast", targets: ["ST", "BA", "BL"], juice: "#931621" },
-  { stageId: 2, stageCode: "SUNRISE_CITRUS", stageName: "Sunrise Citrus", targets: ["OR", "MA", "KI"], juice: "#B5864C" },
-  { stageId: 3, stageCode: "COCO_LOCO", stageName: "Coco Loco", targets: ["CO", "BA", "PI"], juice: "#C8AA8F" },
-  { stageId: 4, stageCode: "ISLAND_GOLD", stageName: "Island Gold", targets: ["PI", "MA", "OR"], juice: "#F2B34C" },
-  { stageId: 5, stageCode: "GREEN_MACHINE", stageName: "Green Machine", targets: ["KI", "BA", "ST"], juice: "#448A5A" },
-  { stageId: 6, stageCode: "BLUE_LAGOON", stageName: "Blue Lagoon", targets: ["BL", "KI", "CO"], juice: "#7E9BD0" },
+  { stageId: 1, stageCode: "GALAXY_SWIRL", stageName: "Galaxy Swirl", targets: ["ST", "BA", "BL"], juice: "#931621" },
+  { stageId: 2, stageCode: "TROPICAL_TREASURE", stageName: "Tropical Treasure", targets: ["OR", "MA", "KI"], juice: "#B5864C" },
+  { stageId: 3, stageCode: "SUNRISE_SPLASH", stageName: "Sunrise Splash", targets: ["AP", "BA", "PI"], juice: "#C8AA8F" },
+  { stageId: 4, stageCode: "FROZEN_SKY", stageName: "Frozen Sky", targets: ["PI", "MA", "OR"], juice: "#F2B34C" },
+  { stageId: 5, stageCode: "JUNGLE_JUMP", stageName: "Jungle Jump", targets: ["KI", "BA", "ST"], juice: "#448A5A" },
+  { stageId: 6, stageCode: "RAINBOW_BURST", stageName: "Rainbow Burst ", targets: ["BL", "KI", "AP"], juice: "#7E9BD0" },
 ];
 function bannerYOffset(playRef, state) {
   const h = playRef.current?.getBoundingClientRect().height || 800;
@@ -563,21 +565,27 @@ export default function SmoothieSlashGame() {
           if (now - eng.lastSpawn > SPAWN_MS && alive.length < MAX_ALIVE) {
             eng.lastSpawn = now;
             const st = STAGES[sIdx];
-            const prev = sIdx > 0 ? STAGES[sIdx - 1].targets : [];
-            let code;
-            if (Math.random() < 0.55) code = st.targets[(Math.random() * 3) | 0];
-            else {
-              const dPrev = prev.filter(c => !st.targets.includes(c));
-              const dRest = ALL_CODES.filter(c => !st.targets.includes(c) && !dPrev.includes(c));
-              const pool = Math.random() < 0.5 && dPrev.length ? dPrev : dRest;
-              code = pool[(Math.random() * pool.length) | 0];
+            const prevTargets = sIdx > 0 ? STAGES[sIdx - 1].targets : [];
+            // "fresh" excludes BOTH the current recipe and the previous recipe —
+            // otherwise it could silently overlap with the perseverative bucket
+            const freshPool = ALL_CODES.filter(c => !st.targets.includes(c) && !prevTargets.includes(c));
+
+            const roll = Math.random();
+            let pool;
+            if (roll < 0.50) {
+              pool = st.targets;                                                          // Target Fruits — 50%
+            } else if (roll < 0.70) {
+              pool = freshPool.length ? freshPool : ALL_CODES.filter(c => !st.targets.includes(c));  // Fresh Distractor — 20%
+            } else {
+              pool = prevTargets.length ? prevTargets : freshPool;                        // Perseverative (Previous Recipe) — 30%
             }
+            const code = pool[(Math.random() * pool.length) | 0];
             const x0 = 50 + Math.random() * (W - 100);
             const peakY = H * (0.12 + Math.random() * 0.28);
             const vy0 = -Math.sqrt(2 * GRAVITY * (H + 20 - peakY));
             const vx0 = ((W / 2 - x0) / W) * 70 + (Math.random() - 0.5) * 60;
             fruitsRef.current.push({
-              id: uid(), code, stageIdx: sIdx, wasPrevTarget: prev.includes(code),
+              id: uid(), code, stageIdx: sIdx, wasPrevTarget: prevTargets.includes(code),
               x: x0, y: H + 20, vx: vx0, vy: vy0,
               rot: Math.random() * 360, spin: (Math.random() - 0.5) * 200,
               born: now, sliced: false,
