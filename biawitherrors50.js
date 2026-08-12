@@ -1556,7 +1556,7 @@ async function connectHeightPort(portPath, baudRate = 9600) {
             }
 
             const distanceCm = distance / 10
-            const calculatedHeight = 194 - distanceCm
+            const calculatedHeight = 192.7 - distanceCm
 
             // ════════════════════════════════════════════════════
             // VALIDATE HEIGHT RANGE
@@ -1564,11 +1564,11 @@ async function connectHeightPort(portPath, baudRate = 9600) {
 
             let statusCode = 0x04 // Default STABLE
 
-            if (calculatedHeight < 80) {
-              statusCode = 0x01 // OUT_OF_RANGE_LOW
-            } else if (calculatedHeight > 250) {
-              statusCode = 0x02 // OUT_OF_RANGE_HIGH
-            }
+            // if (calculatedHeight < 80) {
+            //   statusCode = 0x01 // OUT_OF_RANGE_LOW
+            // } else if (calculatedHeight > 250) {
+            //   statusCode = 0x02 // OUT_OF_RANGE_HIGH
+            // }
 
             // Show error if out of range
             if (statusCode !== 0x04) {
@@ -1595,6 +1595,7 @@ async function connectHeightPort(portPath, baudRate = 9600) {
 
             if (checkStability(distance)) {
               if (stableReadings.length >= STABILITY_COUNT) {
+
                 handleHeightStatus(0x04, calculatedHeight) // STABLE success
                 console.log(`\n${'='.repeat(60)}`)
                 console.log(`✅ STABLE HEIGHT FOUND: ${calculatedHeight.toFixed(1)} cm`)
