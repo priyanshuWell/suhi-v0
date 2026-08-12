@@ -51,6 +51,11 @@
     "ask_teacher": "يرجى سؤال معلمك عن معرف SuHi الخاص بك والمحاولة مرة أخرى.",
     "dont_know_id": "لا تعرف معرف SuHi الخاص بك؟"
   },
+  "audio": {
+    "playing": "جاري التشغيل…",
+    "replay": "إعادة تشغيل التعليمات",
+    "listenFirst": "يرجى الاستماع إلى التعليمات أولاً"
+  },
   "errors": {
     "face_not_detected_short": "عذراً، لا أستطيع فحص وجهك",
     "face_not_detected_short_desc": "لا تقلق، لنحاول استخدام معرف SUHI بدلاً من ذلك.",
@@ -75,6 +80,7 @@
     "height_not_detected": "ابقى ثابتاً، أنا أقيس طولك",
     "shoes_prompt": "يبدو أنك ترتدي حذاءك/جواربك.",
     "shoes_prompt_desc": "للحصول على أدق النتائج، نوصي بإزالتها.",
+    "shoes_prompt_choice": "هل ما زلت ترغب في المتابعة مع ارتداء حذائك أو جواربك؟",
     "press_start_ready": "اضغط على 'ابدأ' بمجرد أن تكون جاهزاً.",
     "inactivity_redirect": "لم يتم رصد أي نشاط. جاري إعادة التوجيه إلى الصفحة الرئيسية.",
     "leg_impedance_missing": "يرجى خلعل حذائك وجواربك لإجراء فحص كامل.",
@@ -84,6 +90,158 @@
     "bia_hand_not_detected": "امسك كلا المقبضين بقوة بكف يدك لمتابعة الفحص.",
     "bia_hand_body_not_detected": "ضع كلا يديك على المقابض وابق ثابتاً.",
     "bia_rods_incorrect": "امسك كلا المقبضين بقوة لمتابعة الفحص.",
-    "bia_max_retries": "لم أتمكن من الحصول على قراءات مستقرة، جاري الانتقال إلى الفحص التالي."
+    "bia_max_retries": "لم أتمكن من الحصول على قراءات مستقرة، جاري الانتقال إلى الفحص التالي.",
+    "redirect_login_label": "جاري الانتقال إلى تسجيل الدخول عبر SUHI ID",
+    "redirect_home_label": "جاري الانتقال إلى الصفحة الرئيسية"
+  },
+  "colorBlindness": {
+    "title": "فحص رؤية الألوان",
+    "instruction": "انظر إلى كل صورة بعناية واختر الرقم أو الشكل الذي تراه.",
+    "instructions_example": "مثال: هذا الرقم 6. انقر على الزر التالي للبدء!",
+    "plateAlt": "مثال على لوحة عمى الألوان",
+    "next": "التالي",
+    "progress": "الصورة {{current}} من {{total}}",
+    "question": "اختر ما تراه",
+    "options": {
+      "no_number": "لا يوجد رقم",
+      "line": "خط",
+      "red_line": "خط أحمر",
+      "two_lines": "خطان",
+      "purple_line": "خط بنفسجي",
+      "red_lines": "خطوط حمراء",
+      "three_lines": "ثلاثة خطوط",
+      "no_lines": "لا توجد خطوط"
+    }
+  },
+  "dmit": {
+    "hand_labels": {
+      "left_front": "اليد اليسرى - الأمام",
+      "left_back": "اليد اليسرى - الخلف",
+      "right_front": "اليد اليمنى - الأمام",
+      "right_back": "اليد اليمنى - الخلف"
+    },
+    "instruction": "ضع يدك داخل المربع وأبقها ثابتة حتى ينتهي الفحص.",
+    "status": {
+      "preparing": "جاري تجهيز الكاميرا...",
+      "opening": "جاري فتح الكاميرا...",
+      "ready": "الكاميرا جاهزة ✓",
+      "recording": "تسجيل 5 ثوانٍ...",
+      "storing": "جاري تخزين المخزن المؤقت...",
+      "uploading": "جاري رفع المخزن المؤقت...",
+      "registering": "جاري تسجيل اليد...",
+      "registered": "تم تسجيل اليد ✓",
+      "success": "نجاح ✅ جاري المتابعة...",
+      "all_complete": "اكتملت جميع الأيدي ✓ جاري إعادة التوجيه...",
+      "all_captured": "تم التقاط جميع المخازن الـ 4 بنجاح ✅",
+      "error": "حدث خطأ. جاري إعادة المحاولة...",
+      "failed_camera": "فشل فتح الكاميرا"
+    }
+  },
+  "voice": {
+    "instruction": "في الصفحة التالية، ستظهر لك صورة. انظر إليها وفكر كيف تجعلك تشعر. ثم انقر 'ابدأ' وتحدث عنها لمدة 30 ثانية.",
+    "start": "ابدأ",
+    "status": {
+      "idle": "خامل",
+      "recording": "تسجيل",
+      "processing": "معالجة",
+      "success": "نجاح",
+      "error": "خطأ",
+      "task_completed": "اكتملت المهمة!",
+      "saved": "تم تسجيل إجابتك"
+    },
+    "analysing": "جاري تحليل الصوت…",
+    "what_you_think": "فحص الصوت",
+    "select_instruction": "تصفح الصور واختر صورة 360° وصف ما تراه.",
+    "tap_to_explore": "اضغط للاستكشاف",
+    "loading_panorama": "جاري تحميل البانوراما…",
+    "failed_load_pano": "فشل تحميل صورة البانوراما.",
+    "check_image_path": "تحقق من مسار الصورة أو عنوان URL.",
+    "tap_to_rotate": "اضغط للتدوير وبدء الوصف",
+    "cta_intro": "هيا نستكشف صورة معاً! اضغط ابدأ، ثم انظر إلى الصورة وتحدث عن أي شيء تراه أو تفكر فيه لمدة 30 ثانية.",
+    "cta_start": "ابدأ",
+    "labels": {
+      "interpersonal": "اجتماعي",
+      "kinesthetic": "حركي",
+      "logical": "منطقي",
+      "musical": "موسيقي",
+      "verbal": "لفظي",
+      "nature": "طبيعي"
+    }
+  },
+  "spaceConvoy": {
+    "title": "فحص العقل",
+    "countdownText": "جاري بدء اللعبة...",
+    "instruction": "لنلعب لعبة، تتبع جميع الكويكبات المتحركة—لا تفقد مسارها!",
+    "start": "ابدأ العرض التوضيحي",
+    "awsomeJob": "عمل رائع!",
+    "complete": "أحسنت! لقد تابعت جميع الأحداث في الفضاء!",
+    "watch_highlighted": "راقب الكويكبات المميزة.",
+    "all_look_same": "الآن تبدو جميع الكويكبات متشابهة.",
+    "follow_them": "تابعها وهي تتحرك.",
+    "tap_tracked": "الآن اضغط على تلك التي كنت تتابعها",
+    "great_job_retry": "عمل رائع. لنحاول مرة أخرى",
+    "great_job_start": "رائع! لنبدأ اللعبة."
+  },
+  "bia_result": {
+    "congratulations": "تهانينا!",
+    "here_are_results": "إليك نتائجك",
+    "weight": "الوزن",
+    "height": "الطول",
+    "hydration": "الترطيب",
+    "hydration_low_message": "ما رأيك في شرب كوب من الماء بعد هذا؟",
+    "study_tip_default": "أثناء الدراسة أذناك هما بطلاك",
+    "go_to_homepage": "الذهاب إلى الصفحة الرئيسية",
+    "body_constitution": "البنية الجسدية",
+    "vata": "فاتا",
+    "pitta": "بيتا",
+    "kapha": "كافا",
+    "head_desc": "في الحكمة الهندية القديمة، يمتلك كل شخص مزيجاً خاصاً من 3 طاقات تسمى الدوشا. هذا هو مزيجك!"
+  },
+  "bia_component": {
+    "attempt": "محاولة",
+    "choose_how": "اختر كيف تريد المتابعة.",
+    "without_shoes": "🦶 بدون حذاء",
+    "with_shoes": "👟 مع الحذاء",
+    "remove_socks_shoes": "أزل جواربك وحذاءك وانقر على ابدأ.",
+    "start": "ابدأ"
+  },
+  "error": {
+    "no_result": "فشل تحميل بيانات النتيجة",
+    "redirecting": "جاري إعادة التوجيه إلى الرئيسية..."
+  },
+  "smoothieSlash": {
+    "beAware": {
+      "timer": "20s",
+      "recipe_changes_every": "تتغير الوصفة كل",
+      "twenty_seconds": "20 ثانية!",
+      "cutting_wrong": "قطع فاكهة خاطئة",
+      "fruits_cost": "يكلفك",
+      "cost_points": "نقاطاً"
+    },
+    "howToDo": {
+      "row1_line1": "هل ترى فاكهة في",
+      "row1_line2": "بطاقة الوصفة?",
+      "row1_cta": "اقطعها!",
+      "row2_line1_prefix": "فاكهة",
+      "row2_line1_not": "ليست",
+      "row2_line1_suffix": "في الوصفة?",
+      "row2_line2": "بطاقة الوصفة?",
+      "row3_line1": "لا تلمسها",
+      "row3_line2": "دعها تطير!"
+    },
+    "howToPlay": {
+      "what_to_do": "ماذا أفعل?",
+      "lets_make_a": "هيا نصنع",
+      "yummy": "لذيذاً",
+      "smoothie": "عصير!",
+      "recipe_card_label": "بطاقة الوصفة",
+      "desc_line1": "وصفة",
+      "desc_recipe": "عصيرك",
+      "desc_line1_suffix": "تظهر في",
+      "desc_line2_prefix": "بطاقة",
+      "desc_recipe_card": "الوصفة",
+      "desc_line2_suffix": "في أعلى",
+      "desc_line3": "الشاشة"
+    }
   }
 }

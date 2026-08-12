@@ -30,6 +30,7 @@ import BiaReportRouter from './components/bia/BiaReportRouter'
 import SmoothieSlashGame from './components/games/smoothie-slash/SmoothieSlashGame'
 import IdentifyStudent from './components/IdentifiedStudent'
 
+
 function App() {
   // Play looping background music on all routes except voice & game sections
   useBackgroundAudio()
@@ -58,10 +59,10 @@ function App() {
       <Routes>
 
         {/* Routes WITHOUT the progress bar */}
-        <Route path="/" element={<SplashScreen />} />
-        <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
+        {/* <Route path="/" element={<SplashScreen />} /> */}
+        {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
         <Route path='/welcome' element={<StartScreen />} />
-        {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
+        <Route path="/" element={<SmoothieSlashGame />} />
         <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path='/divide-attention' element={<DivideAttentionGame />} />

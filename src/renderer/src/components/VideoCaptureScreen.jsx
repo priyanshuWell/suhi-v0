@@ -203,70 +203,65 @@ const getMeasurements = async () => {
     return null
   }
 }
-const getFaceNotDetectedError = (measurements) => {
+const getFaceNotDetectedError = (measurements, t) => {
   const hasWeight = !!measurements?.weight
   const hasHeight = !!measurements?.height
   const heightVal = measurements?.height ?? 0
 
-  // weight & height present but height <= 120 → child / not eligible
   if (hasWeight && hasHeight && heightVal <= 120) {
     return {
       key: "not_eligible",
-      title: "Sorry, I am not able to scan your face",
-      description: "Don't Worry, lets try SUHI ID instead.",
+      title: t("errors.face_not_detected_short"),
+      description: t("errors.face_not_detected_short_desc"),
       redirectTo: "/login-suhi",
-      redirectLabel: "Going to SUHI ID login",
+      redirectLabel: t("errors.redirect_login_label"),
       autoRedirectDelay: 5000,
       maxAttempts: 1,
     }
   }
 
-  // weight & height present, height >= 120 → face alignment issue
   if (hasWeight && hasHeight && heightVal >= 120) {
     return {
       key: "align_face",
-      title: "Sorry, I couldn't scan your face",
-      description: "Please face the camera, ensure nothing is blocking it, and try again.",
+      title: t("errors.face_not_detected_camera"),
+      description: t("errors.face_not_detected_camera_desc"),
       redirectTo: "/login-suhi",
-      redirectLabel: "Going to SUHI ID login",
+      redirectLabel: t("errors.redirect_login_label"),
       autoRedirectDelay: 5000,
       maxAttempts: 3,
     }
   }
 
-  // weight detected but no height → not standing straight / facing camera
   if (hasWeight && !hasHeight) {
     return {
       key: "stand_properly",
-      title: "Sorry, something went wrong",
-      description: "Please stand with your feet aligned on the footprints, look directly at the camera, and try again.",
+      title: t("errors.face_height_not_detected"),
+      description: t("errors.face_height_not_detected_desc"),
       redirectTo: "/welcome",
-      redirectLabel: "Going to home",
+      redirectLabel: t("errors.redirect_home_label"),
       autoRedirectDelay: 5000,
       maxAttempts: 3,
     }
   }
 
-  // Face not detected + Weight not detected (but height detected)
   if (!hasWeight && hasHeight) {
     return {
       key: "no_weight_has_height",
-      title: "Sorry, something went wrong",
-      description: "Please stand with your feet aligned, face the camera, and try again.",
+      title: t("errors.face_weight_not_detected"),
+      description: t("errors.face_weight_not_detected_desc"),
       redirectTo: "/welcome",
-      redirectLabel: "Going to home",
+      redirectLabel: t("errors.redirect_home_label"),
       autoRedirectDelay: 5000,
       maxAttempts: 3,
     }
   }
 
-  // nothing detected → not on kiosk at all
   return {
     key: "not_on_kiosk",
-    title: "Oops! I couldn't detect you",
-    description: "Please try again.",
+    title: t("errors.face_all_not_detected"),
+    description: t("errors.face_all_not_detected_desc"),
     redirectTo: "/welcome",
-    redirectLabel: "Going to home",
+    redirectLabel: t("errors.redirect_home_label"),
     autoRedirectDelay: 5000,
     maxAttempts: 1,
   }
@@ -315,7 +310,7 @@ const VideoCaptureScreen = () => {
 
     // ── Branch A: Face NOT detected ────────────────────────────────────────
     if (!face_detected) {
-      const errorConfig = getFaceNotDetectedError(measurements)
+      const errorConfig = getFaceNotDetectedError(measurements, t)
       const hasRetries = errorConfig.maxAttempts > 1
       const retriesLeft = attemptCountRef.current < errorConfig.maxAttempts - 1
       console.log("Face not detected")
@@ -474,7 +469,7 @@ const VideoCaptureScreen = () => {
   return (
     <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
       <audio ref={audioRef} onEnded={() => setIsAudioPlaying(false)} onPlay={() => setIsAudioPlaying(true)}>
-        Your browser does not support the audio element.
+        {t("common.audio_not_supported")}
       </audio>
 
       {/* Avatar video */}

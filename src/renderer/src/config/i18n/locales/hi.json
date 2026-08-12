@@ -196,6 +196,7 @@
     "height_not_detected": "स्थिर रहें, मैं आपकी लंबाई माप रहा हूं।",
     "shoes_prompt": "लग रहा है कि आपने जूते/मोज़े पहने हैं।",
     "shoes_prompt_desc": "सबसे सटीक परिणाम के लिए, हम उन्हें उतारने की सलाह देते हैं।",
+    "shoes_prompt_choice": "क्या आप अभी भी अपने जूते या मोज़े पहनकर जारी रखना चाहते हैं?",
     "press_start_ready": "जब आप तैयार हों, 'Start' पर दबाएं।",
     "inactivity_redirect": "कोई गतिविधि नहीं मिली। होमस्क्रीन पर जा रहे हैं।",
     "leg_impedance_missing": "कृपया पूरे स्कैन के लिए अपने जूते और मोज़े उतारें।",
@@ -205,6 +206,43 @@
     "bia_hand_not_detected": "स्कैन जारी रखने के लिए दोनों हैंडल को हथेली से मज़बूती से पकड़ें।",
     "bia_hand_body_not_detected": "दोनों हाथ हैंडल पर रखें और स्थिर रहें।",
     "bia_rods_incorrect": "स्कैन जारी रखने के लिए दोनों हैंडल मज़बूती से पकड़ें।",
-    "bia_max_retries": "स्थिर रीडिंग नहीं मिल पाई, अगले स्कैन पर जा रहे हैं।"
+    "bia_max_retries": "स्थिर रीडिंग नहीं मिल पाई, अगले स्कैन पर जा रहे हैं।",
+    "redirect_login_label": "SUHI ID लॉगिन पर जा रहे हैं",
+    "redirect_home_label": "होम पर जा रहे हैं"
+  },
+  "smoothieSlash": {
+    "beAware": {
+      "timer": "20s",
+      "recipe_changes_every": "रेसिपी हर",
+      "twenty_seconds": "20 सेकंड में बदलती है!",
+      "cutting_wrong": "गलत फल काटने पर",
+      "fruits_cost": "अंक",
+      "cost_points": "कटते हैं"
+    },
+    "howToDo": {
+      "row1_line1": "रेसिपी कार्ड पर",
+      "row1_line2": "कोई फल दिखे?",
+      "row1_cta": "काट दो!",
+      "row2_line1_prefix": "फल",
+      "row2_line1_not": "नहीं",
+      "row2_line1_suffix": "है रेसिपी में?",
+      "row2_line2": "रेसिपी कार्ड पर?",
+      "row3_line1": "उसे मत छूओ",
+      "row3_line2": "जाने दो!"
+    },
+    "howToPlay": {
+      "what_to_do": "क्या करना है?",
+      "lets_make_a": "चलो बनाते हैं एक",
+      "yummy": "यम्मी",
+      "smoothie": "स्मूदी!",
+      "recipe_card_label": "रेसिपी कार्ड",
+      "desc_line1": "तुम्हारी स्मूदी की",
+      "desc_recipe": "रेसिपी",
+      "desc_line1_suffix": "दिखती है",
+      "desc_line2_prefix": "ऊपर",
+      "desc_recipe_card": "रेसिपी कार्ड",
+      "desc_line2_suffix": "पर",
+      "desc_line3": "स्क्रीन"
+    }
   }
 }

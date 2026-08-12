@@ -167,6 +167,11 @@
     "ask_teacher": "Please ask your teacher for your SuHi ID and try again.",
     "dont_know_id": "Don't know your SuHi ID?"
   },
+  "audio": {
+    "playing": "Playing…",
+    "replay": "Replay Instructions",
+    "listenFirst": "Please listen to the instructions first"
+  },
   "errors": {
     "face_not_detected_short": "Sorry, I am not able to scan your face",
     "face_not_detected_short_desc": "Don't Worry, lets try SUHI ID instead.",
@@ -191,6 +196,7 @@
     "height_not_detected": "Stay still, I am measuring your height",
     "shoes_prompt": "It looks like you have your shoes/socks on.",
     "shoes_prompt_desc": "For the most accurate results, we recommend removing them.",
+    "shoes_prompt_choice": "Would you still like to continue with your shoes or socks on?",
     "press_start_ready": "Press 'Start' once you are ready.",
     "inactivity_redirect": "I am unable to detect any activity. Redirecting to Homescreen.",
     "leg_impedance_missing": "Please remove your shoes and socks for a complete scan.",
@@ -200,6 +206,43 @@
     "bia_hand_not_detected": "Hold both handles firmly with your palm to continue the scan.",
     "bia_hand_body_not_detected": "Keep both hands on the handles and stay still.",
     "bia_rods_incorrect": "Hold both handles firmly to continue the scan.",
-    "bia_max_retries": "I couldn't get stable readings, moving to next scan."
+    "bia_max_retries": "I couldn't get stable readings, moving to next scan.",
+    "redirect_login_label": "Going to SUHI ID login",
+    "redirect_home_label": "Going to home"
+  },
+  "smoothieSlash": {
+    "beAware": {
+      "timer": "20s",
+      "recipe_changes_every": "Recipe changes every",
+      "twenty_seconds": "20 seconds!",
+      "cutting_wrong": "Cutting the wrong",
+      "fruits_cost": "fruits",
+      "cost_points": "cost points"
+    },
+    "howToDo": {
+      "row1_line1": "See a fruit on the",
+      "row1_line2": "Recipe Card?",
+      "row1_cta": "Slice it!",
+      "row2_line1_prefix": "Fruit",
+      "row2_line1_not": "NOT",
+      "row2_line1_suffix": "on the",
+      "row2_line2": "Recipe Card?",
+      "row3_line1": "Don't touch it",
+      "row3_line2": "Let it fly past!"
+    },
+    "howToPlay": {
+      "what_to_do": "WHAT TO DO?",
+      "lets_make_a": "Let's Make a",
+      "yummy": "Yummy",
+      "smoothie": "Smoothie!",
+      "recipe_card_label": "RECIPE CARD",
+      "desc_line1": "Your smoothie",
+      "desc_recipe": "recipe",
+      "desc_line1_suffix": "is shown on",
+      "desc_line2_prefix": "the",
+      "desc_recipe_card": "Recipe Card",
+      "desc_line2_suffix": "at the top of the",
+      "desc_line3": "screen"
+    }
   }
 }

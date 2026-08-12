@@ -10,9 +10,9 @@ import blenderImage from '../../../assets/smoothie/blenderImage.svg';
 import ProgressStage from '../../ProgessStage';
 import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
 import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
-import beAwareImg from '../../../assets/smoothie/intro/intro_step1.png';
-import howToDoImg from '../../../assets/smoothie/intro/intro_step2.png';
-import howToPlayImg from '../../../assets/smoothie/intro/intro_step3.png';
+import BeAware from './BeAware';
+import HowToDoNew from './HowToDo';
+import HowToPlay from './HowtoPlay';
 import bgMusic from '../../../assets/audio/smoothie/background2.wav';
 import banana from '../../../assets/smoothie/fruits/banana.png';
 import blueberry from '../../../assets/smoothie/fruits/blueberry.png';
@@ -857,9 +857,9 @@ export default function SmoothieSlashGame() {
   } : { display: "none" };
 
   const INTRO_SLIDES = [
-    { type: "image", src: beAwareImg, alt: "Be aware" },
-    { type: "image", src: howToDoImg, alt: "How to do" },
-    { type: "image", src: howToPlayImg, alt: "How to play" },
+    { type: "component", component: HowToPlay },
+    { type: "component", component: HowToDoNew },
+    { type: "component", component: BeAware },
   ];
   const CONSTRUCT_META = [
     ["divided_attention", "Divided Attention"],
@@ -908,18 +908,8 @@ export default function SmoothieSlashGame() {
                 className="flex-1 flex items-center justify-center w-full"
                 style={{ minHeight: 0 }}
               >
-                {INTRO_SLIDES[introStep].type === "image" ? (
-                  <img
-                    src={INTRO_SLIDES[introStep].src}
-                    alt={INTRO_SLIDES[introStep].alt}
-                    style={{
-                      width: "100%",
-                      maxHeight: "75vh",
-                      objectFit: "contain",
-                      borderRadius: 32,
-                      boxShadow: "0 24px 60px rgba(0,0,0,.55)",
-                    }}
-                  />
+                {INTRO_SLIDES[introStep].type === "component" ? (
+                  (() => { const SlideComp = INTRO_SLIDES[introStep].component; return <SlideComp />; })()
                 ) : (
                   <div
                     className="rounded-[36px] w-full"
@@ -1046,8 +1036,19 @@ export default function SmoothieSlashGame() {
       {/* ── COUNTDOWN ────────────────────────────────────────────── */}
       {
         screen === SCREENS.COUNTDOWN && (
-          <div className="flex-1 flex items-center justify-center" style={{ background: "linear-gradient(180deg,#123A34,#0E2B26)" }}>
-            <span className="display" style={{ fontSize: 140, color: "#FF9B6A" }}>{countdown === 0 ? "GO!" : countdown}</span>
+          <div
+            className="flex-1 flex items-center justify-center"
+            style={{
+              backgroundImage: `url(${bg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              position: "relative",
+            }}
+          >
+            <div style={{ position: "absolute", inset: 0, background: "rgba(8,4,20,.4)" }} />
+            <span className="display" style={{ position: "relative", zIndex: 1, fontSize: 140, color: "#FF9B6A", textShadow: "0 4px 32px rgba(0,0,0,.6)" }}>
+              {countdown === 0 ? "GO!" : countdown}
+            </span>
           </div>
         )
       }
