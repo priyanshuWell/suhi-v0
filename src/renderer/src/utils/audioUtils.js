@@ -3,11 +3,11 @@ import i18n from "i18next"
 const audioCache = new Map()
 
 const preloadAudio = async (baseName, langCode) => {
-  const key = `${baseName}_${langCode}`
+  const key = `${langCode}/${baseName}`
   if (audioCache.has(key)) return audioCache.get(key)
 
   try {
-    const module = await import(`../assets/audio/${baseName}_${langCode}.mp3`)
+    const module = await import(`../assets/audio/${langCode}/${baseName}.mp3`)
     console.log("module", module.default)
     audioCache.set(key, module.default)
     return module.default
