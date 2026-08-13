@@ -29,6 +29,8 @@ import Result from './components/bia/Result'
 import BiaReportRouter from './components/bia/BiaReportRouter'
 import SmoothieSlashGame from './components/games/smoothie-slash/SmoothieSlashGame'
 import IdentifyStudent from './components/IdentifiedStudent'
+import NoActivityFrame from './components/ui/NoActivityFrame'
+import AutoIdleRedirect from './components/AutoIdleRedirect'
 
 
 function App() {
@@ -56,13 +58,19 @@ function App() {
   return (
     <>
       <BufferCollectionManager />
+      {/* <AutoIdleRedirect
+        timeoutMs={10000}
+        promptBeforeMs={5000}
+        redirectTo="/welcome"
+      /> */}
+
       <Routes>
 
         {/* Routes WITHOUT the progress bar */}
-        {/* <Route path="/" element={<SplashScreen />} /> */}
-        {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
+        <Route path="/" element={<SplashScreen />} />
+        <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
         <Route path='/welcome' element={<StartScreen />} />
-        <Route path="/" element={<SmoothieSlashGame />} />
+        {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
         <Route path='/capture' element={<VideoCaptureScreen />} />
         <Route path="/login-suhi" element={<LoginSuhi />} />
         <Route path='/divide-attention' element={<DivideAttentionGame />} />
@@ -83,6 +91,8 @@ function App() {
           {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
           <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} /> */}
           <Route path='/identify-student' element={<IdentifyStudent />} />
+          <Route path='/play' element={<NoActivityFrame />} />
+
 
         </Route>
 

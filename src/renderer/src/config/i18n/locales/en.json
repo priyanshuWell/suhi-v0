@@ -208,7 +208,8 @@
     "bia_rods_incorrect": "Hold both handles firmly to continue the scan.",
     "bia_max_retries": "I couldn't get stable readings, moving to next scan.",
     "redirect_login_label": "Going to SUHI ID login",
-    "redirect_home_label": "Going to home"
+    "redirect_home_label": "Going to home",
+    "retrying": "Retrying"
   },
   "smoothieSlash": {
     "beAware": {

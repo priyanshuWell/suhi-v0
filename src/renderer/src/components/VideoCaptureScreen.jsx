@@ -7,9 +7,10 @@ import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
 import { setUser, setLoginScreening, setCandidates, setScreening } from "../features/common/commonSlice"
 import { getKioskId, trackStage } from "../utils/config"
-import FullscreenError from "./FullScreenError"
+
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
 import { useTranslation } from "react-i18next"
+import NoActivityFrame from "./ui/NoActivityFrame"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV FLAGS — flip these to test without hardware or real API
@@ -19,12 +20,12 @@ const USE_DUMMY_MEASUREMENTS = false
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
 // Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
-const DUMMY_FPT_SCENARIO = "HIGH_MULTIPLE"
+const DUMMY_FPT_SCENARIO = "NO_FACE"
 
 // Measurement scenario to simulate (USE_DUMMY_MEASUREMENTS = true)
 // Only matters when DUMMY_FPT_SCENARIO = "NO_FACE"
 // Options: "WEIGHT_AND_SHORT" | "WEIGHT_AND_TALL" | "WEIGHT_NO_HEIGHT" | "NOTHING"
-const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_AND_TALL"
+const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_NO_HEIGHT"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Dummy FPT responses — real API shape: everything under .data
@@ -279,7 +280,9 @@ const VideoCaptureScreen = () => {
 
   const [status, setStatus] = useState("Initializing...")
   const [isVerify, setIsVerify] = useState(false)
-  const [fullscreenError, setFullscreenError] = useState(null)
+  // Renamed from `fullscreenError` — same shape, now drives NoActivityFrame
+  // instead of the retired FullscreenError component.
+  const [noActivityState, setNoActivityState] = useState(null)
   const [shouldRetry, setShouldRetry] = useState(false)
 
   const attemptCountRef = React.useRef(0)
@@ -309,41 +312,56 @@ const VideoCaptureScreen = () => {
     const multiple_matches = false
 
     // ── Branch A: Face NOT detected ────────────────────────────────────────
+    // ── Branch A: Face NOT detected ────────────────────────────────────────
     if (!face_detected) {
       const errorConfig = getFaceNotDetectedError(measurements, t)
       const hasRetries = errorConfig.maxAttempts > 1
       const retriesLeft = attemptCountRef.current < errorConfig.maxAttempts - 1
-      console.log("Face not detected")
+
+      console.log(`[FACE SCAN] Failed attempt ${attemptCountRef.current + 1}/${errorConfig.maxAttempts}`)
+
       trackStage(STAGES.FACE_SCAN, STATUS_KEYS.ERROR, {
         weight_kg: measurements?.weight,
         height_cm: measurements?.height,
       }, "Face not detected")
 
       if (hasRetries && retriesLeft) {
+        // ── ATTEMPT 1 & 2: Show error and auto-retry in background ──
         attemptCountRef.current += 1
 
-        setFullscreenError({
+        setNoActivityState({
           ...errorConfig,
-          showRetry: true,
-          showDescription: false,
-          onRetry: () => {
+          isRetry: true,
+          redirectLabel: t("errors.retrying"), // "Retrying in X sec..."
+          autoRedirectDelay: 3000, // 3 seconds before next scan
+          showRetry: false,
+          showButton: false,
+          showDescription: true,
+          onAutoRetry: () => {
+            // Reset measurement refs for fresh background attempt
             measurementStartedRef.current = false
             measurementPromiseRef.current = null
             trackingDoneRef.current = false
 
-            setFullscreenError(null)
-            setShouldRetry((prev) => !prev)
+            setNoActivityState(null)
+            setShouldRetry((prev) => !prev) // Triggers useEffect to re-scan
           },
         })
-
         return true
       } else {
-        // Out of retries or single-attempt case — show full description now
-        setFullscreenError({ ...errorConfig, showRetry: false, showDescription: true })
+        // ── ATTEMPT 3 (or cases with 0 retries): Auto-redirect to home/login ──
+        setNoActivityState({
+          ...errorConfig,
+          isRetry: false,
+          showRetry: false,
+          showButton: true, // 👈 Show button on 3rd/final count
+          showDescription: true,
+          autoRedirectDelay: 5000,
+        })
+        return true
       }
-
-      return true
     }
+
 
     // ── Branch B: LOW confidence or no matched student ─────────────────────
     if (confidence_band === "LOW" || !matched_student) {
@@ -481,19 +499,29 @@ const VideoCaptureScreen = () => {
         />
       </div>
 
-      {/* Fullscreen error — face not detected cases */}
-      {fullscreenError && (
-        <FullscreenError
-          title={fullscreenError.title}
-          description={fullscreenError.description}
-          showDescription={fullscreenError.showDescription ?? true}
-          redirectLabel={fullscreenError.redirectLabel}
-          autoRedirectDelay={fullscreenError.autoRedirectDelay}
-          showRetry={fullscreenError.showRetry}
-          onRetry={fullscreenError.onRetry}
+      {/* No-activity overlay — face not detected cases. Replaces the old
+          FullscreenError component; NoActivityFrame's prop names line up
+          1:1 with what FullscreenError expected, so this is a drop-in swap. */}
+      {noActivityState && (
+        <NoActivityFrame
+          variant="no-user"
+          title={noActivityState.title}
+          description={noActivityState.description}
+          showDescription={noActivityState.showDescription ?? true}
+          redirectLabel={noActivityState.redirectLabel}
+          showButton={noActivityState.showButton}
+          autoRedirectDelay={noActivityState.autoRedirectDelay}
+          showRetry={noActivityState.showRetry}
+          onRetry={noActivityState.onRetry}
           onRedirect={() => {
-            setFullscreenError(null)
-            navigate(fullscreenError.redirectTo)
+            if (noActivityState.isRetry && noActivityState.onAutoRetry) {
+              // Auto-retry in background
+              noActivityState.onAutoRetry()
+            } else {
+              // Final attempt -> redirect away
+              setNoActivityState(null)
+              navigate(noActivityState.redirectTo)
+            }
           }}
         />
       )}

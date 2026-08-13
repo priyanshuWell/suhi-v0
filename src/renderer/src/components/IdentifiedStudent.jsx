@@ -5,7 +5,7 @@ import { setUser } from "../features/common/commonSlice"
 import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
-import FullscreenError from "./FullScreenError"
+import NoActivityFrame from "./ui/NoActivityFrame"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
 
@@ -345,7 +345,8 @@ const IdentifyStudent = () => {
 
             {/* Fullscreen error */}
             {noMatchError && (
-                <FullscreenError
+                <NoActivityFrame
+                    variant="error"
                     title="Let's try another way"
                     description="Please log in using your SuHi ID."
                     showDescription={true}

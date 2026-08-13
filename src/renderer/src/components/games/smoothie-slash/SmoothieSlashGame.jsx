@@ -1111,7 +1111,7 @@ export default function SmoothieSlashGame() {
                 <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "90px", zIndex: 21 }}>
                   <div className="flex gap-2.5">
                     {stage.targets.map(c => (
-                      <div key={c} className="w-32 h-32 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.3)", backdropFilter: "blur(2px)", boxShadow: "0 4px 10px rgba(0,0,0,.35)" }}>
+                      <div key={c} className="w-36 h-36 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.3)", backdropFilter: "blur(2px)", boxShadow: "0 4px 10px rgba(0,0,0,.35)" }}>
                         <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "68%", height: "68%", objectFit: "contain" }} />
                       </div>
                     ))}
