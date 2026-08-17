@@ -8,10 +8,10 @@ import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId, setScreening } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
-import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
+import { BIAComplete, BIAMeasurementStage, realtimeCapture } from "../../utils/api";
 import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
-import { trackStage } from "../../utils/config";
+import { getKioskId, trackStage } from "../../utils/config";
 import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, PORT_PATHS } from "../../utils/portConfig";
 import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
@@ -408,15 +408,15 @@ export default function BIACalculate({ user, onComplete }) {
   //   }
   // };
 
-  const showError = (message, duration = 5000) => {
+  const showError = async (message, duration = 5000) => {
     console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
     setErrorState({
       title: message,
       canRetry: false,
     });
-    return sleep(duration).then(() => {
-      setErrorState(null);
-    });
+    await sleep(duration);
+    setErrorState(null);
+    return;
   };
 
   /**
@@ -492,6 +492,18 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  const handleFptRealTime = async () => {
+    try {
+      const kiosk_id = getKioskId()
+      const fptResponse = await realtimeCapture(kiosk_id)
+      console.log("[BIA DEBUG] Fpt real-time measurement response:", fptResponse);
+
+    } catch (error) {
+      console.error("[BIA DEBUG] Fpt real-time measurement failed:", error);
+    }
+
+  }
+
   // measurePreliminaryWeight removed — W+H is now Phase 1, no pre-weight check needed
 
   const measureWeight = async () => {
@@ -517,7 +529,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Height sensor timeout: 10 seconds to get a stable reading
 
-  const HEIGHT_SENSOR_TIMEOUT_MS = 8000;
+  const HEIGHT_SENSOR_TIMEOUT_MS = 10000;
 
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement (10s timeout)...");
@@ -589,18 +601,6 @@ export default function BIACalculate({ user, onComplete }) {
       throw new Error("Arm impedance failed");
 
     }
-
-    /*
-    
-    
-    */
-
-    // resultsRef.current.arms50k = {
-    //   fatPercentage: res.body_fat_percentage ?? "20",
-    //   waterPercentage: res.moisture_content_kg ?? "55",
-    //   muscleMassKg: res.muscle_mass_kg ?? "30",
-    //   boneMassKg: res.bone_mass_kg ?? "10",
-    // };
     setMeasuredValues((prev) => ({
       ...prev,
       arms50k: resultsRef.current.arms50k,
@@ -614,23 +614,18 @@ export default function BIACalculate({ user, onComplete }) {
       attempts: res.attempts
     };
     console.log(`[BIA DEBUG] Arm impedance stored: ${res.measurement.impedance.value} ${res.measurement.impedance.unit}`);
-    // updatePhaseState('arm', 'success');
     return res;
   };
 
   const measureImpedance = async (freq, attemptCount) => {
     console.log(`[BIA DEBUG] Starting impedance ${freq}kHz measurement...`);
-    // updatePhaseState(`impedance${freq}`, 'in_progress');
-    // setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     console.log(`[BIA DEBUG] Impedance ${freq}kHz result:`, res);
 
     if (!res?.success) {
       console.error(`[BIA DEBUG] Impedance ${freq}kHz failed`);
-      // updatePhaseState(`impedance${freq}`, 'failed', `Impedance ${freq}kHz failed`);
       await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "8 electrode impedance measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       throw new Error("Arm impedance failed");
-      // throw new Error(`Impedance ${freq}kHz failed`);
     }
 
     resultsRef.current.impedance[freq === "20" ? "k20" : "k100"] = {
@@ -640,7 +635,6 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
     console.log(`[BIA DEBUG] Impedance ${freq}kHz stored: avg=${res.impedance.avg.toFixed(1)}Ω`);
-    // updatePhaseState(`impedance${freq}`, 'success');
     return res;
   };
 
@@ -657,27 +651,34 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Run W+H in parallel; returns settled status without throwing.
     const attemptWH = async () => {
-      const [wRes, hRes] = await Promise.allSettled([
+      const [wRes, hRes, fptRes] = await Promise.allSettled([
         measureWeight(),
         measureHeight(),
+        handleFptRealTime(),
       ]);
-      return { weightOk: wRes.status === 'fulfilled', heightOk: hRes.status === 'fulfilled' };
+      return { weightOk: wRes.status === 'fulfilled', heightOk: hRes.status === 'fulfilled', fptOk: fptRes.status === 'fulfilled' };
     };
 
     // --- Attempt 1 ---
     console.log("[BIA DEBUG] Phase 1 — Attempt 1: W+H parallel");
-    let { weightOk, heightOk } = await attemptWH();
+    let { weightOk, heightOk, fptOk } = await attemptWH();
+    console.log("weightOk", weightOk, "heightOk", heightOk, "fptOk", fptOk);
 
-    if (!weightOk || !heightOk) {
-      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk}`);
+    if (!weightOk || !heightOk || !fptOk) {
+      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk} FPT:${fptOk}`);
 
       if (!heightOk) {
         // Height failed → show animated "Stand Properly" modal for 10 seconds
         console.warn('[BIA DEBUG] Height failed — showing StandProperly modal for 10s');
         await showHeightErrorModal();
-      } else {
+      } else if (!weightOk) {
         // Only weight failed → show generic error for 3s
         setErrorState({ title: ERROR_MESSAGES.weight, canRetry: false });
+        await sleep(3000);
+        setErrorState(null);
+      } else if (!fptOk) {
+        // Only FPT failed → show generic error for 3s
+        setErrorState({ title: ERROR_MESSAGES.fpt, canRetry: false });
         await sleep(3000);
         setErrorState(null);
       }

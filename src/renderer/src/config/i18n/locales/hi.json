@@ -183,6 +183,8 @@
     "face_all_not_detected_desc": "कृपया दोबारा कोशिश करें।",
     "face_weight_not_detected": "माफ़ करें, मैं आपको पहचान नहीं पाई",
     "face_weight_not_detected_desc": "कृपया अपने पैरों को सही जगह रखें, कैमरे की ओर देखें, और दोबारा कोशिश करें।",
+    "multiple_faces_detected": "एक से अधिक चेहरे मिले",
+    "multiple_faces_detected_desc": "कैमरे के सामने केवल एक व्यक्ति होना चाहिए। कृपया सुनिश्चित करें कि केवल एक व्यक्ति कियोस्क के सामने खड़ा हो और पुनः प्रयास करें।",
     "identity_rejected": "चलो दूसरे तरीके से कोशिश करते हैं",
     "identity_rejected_desc": "कृपया अपनी SUHI ID से लॉग इन करें।",
     "session_timeout": "आप लॉग आउट हो गए हैं",

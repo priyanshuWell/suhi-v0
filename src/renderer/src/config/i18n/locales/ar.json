@@ -67,6 +67,8 @@
     "face_all_not_detected_desc": "يرجى المحاولة مرة أخرى.",
     "face_weight_not_detected": "عذراً، حدث خطأ ما",
     "face_weight_not_detected_desc": "يرجى الوقوف مع محاذاة قدميك، ومواجهة الكاميرا، والمحاولة مرة أخرى.",
+    "multiple_faces_detected": "تم رصد أكثر من وجه",
+    "multiple_faces_detected_desc": "يجب أن يكون شخص واحد فقط أمام الكاميرا. يرجى التأكد من وقوف شخص واحد فقط أمام الكشك والمحاولة مرة أخرى.",
     "identity_rejected": "لنحاول طريقة أخرى",
     "identity_rejected_desc": "يرجى تسجيل الدخول باستخدام معرف SuHi الخاص بك.",
     "session_timeout": "تم تسجيل خروجك",

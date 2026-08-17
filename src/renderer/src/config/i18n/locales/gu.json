@@ -67,6 +67,8 @@
     "face_all_not_detected_desc": "કૃપા કરીને ફરીથી પ્રયાસ કરો.",
     "face_weight_not_detected": "માફ કરશો, કંઈક ખોટું થયું",
     "face_weight_not_detected_desc": "કૃપા કરીને તમારા પગ સરખા રાખો, કેમેરા તરફ જુઓ અને ફરી પ્રયાસ કરો.",
+    "multiple_faces_detected": "એક કરતાં વધુ ચહેરા મળ્યા",
+    "multiple_faces_detected_desc": "કેમેરા સામે માત્ર એક જ વ્યક્તિ હોવી જોઈએ. કૃપા કરીને ખાતરી કરો કે કિયોસ્ક સામે માત્ર એક જ વ્યક્તિ ઊભી છે અને ફરી પ્રયાસ કરો.",
     "identity_rejected": "ચાલો બીજી રીતે પ્રયાસ કરીએ",
     "identity_rejected_desc": "કૃપા કરીને તમારા SuHi ID થી લોગિન કરો.",
     "session_timeout": "તમે લોગ આઉટ થઈ ગયા છો",

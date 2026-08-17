@@ -19,7 +19,7 @@ const USE_DUMMY_FPT = false
 const USE_DUMMY_MEASUREMENTS = false
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
-// Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
+// Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE" | "MULTIPLE_FACES"
 const DUMMY_FPT_SCENARIO = "NO_FACE"
 
 // Measurement scenario to simulate (USE_DUMMY_MEASUREMENTS = true)
@@ -31,6 +31,15 @@ const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_NO_HEIGHT"
 // Dummy FPT responses — real API shape: everything under .data
 // ─────────────────────────────────────────────────────────────────────────────
 const DUMMY_FPT_RESPONSES = {
+  MULTIPLE_FACES: {
+    success: false,
+    data: null,
+    error: {
+      code: "MULTIPLE_FACES_DETECTED",
+      message: "Multiple faces detected in 91 frame(s). Only one person should be in front of the camera.",
+    },
+    screening: null,
+  },
   NO_FACE: {
     success: true,
     message: "No face detected",
@@ -257,6 +266,7 @@ const getFaceNotDetectedError = (measurements, t) => {
     }
   }
 
+
   return {
     key: "not_on_kiosk",
     title: t("errors.face_all_not_detected"),
@@ -298,6 +308,71 @@ const VideoCaptureScreen = () => {
 
   // ─── Decision tree ───────────────────────────────────────────────────────
   const handleFptDecision = (fptResponse, measurements) => {
+    // Check for specific FPT error codes from backend or error payload
+    const errorCode =
+      fptResponse?.error?.code ||
+      (typeof fptResponse?.error === "string" ? fptResponse.error : null) ||
+      fptResponse?.code;
+
+    // ── Branch: Multiple faces detected ────────────────────────────────────
+    if (errorCode === "MULTIPLE_FACES_DETECTED") {
+      const errorConfig = {
+        key: "multiple_faces_detected",
+        title: t("errors.multiple_faces_detected"),
+        description: t("errors.multiple_faces_detected_desc"),
+        redirectTo: "/login-suhi",
+        redirectLabel: t("errors.redirect_login_label"),
+        autoRedirectDelay: 5000,
+        maxAttempts: 3,
+      }
+
+      const hasRetries = errorConfig.maxAttempts > 1
+      const retriesLeft = attemptCountRef.current < errorConfig.maxAttempts - 1
+
+      console.log(`[FACE SCAN] Multiple faces detected attempt ${attemptCountRef.current + 1}/${errorConfig.maxAttempts}`)
+
+      trackStage(STAGES.FACE_SCAN, STATUS_KEYS.ERROR, {
+        weight_kg: measurements?.weight,
+        height_cm: measurements?.height,
+      }, fptResponse?.error?.message || "Multiple faces detected")
+
+      if (hasRetries && retriesLeft) {
+        // ── ATTEMPT 1 & 2: Show error and auto-retry in background ──
+        attemptCountRef.current += 1
+
+        setNoActivityState({
+          ...errorConfig,
+          isRetry: true,
+          redirectLabel: t("errors.retrying"), // "Retrying in X sec..."
+          autoRedirectDelay: 3000, // 3 seconds before next scan
+          showRetry: false,
+          showButton: false,
+          showDescription: true,
+          onAutoRetry: () => {
+            // Reset measurement refs for fresh background attempt
+            measurementStartedRef.current = false
+            measurementPromiseRef.current = null
+            trackingDoneRef.current = false
+
+            setNoActivityState(null)
+            setShouldRetry((prev) => !prev) // Triggers useEffect to re-scan
+          },
+        })
+        return true
+      } else {
+        // ── ATTEMPT 3 (or final count): Auto-redirect to login-suhi ──
+        setNoActivityState({
+          ...errorConfig,
+          isRetry: false,
+          showRetry: false,
+          showButton: true, // Show button on 3rd/final count
+          showDescription: true,
+          autoRedirectDelay: 5000,
+        })
+        return true
+      }
+    }
+
     // Real API wraps everything in .data — extract it
     const data = fptResponse?.data ?? {}
     const {
@@ -311,7 +386,6 @@ const VideoCaptureScreen = () => {
     // Force single-match path — Branch D (identify-student) is disabled
     const multiple_matches = false
 
-    // ── Branch A: Face NOT detected ────────────────────────────────────────
     // ── Branch A: Face NOT detected ────────────────────────────────────────
     if (!face_detected) {
       const errorConfig = getFaceNotDetectedError(measurements, t)

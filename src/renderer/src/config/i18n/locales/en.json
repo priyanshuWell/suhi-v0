@@ -183,6 +183,8 @@
     "face_all_not_detected_desc": "Please try again.",
     "face_weight_not_detected": "Sorry, something went wrong",
     "face_weight_not_detected_desc": "Please stand with your feet aligned, face the camera, and try again.",
+    "multiple_faces_detected": "Multiple faces detected",
+    "multiple_faces_detected_desc": "Only one person should be in front of the camera. Please make sure only one person is in front of the kiosk and try again.",
     "identity_rejected": "Let's try another way",
     "identity_rejected_desc": "Please log in using your SuHi ID.",
     "session_timeout": "You have been logged out",

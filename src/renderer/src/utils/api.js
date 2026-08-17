@@ -196,7 +196,11 @@ export async function realtimeCapture(kiosk_id = null) {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data?.error?.message || "Realtime capture failed");
+      return {
+        success: false,
+        ...data,
+        error: data?.error || { message: data?.message || "Realtime capture failed" }
+      };
     }
 
     return {
@@ -209,7 +213,7 @@ export async function realtimeCapture(kiosk_id = null) {
 
     return {
       success: false,
-      error: error.message
+      error: { message: error.message }
     };
   }
 }
@@ -363,11 +367,16 @@ export async function runFPT(shmPath, kioskId) {
       body: JSON.stringify(payload),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      return {
+        success: false,
+        ...data,
+        error: data?.error || { message: data?.message || `HTTP error! status: ${response.status}` }
+      };
     }
 
-    const data = await response.json();
     return {
       success: true,
       ...data
@@ -376,7 +385,7 @@ export async function runFPT(shmPath, kioskId) {
     console.error("Error running FPT:", error);
     return {
       success: false,
-      error: error.message
+      error: { message: error.message }
     };
   }
 }
