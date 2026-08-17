@@ -211,7 +211,7 @@ export default function NoActivityFrame({
                         e.g. FullscreenError's retry state ("keep it minimal, retries left") */}
                     {showDescription && s && (
                         <p
-                            className={`${textGold} text-[17px] text-center max-w-[420px] leading-relaxed opacity-90`}
+                            className={`${textGold} text-[23px] text-center max-w-[420px] leading-relaxed opacity-90`}
                         >
                             {s}
                         </p>
@@ -264,7 +264,7 @@ export default function NoActivityFrame({
                                         over resolvedRedirectSecs, driven by the real `filling` state
                                         above, so it always matches when the auto-redirect actually fires. */}
                                     <div
-                                        className="absolute inset-0 rounded-lg bg-white/25 origin-right pointer-events-none"
+                                        className="absolute inset-0 rounded-lg bg-white/25 origin-left pointer-events-none"
                                         style={{
                                             borderRadius: "10px",
                                             transform: filling ? "scaleX(1)" : "scaleX(0)",
