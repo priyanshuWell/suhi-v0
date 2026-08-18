@@ -692,20 +692,43 @@ export default function BIACalculate({ user, onComplete }) {
     };
 
     /**
-     * Runs W+H (and FPT on first call only) in parallel.
-     * Returns { weightOk, heightOk, fptOk, fptData }.
-     * On isRetry=true, FPT is always skipped — camera stays free.
+     * Checks if the detected face belongs to a different registered user.
+     * Returns true if different user (navigates to /welcome), false otherwise.
      */
-    const attemptWH = async (isRetry = false) => {
+    const checkDifferentUser = async (fptData) => {
+      if (!fptData) return false;
+      const fptUserId = fptData?.data?.matched_student?.user_id;
+      const currentUserId = storeUser?.data?.user_id;
+      console.log(`[BIA DEBUG] Face user: ${fptUserId}, Session user: ${currentUserId}`);
+
+      if (fptUserId && currentUserId && fptUserId !== currentUserId) {
+        console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
+        setShowDifferentUserModal(true);
+        await sleep(5000);
+        setShowDifferentUserModal(false);
+        navigate('/welcome');
+        return true;
+      }
+      if (fptUserId && currentUserId && fptUserId === currentUserId) {
+        setSameUser(true);
+        faceVerifiedRef.current = true;
+        console.log('[BIA DEBUG] Same user confirmed');
+      }
+      return false;
+    };
+
+    /**
+     * Runs W+H (and FPT real-time face capture) in parallel.
+     * Returns { weightOk, heightOk, fptOk, fptData }.
+     */
+    const attemptWH = async (runFpt = true) => {
       const promises = [measureWeight(), measureHeight()];
-      const runFpt = !isRetry && !faceVerifiedRef.current;
       if (runFpt) promises.push(handleFptRealTime());
 
       const results = await Promise.allSettled(promises);
       const [wRes, hRes, fptRes] = results;
 
       const fptData = (runFpt && fptRes?.status === 'fulfilled') ? fptRes.value : null;
-      if (fptData) faceVerifiedRef.current = true;
 
       return {
         weightOk: wRes.status === 'fulfilled',
@@ -718,27 +741,13 @@ export default function BIACalculate({ user, onComplete }) {
     // ── Attempt 1: W + H + F in parallel ────────────────────────────────────
     console.log(`[BIA DEBUG] Phase 1 — Attempt 1/${RETRY_CONFIG.WEIGHT_HEIGHT}: W + H + F`);
     let attempt = 1;
-    let { weightOk, heightOk, fptOk, fptData } = await attemptWH(false);
+    let { weightOk, heightOk, fptOk, fptData } = await attemptWH(true);
     console.log(`[BIA DEBUG] Attempt 1 — W:${weightOk} H:${heightOk} F:${fptOk}`);
 
-    // ── Scenario: W✅ H✅ F✅ — check if same user ────────────────────────
-    if (weightOk && heightOk && fptOk) {
-      const fptUserId = fptData?.data?.matched_student?.user_id;
-      const currentUserId = storeUser?.data?.user_id;
-      console.log(`[BIA DEBUG] Face user: ${fptUserId}, Session user: ${currentUserId}`);
-
-      if (fptUserId && currentUserId && fptUserId !== currentUserId) {
-        // Different user — show modal, wait 5s, redirect home
-        console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
-        setShowDifferentUserModal(true);
-        await sleep(5000);
-        setShowDifferentUserModal(false);
-        navigate('/welcome');
-        return;
-      }
-      // Same user (or no matched_student) → continue
-      setSameUser(true);
-      console.log('[BIA DEBUG] Same user confirmed — continuing flow');
+    // Check if a different user was detected on Attempt 1
+    if (fptOk) {
+      const isDifferent = await checkDifferentUser(fptData);
+      if (isDifferent) return;
     }
 
     // ── Retry loop up to RETRY_CONFIG.WEIGHT_HEIGHT ────────────────────────
@@ -750,27 +759,34 @@ export default function BIACalculate({ user, onComplete }) {
       if (!weightOk && !heightOk && fptOk) {
         console.warn('[BIA DEBUG] Scale empty but face detected — showing StandOnKiosk modal');
         await showStandOnKioskPrompt(); // pauses until user clicks Retry
-        console.log('[BIA DEBUG] StandOnKiosk Retry clicked — re-running W+H only');
+        console.log('[BIA DEBUG] StandOnKiosk Retry clicked — re-running W+H + F');
       }
       // ── Scenario: H❌ (height missing, with or without weight) ────────────
       else if (!heightOk) {
         console.warn('[BIA DEBUG] Height failed — showing StandProperly modal 10s');
         await showHeightErrorModal();
-        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (height retry): W+H`);
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (height retry): W+H + F`);
       }
       // ── Scenario: W❌ H✅ — only weight missing ───────────────────────────
       else if (!weightOk) {
         console.warn('[BIA DEBUG] Weight only failed — showing ErrorAlert 3s');
         await showError(ERROR_MESSAGES.weight, 3000);
-        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (weight retry): W+H`);
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (weight retry): W+H + F`);
       }
       // ── Scenario: W❌ H❌ F❌ — nobody on kiosk, no face ─────────────────
       else {
         console.warn(`[BIA DEBUG] All absent — silent auto-retry Attempt ${attempt}`);
       }
 
-      ({ weightOk, heightOk } = await attemptWH(true)); // isRetry=true → no FPT
-      console.log(`[BIA DEBUG] Attempt ${attempt} result — W:${weightOk} H:${heightOk}`);
+      // Re-run measurement with face check enabled on retries
+      ({ weightOk, heightOk, fptOk, fptData } = await attemptWH(true));
+      console.log(`[BIA DEBUG] Attempt ${attempt} result — W:${weightOk} H:${heightOk} F:${fptOk}`);
+
+      // Check if a different user stepped on during retry
+      if (fptOk) {
+        const isDifferent = await checkDifferentUser(fptData);
+        if (isDifferent) return;
+      }
     }
 
     if (!weightOk || !heightOk) {
@@ -791,7 +807,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // Disconnect height port — no longer needed
     console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting height port before Phase 2");
-    await Promise.allSettled([window.api.disconnectHeightPort()]);
+    // await Promise.allSettled([window.api.disconnectHeightPort()]);
 
     await runPhase2_LegCheck();
   };
