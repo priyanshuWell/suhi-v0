@@ -39,8 +39,11 @@ export default function BIACalculate({ user, onComplete }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
+  const [isSameUser, setSameUser] = useState(false);
   const [showHeightError, setShowHeightError] = useState(false);
   const [heightErrorCountdown, setHeightErrorCountdown] = useState(10);
+  const [showStandOnKioskModal, setShowStandOnKioskModal] = useState(false);
+  const [showDifferentUserModal, setShowDifferentUserModal] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
   const [shoesCtaStep, setShoesCtaStep] = useState(null);
@@ -52,6 +55,8 @@ export default function BIACalculate({ user, onComplete }) {
   const imCompleteResolver = useRef(null);
   // Stores next_stage from BIAComplete API response for use in handleImNextClick
   const biaNextStageRef = useRef(null);
+  const faceVerifiedRef = useRef(false);
+  const standOnKioskResolverRef = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
     height: "-- cm",
     weight: "-- kg",
@@ -98,12 +103,16 @@ export default function BIACalculate({ user, onComplete }) {
     SUCCESS: "SUCCESS",
     ERROR: "ERROR",
   }
+
+  // Centralized Retry Configuration
+  const RETRY_CONFIG = {
+    WEIGHT_HEIGHT: 2, // Total attempts for Phase 1 (Weight & Height)
+    ARM_50KHZ: 3,     // Attempts for Arm 50kHz
+    IMPEDANCE_20KHZ: 2 // Attempts for 20kHz impedance
+  };
+
   const MAX_RETRIES = 2;
 
-  const timeoutRefs = useRef({
-    global: null,
-    step: null,
-  });
 
   // No local recording state needed anymore
 
@@ -493,16 +502,35 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   const handleFptRealTime = async () => {
-    try {
-      const kiosk_id = getKioskId()
-      const fptResponse = await realtimeCapture(kiosk_id)
-      console.log("[BIA DEBUG] Fpt real-time measurement response:", fptResponse);
-
-    } catch (error) {
-      console.error("[BIA DEBUG] Fpt real-time measurement failed:", error);
+    const kiosk_id = getKioskId();
+    const fptResponse = await realtimeCapture(kiosk_id);
+    console.log("[BIA DEBUG] FPT real-time response:", fptResponse);
+    if (!fptResponse?.success) {
+      throw new Error(fptResponse?.error?.message || "FPT capture failed");
     }
+    return fptResponse;
+  };
 
-  }
+  /**
+   * Shows the "Please stand on the kiosk" modal and pauses the flow
+   * until the user clicks the Retry button.
+   */
+  const showStandOnKioskPrompt = () => {
+    console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
+    setShowStandOnKioskModal(true);
+    return new Promise((resolve) => {
+      standOnKioskResolverRef.current = resolve;
+    });
+  };
+
+  const handleStandOnKioskRetry = () => {
+    console.log('[BIA DEBUG] StandOnKiosk — Retry clicked');
+    setShowStandOnKioskModal(false);
+    if (standOnKioskResolverRef.current) {
+      standOnKioskResolverRef.current();
+      standOnKioskResolverRef.current = null;
+    }
+  };
 
   // measurePreliminaryWeight removed — W+H is now Phase 1, no pre-weight check needed
 
@@ -639,79 +667,118 @@ export default function BIACalculate({ user, onComplete }) {
   };
 
   /* =======================
-     PHASE 1: WEIGHT + HEIGHT
-     - Parallel measurement, one automatic 10s-timeout retry.
-     - No user button — fully automatic.
-     - Double failure → skip BIA entirely.
+     PHASE 1: WEIGHT + HEIGHT + FACE
   ======================= */
   const runPhase1_WeightHeight = async () => {
-    console.log("[BIA DEBUG] ========== PHASE 1: WEIGHT + HEIGHT ==========");
+    console.log("[BIA DEBUG] ========== PHASE 1: WEIGHT + HEIGHT + FACE ==========");
     setCurrentPhase('wh');
     navigate('/bia/wh');
 
-    // Run W+H in parallel; returns settled status without throwing.
-    const attemptWH = async () => {
-      const [wRes, hRes, fptRes] = await Promise.allSettled([
-        measureWeight(),
-        measureHeight(),
-        handleFptRealTime(),
-      ]);
-      return { weightOk: wRes.status === 'fulfilled', heightOk: hRes.status === 'fulfilled', fptOk: fptRes.status === 'fulfilled' };
+    /**
+     * Helper: call BIAComplete and navigate away — used by all skip paths.
+     */
+    const skipBIA = async (reason) => {
+      console.error(`[BIA DEBUG] Phase 1 SKIP — ${reason}`);
+      await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, reason, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await Promise.allSettled([window.api.disconnectHeightPort()]);
+      const skipComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: screeningState?.sessionId,
+      });
+      if (skipComplete?.screening) dispatch(setScreening(skipComplete.screening));
+      const skipRoute = getNextRoute(skipComplete?.screening?.next_stage, '/smoothie-slash');
+      console.log('[BIA] Phase 1 skip — navigating to:', skipRoute);
+      navigate(skipRoute);
     };
 
-    // --- Attempt 1 ---
-    console.log("[BIA DEBUG] Phase 1 — Attempt 1: W+H parallel");
-    let { weightOk, heightOk, fptOk } = await attemptWH();
-    console.log("weightOk", weightOk, "heightOk", heightOk, "fptOk", fptOk);
+    /**
+     * Runs W+H (and FPT on first call only) in parallel.
+     * Returns { weightOk, heightOk, fptOk, fptData }.
+     * On isRetry=true, FPT is always skipped — camera stays free.
+     */
+    const attemptWH = async (isRetry = false) => {
+      const promises = [measureWeight(), measureHeight()];
+      const runFpt = !isRetry && !faceVerifiedRef.current;
+      if (runFpt) promises.push(handleFptRealTime());
 
-    if (!weightOk || !heightOk || !fptOk) {
-      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk} FPT:${fptOk}`);
+      const results = await Promise.allSettled(promises);
+      const [wRes, hRes, fptRes] = results;
 
-      if (!heightOk) {
-        // Height failed → show animated "Stand Properly" modal for 10 seconds
-        console.warn('[BIA DEBUG] Height failed — showing StandProperly modal for 10s');
-        await showHeightErrorModal();
-      } else if (!weightOk) {
-        // Only weight failed → show generic error for 3s
-        setErrorState({ title: ERROR_MESSAGES.weight, canRetry: false });
-        await sleep(3000);
-        setErrorState(null);
-      } else if (!fptOk) {
-        // Only FPT failed → show generic error for 3s
-        setErrorState({ title: ERROR_MESSAGES.fpt, canRetry: false });
-        await sleep(3000);
-        setErrorState(null);
-      }
+      const fptData = (runFpt && fptRes?.status === 'fulfilled') ? fptRes.value : null;
+      if (fptData) faceVerifiedRef.current = true;
 
-      // --- Attempt 2 (auto retry) ---
-      console.log("[BIA DEBUG] Phase 1 — Attempt 2 (auto-retry): W+H parallel");
-      ({ weightOk, heightOk } = await attemptWH());
+      return {
+        weightOk: wRes.status === 'fulfilled',
+        heightOk: hRes.status === 'fulfilled',
+        fptOk: !!fptData,
+        fptData,
+      };
+    };
 
-      if (!weightOk || !heightOk) {
-        // Double fail — skip BIA
-        console.error(`[BIA DEBUG] Phase 1 DOUBLE FAIL — W:${weightOk} H:${heightOk} — skipping BIA`);
-        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-        console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
-        // await saveBuffer('wh_skip');
-        // Disconnect ports before navigating away
-        console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
-        await Promise.allSettled([
-          // window.api.disconnectBiaPort(),
-          window.api.disconnectHeightPort(),
-        ]);
-        const whSkipComplete = await BIAComplete({
-          session_id: storeUser?.data?.buffer_id,
-          screening_session_id: screeningState?.sessionId,
-        });
-        if (whSkipComplete?.screening) dispatch(setScreening(whSkipComplete.screening));
-        const whSkipRoute = getNextRoute(whSkipComplete?.screening?.next_stage, '/smoothie-slash');
-        console.log('[BIA] Phase 1 W+H skip — navigating to:', whSkipRoute);
-        navigate(whSkipRoute);
+    // ── Attempt 1: W + H + F in parallel ────────────────────────────────────
+    console.log(`[BIA DEBUG] Phase 1 — Attempt 1/${RETRY_CONFIG.WEIGHT_HEIGHT}: W + H + F`);
+    let attempt = 1;
+    let { weightOk, heightOk, fptOk, fptData } = await attemptWH(false);
+    console.log(`[BIA DEBUG] Attempt 1 — W:${weightOk} H:${heightOk} F:${fptOk}`);
+
+    // ── Scenario: W✅ H✅ F✅ — check if same user ────────────────────────
+    if (weightOk && heightOk && fptOk) {
+      const fptUserId = fptData?.data?.matched_student?.user_id;
+      const currentUserId = storeUser?.data?.user_id;
+      console.log(`[BIA DEBUG] Face user: ${fptUserId}, Session user: ${currentUserId}`);
+
+      if (fptUserId && currentUserId && fptUserId !== currentUserId) {
+        // Different user — show modal, wait 5s, redirect home
+        console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
+        setShowDifferentUserModal(true);
+        await sleep(5000);
+        setShowDifferentUserModal(false);
+        navigate('/welcome');
         return;
       }
+      // Same user (or no matched_student) → continue
+      setSameUser(true);
+      console.log('[BIA DEBUG] Same user confirmed — continuing flow');
     }
 
-    // --- Both W+H succeeded ---
+    // ── Retry loop up to RETRY_CONFIG.WEIGHT_HEIGHT ────────────────────────
+    while ((!weightOk || !heightOk) && attempt < RETRY_CONFIG.WEIGHT_HEIGHT) {
+      attempt++;
+      console.log(`[BIA DEBUG] Phase 1 retry — Attempt ${attempt}/${RETRY_CONFIG.WEIGHT_HEIGHT}`);
+
+      // ── Scenario: W❌ H❌ F✅ — face present, scale empty ─────────────────
+      if (!weightOk && !heightOk && fptOk) {
+        console.warn('[BIA DEBUG] Scale empty but face detected — showing StandOnKiosk modal');
+        await showStandOnKioskPrompt(); // pauses until user clicks Retry
+        console.log('[BIA DEBUG] StandOnKiosk Retry clicked — re-running W+H only');
+      }
+      // ── Scenario: H❌ (height missing, with or without weight) ────────────
+      else if (!heightOk) {
+        console.warn('[BIA DEBUG] Height failed — showing StandProperly modal 10s');
+        await showHeightErrorModal();
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (height retry): W+H`);
+      }
+      // ── Scenario: W❌ H✅ — only weight missing ───────────────────────────
+      else if (!weightOk) {
+        console.warn('[BIA DEBUG] Weight only failed — showing ErrorAlert 3s');
+        await showError(ERROR_MESSAGES.weight, 3000);
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (weight retry): W+H`);
+      }
+      // ── Scenario: W❌ H❌ F❌ — nobody on kiosk, no face ─────────────────
+      else {
+        console.warn(`[BIA DEBUG] All absent — silent auto-retry Attempt ${attempt}`);
+      }
+
+      ({ weightOk, heightOk } = await attemptWH(true)); // isRetry=true → no FPT
+      console.log(`[BIA DEBUG] Attempt ${attempt} result — W:${weightOk} H:${heightOk}`);
+    }
+
+    if (!weightOk || !heightOk) {
+      await skipBIA(`W+H failed after ${RETRY_CONFIG.WEIGHT_HEIGHT} attempts`);
+      return;
+    }
+
+    // ── All W+H succeeded (all paths land here) ───────────────────────────
     console.log("[BIA DEBUG] Phase 1 SUCCESS — W+H both measured");
     setDisplayValues({
       height: resultsRef.current?.height?.value ?? null,
@@ -722,12 +789,9 @@ export default function BIACalculate({ user, onComplete }) {
       height_cm: resultsRef.current?.height?.value,
     }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
-    // Disconnect BIA + height ports — W+H done, no longer needed
-    console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting BIA + height ports before Phase 2");
-    await Promise.allSettled([
-      // window.api.disconnectBiaPort(),
-      window.api.disconnectHeightPort(),
-    ]);
+    // Disconnect height port — no longer needed
+    console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting height port before Phase 2");
+    await Promise.allSettled([window.api.disconnectHeightPort()]);
 
     await runPhase2_LegCheck();
   };
@@ -1592,6 +1656,16 @@ export default function BIACalculate({ user, onComplete }) {
         <StandProperlyModal countdown={heightErrorCountdown} />
       )}
 
+      {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
+      {showStandOnKioskModal && (
+        <StandOnKioskModal onRetry={handleStandOnKioskRetry} />
+      )}
+
+      {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
+      {showDifferentUserModal && (
+        <DifferentUserModal />
+      )}
+
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
       {shoesCtaStep === 'ctaA' && (
         <ContinueWithShoesModal
@@ -1866,6 +1940,181 @@ const StandProperlyModal = ({ countdown }) => {
           50%       { opacity: 1;   transform: translateY(-6px); }
         }
       `}</style>
+    </div>
+  );
+};
+
+/* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
+const StandOnKioskModal = ({ onRetry }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.80)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '28px',
+        animation: 'standProperlyFadeIn 0.4s ease',
+      }}>
+        {/* Kiosk platform icon */}
+        <div style={{ position: 'relative', width: '180px', height: '220px' }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(0,179,255,0.18) 0%, transparent 70%)',
+            animation: 'standGlowPulse 2s ease-in-out infinite',
+          }} />
+          <svg viewBox="0 0 120 180" width="180" height="220" xmlns="http://www.w3.org/2000/svg"
+            style={{ filter: 'drop-shadow(0 0 18px rgba(0,179,255,0.7))', animation: 'standBobble 2.5s ease-in-out infinite' }}>
+            {/* Person */}
+            <circle cx="60" cy="22" r="14" fill="#00B3FF" opacity="0.95" />
+            <rect x="44" y="36" width="32" height="46" rx="8" fill="#0070CC" opacity="0.85" />
+            <rect x="30" y="40" width="16" height="8" rx="4" fill="#00B3FF" opacity="0.8" />
+            <rect x="74" y="40" width="16" height="8" rx="4" fill="#00B3FF" opacity="0.8" />
+            <rect x="46" y="80" width="12" height="44" rx="6" fill="#00B3FF" opacity="0.85" />
+            <rect x="62" y="80" width="12" height="44" rx="6" fill="#00B3FF" opacity="0.85" />
+            {/* Platform */}
+            <rect x="10" y="128" width="100" height="12" rx="4" fill="#FFD700" opacity="0.9" />
+            <rect x="20" y="140" width="80" height="28" rx="3" fill="#b8860b" opacity="0.7" />
+            {/* Down arrow — step on */}
+            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite' }}>
+              <polygon points="60,108 50,118 70,118" fill="#FFD700" opacity="0.9" />
+              <rect x="56" y="118" width="8" height="8" rx="2" fill="#FFD700" opacity="0.8" />
+            </g>
+          </svg>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{
+            color: '#00B3FF',
+            fontSize: '2.4rem',
+            fontFamily: 'Anta, sans-serif',
+            margin: 0,
+            letterSpacing: '0.02em',
+            textShadow: '0 0 20px rgba(0,179,255,0.6)',
+          }}>
+            Please Stand on the Kiosk
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.65)',
+            fontFamily: 'Anta, sans-serif',
+            fontSize: '1.2rem',
+            marginTop: '10px',
+          }}>
+            Step onto the platform so we can measure your weight and height.
+          </p>
+        </div>
+
+        <button
+          onClick={onRetry}
+          style={{
+            width: 'clamp(16rem, 28vw, 24rem)',
+            height: 'clamp(4rem, 7vh, 5.5rem)',
+            borderRadius: '30px',
+            border: '2px solid rgba(255,255,255,0.5)',
+            background: 'radial-gradient(43.11% 181.04% at 50% 50%, #003FFD 0%, #00B3FF 100%)',
+            boxShadow: '0 0 30px rgba(0,179,255,0.5)',
+            color: '#fff',
+            fontSize: '1.6rem',
+            fontFamily: 'Anta, sans-serif',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#fff'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
+        >
+          Try Again
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ── Different User Modal — W✅ H✅ F✅ but wrong user ───────────────── */
+const DifferentUserModal = () => {
+  const [countdown, setCountdown] = React.useState(5);
+
+  React.useEffect(() => {
+    const tick = setInterval(() => {
+      setCountdown(p => Math.max(0, p - 1));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.80)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '28px',
+        animation: 'standProperlyFadeIn 0.4s ease',
+      }}>
+        {/* Warning icon */}
+        <div style={{
+          width: '100px',
+          height: '100px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(255,80,80,0.2) 0%, transparent 70%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'standGlowPulse 2s ease-in-out infinite',
+        }}>
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,80,80,0.7)" strokeWidth="4" />
+            <text x="40" y="56" textAnchor="middle" fill="#FF5050" fontSize="44" fontFamily="Anta, sans-serif" style={{ filter: 'drop-shadow(0 0 8px rgba(255,80,80,0.8))' }}>!</text>
+          </svg>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{
+            color: '#FF5050',
+            fontSize: '2.2rem',
+            fontFamily: 'Anta, sans-serif',
+            margin: 0,
+            letterSpacing: '0.02em',
+            textShadow: '0 0 20px rgba(255,80,80,0.5)',
+          }}>
+            Looks like you are a different user
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.65)',
+            fontFamily: 'Anta, sans-serif',
+            fontSize: '1.2rem',
+            marginTop: '10px',
+          }}>
+            Redirecting you to the home page...
+          </p>
+        </div>
+
+        {/* Countdown ring */}
+        <div style={{ position: 'relative', width: '70px', height: '70px' }}>
+          <svg viewBox="0 0 70 70" width="70" height="70" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,80,80,0.15)" strokeWidth="5" />
+            <circle
+              cx="35" cy="35" r="28"
+              fill="none"
+              stroke="#FF5050"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 28}`}
+              strokeDashoffset={`${2 * Math.PI * 28 * (countdown / 5)}`}
+              style={{ transition: 'stroke-dashoffset 0.9s linear', filter: 'drop-shadow(0 0 6px #FF5050)' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#FF5050',
+            fontSize: '1.5rem',
+            fontFamily: 'Anta, sans-serif',
+            fontWeight: 'bold',
+          }}>
+            {countdown}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
