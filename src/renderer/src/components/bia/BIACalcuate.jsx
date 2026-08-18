@@ -1681,7 +1681,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
       {showDifferentUserModal && (
-        <NoActivityFrame />
+        <NoActivityFrame title="Different User Found" description="Looks like someone appeared in front of the kiosk! " />
       )}
 
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
