@@ -22,9 +22,11 @@ import biaHold_male from "../../assets/bia/bia-hold_male.mp4"
 
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
+import errorFrame from "../../assets/error_frame.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
 import AreYouThereModal from "./AreYouThereModal";
+import NoActivityFrame from "../ui/NoActivityFrame";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -1679,7 +1681,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
       {showDifferentUserModal && (
-        <DifferentUserModal />
+        <NoActivityFrame />
       )}
 
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
@@ -1961,86 +1963,87 @@ const StandProperlyModal = ({ countdown }) => {
 };
 
 /* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
-const StandOnKioskModal = ({ onRetry }) => {
+const StandOnKioskModal = ({ onRetry, title = 'BIA Error', description = 'Please step onto the kiosk platform so we can measure your weight and height.' }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.80)' }}>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '28px',
-        animation: 'standProperlyFadeIn 0.4s ease',
-      }}>
-        {/* Kiosk platform icon */}
-        <div style={{ position: 'relative', width: '180px', height: '220px' }}>
-          <div style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(0,179,255,0.18) 0%, transparent 70%)',
-            animation: 'standGlowPulse 2s ease-in-out infinite',
-          }} />
-          <svg viewBox="0 0 120 180" width="180" height="220" xmlns="http://www.w3.org/2000/svg"
-            style={{ filter: 'drop-shadow(0 0 18px rgba(0,179,255,0.7))', animation: 'standBobble 2.5s ease-in-out infinite' }}>
-            {/* Person */}
-            <circle cx="60" cy="22" r="14" fill="#00B3FF" opacity="0.95" />
-            <rect x="44" y="36" width="32" height="46" rx="8" fill="#0070CC" opacity="0.85" />
-            <rect x="30" y="40" width="16" height="8" rx="4" fill="#00B3FF" opacity="0.8" />
-            <rect x="74" y="40" width="16" height="8" rx="4" fill="#00B3FF" opacity="0.8" />
-            <rect x="46" y="80" width="12" height="44" rx="6" fill="#00B3FF" opacity="0.85" />
-            <rect x="62" y="80" width="12" height="44" rx="6" fill="#00B3FF" opacity="0.85" />
-            {/* Platform */}
-            <rect x="10" y="128" width="100" height="12" rx="4" fill="#FFD700" opacity="0.9" />
-            <rect x="20" y="140" width="80" height="28" rx="3" fill="#b8860b" opacity="0.7" />
-            {/* Down arrow — step on */}
-            <g style={{ animation: 'arrowPulse 1.2s ease-in-out infinite' }}>
-              <polygon points="60,108 50,118 70,118" fill="#FFD700" opacity="0.9" />
-              <rect x="56" y="118" width="8" height="8" rx="2" fill="#FFD700" opacity="0.8" />
-            </g>
-          </svg>
-        </div>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.82)' }}
+    >
+      {/* Frame container — sized to match the error_frame.png aspect ratio (~16:9 crop) */}
+      <div
+        style={{
+          position: 'relative',
 
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{
-            color: '#00B3FF',
-            fontSize: '2.4rem',
-            fontFamily: 'Anta, sans-serif',
-            margin: 0,
-            letterSpacing: '0.02em',
-            textShadow: '0 0 20px rgba(0,179,255,0.6)',
-          }}>
-            Please Stand on the Kiosk
-          </h2>
-          <p style={{
-            color: 'rgba(255,255,255,0.65)',
-            fontFamily: 'Anta, sans-serif',
-            fontSize: '1.2rem',
-            marginTop: '10px',
-          }}>
-            Step onto the platform so we can measure your weight and height.
-          </p>
-        </div>
+          animation: 'standProperlyFadeIn 0.4s ease',
+        }}
+      >
+        {/* Background frame image */}
+        <img
+          src={errorFrame}
+          alt=""
+          draggable={false}
+          style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }}
+        />
 
-        <button
-          onClick={onRetry}
+        {/* Content overlay — centred within the frame's inner panel area */}
+        <div
           style={{
-            width: 'clamp(16rem, 28vw, 24rem)',
-            height: 'clamp(4rem, 7vh, 5.5rem)',
-            borderRadius: '30px',
-            border: '2px solid rgba(255,255,255,0.5)',
-            background: 'radial-gradient(43.11% 181.04% at 50% 50%, #003FFD 0%, #00B3FF 100%)',
-            boxShadow: '0 0 30px rgba(0,179,255,0.5)',
-            color: '#fff',
-            fontSize: '1.6rem',
-            fontFamily: 'Anta, sans-serif',
-            cursor: 'pointer',
-            transition: 'all 0.2s',
+            position: 'absolute',
+            /* These offsets position content inside the panel — tweak if needed */
+            top: '22%',
+            bottom: '12%',
+            left: '10%',
+            right: '10%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '20px',
           }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = '#fff'}
-          onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
         >
-          Try Again
-        </button>
+          {/* Title */}
+          <h2
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#FFC84A',
+              fontSize: 'clamp(1.4rem, 3vw, 2rem)',
+              fontFamily: 'Anta, sans-serif',
+              margin: 0,
+              letterSpacing: '0.04em',
+              textShadow: '0 0 16px rgba(255,200,74,0.55)',
+            }}
+          >
+            {/* ⊙ warning circle */}
+            <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              style={{ flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(255,200,74,0.7))' }}
+            >
+              <circle cx="12" cy="12" r="10" stroke="#FFC84A" strokeWidth="2" />
+              <line x1="12" y1="8" x2="12" y2="12" stroke="#FFC84A" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="16" r="1" fill="#FFC84A" />
+            </svg>
+            {title}
+          </h2>
+
+          {/* Description */}
+          <p
+            style={{
+              color: '#FFC84A',
+              fontFamily: 'Anta, sans-serif',
+              fontSize: 'clamp(1.5rem, 3vw, 4rem)',
+              margin: 0,
+              textAlign: 'center',
+              opacity: 0.85,
+            }}
+          >
+            {description}
+          </p>
+
+          <BlackGradientButton onClick={onRetry} className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta">
+            Retry
+          </BlackGradientButton>
+        </div>
       </div>
     </div>
   );

@@ -186,7 +186,7 @@ export default function NoActivityFrame({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="relative w-full max-w-[900px]">
+            <div className="relative w-full ">
                 {/* PNG background frame */}
                 <img
                     src={frameBg}
@@ -211,7 +211,7 @@ export default function NoActivityFrame({
                         e.g. FullscreenError's retry state ("keep it minimal, retries left") */}
                     {showDescription && s && (
                         <p
-                            className={`${textGold} text-[23px] text-center max-w-[420px] leading-relaxed opacity-90`}
+                            className={`${textGold} text-[24px] text-center max-w-[420px] leading-relaxed opacity-90`}
                         >
                             {s}
                         </p>
@@ -248,16 +248,15 @@ export default function NoActivityFrame({
                                     onClick={handleManualClick}
                                     className="
                     relative overflow-hidden rounded-lg
-                    w-[clamp(16rem,36vw,26rem)] h-14
+                    w-[34rem]
+                    h-20
                     cursor-pointer select-none
                   "
                                     style={{
                                         borderRadius: "10px",
                                         border: "2.996px solid #FFF",
-                                        background:
-                                            "radial-gradient(43.11% 181.04% at 50% 50%, rgba(0, 46, 185, 0.50) 0%, rgba(0, 151, 214, 0.50) 100%)",
-                                        boxShadow:
-                                            "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset",
+                                        background: "radial-gradient(43.11% 181.04% at 50% 50%, #002EB9 0%, #0097D6 100%)",
+                                        boxShadow: "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset",
                                     }}
                                 >
                                     {/* Fill layer — slides the whole button from empty to full color
@@ -276,7 +275,7 @@ export default function NoActivityFrame({
 
                                     {/* Label with live inline countdown */}
                                     <div className="absolute inset-0 flex items-center justify-center px-4">
-                                        <span className="text-white text-[17px] font-medium tracking-wide relative z-10 text-center">
+                                        <span className="text-white text-[20px] font-medium tracking-wide relative z-10 text-center">
                                             {label} in{" "}
                                             <span style={{ fontWeight: 700, color: "#fff" }}>
                                                 {redirectRemaining}
