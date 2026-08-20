@@ -236,19 +236,19 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.face_not_detected_camera"),
           description: t("errors.face_not_detected_camera_desc"),
-          audio: "face_not_detected",
+          audio: "cannot_scan_the_face_please_align",
           showButton: false
         },
         {
           title: t("errors.face_not_detected_camera"),
           description: t("errors.face_not_detected_camera_desc"),
-          audio: "face_not_detected",
+          audio: "cannot_scan_the_face_please_align",
           showButton: false
         },
         {
-          title: t("errors.face_not_detected_camera"),
-          description: t("errors.face_not_detected_camera_desc"),
-          audio: "face_not_detected",
+          title: t("errors.last_retry_title"),
+          description: t("errors.suhi_coordinator_contact"),
+          audio: "",// options
           showButton: true
         }
       ]
