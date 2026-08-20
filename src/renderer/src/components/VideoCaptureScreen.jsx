@@ -14,8 +14,8 @@ import NoActivityFrame from "./ui/NoActivityFrame"
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV FLAGS — flip these to test without hardware or real API
 // ─────────────────────────────────────────────────────────────────────────────
-const USE_DUMMY_FPT = true
-const USE_DUMMY_MEASUREMENTS = true
+const USE_DUMMY_FPT = false
+const USE_DUMMY_MEASUREMENTS = false
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
 // Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
