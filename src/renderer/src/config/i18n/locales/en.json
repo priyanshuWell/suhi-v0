@@ -211,7 +211,9 @@
     "bia_max_retries": "I couldn't get stable readings, moving to next scan.",
     "redirect_login_label": "Going to SUHI ID login",
     "redirect_home_label": "Going to home",
-    "retrying": "Retrying"
+    "retrying": "Retrying",
+    "last_retry_title": "Oops! I cannot detect you",
+    "suhi_coordinator_contact":"Please contact your SUHI Kiosk Coordinator for assistance"
   },
   "smoothieSlash": {
     "beAware": {

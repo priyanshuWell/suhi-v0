@@ -27,10 +27,12 @@ import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
 import AreYouThereModal from "./AreYouThereModal";
 import NoActivityFrame from "../ui/NoActivityFrame";
+import { useKioskAudio } from "../../hooks/useKioskAudio";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { play: playErrorAudio, stop: stopErrorAudio } = useKioskAudio();
   const storeUser = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
 
@@ -419,8 +421,25 @@ export default function BIACalculate({ user, onComplete }) {
   //   }
   // };
 
+  // Auto-maps a userMessage string to the appropriate error audio key.
+  // Pattern order matters — more specific patterns must come first.
+  const ERROR_AUDIO_KEY_MAP = [
+    { match: /barefoot|shoes|socks/i, key: 'errors/shoes_prompt' },
+    { match: /handles firmly.*palm|palm.*hand/i, key: 'errors/bia_hold_handles' },
+    { match: /trying again|keep holding/i, key: 'errors/bia_retry' },
+    { match: /both hands.*still|stay still/i, key: 'errors/bia_hand_body' },
+    { match: /handles.*still|keep still/i, key: 'errors/bia_impedance' },
+    { match: /stable readings|next scan/i, key: 'errors/bia_max_retries' },
+    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_kiosk' },
+    { match: /weight/i, key: 'errors/weight_not_detected' },
+    { match: /height|stand.*straight/i, key: 'errors/height_not_detected' },
+  ];
+
   const showError = async (message, duration = 5000) => {
     console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
+    // Auto-play the matching error audio — overlap-safe via useKioskAudio hook
+    const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
+    if (audioEntry) playErrorAudio(audioEntry.key);
     setErrorState({
       title: message,
       canRetry: false,
@@ -436,6 +455,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
+    playErrorAudio('errors/height_not_detected');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
@@ -519,6 +539,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showStandOnKioskPrompt = () => {
     console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
+    playErrorAudio('errors/stand_on_kiosk');
     setShowStandOnKioskModal(true);
     return new Promise((resolve) => {
       standOnKioskResolverRef.current = resolve;
@@ -705,6 +726,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       if (fptUserId && currentUserId && fptUserId !== currentUserId) {
         console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
+        playErrorAudio('errors/different_user');
         setShowDifferentUserModal(true);
         await sleep(5000);
         setShowDifferentUserModal(false);

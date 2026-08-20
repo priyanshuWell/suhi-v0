@@ -5,6 +5,7 @@ import { useDispatch } from 'react-redux'
 import { resetCommonState } from '../features/common/commonSlice'
 import AreYouThereModal from './ui/AreYouThereModal'
 import NoActivityFrame from './ui/NoActivityFrame'
+import { useKioskAudio } from '../hooks/useKioskAudio'
 
 /**
  * AutoIdleRedirect
@@ -47,6 +48,7 @@ const AutoIdleRedirect = ({
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const location = useLocation()
+    const { play: playErrorAudio, stop: stopErrorAudio } = useKioskAudio()
     // stage: null | 'are-you-there' | 'continue-screening'
     const [stage, setStage] = useState(null)
 
@@ -57,8 +59,9 @@ const AutoIdleRedirect = ({
     const handlePrompt = useCallback(() => {
         if (!isHomeRoute) {
             setStage('are-you-there')
+            playErrorAudio('errors/are_you_there')
         }
-    }, [isHomeRoute])
+    }, [isHomeRoute, playErrorAudio])
 
     const handleIdle = useCallback(() => {
         // When the idle timer fully expires, escalate from stage 1 → stage 2.
@@ -66,12 +69,14 @@ const AutoIdleRedirect = ({
         if (!isHomeRoute) {
             console.log('[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage.')
             setStage('continue-screening')
+            playErrorAudio('errors/inactivity_redirect')
         }
-    }, [isHomeRoute])
+    }, [isHomeRoute, playErrorAudio])
 
     const handleActive = useCallback(() => {
+        stopErrorAudio() // stop any playing error audio when user resumes
         setStage(null)
-    }, [])
+    }, [stopErrorAudio])
 
     // Fired when the "continue-screening" countdown ends with no response.
     const handleFinalTimeout = useCallback(() => {
