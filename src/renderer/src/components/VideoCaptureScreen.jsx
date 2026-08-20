@@ -23,9 +23,8 @@ const DUMMY_FPT_SCENARIO = "NO_FACE"
 
 // Measurement scenario to simulate (USE_DUMMY_MEASUREMENTS = true)
 // Only matters when DUMMY_FPT_SCENARIO = "NO_FACE"
-// Options: "WEIGHT_AND_SHORT" | "WEIGHT_AND_TALL" | "WEIGHT_NO_HEIGHT" | "NOTHING"
-const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_AND_SHORT"
-
+// Options: "WEIGHT_AND_SHORT" | "WEIGHT_AND_TALL" | "WEIGHT_NO_HEIGHT" | "NOTHING" || "NO_WEIGHT"
+const DUMMY_MEASUREMENT_SCENARIO = "WEIGHT_NO_HEIGHT"
 // ─────────────────────────────────────────────────────────────────────────────
 // Dummy FPT responses — real API shape: everything under .data
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,6 +175,7 @@ const DUMMY_MEASUREMENTS = {
   WEIGHT_AND_SHORT: { weight: 25, height: 110, errors: {} },
   WEIGHT_AND_TALL: { weight: 55, height: 155, errors: {} },
   WEIGHT_NO_HEIGHT: { weight: 55, height: null, errors: { height: "Height sensor timeout" } },
+  NO_WEIGHT: { weight: null, height: 155, errors: { weight: "No weight" } },
   NOTHING: { weight: null, height: null, errors: { weight: "No weight", height: "No height" } }
 }
 
@@ -294,19 +294,19 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.face_weight_not_detected"),
           description: t("errors.face_weight_not_detected_desc"),
-          audio: "weight_not_detected",
+          audio: "fight_aligned_on_the_kisok",
           showButton: false
         },
         {
           title: t("errors.face_weight_not_detected"),
           description: t("errors.face_weight_not_detected_desc"),
-          audio: "weight_not_detected",
+          audio: "fight_aligned_on_the_kisok",
           showButton: false
         },
         {
-          title: t("errors.face_weight_not_detected"),
-          description: t("errors.face_weight_not_detected_desc"),
-          audio: "weight_not_detected",
+          title: t("errors.last_retry_title"),
+          description: t("errors.suhi_coordinator_contact"),
+          audio: "",
           showButton: true
         }
       ]
@@ -381,7 +381,8 @@ const VideoCaptureScreen = () => {
           showRetry: false,
           showButton: step.showButton ?? false,
           showDescription: true,
-          onAutoRetry: () => {
+          onAutoRetry: async () => {
+            await waitForPendingAudio() // wait for error audio to finish before retrying
             measurementPromiseRef.current = null
             trackingDoneRef.current = false
             setNoActivityState(null)

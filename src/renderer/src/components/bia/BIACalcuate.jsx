@@ -423,16 +423,26 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Auto-maps a userMessage string to the appropriate error audio key.
   // Pattern order matters — more specific patterns must come first.
+  // Keys map to filenames inside assets/audio/en/errors/ (without .mp3 extension).
   const ERROR_AUDIO_KEY_MAP = [
-    { match: /barefoot|shoes|socks/i, key: 'errors/shoes_prompt' },
-    { match: /handles firmly.*palm|palm.*hand/i, key: 'errors/bia_hold_handles' },
-    { match: /trying again|keep holding/i, key: 'errors/bia_retry' },
-    { match: /both hands.*still|stay still/i, key: 'errors/bia_hand_body' },
-    { match: /handles.*still|keep still/i, key: 'errors/bia_impedance' },
-    { match: /stable readings|next scan/i, key: 'errors/bia_max_retries' },
-    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_kiosk' },
-    { match: /weight/i, key: 'errors/weight_not_detected' },
-    { match: /height|stand.*straight/i, key: 'errors/height_not_detected' },
+    // Shoes / barefoot prompt
+    { match: /barefoot|shoes|socks/i,                      key: 'errors/remove_your_shoes_and_socks' },
+    // Arm — first attempt: hold handles firmly with palm
+    { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
+    // Arm — retry attempt: keep holding / trying again
+    { match: /trying again|keep holding|we.?re trying/i,   key: 'errors/hold_both_handles_firmly_to_continue' },
+    // Arm — hand + body still (3rd attempt phrasing)
+    { match: /both hands.*still|stay still/i,              key: 'errors/hold_both_handles_firmly_to_continue' },
+    // Impedance — hold handles and keep still
+    { match: /handles.*still|keep still/i,                 key: 'errors/hold_both_handles_firmly_to_continue' },
+    // Max retry reached
+    { match: /stable readings|next scan|couldn.?t get/i,   key: 'errors/oops_couldnt_detect_you_try_again' },
+    // Stand on kiosk / nobody on scale
+    { match: /stand.*kiosk|check device/i,                 key: 'errors/stand_on_the_kisok' },
+    // Weight not detected
+    { match: /stand.*platform|weight/i,                    key: 'errors/stand_on_the_kisok' },
+    // Height not detected
+    { match: /height|measuring.*height/i,                  key: 'errors/fight_aligned_on_the_kisok' },
   ];
 
   const showError = async (message, duration = 5000) => {
