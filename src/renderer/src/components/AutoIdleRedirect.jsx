@@ -47,7 +47,8 @@ const AutoIdleRedirect = ({
     const dispatch = useDispatch()
     const navigate = useNavigate()
     const location = useLocation()
-    const [isPrompted, setIsPrompted] = useState(false)
+    // stage: null | 'are-you-there' | 'continue-screening'
+    const [stage, setStage] = useState(null)
 
     // Disable on home/splash routes — no point idling-out a page you'd
     // just get redirected back to anyway.
@@ -55,24 +56,30 @@ const AutoIdleRedirect = ({
 
     const handlePrompt = useCallback(() => {
         if (!isHomeRoute) {
-            setIsPrompted(true)
+            setStage('are-you-there')
         }
     }, [isHomeRoute])
 
     const handleIdle = useCallback(() => {
-        setIsPrompted(false)
+        // When the idle timer fully expires, escalate from stage 1 → stage 2.
+        // The actual redirect is fired by the continue-screening stage timeout.
         if (!isHomeRoute) {
-            console.log(
-                `[AutoIdleRedirect] Idle timeout reached. Resetting Redux state & redirecting to ${redirectTo}...`
-            )
-            dispatch(resetCommonState())
-            navigate(redirectTo)
+            console.log('[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage.')
+            setStage('continue-screening')
         }
-    }, [isHomeRoute, dispatch, navigate, redirectTo])
+    }, [isHomeRoute])
 
     const handleActive = useCallback(() => {
-        setIsPrompted(false)
+        setStage(null)
     }, [])
+
+    // Fired when the "continue-screening" countdown ends with no response.
+    const handleFinalTimeout = useCallback(() => {
+        console.log(`[AutoIdleRedirect] Final timeout — resetting state & redirecting to ${redirectTo}...`)
+        setStage(null)
+        dispatch(resetCommonState())
+        navigate(redirectTo)
+    }, [dispatch, navigate, redirectTo])
 
     // Uncomment while debugging to confirm which events are actually
     // being detected on your device:
@@ -91,27 +98,29 @@ const AutoIdleRedirect = ({
         crossTab: true // keeps idle state in sync across multiple tabs of the same app
     })
 
+    // "Yes, I'm here" — reset the idle timer and dismiss the overlay.
     const handleYes = () => {
         activate()
-        setIsPrompted(false)
+        setStage(null)
     }
 
-    const handleNo = () => {
-        reset()
-        setIsPrompted(false)
-        if (!isHomeRoute) {
-            dispatch(resetCommonState())
-            navigate(redirectTo)
-        }
-    }
-
-    if (isPrompted && !isHomeRoute) {
+    if (stage === 'are-you-there' && !isHomeRoute) {
         return (
             <NoActivityFrame
                 variant="are-you-there"
                 timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
                 onButtonClick={handleYes}
-                onTimeout={handleNo}
+                onTimeout={() => setStage('continue-screening')}
+            />
+        )
+    }
+
+    if (stage === 'continue-screening' && !isHomeRoute) {
+        return (
+            <NoActivityFrame
+                variant="continue-screening"
+                onTimeout={handleFinalTimeout}
+                onButtonClick={handleYes}
             />
         )
     }

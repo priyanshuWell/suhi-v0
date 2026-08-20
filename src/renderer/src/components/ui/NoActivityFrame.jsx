@@ -58,6 +58,8 @@ export default function NoActivityFrame({
     redirectSecs,
     autoRedirectDelay,
     timeoutSecs = 10,
+    continueScreeningSecs = 10,   // total countdown for continue-screening stage
+    continueButtonDelaySecs = 5,  // seconds before the button appears
     onButtonClick,
     onRedirect,
     onTimeout,
@@ -171,9 +173,60 @@ export default function NoActivityFrame({
         };
     }, [variant, resolvedRedirectSecs, showRetry]);
 
-    // Manual click on the redirect button fires immediately too.
+    // ── continue-screening: own countdown + delayed button reveal ─────
+    const csTimerRef = useRef(null)
+    const csFiredRef = useRef(false)
+    const [csRemaining, setCsRemaining] = useState(continueScreeningSecs)
+    const [csButtonVisible, setCsButtonVisible] = useState(false)
+
+    const fireCsTimeout = () => {
+        if (csFiredRef.current) return
+        csFiredRef.current = true
+        clearInterval(csTimerRef.current)
+        onTimeout?.()
+    }
+
+    useEffect(() => {
+        if (variant !== 'continue-screening') return
+        csFiredRef.current = false
+        setCsRemaining(continueScreeningSecs)
+        setCsButtonVisible(false)
+
+        // Show the button after `continueButtonDelaySecs` seconds
+        const buttonRevealTimeout = setTimeout(() => {
+            setCsButtonVisible(true)
+        }, continueButtonDelaySecs * 1000)
+
+        // Tick down the full countdown
+        csTimerRef.current = setInterval(() => {
+            setCsRemaining((prev) => {
+                if (prev <= 1) {
+                    clearInterval(csTimerRef.current)
+                    setTimeout(fireCsTimeout, 0)
+                    return 0
+                }
+                return prev - 1
+            })
+        }, 1000)
+
+        return () => {
+            clearTimeout(buttonRevealTimeout)
+            clearInterval(csTimerRef.current)
+        }
+    }, [variant, continueScreeningSecs, continueButtonDelaySecs])
+
+    // "Continue Screening" button — dismisses the overlay and resets idle.
+    const handleContinueClick = () => {
+        if (csFiredRef.current) return
+        csFiredRef.current = true
+        clearInterval(csTimerRef.current)
+        // Treat as manual "still here" — delegate back to parent via onButtonClick
+        onButtonClick?.()
+    }
+
+    // Manual click on the no-user redirect button fires immediately.
     const handleManualClick = () => {
-        fireRedirect();
+        fireRedirect()
     };
 
     // ── countdown ring math (are-you-there) ────────────────────────────
@@ -321,22 +374,38 @@ export default function NoActivityFrame({
 
                         {/* ═══ VARIANT 3: Continue Screening ═══ */}
                         {variant === "continue-screening" && (
-                            <button
-                                onClick={handleManualClick}
-                                className="
-                  px-12 py-3.5 rounded-[14px]
-                  text-white text-[17px] font-medium tracking-wide
-                  active:scale-[0.98] transition-all duration-200
-                "
-                                style={{
-                                    background: "#1a1a1a",
-                                    border: "1px solid rgba(255,255,255,0.15)",
-                                    boxShadow:
-                                        "0 0 24px rgba(100,180,220,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
-                                }}
-                            >
-                                {label}
-                            </button>
+                            <div className="flex flex-col items-center gap-4">
+                                {/* Countdown text */}
+                                <p
+                                    className={`${textGold} text-[22px] font-semibold text-center tracking-wide`}
+                                >
+                                    We are redirecting you in{' '}
+                                    <span className="text-white font-bold">{csRemaining}</span>
+                                    {' '}sec
+                                </p>
+
+                                {/* Button appears after continueButtonDelaySecs */}
+                                <button
+                                    onClick={handleContinueClick}
+                                    className="
+                                        px-12 py-3.5 rounded-[14px]
+                                        text-white text-[17px] font-medium tracking-wide
+                                        active:scale-[0.98] transition-all duration-300
+                                    "
+                                    style={{
+                                        background: "#1a1a1a",
+                                        border: "1px solid rgba(255,255,255,0.15)",
+                                        boxShadow:
+                                            "0 0 24px rgba(100,180,220,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
+                                        opacity: csButtonVisible ? 1 : 0,
+                                        transform: csButtonVisible ? 'translateY(0)' : 'translateY(8px)',
+                                        pointerEvents: csButtonVisible ? 'auto' : 'none',
+                                        transition: 'opacity 0.4s ease, transform 0.4s ease',
+                                    }}
+                                >
+                                    Continue Screening
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
