@@ -10,7 +10,7 @@ import textbgframe from "../../assets/textbgframe.svg";
  * @param {Function} onYes        Called when user taps "Yes"
  * @param {Function} onNo         Called when user taps "No" OR timer reaches 0
  */
-export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
+export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAudio }) {
     const [remaining, setRemaining] = useState(timeoutSecs);
     const intervalRef = useRef(null);
     const firedRef = useRef(false); // prevent double-fire
@@ -30,6 +30,9 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
     };
 
     useEffect(() => {
+        // Play the "are you still there?" audio on mount
+        playAudio?.('errors/are_you_still_there');
+
         intervalRef.current = setInterval(() => {
             setRemaining((prev) => {
                 if (prev <= 1) {

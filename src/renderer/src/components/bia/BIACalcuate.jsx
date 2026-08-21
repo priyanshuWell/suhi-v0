@@ -426,23 +426,23 @@ export default function BIACalculate({ user, onComplete }) {
   // Keys map to filenames inside assets/audio/en/errors/ (without .mp3 extension).
   const ERROR_AUDIO_KEY_MAP = [
     // Shoes / barefoot prompt
-    { match: /barefoot|shoes|socks/i,                      key: 'errors/remove_your_shoes_and_socks' },
+    { match: /barefoot|shoes|socks/i, key: 'errors/remove_your_shoes_and_socks' },
     // Arm — first attempt: hold handles firmly with palm
     { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     // Arm — retry attempt: keep holding / trying again
-    { match: /trying again|keep holding|we.?re trying/i,   key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /trying again|keep holding|we.?re trying/i, key: 'errors/hold_both_handles_firmly_to_continue' },
     // Arm — hand + body still (3rd attempt phrasing)
-    { match: /both hands.*still|stay still/i,              key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /both hands.*still|stay still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
     // Impedance — hold handles and keep still
-    { match: /handles.*still|keep still/i,                 key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
     // Max retry reached
-    { match: /stable readings|next scan|couldn.?t get/i,   key: 'errors/oops_couldnt_detect_you_try_again' },
+    { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
     // Stand on kiosk / nobody on scale
-    { match: /stand.*kiosk|check device/i,                 key: 'errors/stand_on_the_kisok' },
+    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kisok' },
     // Weight not detected
-    { match: /stand.*platform|weight/i,                    key: 'errors/stand_on_the_kisok' },
+    { match: /stand.*platform|weight/i, key: 'errors/stand_on_the_kisok' },
     // Height not detected
-    { match: /height|measuring.*height/i,                  key: 'errors/fight_aligned_on_the_kisok' },
+    { match: /height|measuring.*height/i, key: 'errors/fight_aligned_on_the_kisok' },
   ];
 
   const showError = async (message, duration = 5000) => {
@@ -948,6 +948,7 @@ export default function BIACalculate({ user, onComplete }) {
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
         console.log("[BIA DEBUG] ELECTRODE error — starting shoes CTA tree");
         const outcome = await runShoesCtaTree();
+        // await playErrorAudio("Please remove your shoes and socks for a complete scan")
         console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
       } else {
         console.warn("[BIA DEBUG] Hardware/generic leg error — skipping leg");
@@ -1721,6 +1722,7 @@ export default function BIACalculate({ user, onComplete }) {
         <ContinueWithShoesModal
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
+          playAudio={playErrorAudio}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1729,6 +1731,7 @@ export default function BIACalculate({ user, onComplete }) {
           onStart={shoesCtaStep === 'ctaB_1st'
             ? shoesCtaHandlersRef.current.onCtaB1stStart
             : shoesCtaHandlersRef.current.onCtaB2ndStart}
+          playAudio={playErrorAudio}
         />
       )}
       {shoesCtaStep === 'ctaC' && (
@@ -1736,6 +1739,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaCYes}
           onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
+          playAudio={playErrorAudio}
         />
       )}
       {shoesCtaStep === 'ctaD' && (
@@ -1743,6 +1747,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaDYes}
           onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
+          playAudio={playErrorAudio}
           t={t}
         />
       )}
@@ -1752,7 +1757,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
-const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
+const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
   const [remaining, setRemaining] = React.useState(10);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
@@ -1771,6 +1776,9 @@ const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
   };
 
   React.useEffect(() => {
+    // Play the shoes/barefoot prompt audio on mount
+    playAudio?.('errors/remove_your_shoes_and_socks');
+
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
         if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
@@ -1807,7 +1815,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
 };
 
 /* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
+const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
   const [remaining, setRemaining] = React.useState(timeoutSecs);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
@@ -1820,6 +1828,9 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
   };
 
   React.useEffect(() => {
+    // Play the "press start when ready" audio on mount
+    playAudio?.('errors/press_start_once_you_are_ready');
+
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
         if (p <= 1) { clearInterval(intervalRef.current); return 0; }

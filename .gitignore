@@ -9,3 +9,5 @@ out
 /.agent
 /src/Divided_Attention
 build-v0
+.agents/
+skills-lock.json
