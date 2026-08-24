@@ -110,7 +110,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Centralized Retry Configuration
   const RETRY_CONFIG = {
-    WEIGHT_HEIGHT: 2, // Total attempts for Phase 1 (Weight & Height)
+    WEIGHT_HEIGHT: 8, // Total attempts for Phase 1 (Weight & Height)
     ARM_50KHZ: 3,     // Attempts for Arm 50kHz
     IMPEDANCE_20KHZ: 2 // Attempts for 20kHz impedance
   };
@@ -999,7 +999,7 @@ export default function BIACalculate({ user, onComplete }) {
       console.log("[BIA DEBUG] lastLegErrorCodeRef after sleep:", lastLegErrorCodeRef.current);
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
         console.log("[BIA DEBUG] ELECTRODE error — awaiting 'remove shoes/socks' audio then showing CTA tree");
-        await playErrorAudio('errors/remove_your_shoes_and_socks');
+        // await playErrorAudio('errors/remove_your_shoes_and_socks');
         const outcome = await runShoesCtaTree();
         console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
       } else {
@@ -1784,6 +1784,7 @@ export default function BIACalculate({ user, onComplete }) {
             ? shoesCtaHandlersRef.current.onCtaB1stStart
             : shoesCtaHandlersRef.current.onCtaB2ndStart}
           playAudio={playErrorAudio}
+          t={t}
         />
       )}
       {shoesCtaStep === 'ctaC' && (
@@ -1810,7 +1811,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
 const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
-  // const [remaining, setRemaining] = React.useState(10);
+  const [remaining, setRemaining] = React.useState(15);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
@@ -1828,20 +1829,20 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
     onYes?.();
   };
 
-  // React.useEffect(() => {
-  //   // Play the shoes/barefoot prompt audio on mount
-  //   playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
-  //     setIsAudioPlaying(false);
-  //   });
+  React.useEffect(() => {
+    // Play the shoes/barefoot prompt audio on mount
+    playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
 
-  //   intervalRef.current = setInterval(() => {
-  //     setRemaining((p) => {
-  //       if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
-  //       return p - 1;
-  //     });
-  //   }, 1000);
-  //   return () => clearInterval(intervalRef.current);
-  // }, []);
+    intervalRef.current = setInterval(() => {
+      setRemaining((p) => {
+        if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
+        return p - 1;
+      });
+    }, 1000);
+    return () => clearInterval(intervalRef.current);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1852,7 +1853,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
             It looks like you have your shoes/socks on.<br />Would you like to continue with them?
           </h2>
-          {/* <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p> */}
+          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
           <div className="flex gap-10">
             <button onClick={fireNo} disabled={isAudioPlaying}
               className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -1870,7 +1871,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
 };
 
 /* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
+const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio,t }) => {
   const [remaining, setRemaining] = React.useState(timeoutSecs);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
@@ -1905,8 +1906,8 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Remove your socks and shoes,<br />then press Start when you're ready.
-          </h2>
+           { t("errors.press_start_ready")
+}          </h2>
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
           <button onClick={fireStart} disabled={isAudioPlaying}
             className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
