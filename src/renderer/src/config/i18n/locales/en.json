@@ -213,7 +213,9 @@
     "redirect_home_label": "Going to home",
     "retrying": "Retrying",
     "last_retry_title": "Oops! I cannot detect you",
-    "suhi_coordinator_contact":"Please contact your SUHI Kiosk Coordinator for assistance"
+    "suhi_coordinator_contact":"Please contact your SUHI Kiosk Coordinator for assistance",
+    "different_user_found":"Different User Found",
+    "different_user_found_desc":"Looks like someone appeared in front of the kiosk!"
   },
   "smoothieSlash": {
     "beAware": {

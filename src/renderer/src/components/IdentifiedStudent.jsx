@@ -8,6 +8,7 @@ import KeyboardContainer from "./ui/KeyboardContainer"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
+import { useKioskAudio } from "../hooks/useKioskAudio"
 
 const STEPS = ["suhi_id"]
 const RECORD_DURATION_S = 5
@@ -138,6 +139,7 @@ const IdentifyStudent = () => {
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const { t } = useTranslation()
+    const { play: playAudio } = useKioskAudio()
 
     const candidates = useSelector((state) => state.common.candidates)
     const user = useSelector((state) => state.common.user)
@@ -201,10 +203,14 @@ const IdentifyStudent = () => {
         if (matches.length === 0) {
             retryRef.current += 1
             if (retryRef.current < MAX_RETRIES) {
+                // Play "invalid SUHI ID" audio feedback
+                playAudio('errors/invalid_suhi_id_coordinate')
                 setError("No match found. Please check and try again.")
                 setLoading(false)
                 return
             }
+            // Max retries reached — play redirect audio then show fullscreen error
+            playAudio('errors/let_try_suhi_id')
             setNoMatchError(true)
             setLoading(false)
             return

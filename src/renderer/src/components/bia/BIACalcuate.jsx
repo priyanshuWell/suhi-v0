@@ -430,11 +430,11 @@ export default function BIACalculate({ user, onComplete }) {
     // Arm — first attempt: hold handles firmly with palm
     { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     // Arm — retry attempt: keep holding / trying again
-    { match: /trying again|keep holding|we.?re trying/i, key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
     // Arm — hand + body still (3rd attempt phrasing)
     { match: /both hands.*still|stay still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
     // Impedance — hold handles and keep still
-    { match: /handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /handles.*still|keep still/i, key: 'errors/stand_fully_on_the_platform' },
     // Max retry reached
     { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
     // Stand on kiosk / nobody on scale
@@ -442,7 +442,7 @@ export default function BIACalculate({ user, onComplete }) {
     // Weight not detected
     { match: /stand.*platform|weight/i, key: 'errors/stand_on_the_kisok' },
     // Height not detected
-    { match: /height|measuring.*height/i, key: 'errors/fight_aligned_on_the_kisok' },
+    { match: /height|measuring.*height/i, key: 'errors/stand_fully_on_the_platform' },
   ];
 
   const showError = async (message, duration = 5000) => {
@@ -1714,7 +1714,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
       {showDifferentUserModal && (
-        <NoActivityFrame title="Different User Found" description="Looks like someone appeared in front of the kiosk! " />
+        <NoActivityFrame title={t("errors.different_user_found")} description={t("errors.different_user_found_desc")} />
       )}
 
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
