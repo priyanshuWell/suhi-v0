@@ -255,7 +255,14 @@ export default function BIACalculate({ user, onComplete }) {
             shouldShow = true;
             errorTriggered.current.leg = true;
           } else if (payload.source === 'ARM' && payload.attempt === ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
-            shouldShow = true;
+            // NOTE: ARM errors are intentionally NOT shown here.
+            // runArm50kHz_v1 / runPhase3_NoLeg handle arm retry messages explicitly
+            // with correct durations and audio. Calling showError here creates a race
+            // condition: the new play() call inside a subsequent showError invocation
+            // calls settleCurrent(false) on useKioskAudio, which immediately resolves
+            // the in-flight audioPromise and collapses Promise.all prematurely —
+            // causing the error banner to vanish before audio finishes.
+            // shouldShow = true;
             errorTriggered.current.arm = true;
           } else if (payload.source === 'HEIGHT' && payload.attempt === ATTEMPT_THRESHOLDS.height && !errorTriggered.current.height) {
             shouldShow = true;
@@ -446,6 +453,18 @@ export default function BIACalculate({ user, onComplete }) {
   const showErrorLockRef = React.useRef(Promise.resolve());
   const currentErrorMsgRef = React.useRef(null);
 
+  // NEW — single serialization point for the shared audio channel.
+  // Every playErrorAudio() call in this component must go through this,
+  // so no caller can interrupt another's clip mid-playback and cause
+  // showError's Promise.all to resolve early.
+  const audioQueueRef = React.useRef(Promise.resolve());
+  const queueAudio = React.useCallback((key) => {
+    const run = () => playErrorAudio(key);
+    const next = audioQueueRef.current.then(run, run); // run even if prior errored
+    audioQueueRef.current = next;
+    return next;
+  }, [playErrorAudio]);
+
   const showError = (message, duration = 7000) => {
     // If the exact same error message is currently playing, skip duplicate call
     if (currentErrorMsgRef.current === message) {
@@ -460,11 +479,10 @@ export default function BIACalculate({ user, onComplete }) {
         title: message,
         canRetry: false,
       });
-      // Auto-play the matching error audio — overlap-safe via useKioskAudio hook
       const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
       let audioPromise = Promise.resolve();
       if (audioEntry) {
-        audioPromise = playErrorAudio(audioEntry.key);
+        audioPromise = queueAudio(audioEntry.key); // ← was playErrorAudio(audioEntry.key)
       }
       // Wait for BOTH the display duration AND the audio playback to complete
       await Promise.all([sleep(duration), audioPromise]);
@@ -476,14 +494,13 @@ export default function BIACalculate({ user, onComplete }) {
     showErrorLockRef.current = nextLock;
     return nextLock;
   };
-
   /**
    * Shows the animated "Stand Properly" modal for 10 seconds with a live countdown,
    * then hides it and resolves — caller then retries height measurement.
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
-    playErrorAudio('errors/stay_still_i_am_measuring_height');
+    queueAudio('errors/stay_still_i_am_measuring_height');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
@@ -567,7 +584,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showStandOnKioskPrompt = () => {
     console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
-    playErrorAudio('errors/stand_on_the_kisok');
+    queueAudio('errors/stand_on_the_kisok');
     setShowStandOnKioskModal(true);
     return new Promise((resolve) => {
       standOnKioskResolverRef.current = resolve;
@@ -1727,7 +1744,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
       {showStandOnKioskModal && (
-        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
+        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={queueAudio} />
       )}
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
@@ -1740,7 +1757,7 @@ export default function BIACalculate({ user, onComplete }) {
         <ContinueWithShoesModal
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
-          playAudio={playErrorAudio}
+          playAudio={queueAudio}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1749,7 +1766,7 @@ export default function BIACalculate({ user, onComplete }) {
           onStart={shoesCtaStep === 'ctaB_1st'
             ? shoesCtaHandlersRef.current.onCtaB1stStart
             : shoesCtaHandlersRef.current.onCtaB2ndStart}
-          playAudio={playErrorAudio}
+          playAudio={queueAudio}
         />
       )}
       {shoesCtaStep === 'ctaC' && (
@@ -1757,7 +1774,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaCYes}
           onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
-          playAudio={playErrorAudio}
+          playAudio={queueAudio}
         />
       )}
       {shoesCtaStep === 'ctaD' && (
@@ -1765,7 +1782,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaDYes}
           onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
-          playAudio={playErrorAudio}
+          playAudio={queueAudio}
           t={t}
         />
       )}
@@ -1776,7 +1793,7 @@ export default function BIACalculate({ user, onComplete }) {
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
 const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
-  const [remaining, setRemaining] = React.useState(10);
+  // const [remaining, setRemaining] = React.useState(10);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
   const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
@@ -1794,20 +1811,20 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
     onYes?.();
   };
 
-  React.useEffect(() => {
-    // Play the shoes/barefoot prompt audio on mount
-    playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
-      setIsAudioPlaying(false);
-    });
+  // React.useEffect(() => {
+  //   // Play the shoes/barefoot prompt audio on mount
+  //   playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
+  //     setIsAudioPlaying(false);
+  //   });
 
-    intervalRef.current = setInterval(() => {
-      setRemaining((p) => {
-        if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
-        return p - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, []);
+  //   intervalRef.current = setInterval(() => {
+  //     setRemaining((p) => {
+  //       if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
+  //       return p - 1;
+  //     });
+  //   }, 1000);
+  //   return () => clearInterval(intervalRef.current);
+  // }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -1818,7 +1835,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
             It looks like you have your shoes/socks on.<br />Would you like to continue with them?
           </h2>
-          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
+          {/* <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p> */}
           <div className="flex gap-10">
             <button onClick={fireNo} disabled={isAudioPlaying}
               className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
