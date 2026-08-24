@@ -122,19 +122,20 @@ export default function BIACalculate({ user, onComplete }) {
 
 
   // Error messages map
+  // Values are i18n keys — showError calls t(key) internally.
   const ERROR_MESSAGES = {
-    legImpedance_noWeight: "Stand fully on the platform and stay still",
-    legImpedance_hasWeight: "Please make sure you are barefoot",
-    weight: "Stand fully on the platform and stay still",
-    height: "Stay still, I am measuring your height",
-    armImpedance: "Hold both handles firmly with your palm to continue the scan",
-    armRetry: "We're trying again. Keep holding the handles firmly",
-    handAndBody: "Keep both hands on the handles and stay still",
-    impedance20: "Hold both handles firmly with your palm to continue the scan",
-    impedance100: "Hold both handles firmly with your palm to continue the scan",
-    maxRetryReached: "I couldn't get stable readings, moving to next scan",
-    HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected",
-    legImpedanceMissing: "Please remove your shoes and socks for a complete scan"
+    legImpedance_noWeight: 'errors.weight_not_detected',
+    legImpedance_hasWeight: 'errors.barefoot_required',
+    weight: 'errors.weight_not_detected',
+    height: 'errors.height_not_detected',
+    armImpedance: 'errors.bia_hand_not_detected',
+    armRetry: 'errors.bia_retry',
+    handAndBody: 'errors.bia_hand_body_not_detected',
+    impedance20: 'errors.bia_hand_not_detected',
+    impedance100: 'errors.bia_hand_not_detected',
+    maxRetryReached: 'errors.bia_max_retries',
+    HEIGHT_PORT_NOT_CONNECTED: 'errors.height_port_not_connected',
+    legImpedanceMissing: 'errors.leg_impedance_missing',
   };
 
   const screenConfig = {
@@ -428,25 +429,33 @@ export default function BIACalculate({ user, onComplete }) {
   //   }
   // };
 
-  // Auto-maps a userMessage string to the appropriate error audio key.
-  // Pattern order matters — more specific patterns must come first.
-  // Keys map to filenames inside assets/audio/en/errors/ (without .mp3 extension).
-  const ERROR_AUDIO_KEY_MAP = [
-    // Shoes / barefoot prompt
+
+  // i18n key → audio file key (used when showError receives an ERROR_MESSAGES key).
+  // No regex fragility — lookup is a direct object property access.
+  const ERROR_AUDIO_KEY_MAP = {
+    'errors.leg_impedance_missing': 'errors/remove_your_shoes_and_socks',
+    'errors.barefoot_required': 'errors/remove_your_shoes_and_socks',
+    'errors.height_not_detected': 'errors/stay_still_i_am_measuring_height',
+    'errors.weight_not_detected': 'errors/stand_fully_on_the_platform',
+    'errors.hw_not_detected': 'errors/stand_on_the_kisok',
+    'errors.bia_retry': 'errors/tring_again_keep_holding',
+    'errors.bia_hand_not_detected': 'errors/hold_both_handles_firmly_with_your_palm',
+    'errors.bia_impedance_not_detected': 'errors/hold_both_handles_firmly_with_your_palm',
+    'errors.bia_rods_incorrect': 'errors/hold_both_handles_firmly_to_continue',
+    'errors.bia_hand_body_not_detected': 'errors/hold_both_handles_firmly_to_continue',
+    'errors.bia_max_retries': 'errors/oops_couldnt_detect_you_try_again',
+  };
+
+  // Regex fallback — used only for raw strings arriving from the main process
+  // via IPC (payload.userMessage). Order matters: more specific first. (For hardware-related errors)
+  const ERROR_AUDIO_REGEX_MAP = [
     { match: /barefoot|shoes|socks/i, key: 'errors/remove_your_shoes_and_socks' },
-    // Height not detected
     { match: /height|measuring.*height/i, key: 'errors/stay_still_i_am_measuring_height' },
-    // Weight / platform not detected
     { match: /platform|weight|stand fully/i, key: 'errors/stand_fully_on_the_platform' },
-    // Stand on kiosk / nobody on scale
     { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kisok' },
-    // Arm — first attempt: hold handles firmly with palm
-    { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
-    // Arm — retry attempt: keep holding / trying again
     { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
-    // Arm — hand + body still / hold handles to continue
+    { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     { match: /both hands.*handles|both hands.*still|handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
-    // Max retry reached
     { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
   ];
 
@@ -459,24 +468,38 @@ export default function BIACalculate({ user, onComplete }) {
   // showError's Promise.all to resolve early.
   const audioQueueRef = React.useRef(Promise.resolve());
 
-  const showError = (message, duration = 7000) => {
-    // If the exact same error message is currently playing, skip duplicate call
-    if (currentErrorMsgRef.current === message) {
-      console.log(`[BIA DEBUG] Skipping duplicate active error: "${message}"`);
+  /**
+   * showError(msgKeyOrRaw, duration?)
+   *
+   * Accepts either:
+   *   - An i18n key (e.g. 'errors.bia_retry') → translates with t(), looks up
+   *     audio via ERROR_AUDIO_KEY_MAP (fast object lookup, no regex).
+   *   - A raw string from the main process (IPC payload.userMessage) → displays
+   *     as-is, looks up audio via ERROR_AUDIO_REGEX_MAP (regex fallback).
+   */
+  const showError = (msgKeyOrRaw, duration = 7000) => {
+    if (currentErrorMsgRef.current === msgKeyOrRaw) {
+      console.log(`[BIA DEBUG] Skipping duplicate active error: "${msgKeyOrRaw}"`);
       return showErrorLockRef.current;
     }
 
     const run = async () => {
-      console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
-      currentErrorMsgRef.current = message;
-      setErrorState({
-        title: message,
-        canRetry: false,
-      });
-      const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
+      console.log(`[BIA DEBUG] Showing error: "${msgKeyOrRaw}" for ${duration}ms`);
+      currentErrorMsgRef.current = msgKeyOrRaw;
+
+      // Resolve display text + audio key based on whether we got an i18n key or raw string
+      const isI18nKey = Object.prototype.hasOwnProperty.call(ERROR_AUDIO_KEY_MAP, msgKeyOrRaw)
+        || msgKeyOrRaw.startsWith('errors.');
+      const displayMessage = isI18nKey ? t(msgKeyOrRaw) : msgKeyOrRaw;
+      const audioKey = isI18nKey
+        ? ERROR_AUDIO_KEY_MAP[msgKeyOrRaw]
+        : ERROR_AUDIO_REGEX_MAP.find((e) => e.match.test(msgKeyOrRaw))?.key;
+
+      setErrorState({ title: displayMessage, canRetry: false });
+
       let audioPromise = Promise.resolve();
-      if (audioEntry) {
-        audioPromise = playErrorAudio(audioEntry.key); // ← was playErrorAudio(audioEntry.key)
+      if (audioKey) {
+        audioPromise = playErrorAudio(audioKey);
       }
       // Wait for BOTH the display duration AND the audio playback to complete
       await Promise.all([sleep(duration), audioPromise]);
@@ -975,8 +998,8 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(300);
       console.log("[BIA DEBUG] lastLegErrorCodeRef after sleep:", lastLegErrorCodeRef.current);
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
-        console.log("[BIA DEBUG] ELECTRODE error — playing 'remove shoes/socks' audio then showing CTA tree");
-        playErrorAudio('errors/remove_your_shoes_and_socks');
+        console.log("[BIA DEBUG] ELECTRODE error — awaiting 'remove shoes/socks' audio then showing CTA tree");
+        await playErrorAudio('errors/remove_your_shoes_and_socks');
         const outcome = await runShoesCtaTree();
         console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
       } else {

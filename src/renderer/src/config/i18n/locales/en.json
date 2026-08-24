@@ -202,6 +202,8 @@
     "press_start_ready": "Press 'Start' once you are ready.",
     "inactivity_redirect": "I am unable to detect any activity. Redirecting to Homescreen.",
     "leg_impedance_missing": "Please remove your shoes and socks for a complete scan.",
+    "barefoot_required": "Please make sure you are barefoot.",
+    "height_port_not_connected": "Height port is not connected.",
     "bia_initial": "Hold both handles firmly until the scan is complete.",
     "bia_impedance_not_detected": "Hold the handles firmly and keep still.",
     "bia_retry": "We're trying again. Keep holding the handles firmly.",
