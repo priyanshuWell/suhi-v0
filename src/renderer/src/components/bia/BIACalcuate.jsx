@@ -427,22 +427,20 @@ export default function BIACalculate({ user, onComplete }) {
   const ERROR_AUDIO_KEY_MAP = [
     // Shoes / barefoot prompt
     { match: /barefoot|shoes|socks/i, key: 'errors/remove_your_shoes_and_socks' },
+    // Height not detected
+    { match: /height|measuring.*height/i, key: 'errors/stay_still_i_am_measuring_height' },
+    // Weight / platform not detected
+    { match: /platform|weight|stand fully/i, key: 'errors/stand_fully_on_the_platform' },
+    // Stand on kiosk / nobody on scale
+    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kisok' },
     // Arm — first attempt: hold handles firmly with palm
     { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     // Arm — retry attempt: keep holding / trying again
     { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
-    // Arm — hand + body still (3rd attempt phrasing)
-    { match: /both hands.*still|stay still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
-    // Impedance — hold handles and keep still
-    { match: /handles.*still|keep still/i, key: 'errors/stand_fully_on_the_platform' },
+    // Arm — hand + body still / hold handles to continue
+    { match: /both hands.*handles|both hands.*still|handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
     // Max retry reached
     { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
-    // Stand on kiosk / nobody on scale
-    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kisok' },
-    // Weight not detected
-    { match: /stand.*platform|weight/i, key: 'errors/stand_on_the_kisok' },
-    // Height not detected
-    { match: /height|measuring.*height/i, key: 'errors/stand_fully_on_the_platform' },
   ];
 
   const showError = async (message, duration = 5000) => {
@@ -465,7 +463,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
-    playErrorAudio('errors/stay_still_i_am_measuring_height ');
+    playErrorAudio('errors/stay_still_i_am_measuring_height');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
