@@ -443,18 +443,38 @@ export default function BIACalculate({ user, onComplete }) {
     { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
   ];
 
-  const showError = async (message, duration = 5000) => {
-    console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
-    // Auto-play the matching error audio — overlap-safe via useKioskAudio hook
-    const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
-    if (audioEntry) playErrorAudio(audioEntry.key);
-    setErrorState({
-      title: message,
-      canRetry: false,
-    });
-    await sleep(duration);
-    setErrorState(null);
-    return;
+  const showErrorLockRef = React.useRef(Promise.resolve());
+  const currentErrorMsgRef = React.useRef(null);
+
+  const showError = (message, duration = 5000) => {
+    // If the exact same error message is currently playing, skip duplicate call
+    if (currentErrorMsgRef.current === message) {
+      console.log(`[BIA DEBUG] Skipping duplicate active error: "${message}"`);
+      return showErrorLockRef.current;
+    }
+
+    const run = async () => {
+      console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
+      currentErrorMsgRef.current = message;
+      setErrorState({
+        title: message,
+        canRetry: false,
+      });
+      // Auto-play the matching error audio — overlap-safe via useKioskAudio hook
+      const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
+      let audioPromise = Promise.resolve();
+      if (audioEntry) {
+        audioPromise = playErrorAudio(audioEntry.key);
+      }
+      // Wait for BOTH the display duration AND the audio playback to complete
+      await Promise.all([sleep(duration), audioPromise]);
+      setErrorState(null);
+      currentErrorMsgRef.current = null;
+    };
+
+    const nextLock = showErrorLockRef.current.then(run, run);
+    showErrorLockRef.current = nextLock;
+    return nextLock;
   };
 
   /**
@@ -1225,12 +1245,12 @@ export default function BIACalculate({ user, onComplete }) {
     if (ok1) return true;
 
     // Attempt 2 — show retry-specific error first
-    await showError(ERROR_MESSAGES.armRetry, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 5000);
     const ok2 = await tryArm50kHz("Arm-v1-attempt-2", 1);
     if (ok2) return true;
 
     // Attempt 3 — show hand+body error first
-    await showError(ERROR_MESSAGES.handAndBody, 3000);
+    await showError(ERROR_MESSAGES.handAndBody, 5000);
     const ok3 = await tryArm50kHz("Arm-v1-attempt-3", 2);
     return ok3;
   };
@@ -1263,7 +1283,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Show error before attempt 2
-    await showError(ERROR_MESSAGES.armRetry, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 5000);
 
     // Attempt 2
     const ok2 = await try20kHz("20kHz-retry-2");
@@ -1310,7 +1330,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 2 — show error first
-    await showError(ERROR_MESSAGES.armRetry, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 5000);
     const ok2 = await tryArm50kHz("NoLeg-arm-attempt-2", 1);
     if (ok2) {
       await finishWithImcomplete("noleg_arm50k_success_retry2");
@@ -1318,7 +1338,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 3 — show error first
-    await showError(ERROR_MESSAGES.handAndBody, 3000);
+    await showError(ERROR_MESSAGES.handAndBody, 5000);
     const ok3 = await tryArm50kHz("NoLeg-arm-attempt-3", 2);
     if (ok3) {
       await finishWithImcomplete("noleg_arm50k_success_retry3");
