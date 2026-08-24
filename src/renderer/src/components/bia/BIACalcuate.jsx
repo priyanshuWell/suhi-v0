@@ -458,12 +458,6 @@ export default function BIACalculate({ user, onComplete }) {
   // so no caller can interrupt another's clip mid-playback and cause
   // showError's Promise.all to resolve early.
   const audioQueueRef = React.useRef(Promise.resolve());
-  const queueAudio = React.useCallback((key) => {
-    const run = () => playErrorAudio(key);
-    const next = audioQueueRef.current.then(run, run); // run even if prior errored
-    audioQueueRef.current = next;
-    return next;
-  }, [playErrorAudio]);
 
   const showError = (message, duration = 7000) => {
     // If the exact same error message is currently playing, skip duplicate call
@@ -482,7 +476,7 @@ export default function BIACalculate({ user, onComplete }) {
       const audioEntry = ERROR_AUDIO_KEY_MAP.find((e) => e.match.test(message));
       let audioPromise = Promise.resolve();
       if (audioEntry) {
-        audioPromise = queueAudio(audioEntry.key); // ← was playErrorAudio(audioEntry.key)
+        audioPromise = playErrorAudio(audioEntry.key); // ← was playErrorAudio(audioEntry.key)
       }
       // Wait for BOTH the display duration AND the audio playback to complete
       await Promise.all([sleep(duration), audioPromise]);
@@ -500,7 +494,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
-    queueAudio('errors/stay_still_i_am_measuring_height');
+    playErrorAudio('errors/stay_still_i_am_measuring_height');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
@@ -584,7 +578,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showStandOnKioskPrompt = () => {
     console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
-    queueAudio('errors/stand_on_the_kisok');
+    playErrorAudio('errors/stand_on_the_kisok');
     setShowStandOnKioskModal(true);
     return new Promise((resolve) => {
       standOnKioskResolverRef.current = resolve;
@@ -1744,7 +1738,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
       {showStandOnKioskModal && (
-        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={queueAudio} />
+        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
       )}
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
@@ -1757,7 +1751,7 @@ export default function BIACalculate({ user, onComplete }) {
         <ContinueWithShoesModal
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
-          playAudio={queueAudio}
+          playAudio={playErrorAudio}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1766,7 +1760,7 @@ export default function BIACalculate({ user, onComplete }) {
           onStart={shoesCtaStep === 'ctaB_1st'
             ? shoesCtaHandlersRef.current.onCtaB1stStart
             : shoesCtaHandlersRef.current.onCtaB2ndStart}
-          playAudio={queueAudio}
+          playAudio={playErrorAudio}
         />
       )}
       {shoesCtaStep === 'ctaC' && (
@@ -1774,7 +1768,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaCYes}
           onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
-          playAudio={queueAudio}
+          playAudio={playErrorAudio}
         />
       )}
       {shoesCtaStep === 'ctaD' && (
@@ -1782,7 +1776,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaDYes}
           onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
-          playAudio={queueAudio}
+          playAudio={playErrorAudio}
           t={t}
         />
       )}
