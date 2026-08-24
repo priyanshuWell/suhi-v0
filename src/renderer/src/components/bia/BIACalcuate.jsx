@@ -465,7 +465,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
-    playErrorAudio('errors/height_not_detected');
+    playErrorAudio('errors/stay_still_i_am_measuring_height ');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
@@ -549,7 +549,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showStandOnKioskPrompt = () => {
     console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
-    playErrorAudio('errors/stand_on_kiosk');
+    playErrorAudio('errors/stand_on_the_kisok');
     setShowStandOnKioskModal(true);
     return new Promise((resolve) => {
       standOnKioskResolverRef.current = resolve;
