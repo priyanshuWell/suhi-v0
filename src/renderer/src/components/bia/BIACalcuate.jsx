@@ -446,7 +446,7 @@ export default function BIACalculate({ user, onComplete }) {
   const showErrorLockRef = React.useRef(Promise.resolve());
   const currentErrorMsgRef = React.useRef(null);
 
-  const showError = (message, duration = 5000) => {
+  const showError = (message, duration = 7000) => {
     // If the exact same error message is currently playing, skip duplicate call
     if (currentErrorMsgRef.current === message) {
       console.log(`[BIA DEBUG] Skipping duplicate active error: "${message}"`);
@@ -822,7 +822,7 @@ export default function BIACalculate({ user, onComplete }) {
       // ── Scenario: W❌ H✅ — only weight missing ───────────────────────────
       else if (!weightOk) {
         console.warn('[BIA DEBUG] Weight only failed — showing ErrorAlert 3s');
-        await showError(ERROR_MESSAGES.weight, 3000);
+        await showError(ERROR_MESSAGES.weight, 6000);
         console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (weight retry): W+H + F`);
       }
       // ── Scenario: W❌ H❌ F❌ — nobody on kiosk, no face ─────────────────
@@ -1245,12 +1245,12 @@ export default function BIACalculate({ user, onComplete }) {
     if (ok1) return true;
 
     // Attempt 2 — show retry-specific error first
-    await showError(ERROR_MESSAGES.armRetry, 5000);
+    await showError(ERROR_MESSAGES.armRetry, 8000);
     const ok2 = await tryArm50kHz("Arm-v1-attempt-2", 1);
     if (ok2) return true;
 
     // Attempt 3 — show hand+body error first
-    await showError(ERROR_MESSAGES.handAndBody, 5000);
+    await showError(ERROR_MESSAGES.handAndBody, 8000);
     const ok3 = await tryArm50kHz("Arm-v1-attempt-3", 2);
     return ok3;
   };
