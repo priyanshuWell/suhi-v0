@@ -14,16 +14,17 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
     const [remaining, setRemaining] = useState(timeoutSecs);
     const intervalRef = useRef(null);
     const firedRef = useRef(false); // prevent double-fire
+    const [isAudioPlaying, setIsAudioPlaying] = useState(true);
 
     const fireNo = () => {
-        if (firedRef.current) return;
+        if (firedRef.current || isAudioPlaying) return;
         firedRef.current = true;
         clearInterval(intervalRef.current);
         onNo?.();
     };
 
     const fireYes = () => {
-        if (firedRef.current) return;
+        if (firedRef.current || isAudioPlaying) return;
         firedRef.current = true;
         clearInterval(intervalRef.current);
         onYes?.();
@@ -31,7 +32,9 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
 
     useEffect(() => {
         // Play the "are you still there?" audio on mount
-        playAudio?.('errors/are_you_still_there');
+        playAudio?.('errors/are_you_still_there')?.then?.(() => {
+            setIsAudioPlaying(false);
+        });
 
         intervalRef.current = setInterval(() => {
             setRemaining((prev) => {
@@ -98,24 +101,10 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
 
                     {/* Buttons */}
                     <div className="flex gap-10">
-                        {/* <button
-              onClick={fireNo}
-              className="
-                w-[200px] h-[80px]
-                rounded-[30px]
-                border-2 border-white/30
-                bg-white/5 backdrop-blur-sm
-                text-white text-2xl font-anta
-                hover:bg-white/10 hover:border-white/50
-                active:scale-[0.98]
-                transition-all duration-200
-              "
-            >
-              No
-            </button> */}
                         <button
                             onClick={fireYes}
-                            className="
+                            disabled={isAudioPlaying}
+                            className={`
                 w-[200px] h-[80px]
                 rounded-[30px]
                 border-2 border-white/50
@@ -125,7 +114,8 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
                 hover:border-white
                 active:scale-[0.98]
                 transition-all duration-200
-              "
+                ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}
+              `}
                         >
                             Yes
                         </button>

@@ -1707,7 +1707,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
       {showStandOnKioskModal && (
-        <StandOnKioskModal onRetry={handleStandOnKioskRetry} />
+        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
       )}
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
@@ -1759,15 +1759,16 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
   const [remaining, setRemaining] = React.useState(10);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   const fireNo = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onNo?.();
   };
   const fireYes = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onYes?.();
@@ -1775,7 +1776,9 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
 
   React.useEffect(() => {
     // Play the shoes/barefoot prompt audio on mount
-    playAudio?.('errors/remove_your_shoes_and_socks');
+    playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
 
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
@@ -1797,12 +1800,12 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
           </h2>
           <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
           <div className="flex gap-10">
-            <button onClick={fireNo}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200">
+            <button onClick={fireNo} disabled={isAudioPlaying}
+              className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
               🦶 No
             </button>
-            <button onClick={fireYes}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
+            <button onClick={fireYes} disabled={isAudioPlaying}
+              className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
               👟 Yes
             </button>
           </div>
@@ -1817,9 +1820,10 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
   const [remaining, setRemaining] = React.useState(timeoutSecs);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   const fireStart = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onStart?.();
@@ -1827,7 +1831,9 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
 
   React.useEffect(() => {
     // Play the "press start when ready" audio on mount
-    playAudio?.('errors/press_start_once_you_are_ready');
+    playAudio?.('errors/press_start_once_you_are_ready')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
 
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
@@ -1848,8 +1854,8 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio }) => {
             Remove your socks and shoes,<br />then press Start when you're ready.
           </h2>
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
-          <button onClick={fireStart}
-            className="w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
+          <button onClick={fireStart} disabled={isAudioPlaying}
+            className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
             Start
           </button>
         </div>
@@ -2004,7 +2010,15 @@ const StandProperlyModal = ({ countdown }) => {
 };
 
 /* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
-const StandOnKioskModal = ({ onRetry, title = 'BIA Error', description = 'Please step onto the kiosk platform so we can measure your weight and height.' }) => {
+const StandOnKioskModal = ({ onRetry, title = 'BIA Error', description = 'Please step onto the kiosk platform so we can measure your weight and height.', playAudio }) => {
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
+
+  React.useEffect(() => {
+    playAudio?.('errors/stand_on_the_kisok')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -2081,7 +2095,7 @@ const StandOnKioskModal = ({ onRetry, title = 'BIA Error', description = 'Please
             {description}
           </p>
 
-          <BlackGradientButton onClick={onRetry} className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta">
+          <BlackGradientButton onClick={onRetry} disabled={isAudioPlaying} className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta">
             Retry
           </BlackGradientButton>
         </div>

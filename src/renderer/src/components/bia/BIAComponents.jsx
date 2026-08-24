@@ -574,6 +574,8 @@ export const BIAComponent = ({
         <audio
           ref={audioRef}
           onEnded={handleAudioEnd}
+          onPause={() => setIsAudioPlaying(false)}
+          onError={() => setIsAudioPlaying(false)}
           onPlay={() => setIsAudioPlaying(true)}
         >
           <source src={getAudioPath(screenType)} type="audio/mpeg" />
@@ -669,12 +671,13 @@ export const BIAComponent = ({
           heightValue={heightValue}
           weightValue={weightValue}
           onNextClick={onNextClick}
+          isAudioPlaying={isAudioPlaying}
         />
       )}
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">
-          <BlueGradientButton onClick={onNextVoiceClick}>
+          <BlueGradientButton onClick={onNextVoiceClick} disabled={isAudioPlaying}>
             {t("common.next")}
           </BlueGradientButton>
         </div>
