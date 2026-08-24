@@ -31,6 +31,18 @@ const LoginSuhi = () => {
   const [photoLoading, setPhotoLoading] = useState(false)
   const retryRef = useRef(0)
   const photoDebounceRef = useRef(null)
+  const errorAlertTimerRef = useRef(null)
+
+  // Auto-dismiss the ErrorAlert after 4 s — ErrorAlert no longer self-dismisses;
+  // the parent (us) is responsible for setting visible=false.
+  useEffect(() => {
+    if (!showErrorAlert) return
+    clearTimeout(errorAlertTimerRef.current)
+    errorAlertTimerRef.current = setTimeout(() => {
+      setShowErrorAlert(false)
+    }, 4000)
+    return () => clearTimeout(errorAlertTimerRef.current)
+  }, [showErrorAlert])
 
   const isButtonDisabled = !suhiId.trim() || loading
 

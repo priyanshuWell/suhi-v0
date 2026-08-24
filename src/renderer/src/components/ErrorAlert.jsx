@@ -1,37 +1,54 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
+/**
+ * ErrorAlert
+ *
+ * Displays a full-screen error banner. Lifecycle is entirely controlled by the
+ * parent via the `visible` prop — this component does NOT self-dismiss.
+ *
+ * When `visible` flips true  → slide in
+ * When `visible` flips false → play 800ms slide-out animation, then hide
+ *
+ * Why no internal timer? The parent (`showError` in BIACalcuate.jsx) already
+ * awaits Promise.all([sleep(duration), audioPromise]) before setting
+ * errorState=null, so the banner stays up for whichever is longer — the
+ * minimum display time OR the audio clip. Having a 3 s internal timer here
+ * caused the banner to vanish (and call onClose) while audio was still playing.
+ */
 export default function ErrorAlert({
   title,
   description,
   visible,
   onClose,
   onRetry,
-  autoRetryDelay = 3000
 }) {
+  // true  = banner is mounted and visible in the DOM
+  // false = hidden (either never shown, or exit animation finished)
+  const [isMounted, setIsMounted] = useState(false)
   const [isExiting, setIsExiting] = useState(false)
+  const exitTimerRef = useRef(null)
 
   useEffect(() => {
-    if (!visible) return
-
-    // Auto-dismiss timer
-    const holdTimer = setTimeout(() => {
-      setIsExiting(true)
-    }, autoRetryDelay)
-
-    // Complete exit and trigger callbacks
-    const exitTimer = setTimeout(() => {
+    if (visible) {
+      // Cancel any in-flight exit animation and show immediately
+      clearTimeout(exitTimerRef.current)
       setIsExiting(false)
-      onClose?.()
-      onRetry?.()
-    }, autoRetryDelay + 800) // 800ms for slide-down animation
+      setIsMounted(true)
+    } else {
+      if (!isMounted) return // nothing to animate out
 
-    return () => {
-      clearTimeout(holdTimer)
-      clearTimeout(exitTimer)
+      // Start slide-out, then unmount after animation completes
+      setIsExiting(true)
+      exitTimerRef.current = setTimeout(() => {
+        setIsExiting(false)
+        setIsMounted(false)
+      }, 800) // matches the CSS transition duration
     }
-  }, [visible, autoRetryDelay, onClose, onRetry])
 
-  if (!visible) return null
+    return () => clearTimeout(exitTimerRef.current)
+  }, [visible]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!isMounted) return null
 
   return (
     <div
