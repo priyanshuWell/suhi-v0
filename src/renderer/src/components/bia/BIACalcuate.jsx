@@ -130,8 +130,8 @@ export default function BIACalculate({ user, onComplete }) {
     armImpedance: "Hold both handles firmly with your palm to continue the scan",
     armRetry: "We're trying again. Keep holding the handles firmly",
     handAndBody: "Keep both hands on the handles and stay still",
-    impedance20: "Hold the handles firmly and keep still",
-    impedance100: "Hold the handles firmly and keep still",
+    impedance20: "Hold both handles firmly with your palm to continue the scan",
+    impedance100: "Hold both handles firmly with your palm to continue the scan",
     maxRetryReached: "I couldn't get stable readings, moving to next scan",
     HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected",
     legImpedanceMissing: "Please remove your shoes and socks for a complete scan"
@@ -975,9 +975,9 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(300);
       console.log("[BIA DEBUG] lastLegErrorCodeRef after sleep:", lastLegErrorCodeRef.current);
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
-        console.log("[BIA DEBUG] ELECTRODE error — starting shoes CTA tree");
+        console.log("[BIA DEBUG] ELECTRODE error — playing 'remove shoes/socks' audio then showing CTA tree");
+        playErrorAudio('errors/remove_your_shoes_and_socks');
         const outcome = await runShoesCtaTree();
-        // await playErrorAudio("Please remove your shoes and socks for a complete scan")
         console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
       } else {
         console.warn("[BIA DEBUG] Hardware/generic leg error — skipping leg");
