@@ -248,7 +248,7 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.last_retry_title"),
           description: t("errors.suhi_coordinator_contact"),
-          audio: "",// options
+          audio: "contact_your_kiosk_coordinator",// options
           showButton: true
         }
       ]
@@ -277,7 +277,7 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.last_retry_title"),
           description: t("errors.suhi_coordinator_contact"),
-          audio: "",// options
+          audio: "contact_your_kiosk_coordinator",// options
           showButton: true
         }
       ]
@@ -414,19 +414,13 @@ const VideoCaptureScreen = () => {
           {
             title: t("errors.multiple_faces_detected"),
             description: t("errors.multiple_faces_detected_desc"),
-            audio: "multiple_faces",
+            audio: "multiple_faces_detected",
             showButton: false
           },
           {
             title: t("errors.multiple_faces_detected"),
             description: t("errors.multiple_faces_detected_desc"),
-            audio: "multiple_faces",
-            showButton: false
-          },
-          {
-            title: t("errors.multiple_faces_detected"),
-            description: t("errors.multiple_faces_detected_desc"),
-            audio: "multiple_faces",
+            audio: "multiple_faces_detected",
             showButton: true
           }
         ]
