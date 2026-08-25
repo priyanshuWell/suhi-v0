@@ -205,7 +205,7 @@
     "barefoot_required": "Please make sure you are barefoot.",
     "height_port_not_connected": "Height port is not connected.",
     "bia_initial": "Hold both handles firmly until the scan is complete.",
-    "bia_impedance_not_detected": "Hold the handles firmly and keep still.",
+    "bia_impedance_not_detected": "Hold both handles firmly to continue the scan.",
     "bia_retry": "We're trying again. Keep holding the handles firmly.",
     "bia_hand_not_detected": "Hold both handles firmly with your palm to continue the scan.",
     "bia_hand_body_not_detected": "Keep both hands on the handles and stay still.",
@@ -217,7 +217,9 @@
     "last_retry_title": "Oops! I cannot detect you",
     "suhi_coordinator_contact":"Please contact your SUHI Kiosk Coordinator for assistance",
     "different_user_found":"Different User Found",
-    "different_user_found_desc":"Looks like someone appeared in front of the kiosk!"
+    "different_user_found_desc":"Looks like someone appeared in front of the kiosk!",
+    "bia_error_title": "BIA Error",
+    "moving_to_next_scan": "Moving to Next Scan"
   },
   "smoothieSlash": {
     "beAware": {

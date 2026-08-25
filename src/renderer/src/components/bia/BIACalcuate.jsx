@@ -49,6 +49,10 @@ export default function BIACalculate({ user, onComplete }) {
   const [showStandOnKioskModal, setShowStandOnKioskModal] = useState(false);
   const [showDifferentUserModal, setShowDifferentUserModal] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  // BIA Error CTA — shown when height or impedance retries are exhausted
+  const [showBiaErrorCta, setShowBiaErrorCta] = useState(false);
+  const biaErrorCtaResolverRef = useRef(null);
+  const biaErrorCtaTimerRef = useRef(null);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
   const [shoesCtaStep, setShoesCtaStep] = useState(null);
   const shoesCtaResolverRef = useRef(null);   // resolves 'shoes' | 'barefoot_success' | 'barefoot_fail'
@@ -563,6 +567,38 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  /**
+   * Shows the "BIA Error" NoActivityFrame CTA (max-retry exhausted).
+   * Resolves when the user taps "Moving to Next Scan" OR after 5 seconds,
+   * whichever comes first — then the caller proceeds with skipBIA / finishWithImcomplete / navigate.
+   */
+  const showBiaMaxRetryError = () => {
+    console.log('[BIA DEBUG] Showing BIA max-retry error CTA');
+    // Play the matching audio (non-blocking — the 5 s timer acts as minimum display)
+    playErrorAudio('errors/couldnt_get_stable_reading');
+    setShowBiaErrorCta(true);
+    return new Promise((resolve) => {
+      biaErrorCtaResolverRef.current = resolve;
+      // Auto-resolve after 5 s so the flow never stalls if nobody taps
+      biaErrorCtaTimerRef.current = setTimeout(() => {
+        if (biaErrorCtaResolverRef.current) {
+          biaErrorCtaResolverRef.current();
+          biaErrorCtaResolverRef.current = null;
+        }
+        setShowBiaErrorCta(false);
+      }, 5000);
+    });
+  };
+
+  const handleBiaErrorCtaDismiss = () => {
+    clearTimeout(biaErrorCtaTimerRef.current);
+    setShowBiaErrorCta(false);
+    if (biaErrorCtaResolverRef.current) {
+      biaErrorCtaResolverRef.current();
+      biaErrorCtaResolverRef.current = null;
+    }
+  };
+
   const handleWhNextClick = () => {
     console.log("[BIA DEBUG] whComplete Next button clicked");
     if (whCompleteResolver.current) {
@@ -788,7 +824,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       if (fptUserId && currentUserId && fptUserId !== currentUserId) {
         console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
-        playErrorAudio('errors/different_user');
+        await playErrorAudio('errors/different_user_found');
         setShowDifferentUserModal(true);
         await sleep(5000);
         setShowDifferentUserModal(false);
@@ -876,6 +912,10 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     if (!weightOk || !heightOk) {
+      if (!heightOk) {
+        // Height retries exhausted — show BIA Error CTA before skipping
+        await showBiaMaxRetryError();
+      }
       await skipBIA(`W+H failed after ${RETRY_CONFIG.WEIGHT_HEIGHT} attempts`);
       return;
     }
@@ -1258,8 +1298,9 @@ export default function BIACalculate({ user, onComplete }) {
     const armOk = await runArm50kHz_v1();
 
     if (!armOk) {
-      // Arm completely failed after retries → show leg result
+      // Arm completely failed after retries → show BIA Error CTA then leg result
       console.log("[BIA DEBUG] Arm 50kHz exhausted — showing leg result");
+      await showBiaMaxRetryError();
       await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "Arm 50kHz exhausted, showing leg result", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       await finishWithImcomplete("leg_result_fallback");
       return;
@@ -1337,8 +1378,9 @@ export default function BIACalculate({ user, onComplete }) {
       return;
     }
 
-    // Both retries failed → show 50kHz arm result
+    // Both retries failed → show BIA Error CTA then 50kHz arm result
     console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing 50kHz arm result");
+    await showBiaMaxRetryError();
     await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "20kHz failed after arm 50kHz retries", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     await finishWithImcomplete("arm50k_result_20khz_exhausted");
   };
@@ -1379,8 +1421,9 @@ export default function BIACalculate({ user, onComplete }) {
       return;
     }
 
-    // All failed → move to next screen
+    // All failed → show BIA Error CTA then move to next screen
     console.log("[BIA DEBUG] No-leg path: arm 50kHz exhausted — moving to next screen");
+    await showBiaMaxRetryError();
     await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "No-leg arm 50kHz exhausted", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     const result = await BIAComplete({
       session_id: storeUser?.data?.buffer_id,
@@ -1769,6 +1812,18 @@ export default function BIACalculate({ user, onComplete }) {
         <NoActivityFrame title={t("errors.different_user_found")} description={t("errors.different_user_found_desc")} />
       )}
 
+      {/* BIA Error CTA — max retries exhausted for height or impedance */}
+      {showBiaErrorCta && (
+        <NoActivityFrame
+          variant="no-user"
+          title={t("errors.bia_error_title") || "BIA Error"}
+          description={t("errors.bia_max_retries")}
+          showRetry
+          retryLabel={t("errors.moving_to_next_scan") || "Moving to Next Scan"}
+          onRetry={handleBiaErrorCtaDismiss}
+        />
+      )}
+
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
       {shoesCtaStep === 'ctaA' && (
         <ContinueWithShoesModal
@@ -1871,7 +1926,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
 };
 
 /* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio,t }) => {
+const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
   const [remaining, setRemaining] = React.useState(timeoutSecs);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
@@ -1906,8 +1961,8 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio,t }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-           { t("errors.press_start_ready")
-}          </h2>
+            {t("errors.press_start_ready")
+            }          </h2>
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
           <button onClick={fireStart} disabled={isAudioPlaying}
             className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
