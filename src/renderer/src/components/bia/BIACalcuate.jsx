@@ -132,11 +132,11 @@ export default function BIACalculate({ user, onComplete }) {
     legImpedance_hasWeight: 'errors.barefoot_required',
     weight: 'errors.weight_not_detected',
     height: 'errors.height_not_detected',
-    armImpedance: 'errors.bia_hand_not_detected',
+    armImpedance: 'errors.bia_rods_incorrect',
     armRetry: 'errors.bia_retry',
-    handAndBody: 'errors.bia_hand_body_not_detected',
-    impedance20: 'errors.bia_hand_not_detected',
-    impedance100: 'errors.bia_hand_not_detected',
+    handAndBody: 'errors.bia_rods_incorrect',
+    impedance20: 'errors.bia_rods_incorrect',
+    impedance100: 'errors.bia_rods_incorrect',
     maxRetryReached: 'errors.bia_max_retries',
     HEIGHT_PORT_NOT_CONNECTED: 'errors.height_port_not_connected',
     legImpedanceMissing: 'errors.leg_impedance_missing',
@@ -443,8 +443,8 @@ export default function BIACalculate({ user, onComplete }) {
     'errors.weight_not_detected': 'errors/stand_fully_on_the_platform',
     'errors.hw_not_detected': 'errors/stand_on_the_kisok',
     'errors.bia_retry': 'errors/tring_again_keep_holding',
-    'errors.bia_impedance_not_detected': 'errors/hold_both_handles_firmly_with_your_palm',
-    'errors.bia_max_retries': 'errors/oops_couldnt_detect_you_try_again',
+    'errors.bia_rods_incorrect': 'errors/hold_both_handles_firmly_to_continue',
+    'errors.bia_max_retries': 'errors/couldnt_get_stable_reading',
   };
 
   // Regex fallback — used only for raw strings arriving from the main process
@@ -457,7 +457,7 @@ export default function BIACalculate({ user, onComplete }) {
     { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
     { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     { match: /both hands.*handles|both hands.*still|handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
-    { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/oops_couldnt_detect_you_try_again' },
+    { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/couldnt_get_stable_reading' },
   ];
 
   const showErrorLockRef = React.useRef(Promise.resolve());
@@ -489,12 +489,10 @@ export default function BIACalculate({ user, onComplete }) {
       currentErrorMsgRef.current = msgKeyOrRaw;
 
       // Resolve display text + audio key based on whether we got an i18n key or raw string
-      const isI18nKey = Object.prototype.hasOwnProperty.call(ERROR_AUDIO_KEY_MAP, msgKeyOrRaw)
-        || msgKeyOrRaw.startsWith('errors.');
+      const isI18nKey = msgKeyOrRaw.startsWith('errors.');
       const displayMessage = isI18nKey ? t(msgKeyOrRaw) : msgKeyOrRaw;
-      const audioKey = isI18nKey
-        ? ERROR_AUDIO_KEY_MAP[msgKeyOrRaw]
-        : ERROR_AUDIO_REGEX_MAP.find((e) => e.match.test(msgKeyOrRaw))?.key;
+      const audioKey = ERROR_AUDIO_KEY_MAP[msgKeyOrRaw]
+        || ERROR_AUDIO_REGEX_MAP.find((e) => e.match.test(displayMessage) || e.match.test(msgKeyOrRaw))?.key;
 
       setErrorState({ title: displayMessage, canRetry: false });
 
@@ -821,7 +819,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       if (fptUserId && currentUserId && fptUserId !== currentUserId) {
         console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
-         playErrorAudio('errors/different_user_found');
+        playErrorAudio('errors/different_user_found');
         setShowDifferentUserModal(true);
         await sleep(5000);
         setShowDifferentUserModal(false);
@@ -1801,7 +1799,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
       {showStandOnKioskModal && (
-        <StandOnKioskModal onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
+        <StandOnKioskModal title={t("errors.bia_error_title")} description={t("errors.face_height_not_detected_desc")} onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
       )}
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
@@ -1964,7 +1962,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
           <button onClick={fireStart} disabled={isAudioPlaying}
             className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
-            Start
+            {t("common.start")}
           </button>
         </div>
       </div>
@@ -2118,7 +2116,7 @@ const StandProperlyModal = ({ countdown }) => {
 };
 
 /* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
-const StandOnKioskModal = ({ onRetry, title = 'BIA Error', description = 'Please step onto the kiosk platform so we can measure your weight and height.', playAudio }) => {
+const StandOnKioskModal = ({ onRetry, title, description, playAudio }) => {
   const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   React.useEffect(() => {
