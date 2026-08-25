@@ -59,7 +59,7 @@ const AutoIdleRedirect = ({
     const handlePrompt = useCallback(() => {
         if (!isHomeRoute) {
             setStage('are-you-there')
-            playErrorAudio('errors/are_you_there')
+            playErrorAudio('errors/are_you_still_there')
         }
     }, [isHomeRoute, playErrorAudio])
 
@@ -69,7 +69,7 @@ const AutoIdleRedirect = ({
         if (!isHomeRoute) {
             console.log('[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage.')
             setStage('continue-screening')
-            playErrorAudio('errors/inactivity_redirect')
+            playErrorAudio('errors/unable_to_detect_any_activity')
         }
     }, [isHomeRoute, playErrorAudio])
 

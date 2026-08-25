@@ -6,6 +6,7 @@ import gu from './locales/gu.json'
 import mr from './locales/mr.json'
 import bn from './locales/bn.json'
 import ar from './locales/ar.json'
+import { clearAudioCache } from '../../utils/audioUtils'
 
 i18n
   .use(initReactI18next)
@@ -23,5 +24,11 @@ i18n
       ar: { translation: ar }
     }
   })
+
+// Clear the audio URL cache whenever the user switches language,
+// so the new language's files are resolved fresh.
+i18n.on('languageChanged', () => {
+  clearAudioCache()
+})
 
   export default  i18n;
