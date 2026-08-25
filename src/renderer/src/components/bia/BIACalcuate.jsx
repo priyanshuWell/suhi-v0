@@ -821,7 +821,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       if (fptUserId && currentUserId && fptUserId !== currentUserId) {
         console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
-        await playErrorAudio('errors/different_user_found');
+         playErrorAudio('errors/different_user_found');
         setShowDifferentUserModal(true);
         await sleep(5000);
         setShowDifferentUserModal(false);
@@ -1827,6 +1827,7 @@ export default function BIACalculate({ user, onComplete }) {
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
           playAudio={playErrorAudio}
+          t={t}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1902,10 +1903,10 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
         <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
-          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
+          <h2 className="text-[#8BC3E5] text-[30px] font-anta text-center m-0">
             {t("errors.shoes_prompt")}<br /> {t("errors.shoes_prompt_choice")}
           </h2>
-          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
+          {/* <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p> */}
           <div className="flex gap-10">
             <button onClick={fireNo} disabled={isAudioPlaying}
               className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>

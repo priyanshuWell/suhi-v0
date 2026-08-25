@@ -306,7 +306,7 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.last_retry_title"),
           description: t("errors.suhi_coordinator_contact"),
-          audio: "",
+          audio: "contact_your_kiosk_coordinator",
           showButton: true
         }
       ]
