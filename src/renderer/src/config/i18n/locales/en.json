@@ -11,7 +11,9 @@
     "audio_not_supported": "Your browser does not support the audio element.",
     "replay": "Replay Audio",
     "let_go":"Let's Go",
-    "hi":"Hi"
+    "hi":"Hi",
+    "yes":"Yes",
+    "no":"No"
   },
   "profile": {
     "welcome_suhi":"Welcome ",
@@ -196,8 +198,7 @@
     "face_missing_weight": "Sorry, I couldn't complete the scan.",
     "face_missing_weight_desc": "Please stand on the footprints, look directly at the camera, and try again.",
     "height_not_detected": "Stay still, I am measuring your height",
-    "shoes_prompt": "It looks like you have your shoes/socks on.",
-    "shoes_prompt_desc": "For the most accurate results, we recommend removing them.",
+    "shoes_prompt": "It looks like you have your shoes/socks on. For the most accurate results, we recommend removing them.",
     "shoes_prompt_choice": "Would you still like to continue with your shoes or socks on?",
     "press_start_ready": "Press 'Start' once you are ready.",
     "inactivity_redirect": "I am unable to detect any activity. Redirecting to Homescreen.",
@@ -208,7 +209,7 @@
     "bia_impedance_not_detected": "Hold both handles firmly to continue the scan.",
     "bia_retry": "We're trying again. Keep holding the handles firmly.",
     "bia_hand_not_detected": "Hold both handles firmly with your palm to continue the scan.",
-    "bia_hand_body_not_detected": "Keep both hands on the handles and stay still.",
+    "bia_hand_body_not_detected": "Hold both handles firmly to continue the scan.",
     "bia_rods_incorrect": "Hold both handles firmly to continue the scan.",
     "bia_max_retries": "I couldn't get stable readings, moving to next scan.",
     "redirect_login_label": "Going to SUHI ID login",

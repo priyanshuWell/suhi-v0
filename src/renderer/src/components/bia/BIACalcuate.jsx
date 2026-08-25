@@ -443,10 +443,7 @@ export default function BIACalculate({ user, onComplete }) {
     'errors.weight_not_detected': 'errors/stand_fully_on_the_platform',
     'errors.hw_not_detected': 'errors/stand_on_the_kisok',
     'errors.bia_retry': 'errors/tring_again_keep_holding',
-    'errors.bia_hand_not_detected': 'errors/hold_both_handles_firmly_with_your_palm',
     'errors.bia_impedance_not_detected': 'errors/hold_both_handles_firmly_with_your_palm',
-    'errors.bia_rods_incorrect': 'errors/hold_both_handles_firmly_to_continue',
-    'errors.bia_hand_body_not_detected': 'errors/hold_both_handles_firmly_to_continue',
     'errors.bia_max_retries': 'errors/oops_couldnt_detect_you_try_again',
   };
 
@@ -967,7 +964,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const showCtaA = () => {
         setShoesCtaStep('ctaA');
-        startCtaTimer(10000, () => showCtaD());
+        startCtaTimer(20000, () => showCtaD());
       };
 
       const showCtaB_1st = () => {
@@ -1816,10 +1813,10 @@ export default function BIACalculate({ user, onComplete }) {
       {showBiaErrorCta && (
         <NoActivityFrame
           variant="no-user"
-          title={t("errors.bia_error_title") || "BIA Error"}
+          title={t("errors.bia_error_title")}
           description={t("errors.bia_max_retries")}
           showRetry
-          retryLabel={t("errors.moving_to_next_scan") || "Moving to Next Scan"}
+          retryLabel={t("errors.moving_to_next_scan")}
           onRetry={handleBiaErrorCtaDismiss}
         />
       )}
@@ -1906,17 +1903,17 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            It looks like you have your shoes/socks on.<br />Would you like to continue with them?
+            {t("errors.shoes_prompt")}<br /> {t("errors.shoes_prompt_choice")}
           </h2>
           <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
           <div className="flex gap-10">
             <button onClick={fireNo} disabled={isAudioPlaying}
               className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              🦶 No
+              🦶 {t("common.no")}
             </button>
             <button onClick={fireYes} disabled={isAudioPlaying}
               className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
-              👟 Yes
+              👟 {t("common.yes")}
             </button>
           </div>
         </div>
