@@ -12,82 +12,69 @@ import i18n from "i18next"
  *   "errors/face_not_detected"     → assets/audio/{lang}/errors/face_not_detected.mp3
  *   "camera_scan"                  → tries instructions/ first, then flat path (backward compat)
  *
- * Strategy: use new URL(..., import.meta.url) which Vite resolves reliably
- * for all asset paths, including fully dynamic subfolder paths.
+ * Uses Vite's `import.meta.glob` to statically discover all available audio assets.
+ * This guarantees 100% reliable resolution, instant synchronous checks, and seamless
+ * fallback to 'en' when audio files are missing in other languages.
  */
 
-const audioCache = new Map()
+// Eagerly map all audio files under assets/audio
+const audioModules = import.meta.glob('../assets/audio/**/*.{mp3,wav,ogg}', {
+  eager: true,
+  import: 'default'
+})
 
 /**
- * Try to resolve an audio file URL using Vite's URL constructor.
- * Returns the href string if the file exists, or null on any error.
+ * Helper to retrieve a resolved module URL from audioModules.
  */
-const tryResolve = (path) => {
-  try {
-    // new URL with import.meta.url is the idiomatic Vite way to resolve
-    // dynamic asset paths — it works in both dev and built Electron apps.
-    const url = new URL(`../assets/audio/${path}.mp3`, import.meta.url)
-    return url.href
-  } catch {
-    return null
-  }
+const getModule = (relPath) => {
+  const fullPath = `../assets/audio/${relPath}`
+  return audioModules[fullPath] || null
 }
 
 /**
- * Verify a resolved URL actually loads (fetch HEAD check).
- * Falls back silently — returns null if the file isn't found.
+ * Attempt to match a baseName within a specific language folder.
  */
-const verifyUrl = async (href) => {
-  if (!href) return null
-  try {
-    const res = await fetch(href, { method: "HEAD" })
-    return res.ok ? href : null
-  } catch {
-    // In Electron with file:// protocol, fetch HEAD can fail even for valid files.
-    // In that case we trust the URL and return it directly.
-    return href
-  }
-}
+const resolvePath = (baseName, langCode) => {
+  const cleanName = baseName.replace(/^\//, '')
 
-const preloadAudio = async (baseName, langCode) => {
-  const cacheKey = `${langCode}/${baseName}`
-  if (audioCache.has(cacheKey)) return audioCache.get(cacheKey)
+  // 1. Try exact path (e.g. "bn/errors/remove_your_shoes_and_socks.mp3")
+  let mod = getModule(`${langCode}/${cleanName}.mp3`) || 
+            getModule(`${langCode}/${cleanName}.wav`) || 
+            getModule(`${langCode}/${cleanName}.ogg`)
+  if (mod) return mod
 
-  let result = null
-
-  // 1. Try the exact path as given ("instructions/x", "errors/x", or a prefixed path)
-  const url1 = tryResolve(`${langCode}/${baseName}`)
-  result = await verifyUrl(url1)
-
-  // 2. If no subfolder prefix given, try instructions/ subfolder (backward compat)
-  if (!result && !baseName.includes('/')) {
-    const url2 = tryResolve(`${langCode}/instructions/${baseName}`)
-    result = await verifyUrl(url2)
+  // 2. If no subfolder prefix given (e.g. "camera_scan"), try instructions/ subfolder
+  if (!cleanName.includes('/')) {
+    mod = getModule(`${langCode}/instructions/${cleanName}.mp3`) || 
+          getModule(`${langCode}/instructions/${cleanName}.wav`) || 
+          getModule(`${langCode}/instructions/${cleanName}.ogg`)
+    if (mod) return mod
   }
 
-  if (result) audioCache.set(cacheKey, result)
-  return result ?? null
+  return null
 }
 
 /**
  * Resolves the audio path for the current i18n language.
  * Falls back silently to "en" if the target language file is not found.
  *
- * @param {string} baseName  e.g. "instructions/camera_scan" | "errors/face_not_detected" | "camera_scan"
- * @returns {Promise<string|null>} Resolved URL or null
+ * @param {string} baseName  e.g. "instructions/camera_scan" | "errors/remove_your_shoes_and_socks" | "welcome_screen"
+ * @returns {Promise<string|null>} Resolved URL string or null
  */
 export const getAudioForCurrentLanguage = async (baseName) => {
+  if (!baseName) return null
   const currentLang = i18n.language || "en"
   console.log("[audioUtils] lang:", currentLang, "key:", baseName)
 
-  const audio = await preloadAudio(baseName, currentLang)
+  // Try target language
+  let audio = resolvePath(baseName, currentLang)
   if (audio) return audio
 
-  // Language fallback → en
+  // Language fallback -> en
   if (currentLang !== "en") {
-    console.warn(`[audioUtils] "${baseName}" not found in "${currentLang}", falling back to en`)
-    const fallback = await preloadAudio(baseName, "en")
-    if (fallback) return fallback
+    console.warn(`[audioUtils] "${baseName}" not found in "${currentLang}", falling back to "en"`)
+    audio = resolvePath(baseName, "en")
+    if (audio) return audio
   }
 
   console.warn(`[audioUtils] No audio found for "${baseName}" in "${currentLang}" or "en"`)
@@ -95,17 +82,15 @@ export const getAudioForCurrentLanguage = async (baseName) => {
 }
 
 /**
- * Call this when the app language changes to clear stale cached paths.
- * Wire this into your i18n.on('languageChanged') handler.
+ * Kept for backward compatibility.
  */
 export const clearAudioCache = () => {
-  audioCache.clear()
-  console.log("[audioUtils] Cache cleared on language change")
+  console.log("[audioUtils] Audio map active")
 }
 
 /**
  * Convenience factory — returns a `play(baseName)` function pre-wired to an
- * audio ref. Same API as the old createLanguageAudioPlayer.
+ * audio ref.
  */
 export const createLanguageAudioPlayer = (audioRef, onPlayingChange) => {
   return async (baseName) => {
@@ -128,3 +113,4 @@ export const createLanguageAudioPlayer = (audioRef, onPlayingChange) => {
 }
 
 export default getAudioForCurrentLanguage
+

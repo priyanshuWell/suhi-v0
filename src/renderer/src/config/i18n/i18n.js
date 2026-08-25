@@ -11,7 +11,7 @@ import { clearAudioCache } from '../../utils/audioUtils'
 i18n
   .use(initReactI18next)
   .init({
-    lng: 'en',
+    lng: 'gu',
     debug: true,
     fallbackLng: 'en',
     returnObjects: true,
