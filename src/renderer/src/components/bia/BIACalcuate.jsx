@@ -442,7 +442,7 @@ export default function BIACalculate({ user, onComplete }) {
     'errors.barefoot_required': 'errors/remove_your_shoes_and_socks',
     'errors.height_not_detected': 'errors/stay_still_i_am_measuring_height',
     'errors.weight_not_detected': 'errors/stand_fully_on_the_platform',
-    'errors.hw_not_detected': 'errors/stand_on_the_kisok',
+    'errors.hw_not_detected': 'errors/stand_on_the_kiosk',
     'errors.bia_retry': 'errors/tring_again_keep_holding',
     'errors.bia_rods_incorrect': 'errors/hold_both_handles_firmly_to_continue',
     'errors.bia_max_retries': 'errors/couldnt_get_stable_reading',
@@ -454,7 +454,7 @@ export default function BIACalculate({ user, onComplete }) {
     { match: /barefoot|shoes|socks/i, key: 'errors/remove_your_shoes_and_socks' },
     { match: /height|measuring.*height/i, key: 'errors/stay_still_i_am_measuring_height' },
     { match: /platform|weight|stand fully/i, key: 'errors/stand_fully_on_the_platform' },
-    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kisok' },
+    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kiosk' },
     { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
     { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
     { match: /both hands.*handles|both hands.*still|handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
@@ -650,7 +650,7 @@ export default function BIACalculate({ user, onComplete }) {
    */
   const showStandOnKioskPrompt = () => {
     console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
-    playErrorAudio('errors/stand_on_the_kisok');
+    playErrorAudio('errors/stand_on_the_kiosk');
     setShowStandOnKioskModal(true);
     return new Promise((resolve) => {
       standOnKioskResolverRef.current = resolve;
@@ -2141,7 +2141,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio }) => {
   const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   React.useEffect(() => {
-    playAudio?.('errors/stand_on_the_kisok')?.then?.(() => {
+    playAudio?.('errors/stand_on_the_kiosk')?.then?.(() => {
       setIsAudioPlaying(false);
     });
   }, []);
