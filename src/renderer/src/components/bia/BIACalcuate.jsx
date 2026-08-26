@@ -833,9 +833,12 @@ export default function BIACalculate({ user, onComplete }) {
       if (!fptData) return false;
       const fptUserId = fptData?.data?.matched_student?.user_id;
       const currentUserId = storeUser?.data?.user_id;
+      const candidateList = fptData?.data?.candidates;
+      const isPresentInCandidateList = candidateList?.some((user) => user?.user_id === currentUserId);
+      console.log('[BIA DEBUG] Candidate match:', isPresentInCandidateList);
       console.log(`[BIA DEBUG] Face user: ${fptUserId}, Session user: ${currentUserId}`);
 
-      if (fptUserId && currentUserId && fptUserId !== currentUserId) {
+      if (fptUserId && currentUserId && fptUserId !== currentUserId && !isPresentInCandidateList) {
         console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
         playErrorAudio('errors/different_user_found');
         setShowDifferentUserModal(true);
@@ -844,7 +847,7 @@ export default function BIACalculate({ user, onComplete }) {
         navigate('/welcome');
         return true;
       }
-      if (fptUserId && currentUserId && fptUserId === currentUserId) {
+      if (currentUserId && (fptUserId === currentUserId || isPresentInCandidateList)) {
         setSameUser(true);
         faceVerifiedRef.current = true;
         console.log('[BIA DEBUG] Same user confirmed');

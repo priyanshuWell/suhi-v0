@@ -161,13 +161,13 @@
     "redirecting": "Redirecting to home..."
   },
   "loginSuhi": {
-    "title": "Log in using your ID or fingerprint",
-    "id_label": "Suhi ID",
+    "title": "Log in using your SUHI Id",
+    "id_label": "SUHI Id",
     "verifying": "Verifying...",
-    "login_failed": "Invalid SUHI ID",
-    "student_not_found": "Invalid SUHI ID. Please contact your SUHI Kiosk Coordinator for assistance.",
-    "ask_teacher": "Please ask your teacher for your SuHi ID and try again.",
-    "dont_know_id": "Don't know your SuHi ID?"
+    "login_failed": "Invalid SUHI Id",
+    "student_not_found": "Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance.",
+    "ask_teacher": "Please ask your teacher for your SuHi Id and try again.",
+    "dont_know_id": "Don't know your SuHi Id?"
   },
   "audio": {
     "playing": "Playing…",
