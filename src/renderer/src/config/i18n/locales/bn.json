@@ -11,7 +11,9 @@
     "audio_not_supported": "আপনার ব্রাউজার অডিও সমর্থন করে না।",
     "replay": "অডিও পুনরায় চালান",
     "let_go": "চলুন শুরু করি",
-    "hi": "হ্যালো"
+    "hi": "হ্যালো",
+    "yes": "হ্যাঁ",
+    "no": "না"
   },
   "profile": {
     "welcome_suhi": "SUHI-তে স্বাগতম ",
@@ -93,8 +95,17 @@
     "bia_hand_body_not_detected": "উভয় হাত হ্যান্ডেলে রাখুন এবং স্থির থাকুন।",
     "bia_rods_incorrect": "স্ক্যান চালিয়ে যেতে উভয় হ্যান্ডেল শক্ত করে ধরে রাখুন।",
     "bia_max_retries": "স্থির রিডিং পাওয়া যায়নি, পরবর্তী স্ক্যানে যাওয়া হচ্ছে।",
+    "barefoot_required": "অনুগ্রহ করে নিশ্চিত করুন যে আপনি খালি পায়ে আছেন।",
+    "height_port_not_connected": "উচ্চতা সেন্সর সংযুক্ত নেই।",
     "redirect_login_label": "SUHI ID লগইনে যাওয়া হচ্ছে",
-    "redirect_home_label": "হোমে যাওয়া হচ্ছে"
+    "redirect_home_label": "হোমে যাওয়া হচ্ছে",
+    "retrying": "পুনরায় চেষ্টা করা হচ্ছে",
+    "last_retry_title": "ওহো! আমি আপনাকে শনাক্ত করতে পারছি না",
+    "suhi_coordinator_contact": "সহায়তার জন্য আপনার SUHI কিওস্ক সমন্বয়কারীর সাথে যোগাযোগ করুন",
+    "different_user_found": "ভিন্ন ব্যবহারকারী পাওয়া গেছে",
+    "different_user_found_desc": "মনে হচ্ছে কেউ কিওস্কের সামনে এসেছে!",
+    "bia_error_title": "BIA ত্রুটি",
+    "moving_to_next_scan": "পরবর্তী স্ক্যানে যাওয়া হচ্ছে"
   },
   "colorBlindness": {
     "title": "রঙ দৃষ্টি স্ক্যান",

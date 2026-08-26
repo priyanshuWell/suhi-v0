@@ -9,13 +9,14 @@ import { setUser, setLoginScreening, setCandidates } from "../features/common/co
 import { getKioskId, trackStage } from "../utils/config"
 import { useKioskAudio } from "../hooks/useKioskAudio"
 import { useTranslation } from "react-i18next"
+import i18n from "../config/i18n/i18n"
 import NoActivityFrame from "./ui/NoActivityFrame"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEV FLAGS — flip these to test without hardware or real API
 // ─────────────────────────────────────────────────────────────────────────────
-const USE_DUMMY_FPT = false
-const USE_DUMMY_MEASUREMENTS = false
+const USE_DUMMY_FPT = true
+const USE_DUMMY_MEASUREMENTS = true
 
 // Face-recognition scenario to simulate (USE_DUMMY_FPT = true)
 // Options: "NO_FACE" | "LOW_CONFIDENCE" | "AVERAGE_SINGLE" | "HIGH_MULTIPLE" | "VERY_HIGH_SINGLE"
@@ -265,13 +266,13 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.face_height_not_detected"),
           description: t("errors.face_height_not_detected_desc"),
-          audio: "fight_aligned_on_the_kisok",
+          audio: "fight_aligned_on_the_kiosk",
           showButton: false
         },
         {
           title: t("errors.face_height_not_detected"),
           description: t("errors.face_height_not_detected_desc"),
-          audio: "fight_aligned_on_the_kisok",
+          audio: "fight_aligned_on_the_kiosk",
           showButton: false
         },
         {
@@ -294,13 +295,13 @@ const getFaceNotDetectedError = (measurements, t) => {
         {
           title: t("errors.face_weight_not_detected"),
           description: t("errors.face_weight_not_detected_desc"),
-          audio: "fight_aligned_on_the_kisok",
+          audio: "fight_aligned_on_the_kiosk",
           showButton: false
         },
         {
           title: t("errors.face_weight_not_detected"),
           description: t("errors.face_weight_not_detected_desc"),
-          audio: "fight_aligned_on_the_kisok",
+          audio: "fight_aligned_on_the_kiosk",
           showButton: false
         },
         {
@@ -350,6 +351,25 @@ const VideoCaptureScreen = () => {
   const waitForPendingAudio = () =>
     Promise.race([pendingAudioRef.current, new Promise((r) => setTimeout(r, AUDIO_SAFETY_CAP_MS))])
 
+  // Tracks the audio key currently playing in an error state so that
+  // a language switch can replay it in the new language immediately.
+  const currentErrorAudioKeyRef = useRef(null)
+
+  // Re-play the active error audio whenever the user switches language.
+  useEffect(() => {
+    const handleLangChange = () => {
+      if (currentErrorAudioKeyRef.current) {
+        console.log(`[VIDEO CAPTURE] Language changed — replaying "${currentErrorAudioKeyRef.current}" in new language`)
+        pendingAudioRef.current = playKioskAudio(currentErrorAudioKeyRef.current)
+      }
+    }
+    i18n.on('languageChanged', handleLangChange)
+    return () => {
+      i18n.off('languageChanged', handleLangChange)
+      currentErrorAudioKeyRef.current = null
+    }
+  }, [playKioskAudio])
+
   const STAGES = { FACE_SCAN: "FACE_SCAN" }
   const STATUS_KEYS = { SUCCESS: "SUCCESS", ERROR: "ERROR" }
 
@@ -367,7 +387,9 @@ const VideoCaptureScreen = () => {
 
       // Single call: interrupts instruction audio (or previous error clip)
       // and starts the new one, or just silences everything if step has no clip.
-      pendingAudioRef.current = playKioskAudio(step.audio ? `errors/${step.audio}` : null)
+      const errorAudioKey = step.audio ? `errors/${step.audio}` : null
+      currentErrorAudioKeyRef.current = errorAudioKey
+      pendingAudioRef.current = playKioskAudio(errorAudioKey)
 
       if (!isFinalAttempt) {
         attemptCountRef.current += 1
@@ -383,6 +405,7 @@ const VideoCaptureScreen = () => {
           showDescription: true,
           onAutoRetry: async () => {
             await waitForPendingAudio() // wait for error audio to finish before retrying
+            currentErrorAudioKeyRef.current = null
             measurementPromiseRef.current = null
             trackingDoneRef.current = false
             setNoActivityState(null)

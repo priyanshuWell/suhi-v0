@@ -11,7 +11,9 @@
     "audio_not_supported": "તમારું બ્રાઉઝર ઑડિઓ સપોર્ટ કરતું નથી.",
     "replay": "ઑડિઓ ફરી ચલાવો",
     "let_go": "ચાલો શરૂ કરીએ",
-    "hi": "નમસ્તે"
+    "hi": "નમસ્તે",
+    "yes": "હા",
+    "no": "ના"
   },
   "profile": {
     "welcome_suhi": "SUHI માં આપનું સ્વાગત છે ",
@@ -93,8 +95,17 @@
     "bia_hand_body_not_detected": "બંને હાથ હેન્ડલ પર રાખો અને સ્થિર રહો.",
     "bia_rods_incorrect": "સ્કેન ચાલુ રાખવા માટે બંને હેન્ડલ મજબૂત રીતે પકડો.",
     "bia_max_retries": "સ્થિર રીડિંગ્સ મેળવી શક્યા નથી, આગળના સ્કેન પર જઈ રહ્યા છીએ.",
+    "barefoot_required": "કૃપા ખાત્રી કરો કે તમે ખાલી પગે છો.",
+    "height_port_not_connected": "ઊંચાઈ પોર્ટ જોડાયલા નથી.",
     "redirect_login_label": "SUHI ID લોગિન પર જઈ રહ્યા છીએ",
-    "redirect_home_label": "હોમ પર જઈ રહ્યા છીએ"
+    "redirect_home_label": "હોમ પર જઈ રહ્૯ા છીએ",
+    "retrying": "ફરી પ્રયાસ કરી રહ્યા છીએ",
+    "last_retry_title": "ઓહો! હું તમને શોધી શકતો નથી",
+    "suhi_coordinator_contact": "કૃપા સહાય માટે તમારા SUHI કિયોસ્ક કોઓર્ડિનેટરનો સંપર્ક કરો",
+    "different_user_found": "અલગ વપરાશકર્તા મળ્૯ો",
+    "different_user_found_desc": "લાગે છે કોઈ કિયોસ્કની સામે આવ્૯ા!",
+    "bia_error_title": "BIA ભૂલ",
+    "moving_to_next_scan": "આગળાના સ્કેન પર જઈ રહ્૯ા છીએ"
   },
   "smoothieSlash": {
     "beAware": {

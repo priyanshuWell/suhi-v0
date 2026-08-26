@@ -11,7 +11,9 @@
     "audio_not_supported": "आपका ब्राउज़र ऑडियो तत्व का समर्थन नहीं करता है।",
     "replay": "ऑडियो फिर से चलाएं",
     "let_go": "चलो शुरू करें",
-    "hi": "नमस्ते"
+    "hi": "नमस्ते",
+    "yes": "हाँ",
+    "no": "नहीं"
 
   },
   "profile": {
@@ -209,8 +211,17 @@
     "bia_hand_body_not_detected": "दोनों हाथ हैंडल पर रखें और स्थिर रहें।",
     "bia_rods_incorrect": "स्कैन जारी रखने के लिए दोनों हैंडल मज़बूती से पकड़ें।",
     "bia_max_retries": "स्थिर रीडिंग नहीं मिल पाई, अगले स्कैन पर जा रहे हैं।",
+    "barefoot_required": "कृपया सुनिश्चित करें कि आप नंगे पैरों से हैं।",
+    "height_port_not_connected": "हाइट पोर्ट कनेक्ट नहीं है।",
     "redirect_login_label": "SUHI ID लॉगिन पर जा रहे हैं",
-    "redirect_home_label": "होम पर जा रहे हैं"
+    "redirect_home_label": "होम पर जा रहे हैं",
+    "retrying": "पुनः प्रयास कर रहे हैं",
+    "last_retry_title": "ओह! मैं आपको पहचान नहीं पा सकता",
+    "suhi_coordinator_contact": "कृपया सहायता के लिए अपने SUHI कियोस्क कोऑर्डिनेटर से संपर्क करें",
+    "different_user_found": "अलग उपयोगकर्ता मिला",
+    "different_user_found_desc": "लगता है कोई कियोस्क के सामने आया!",
+    "bia_error_title": "BIA एरर",
+    "moving_to_next_scan": "अगले स्कैन पर जा रहे हैं"
   },
   "smoothieSlash": {
     "beAware": {

@@ -3,6 +3,7 @@ import { useBackgroundCamera } from "../../services/BackgroundCameraProvider";
 import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import i18n from "../../config/i18n/i18n";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId, setScreening } from "../../features/common/commonSlice";
@@ -462,6 +463,21 @@ export default function BIACalculate({ user, onComplete }) {
 
   const showErrorLockRef = React.useRef(Promise.resolve());
   const currentErrorMsgRef = React.useRef(null);
+  // Tracks the audio key that is currently playing inside showError so that
+  // a language switch can immediately replay it in the new language.
+  const currentAudioKeyRef = React.useRef(null);
+
+  // Re-play the active error audio whenever the user switches language.
+  useEffect(() => {
+    const handleLangChange = () => {
+      if (currentAudioKeyRef.current) {
+        console.log(`[BIA AUDIO] Language changed — replaying "${currentAudioKeyRef.current}" in new language`);
+        playErrorAudio(currentAudioKeyRef.current);
+      }
+    };
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [playErrorAudio]);
 
   // NEW — single serialization point for the shared audio channel.
   // Every playErrorAudio() call in this component must go through this,
@@ -498,12 +514,14 @@ export default function BIACalculate({ user, onComplete }) {
 
       let audioPromise = Promise.resolve();
       if (audioKey) {
+        currentAudioKeyRef.current = audioKey;
         audioPromise = playErrorAudio(audioKey);
       }
       // Wait for BOTH the display duration AND the audio playback to complete
       await Promise.all([sleep(duration), audioPromise]);
       setErrorState(null);
       currentErrorMsgRef.current = null;
+      currentAudioKeyRef.current = null;
     };
 
     const nextLock = showErrorLockRef.current.then(run, run);
