@@ -93,7 +93,7 @@
     "bia_hand_body_not_detected": "ضع كلا يديك على المقابض وابق ثابتاً.",
     "bia_rods_incorrect": "امسك كلا المقبضين بقوة لمتابعة الفحص.",
     "bia_max_retries": "لم أتمكن من الحصول على قراءات مستقرة، جاري الانتقال إلى الفحص التالي.",
-    "redirect_login_label": "جاري الانتقال إلى تسجيل الدخول عبر SUHI ID",
+    "redirect_login_label": "جاري الانتقال إلى تسجيل الدخول عبر SUHI Id",
     "redirect_home_label": "جاري الانتقال إلى الصفحة الرئيسية"
   },
   "colorBlindness": {

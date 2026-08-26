@@ -89,7 +89,7 @@ const LoginSuhi = () => {
       }
 
       if (!response.success || !response.data) {
-        throw new Error('Invalid SUHI ID. Please contact your SUHI Kiosk Coordinator for assistance.')
+        throw new Error('Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance.')
       }
 
       // Save student data
@@ -118,7 +118,7 @@ const LoginSuhi = () => {
 
       if (attempt < MAX_RETRIES) {
         retryRef.current = attempt
-        // Play "invalid SUHI ID" audio feedback
+        // Play "invalid SUHI Id" audio feedback
         playAudio('errors/invalid_suhi_id_coordinate')
         setError(err.message || t('loginSuhi.student_not_found'))
         setShowErrorAlert(true)

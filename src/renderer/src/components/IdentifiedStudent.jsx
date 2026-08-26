@@ -15,7 +15,7 @@ const RECORD_DURATION_S = 5
 
 const STEP_CONFIG = {
     suhi_id: {
-        label: "Enter your SUHI ID",
+        label: "Enter your SUHI Id",
         hint: "e.g. SUHI_210S0A642",
         filter: (candidates, value) =>
             candidates.filter((c) =>
@@ -203,7 +203,7 @@ const IdentifyStudent = () => {
         if (matches.length === 0) {
             retryRef.current += 1
             if (retryRef.current < MAX_RETRIES) {
-                // Play "invalid SUHI ID" audio feedback
+                // Play "invalid SUHI Id" audio feedback
                 playAudio('errors/invalid_suhi_id_coordinate')
                 setError("No match found. Please check and try again.")
                 setLoading(false)
@@ -356,7 +356,7 @@ const IdentifyStudent = () => {
                     title="Let's try another way"
                     description="Please log in using your SuHi ID."
                     showDescription={true}
-                    redirectLabel="Going to SUHI ID login"
+                    redirectLabel="Going to SUHI Id login"
                     autoRedirectDelay={5000}
                     showRetry={false}
                     onRedirect={() => { setNoMatchError(false); navigate("/login-suhi") }}

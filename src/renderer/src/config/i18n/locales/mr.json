@@ -37,7 +37,7 @@
   "videoCapture": {
     "instruction": "वरील कॅमेऱ्याकडे पहा",
     "error_unregistered_title": "माफ करा, मी तुमचा चेहरा स्कॅन करू शकत नाही",
-    "error_unregistered_desc": "काळजी करू नका, चला SUHI ID वापरूया.",
+    "error_unregistered_desc": "काळजी करू नका, चला SUHI Id वापरूया.",
     "error_unrecognized_title": "माफ करा, मी तुमचा चेहरा स्कॅन करू शकलो नाही",
     "error_unrecognized_retry_desc": "कृपया कॅमेऱ्याकडे पहा, काहीही अडथळा नाही याची खात्री करा आणि पुन्हा प्रयत्न करा.",
     "error_unrecognized_max_desc": "कृपया तुमचे पाय पावलांच्या चिन्हावर सरळ ठेवा, थेट कॅमेऱ्याकडे पहा आणि पुन्हा प्रयत्न करा."
@@ -46,8 +46,8 @@
     "title": "तुमचा ID किंवा फिंगरप्रिंट वापरून लॉग इन करा",
     "id_label": "Suhi ID",
     "verifying": "तपासत आहे...",
-    "login_failed": "अवैध SUHI ID",
-    "student_not_found": "अवैધ SUHI ID. कृपया मदतीसाठी तुमच्या SUHI किऑस्क समन्वयकाशी संपर्क साधा.",
+    "login_failed": "अवैध SUHI Id",
+    "student_not_found": "अवैધ SUHI Id. कृपया मदतीसाठी तुमच्या SUHI किऑस्क समन्वयकाशी संपर्क साधा.",
     "ask_teacher": "कृपया तुमच्या शिक्षकांकडे तुमची SuHi ID मागा आणि पुन्हा प्रयत्न करा.",
     "dont_know_id": "तुमची SuHi ID माहित नाही?"
   },
@@ -58,7 +58,7 @@
   },
   "errors": {
     "face_not_detected_short": "माफ करा, मी तुमचा चेहरा स्कॅन करू शकत नाही",
-    "face_not_detected_short_desc": "काळजी करू नका, चला SUHI ID वापरूया.",
+    "face_not_detected_short_desc": "काळजी करू नका, चला SUHI Id वापरूया.",
     "face_not_detected_camera": "माफ करा, मी तुमचा चेहरा स्कॅन करू शकलो नाही",
     "face_not_detected_camera_desc": "कृपया कॅमेऱ्याकडे पहा, काहीही अडथळा नाही याची खात्री करा आणि पुन्हा प्रयत्न करा.",
     "face_height_not_detected": "माफ करा, काहीतरी चुकीचे घडले",
@@ -93,7 +93,7 @@
     "bia_hand_body_not_detected": "दोन्ही हात हँडल्सवर ठेवा आणि स्थिर राहा.",
     "bia_rods_incorrect": "स्कॅन सुरू ठेवण्यासाठी दोन्ही हँडल्स घट्ट पकडा.",
     "bia_max_retries": "स्थिर रीडिंग मिळू शकले नाही, पुढील स्कॅनवर जात आहोत.",
-    "redirect_login_label": "SUHI ID लॉगिनवर जात आहोत",
+    "redirect_login_label": "SUHI Id लॉगिनवर जात आहोत",
     "redirect_home_label": "मुख्यपृष्ठावर जात आहोत"
   },
   "colorBlindness": {
