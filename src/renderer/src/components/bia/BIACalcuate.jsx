@@ -51,7 +51,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [showDifferentUserModal, setShowDifferentUserModal] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   // BIA Error CTA — shown when height or impedance retries are exhausted
-  const [showBiaErrorCta, setShowBiaErrorCta] = useState(false);
+  const [showBiaErrorCta, setShowBiaErrorCta] = useState(true);
   const biaErrorCtaResolverRef = useRef(null);
   const biaErrorCtaTimerRef = useRef(null);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
@@ -1439,7 +1439,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // All failed → show BIA Error CTA then move to next screen
     console.log("[BIA DEBUG] No-leg path: arm 50kHz exhausted — moving to next screen");
-    await showBiaMaxRetryError();
+    // await showBiaMaxRetryError();
     await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "No-leg arm 50kHz exhausted", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     const result = await BIAComplete({
       session_id: storeUser?.data?.buffer_id,
@@ -1834,8 +1834,8 @@ export default function BIACalculate({ user, onComplete }) {
           variant="no-user"
           title={t("errors.bia_error_title")}
           description={t("errors.bia_max_retries")}
-          showRetry
-          retryLabel={t("errors.moving_to_next_scan")}
+          // showRetry
+          buttonText={t("errors.moving_to_next_scan")}
           onRetry={handleBiaErrorCtaDismiss}
         />
       )}

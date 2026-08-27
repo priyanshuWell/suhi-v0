@@ -323,7 +323,7 @@ const getFaceNotDetectedError = (measurements, t) => {
       {
         title: t("errors.face_all_not_detected"),
         description: t("errors.face_all_not_detected_desc"),
-        audio: "stand_on_kiosk",
+        audio: "oops_couldnt_detect_you_try_again",
         showButton: true
       }
     ]
