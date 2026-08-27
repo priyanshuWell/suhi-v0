@@ -512,14 +512,14 @@ export const BIAComponent = ({
   // correct subfolder for each language (en, br, etc.).
   const getAudioBaseName = (type) => {
     const audioMap = {
-      wh:         "instructions/wh_measuring",
+      wh: "instructions/wh_measuring",
       whcomplete: "instructions/wh_complete",
-      im:         "instructions/impedance",
+      im: "instructions/impedance",
       imcomplete: "instructions/im_complete",
-      leg50:      "instructions/standstraight",
-      hold:       "instructions/impedance",
+      leg50: "instructions/standstraight",
+      hold: "instructions/impedance",
     }
-    return audioMap[type] || "instructions/standstraight"
+    return audioMap[type] || null
   }
 
   useEffect(() => { playAudio() }, [screenType])

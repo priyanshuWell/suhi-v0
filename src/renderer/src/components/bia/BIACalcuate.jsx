@@ -51,7 +51,7 @@ export default function BIACalculate({ user, onComplete }) {
   const [showDifferentUserModal, setShowDifferentUserModal] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   // BIA Error CTA — shown when height or impedance retries are exhausted
-  const [showBiaErrorCta, setShowBiaErrorCta] = useState(true);
+  const [showBiaErrorCta, setShowBiaErrorCta] = useState(false);
   const biaErrorCtaResolverRef = useRef(null);
   const biaErrorCtaTimerRef = useRef(null);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
@@ -1314,9 +1314,8 @@ export default function BIACalculate({ user, onComplete }) {
     const armOk = await runArm50kHz_v1();
 
     if (!armOk) {
-      // Arm completely failed after retries → show BIA Error CTA then leg result
-      console.log("[BIA DEBUG] Arm 50kHz exhausted — showing leg result");
-      await showBiaMaxRetryError();
+      // Arm completely failed after retries → leg data exists, go straight to result
+      console.log("[BIA DEBUG] Arm 50kHz exhausted — leg data exists, skipping error CTA, showing leg result directly");
       await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "Arm 50kHz exhausted, showing leg result", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       await finishWithImcomplete("leg_result_fallback");
       return;
@@ -1394,9 +1393,8 @@ export default function BIACalculate({ user, onComplete }) {
       return;
     }
 
-    // Both retries failed → show BIA Error CTA then 50kHz arm result
-    console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing 50kHz arm result");
-    await showBiaMaxRetryError();
+    // Both retries failed → leg/arm data exists, go straight to result (no error CTA)
+    console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing available result directly");
     await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "20kHz failed after arm 50kHz retries", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     await finishWithImcomplete("arm50k_result_20khz_exhausted");
   };
@@ -1439,7 +1437,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     // All failed → show BIA Error CTA then move to next screen
     console.log("[BIA DEBUG] No-leg path: arm 50kHz exhausted — moving to next screen");
-    // await showBiaMaxRetryError();
+    await showBiaMaxRetryError();
     await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "No-leg arm 50kHz exhausted", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     const result = await BIAComplete({
       session_id: storeUser?.data?.buffer_id,
