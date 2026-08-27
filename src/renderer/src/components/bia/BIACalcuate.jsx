@@ -1818,7 +1818,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
       {showStandOnKioskModal && (
-        <StandOnKioskModal title={t("errors.bia_error_title")} description={t("errors.face_height_not_detected_desc")} onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} />
+        <StandOnKioskModal title={t("errors.bia_error_title")} description={t("errors.face_height_not_detected_desc")} onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} t={t} />
       )}
 
       {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
@@ -2135,7 +2135,7 @@ const StandProperlyModal = ({ countdown, t }) => {
 };
 
 /* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
-const StandOnKioskModal = ({ onRetry, title, description, playAudio }) => {
+const StandOnKioskModal = ({ onRetry, title, description, playAudio,t }) => {
   const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   React.useEffect(() => {
