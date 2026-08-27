@@ -97,7 +97,7 @@ export default function RegisterCard() {
     // Use the next_stage from the backend (stored in Redux during login)
     const nextRoute = getNextRoute(nextStage, '/bia/leg50')
     console.log('[RegisterCard] navigating to next stage:', nextRoute)
-    navigate('/bia/leg50')
+    navigate(nextRoute)
   }
 
   const handleNotYou = () => {

@@ -115,7 +115,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Centralized Retry Configuration
   const RETRY_CONFIG = {
-    WEIGHT_HEIGHT: 8, // Total attempts for Phase 1 (Weight & Height)
+    WEIGHT_HEIGHT: 3, // Total attempts for Phase 1 (Weight & Height)
     ARM_50KHZ: 3,     // Attempts for Arm 50kHz
     IMPEDANCE_20KHZ: 2 // Attempts for 20kHz impedance
   };
