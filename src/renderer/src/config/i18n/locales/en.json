@@ -13,7 +13,10 @@
     "let_go":"Let's Go",
     "hi":"Hi",
     "yes":"Yes",
-    "no":"No"
+    "no":"No",
+    "are_you_there":"Are you there?",
+    "retry":"Retry",
+    "retrying_in":"Retrying in {countdown}s…"
   },
   "profile": {
     "welcome_suhi":"Welcome ",
@@ -217,7 +220,8 @@
     "different_user_found":"Different User Found",
     "different_user_found_desc":"Looks like someone appeared in front of the kiosk!",
     "bia_error_title": "BIA Error",
-    "moving_to_next_scan": "Moving to Next Scan"
+    "moving_to_next_scan": "Moving to Next Scan",
+    "stand_straight_still":"Stand Straight &amp; Still"
   },
   "smoothieSlash": {
     "beAware": {

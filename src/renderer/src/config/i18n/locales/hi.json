@@ -13,7 +13,10 @@
     "let_go": "चलो शुरू करें",
     "hi": "नमस्ते",
     "yes": "हाँ",
-    "no": "नहीं"
+    "no": "नहीं",
+    "are_you_there": "क्या आप अभी भी कियोस्क पर हैं?",
+    "retry": "दोबारा प्रयास करें",
+    "retrying_in": "{countdown}s में दोबारा कोशिश कर रहे हैं…"
   },
   "profile": {
     "welcome_suhi": "सुही में आपका स्वागत है",
@@ -220,7 +223,8 @@
     "different_user_found": "अलग उपयोगकर्ता मिला",
     "different_user_found_desc": "लगता है कोई कियोस्क के सामने आया!",
     "bia_error_title": "BIA एरर",
-    "moving_to_next_scan": "अगले स्कैन पर जा रहे हैं"
+    "moving_to_next_scan": "अगले स्कैन पर जा रहे हैं",
+    "stand_straight_still": "सीधे खड़े रहें और स्थिर रहें"
   },
   "smoothieSlash": {
     "beAware": {

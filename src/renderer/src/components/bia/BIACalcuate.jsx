@@ -1813,7 +1813,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand Properly Modal — shown when height measurement fails */}
       {showHeightError && (
-        <StandProperlyModal countdown={heightErrorCountdown} />
+        <StandProperlyModal countdown={heightErrorCountdown} t={t} />
       )}
 
       {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
@@ -1991,7 +1991,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
 
 
 /* ── Stand Properly Modal — animated height error prompt ────────── */
-const StandProperlyModal = ({ countdown }) => {
+const StandProperlyModal = ({ countdown, t }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <div style={{
@@ -2059,7 +2059,7 @@ const StandProperlyModal = ({ countdown }) => {
             letterSpacing: '0.02em',
             textShadow: '0 0 20px rgba(139,195,229,0.6)',
           }}>
-            Stand Straight &amp; Still
+            {t("errors.stand_straight_still")}
           </h2>
           <p style={{
             color: 'rgba(255,255,255,0.7)',
@@ -2067,7 +2067,7 @@ const StandProperlyModal = ({ countdown }) => {
             fontSize: '1.2rem',
             marginTop: '8px',
           }}>
-            Stay still, I am measuring your height
+            {t("errors.height_not_detected")}
           </p>
         </div>
 
@@ -2099,7 +2099,7 @@ const StandProperlyModal = ({ countdown }) => {
         </div>
 
         <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Anta, sans-serif', fontSize: '1rem', margin: 0 }}>
-          Retrying in {countdown}s…
+          {t("common.retry_in", { countdown })}
         </p>
       </div>
 
@@ -2221,7 +2221,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio }) => {
           </p>
 
           <BlackGradientButton onClick={onRetry} disabled={isAudioPlaying} className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta">
-            Retry
+            {t("common.retry")}
           </BlackGradientButton>
         </div>
       </div>

@@ -64,7 +64,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
         >
           {/* Title */}
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Are you there?
+            {t("common.are_you_there")}
           </h2>
 
           {/* Countdown ring */}
@@ -124,7 +124,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo }) {
                 transition-all duration-200
               "
             >
-              Yes
+              {t("common.yes")}
             </button>
           </div>
         </div>
