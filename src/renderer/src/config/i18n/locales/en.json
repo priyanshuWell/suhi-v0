@@ -40,7 +40,7 @@
   "videoCapture": {
     "instruction": "Look at the top Camera",
     "error_unregistered_title": "Sorry, I am not able to scan your face",
-    "error_unregistered_desc": "Don't Worry, lets try SUHI ID instead.",
+    "error_unregistered_desc": "Don't Worry, lets try SUHI Id instead.",
     "error_unrecognized_title": "Sorry, I couldn't scan your face",
     "error_unrecognized_retry_desc": "Please face the camera, ensure nothing is blocking it, and try again.",
     "error_unrecognized_max_desc": "Please stand with your feet aligned on the footprints, look directly at the camera, and try again."
@@ -166,8 +166,8 @@
     "verifying": "Verifying...",
     "login_failed": "Invalid SUHI Id",
     "student_not_found": "Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance.",
-    "ask_teacher": "Please ask your teacher for your SuHi Id and try again.",
-    "dont_know_id": "Don't know your SuHi Id?"
+    "ask_teacher": "Please ask your teacher for your SUHI Id and try again.",
+    "dont_know_id": "Don't know your SUHI Id?"
   },
   "audio": {
     "playing": "Playing…",
@@ -176,7 +176,7 @@
   },
   "errors": {
     "face_not_detected_short": "Sorry, I am not able to scan your face",
-    "face_not_detected_short_desc": "Don't Worry, lets try SUHI ID instead.",
+    "face_not_detected_short_desc": "Don't Worry, lets try SUHI Id instead.",
     "face_not_detected_camera": "Sorry, I couldn't scan your face",
     "face_not_detected_camera_desc": "Please face the camera, ensure nothing is blocking it, and try again.",
     "face_height_not_detected": "Sorry, something went wrong",
@@ -209,7 +209,7 @@
     "bia_retry": "We're trying again. Keep holding the handles firmly.",
     "bia_rods_incorrect": "Hold both handles firmly to continue the scan.",
     "bia_max_retries": "I couldn't get stable readings, moving to next scan.",
-    "redirect_login_label": "Going to SUHI ID login",
+    "redirect_login_label": "Going to SUHI Id login",
     "redirect_home_label": "Going to home",
     "retrying": "Retrying",
     "last_retry_title": "Oops! I cannot detect you",

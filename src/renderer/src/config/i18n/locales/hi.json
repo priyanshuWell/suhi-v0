@@ -83,7 +83,7 @@
   "videoCapture": {
     "instruction": "ऊपर कैमरे की ओर देखें",
     "error_unregistered_title": "माफ़ करें, मैं आपका चेहरा स्कैन नहीं कर पा रहा",
-    "error_unregistered_desc": "चिंता मत करो, चलो SUHI ID से कोशिश करते हैं।",
+    "error_unregistered_desc": "चिंता मत करो, चलो SUHI Id से कोशिश करते हैं।",
     "error_unrecognized_title": "माफ़ करें, मैं आपका चेहरा स्कैन नहीं कर पाया",
     "error_unrecognized_retry_desc": "कृपया कैमरे की ओर देखें, सुनिश्चित करें कि कुछ भी उसे रोक न रहा हो, और दोबारा कोशिश करें।",
     "error_unrecognized_max_desc": "कृपया अपने पैरों को पैरों के निशान पर रखें, सीधे कैमरे की ओर देखें, और दोबारा कोशिश करें।"
@@ -164,9 +164,9 @@
     "title": "अपने आईडी या फिंगरप्रिंट का उपयोग करके लॉग इन करें",
     "id_label": "सुही आईडी",
     "verifying": "सत्यापित किया जा रहा है...",
-    "login_failed": "अमान्य SUHI ID",
-    "student_not_found": "यह SUHI ID सही नहीं है। कृपया SUHI कियोस्क कोऑर्डिनेटर से संपर्क करें।",
-    "ask_teacher": "कृपया अपने SUHI ID के लिए अपने शिक्षक से पूछें और फिर से कोशिश करें।",
+    "login_failed": "अमान्य SUHI Id",
+    "student_not_found": "यह SUHI Id सही नहीं है। कृपया SUHI कियोस्क कोऑर्डिनेटर से संपर्क करें।",
+    "ask_teacher": "कृपया अपने SUHI Id के लिए अपने शिक्षक से पूछें और फिर से कोशिश करें।",
     "dont_know_id": "क्या आपको अपनी SuHi ID नहीं मालूम?"
   },
   "audio": {
@@ -176,7 +176,7 @@
   },
   "errors": {
     "face_not_detected_short": "माफ़ करें, मैं आपका चेहरा स्कैन नहीं कर पा रहा",
-    "face_not_detected_short_desc": "चिंता मत करो, चलो SUHI ID से कोशिश करते हैं।",
+    "face_not_detected_short_desc": "चिंता मत करो, चलो SUHI Id से कोशिश करते हैं।",
     "face_not_detected_camera": "माफ़ करें, मैं आपका चेहरा स्कैन नहीं कर पाया",
     "face_not_detected_camera_desc": "कृपया कैमरे की ओर देखें, सुनिश्चित करें कि कुछ भी उसे रोक न रहा हो, और दोबारा कोशिश करें।",
     "face_height_not_detected": "माफ़ करें, मैं आपको पहचान नहीं पाई",
@@ -188,7 +188,7 @@
     "multiple_faces_detected": "एक से अधिक चेहरे मिले",
     "multiple_faces_detected_desc": "कैमरे के सामने केवल एक व्यक्ति होना चाहिए। कृपया सुनिश्चित करें कि केवल एक व्यक्ति कियोस्क के सामने खड़ा हो और पुनः प्रयास करें।",
     "identity_rejected": "चलो दूसरे तरीके से कोशिश करते हैं",
-    "identity_rejected_desc": "कृपया अपनी SUHI ID से लॉग इन करें।",
+    "identity_rejected_desc": "कृपया अपनी SUHI Id से लॉग इन करें।",
     "session_timeout": "आप लॉग आउट हो गए हैं",
     "session_timeout_desc": "फिर से शुरू करने के लिए, 'Start' पर दबाएं।",
     "hw_not_detected": "कृपया सुनिश्चित करें कि आप कियोस्क पर खड़े हैं और आपके पैर प्लेटफॉर्म पर निशानों के अनुसार हैं।",
@@ -213,7 +213,7 @@
     "bia_max_retries": "स्थिर रीडिंग नहीं मिल पाई, अगले स्कैन पर जा रहे हैं।",
     "barefoot_required": "कृपया सुनिश्चित करें कि आप नंगे पैरों से हैं।",
     "height_port_not_connected": "हाइट पोर्ट कनेक्ट नहीं है।",
-    "redirect_login_label": "SUHI ID लॉगिन पर जा रहे हैं",
+    "redirect_login_label": "SUHI Id लॉगिन पर जा रहे हैं",
     "redirect_home_label": "होम पर जा रहे हैं",
     "retrying": "पुनः प्रयास कर रहे हैं",
     "last_retry_title": "ओह! मैं आपको पहचान नहीं पा सकता",

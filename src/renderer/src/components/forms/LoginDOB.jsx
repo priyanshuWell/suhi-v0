@@ -17,7 +17,7 @@ const LoginDOB = () => {
 
   const isButtonDisabled = !suhiId.trim() || !dob.trim() || loading
 
-  //  Submit: verify SUHI ID + DOB against backend
+  //  Submit: verify SUHI Id + DOB against backend
   const handleSubmit = async () => {
     if (isButtonDisabled) return
     setError('')
@@ -32,7 +32,7 @@ const LoginDOB = () => {
         dispatch(setScreening(res.data.screening))
         navigate('/register')
       } else {
-        setError(res?.data?.message || 'Invalid SUHI ID or Date of Birth')
+        setError(res?.data?.message || 'Invalid SUHI Id or Date of Birth')
       }
     } catch (err) {
       setError('Login failed. Please try again.')

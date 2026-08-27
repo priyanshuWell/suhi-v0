@@ -39,7 +39,7 @@
   "videoCapture": {
     "instruction": "উপরের ক্যামেরার দিকে তাকান",
     "error_unregistered_title": "দুঃখিত, আমি আপনার মুখ স্ক্যান করতে পারছি না",
-    "error_unregistered_desc": "চিন্তা করবেন না, চলুন SUHI ID চেষ্টা করি।",
+    "error_unregistered_desc": "চিন্তা করবেন না, চলুন SUHI Id চেষ্টা করি।",
     "error_unrecognized_title": "দুঃখিত, আমি আপনার মুখ স্ক্যান করতে পারিনি",
     "error_unrecognized_retry_desc": "অনুগ্রহ করে ক্যামেরার দিকে তাকান, কোনো কিছু বাধা দিচ্ছে না তা নিশ্চিত করুন এবং আবার চেষ্টা করুন।",
     "error_unrecognized_max_desc": "অনুগ্রহ করে পায়ের ছাপে সোজা হয়ে দাঁড়ান, সরাসরি ক্যামেরার দিকে তাকান এবং আবার চেষ্টা করুন।"
@@ -48,8 +48,8 @@
     "title": "আপনার ID বা ফিঙ্গারপ্রিন্ট ব্যবহার করে লগ ইন করুন",
     "id_label": "Suhi ID",
     "verifying": "যাচাই করা হচ্ছে...",
-    "login_failed": "অবৈধ SUHI ID",
-    "student_not_found": "অবৈধ SUHI ID। সহায়তার জন্য আপনার SUHI কিওস্ক সমন্বয়কারীর সাথে যোগাযোগ করুন।",
+    "login_failed": "অবৈধ SUHI Id",
+    "student_not_found": "অবৈধ SUHI Id। সহায়তার জন্য আপনার SUHI কিওস্ক সমন্বয়কারীর সাথে যোগাযোগ করুন।",
     "ask_teacher": "অনুগ্রহ করে আপনার শিক্ষকের কাছে আপনার SuHi ID চান এবং আবার চেষ্টা করুন।",
     "dont_know_id": "আপনার SuHi ID জানা নেই?"
   },
@@ -60,7 +60,7 @@
   },
   "errors": {
     "face_not_detected_short": "দুঃখিত, আমি আপনার মুখ স্ক্যান করতে পারছি না",
-    "face_not_detected_short_desc": "চিন্তা করবেন না, চলুন SUHI ID চেষ্টা করি।",
+    "face_not_detected_short_desc": "চিন্তা করবেন না, চলুন SUHI Id চেষ্টা করি।",
     "face_not_detected_camera": "দুঃখিত, আমি আপনার মুখ স্ক্যান করতে পারিনি",
     "face_not_detected_camera_desc": "অনুগ্রহ করে ক্যামেরার দিকে তাকান, কোনো কিছু বাধা দিচ্ছে না তা নিশ্চিত করুন এবং আবার চেষ্টা করুন।",
     "face_height_not_detected": "দুঃখিত, কিছু ভুল হয়েছে",
@@ -97,7 +97,7 @@
     "bia_max_retries": "স্থির রিডিং পাওয়া যায়নি, পরবর্তী স্ক্যানে যাওয়া হচ্ছে।",
     "barefoot_required": "অনুগ্রহ করে নিশ্চিত করুন যে আপনি খালি পায়ে আছেন।",
     "height_port_not_connected": "উচ্চতা সেন্সর সংযুক্ত নেই।",
-    "redirect_login_label": "SUHI ID লগইনে যাওয়া হচ্ছে",
+    "redirect_login_label": "SUHI Id লগইনে যাওয়া হচ্ছে",
     "redirect_home_label": "হোমে যাওয়া হচ্ছে",
     "retrying": "পুনরায় চেষ্টা করা হচ্ছে",
     "last_retry_title": "ওহো! আমি আপনাকে শনাক্ত করতে পারছি না",
