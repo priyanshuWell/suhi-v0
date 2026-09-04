@@ -9,8 +9,8 @@ export const BUFFER_COLLECTION_STEPS = [
   {
     bufferType: 'BIA',
     routes: [
-      '/bia/leg50',
-      '/bia/wh',
+      // '/bia/leg50',
+      // '/bia/wh',
       '/bia/whcomplete',
       '/bia/im',
       '/bia/imcomplete',
@@ -25,11 +25,9 @@ export const BUFFER_COLLECTION_STEPS = [
     routes: ['/colorblindness', '/colorblindness/quiz'],
   },
   {
-    bufferType: 'SPACE_CONVOY',
+    bufferType: 'SMOOTH_SLASH',
     routes: [
-      '/space-convoy-main',
-      '/divide-attention',
-      '/space-convoy-complete',
+      '/smoothie-slash'
     ],
   },
 ];

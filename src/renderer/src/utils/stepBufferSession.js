@@ -5,7 +5,7 @@ import { rotateStream90 } from '../components/dmit/NewDmit';
 import { BUFFER_COLLECTION_MAX_MS, getStepForPath } from './bufferCollectionRoutes';
 
 const CHUNK_MS = 1000;
-
+// chunk
 const session = {
   screeningSessionId: null,
   userId: null,

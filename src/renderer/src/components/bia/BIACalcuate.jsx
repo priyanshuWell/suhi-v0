@@ -3,15 +3,16 @@ import { useBackgroundCamera } from "../../services/BackgroundCameraProvider";
 import { BIAComponent } from "./BIAComponents";
 import { useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
+import i18n from "../../config/i18n/i18n";
 import ErrorAlert from "../ErrorAlert";
 import { useDispatch, useSelector } from "react-redux";
 import { setBiaResult, setLegBiaResult, setHeight, setWeight, setArmBiaResult, setSessionId, setScreening } from "../../features/common/commonSlice";
 import { measureHeight } from "../../utils/measurementUtils";
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux";
-import { BIAComplete, BIAMeasurementStage } from "../../utils/api";
+import { BIAComplete, BIAMeasurementStage, realtimeCapture } from "../../utils/api";
 import { getNextRoute } from "../../utils/stageRouter";
 import { mapArmsPayloadToBIAMeasurement, mapLegsPayloadToBIAMeasurement } from "../../utils/dataCoverter";
-import { trackStage } from "../../utils/config";
+import { getKioskId, trackStage } from "../../utils/config";
 import { validatePorts, logPortConfiguration, MEASUREMENT_TIMEOUTS, PORT_PATHS } from "../../utils/portConfig";
 import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
@@ -22,13 +23,17 @@ import biaHold_male from "../../assets/bia/bia-hold_male.mp4"
 
 import ctaShoesBg from "../../assets/bia/ctaShoes.svg";
 import textbgframe from "../../assets/textbgframe.svg";
+import errorFrame from "../../assets/error_frame.png";
 import BlueGradientButton from "../ui/BlueGradientButton";
 import BlackGradientButton from "../ui/BlackGradientButton";
 import AreYouThereModal from "./AreYouThereModal";
+import NoActivityFrame from "../ui/NoActivityFrame";
+import { useKioskAudio } from "../../hooks/useKioskAudio";
 export default function BIACalculate({ user, onComplete }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const { play: playErrorAudio, stop: stopErrorAudio } = useKioskAudio();
   const storeUser = useSelector((state) => state.common.user);
   const screeningState = useSelector((state) => state.common.screening);
 
@@ -39,9 +44,16 @@ export default function BIACalculate({ user, onComplete }) {
   const [isRunning, setIsRunning] = useState(false);
   const [currentStatus, setCurrentStatus] = useState("");
   const [errorState, setErrorState] = useState(null);
+  const [isSameUser, setSameUser] = useState(false);
   const [showHeightError, setShowHeightError] = useState(false);
   const [heightErrorCountdown, setHeightErrorCountdown] = useState(10);
+  const [showStandOnKioskModal, setShowStandOnKioskModal] = useState(false);
+  const [showDifferentUserModal, setShowDifferentUserModal] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  // BIA Error CTA — shown when height or impedance retries are exhausted
+  const [showBiaErrorCta, setShowBiaErrorCta] = useState(false);
+  const biaErrorCtaResolverRef = useRef(null);
+  const biaErrorCtaTimerRef = useRef(null);
   // Shoes CTA step: null | 'ctaA' | 'ctaB_1st' | 'ctaB_2nd' | 'ctaC' | 'ctaD'
   const [shoesCtaStep, setShoesCtaStep] = useState(null);
   const shoesCtaResolverRef = useRef(null);   // resolves 'shoes' | 'barefoot_success' | 'barefoot_fail'
@@ -52,6 +64,8 @@ export default function BIACalculate({ user, onComplete }) {
   const imCompleteResolver = useRef(null);
   // Stores next_stage from BIAComplete API response for use in handleImNextClick
   const biaNextStageRef = useRef(null);
+  const faceVerifiedRef = useRef(false);
+  const standOnKioskResolverRef = useRef(null);
   const [measuredValues, setMeasuredValues] = useState({
     height: "-- cm",
     weight: "-- kg",
@@ -98,27 +112,35 @@ export default function BIACalculate({ user, onComplete }) {
     SUCCESS: "SUCCESS",
     ERROR: "ERROR",
   }
+
+  // Centralized Retry Configuration
+  const RETRY_CONFIG = {
+    WEIGHT_HEIGHT: 3, // Total attempts for Phase 1 (Weight & Height)
+    ARM_50KHZ: 3,     // Attempts for Arm 50kHz
+    IMPEDANCE_20KHZ: 2 // Attempts for 20kHz impedance
+  };
+
   const MAX_RETRIES = 2;
 
-  const timeoutRefs = useRef({
-    global: null,
-    step: null,
-  });
 
   // No local recording state needed anymore
 
 
   // Error messages map
+  // Values are i18n keys — showError calls t(key) internally.
   const ERROR_MESSAGES = {
-    legImpedance_noWeight: "Please step on the platform barefoot",
-    legImpedance_hasWeight: "Please make sure you are barefoot",
-    weight: "Please step on the platform barefoot",
-    height: "Please stand straight & still",
-    armImpedance: "Please hold the rods firmly",
-    impedance20: "Please be barefoot and hold the rods firmly",
-    impedance100: "Please be barefoot and hold the rods firmly",
-    maxRetryReached: "Maximum retries reached. redirecting to dmit.",
-    HEIGHT_PORT_NOT_CONNECTED: "Height port is not connected"
+    legImpedance_noWeight: 'errors.weight_not_detected',
+    legImpedance_hasWeight: 'errors.barefoot_required',
+    weight: 'errors.weight_not_detected',
+    height: 'errors.height_not_detected',
+    armImpedance: 'errors.bia_rods_incorrect',
+    armRetry: 'errors.bia_retry',
+    handAndBody: 'errors.bia_rods_incorrect',
+    impedance20: 'errors.bia_rods_incorrect',
+    impedance100: 'errors.bia_rods_incorrect',
+    maxRetryReached: 'errors.bia_max_retries',
+    HEIGHT_PORT_NOT_CONNECTED: 'errors.height_port_not_connected',
+    legImpedanceMissing: 'errors.leg_impedance_missing',
   };
 
   const screenConfig = {
@@ -239,7 +261,14 @@ export default function BIACalculate({ user, onComplete }) {
             shouldShow = true;
             errorTriggered.current.leg = true;
           } else if (payload.source === 'ARM' && payload.attempt === ATTEMPT_THRESHOLDS.arm && !errorTriggered.current.arm) {
-            shouldShow = true;
+            // NOTE: ARM errors are intentionally NOT shown here.
+            // runArm50kHz_v1 / runPhase3_NoLeg handle arm retry messages explicitly
+            // with correct durations and audio. Calling showError here creates a race
+            // condition: the new play() call inside a subsequent showError invocation
+            // calls settleCurrent(false) on useKioskAudio, which immediately resolves
+            // the in-flight audioPromise and collapses Promise.all prematurely —
+            // causing the error banner to vanish before audio finishes.
+            // shouldShow = true;
             errorTriggered.current.arm = true;
           } else if (payload.source === 'HEIGHT' && payload.attempt === ATTEMPT_THRESHOLDS.height && !errorTriggered.current.height) {
             shouldShow = true;
@@ -405,23 +434,107 @@ export default function BIACalculate({ user, onComplete }) {
   //   }
   // };
 
-  const showError = (message, duration = 5000) => {
-    console.log(`[BIA DEBUG] Showing error: "${message}" for ${duration}ms`);
-    setErrorState({
-      title: message,
-      canRetry: false,
-    });
-    return sleep(duration).then(() => {
-      setErrorState(null);
-    });
+
+  // i18n key → audio file key (used when showError receives an ERROR_MESSAGES key).
+  // No regex fragility — lookup is a direct object property access.
+  const ERROR_AUDIO_KEY_MAP = {
+    'errors.leg_impedance_missing': 'errors/remove_your_shoes_and_socks',
+    'errors.barefoot_required': 'errors/remove_your_shoes_and_socks',
+    'errors.height_not_detected': 'errors/stay_still_i_am_measuring_height',
+    'errors.weight_not_detected': 'errors/stand_fully_on_the_platform',
+    'errors.hw_not_detected': 'errors/stand_on_the_kiosk',
+    'errors.bia_retry': 'errors/tring_again_keep_holding',
+    'errors.bia_rods_incorrect': 'errors/hold_both_handles_firmly_to_continue',
+    'errors.bia_max_retries': 'errors/couldnt_get_stable_reading',
   };
 
+  // Regex fallback — used only for raw strings arriving from the main process
+  // via IPC (payload.userMessage). Order matters: more specific first. (For hardware-related errors)
+  const ERROR_AUDIO_REGEX_MAP = [
+    { match: /barefoot|shoes|socks/i, key: 'errors/remove_your_shoes_and_socks' },
+    { match: /height|measuring.*height/i, key: 'errors/stay_still_i_am_measuring_height' },
+    { match: /platform|weight|stand fully/i, key: 'errors/stand_fully_on_the_platform' },
+    { match: /stand.*kiosk|check device/i, key: 'errors/stand_on_the_kiosk' },
+    { match: /trying again|keep holding|we.?re trying/i, key: 'errors/tring_again_keep_holding' },
+    { match: /handles firmly.*palm|hold.*handles firmly/i, key: 'errors/hold_both_handles_firmly_with_your_palm' },
+    { match: /both hands.*handles|both hands.*still|handles.*still|keep still/i, key: 'errors/hold_both_handles_firmly_to_continue' },
+    { match: /stable readings|next scan|couldn.?t get/i, key: 'errors/couldnt_get_stable_reading' },
+  ];
+
+  const showErrorLockRef = React.useRef(Promise.resolve());
+  const currentErrorMsgRef = React.useRef(null);
+  // Tracks the audio key that is currently playing inside showError so that
+  // a language switch can immediately replay it in the new language.
+  const currentAudioKeyRef = React.useRef(null);
+
+  // Re-play the active error audio whenever the user switches language.
+  useEffect(() => {
+    const handleLangChange = () => {
+      if (currentAudioKeyRef.current) {
+        console.log(`[BIA AUDIO] Language changed — replaying "${currentAudioKeyRef.current}" in new language`);
+        playErrorAudio(currentAudioKeyRef.current);
+      }
+    };
+    i18n.on('languageChanged', handleLangChange);
+    return () => i18n.off('languageChanged', handleLangChange);
+  }, [playErrorAudio]);
+
+  // NEW — single serialization point for the shared audio channel.
+  // Every playErrorAudio() call in this component must go through this,
+  // so no caller can interrupt another's clip mid-playback and cause
+  // showError's Promise.all to resolve early.
+  const audioQueueRef = React.useRef(Promise.resolve());
+
+  /**
+   * showError(msgKeyOrRaw, duration?)
+   *
+   * Accepts either:
+   *   - An i18n key (e.g. 'errors.bia_retry') → translates with t(), looks up
+   *     audio via ERROR_AUDIO_KEY_MAP (fast object lookup, no regex).
+   *   - A raw string from the main process (IPC payload.userMessage) → displays
+   *     as-is, looks up audio via ERROR_AUDIO_REGEX_MAP (regex fallback).
+   */
+  const showError = (msgKeyOrRaw, duration = 7000) => {
+    if (currentErrorMsgRef.current === msgKeyOrRaw) {
+      console.log(`[BIA DEBUG] Skipping duplicate active error: "${msgKeyOrRaw}"`);
+      return showErrorLockRef.current;
+    }
+
+    const run = async () => {
+      console.log(`[BIA DEBUG] Showing error: "${msgKeyOrRaw}" for ${duration}ms`);
+      currentErrorMsgRef.current = msgKeyOrRaw;
+
+      // Resolve display text + audio key based on whether we got an i18n key or raw string
+      const isI18nKey = msgKeyOrRaw.startsWith('errors.');
+      const displayMessage = isI18nKey ? t(msgKeyOrRaw) : msgKeyOrRaw;
+      const audioKey = ERROR_AUDIO_KEY_MAP[msgKeyOrRaw]
+        || ERROR_AUDIO_REGEX_MAP.find((e) => e.match.test(displayMessage) || e.match.test(msgKeyOrRaw))?.key;
+
+      setErrorState({ title: displayMessage, canRetry: false });
+
+      let audioPromise = Promise.resolve();
+      if (audioKey) {
+        currentAudioKeyRef.current = audioKey;
+        audioPromise = playErrorAudio(audioKey);
+      }
+      // Wait for BOTH the display duration AND the audio playback to complete
+      await Promise.all([sleep(duration), audioPromise]);
+      setErrorState(null);
+      currentErrorMsgRef.current = null;
+      currentAudioKeyRef.current = null;
+    };
+
+    const nextLock = showErrorLockRef.current.then(run, run);
+    showErrorLockRef.current = nextLock;
+    return nextLock;
+  };
   /**
    * Shows the animated "Stand Properly" modal for 10 seconds with a live countdown,
    * then hides it and resolves — caller then retries height measurement.
    */
   const showHeightErrorModal = () => {
     console.log('[BIA DEBUG] Showing StandProperly modal for 10s');
+    playErrorAudio('errors/stay_still_i_am_measuring_height');
     setHeightErrorCountdown(10);
     setShowHeightError(true);
     return new Promise((resolve) => {
@@ -467,6 +580,38 @@ export default function BIACalculate({ user, onComplete }) {
     }
   };
 
+  /**
+   * Shows the "BIA Error" NoActivityFrame CTA (max-retry exhausted).
+   * Resolves when the user taps "Moving to Next Scan" OR after 5 seconds,
+   * whichever comes first — then the caller proceeds with skipBIA / finishWithImcomplete / navigate.
+   */
+  const showBiaMaxRetryError = () => {
+    console.log('[BIA DEBUG] Showing BIA max-retry error CTA');
+    // Play the matching audio (non-blocking — the 5 s timer acts as minimum display)
+    playErrorAudio('errors/couldnt_get_stable_reading');
+    setShowBiaErrorCta(true);
+    return new Promise((resolve) => {
+      biaErrorCtaResolverRef.current = resolve;
+      // Auto-resolve after 5 s so the flow never stalls if nobody taps
+      biaErrorCtaTimerRef.current = setTimeout(() => {
+        if (biaErrorCtaResolverRef.current) {
+          biaErrorCtaResolverRef.current();
+          biaErrorCtaResolverRef.current = null;
+        }
+        setShowBiaErrorCta(false);
+      }, 5000);
+    });
+  };
+
+  const handleBiaErrorCtaDismiss = () => {
+    clearTimeout(biaErrorCtaTimerRef.current);
+    setShowBiaErrorCta(false);
+    if (biaErrorCtaResolverRef.current) {
+      biaErrorCtaResolverRef.current();
+      biaErrorCtaResolverRef.current = null;
+    }
+  };
+
   const handleWhNextClick = () => {
     console.log("[BIA DEBUG] whComplete Next button clicked");
     if (whCompleteResolver.current) {
@@ -486,6 +631,38 @@ export default function BIACalculate({ user, onComplete }) {
       const nextRoute = getNextRoute(biaNextStageRef.current, '/smoothie-slash');
       console.log('[BIA] handleImNextClick — navigating to:', nextRoute);
       navigate(nextRoute);
+    }
+  };
+
+  const handleFptRealTime = async () => {
+    const kiosk_id = getKioskId();
+    const fptResponse = await realtimeCapture(kiosk_id);
+    console.log("[BIA DEBUG] FPT real-time response:", fptResponse);
+    if (!fptResponse?.success) {
+      throw new Error(fptResponse?.error?.message || "FPT capture failed");
+    }
+    return fptResponse;
+  };
+
+  /**
+   * Shows the "Please stand on the kiosk" modal and pauses the flow
+   * until the user clicks the Retry button.
+   */
+  const showStandOnKioskPrompt = () => {
+    console.log('[BIA DEBUG] Showing StandOnKiosk modal — waiting for user');
+    playErrorAudio('errors/stand_on_the_kiosk');
+    setShowStandOnKioskModal(true);
+    return new Promise((resolve) => {
+      standOnKioskResolverRef.current = resolve;
+    });
+  };
+
+  const handleStandOnKioskRetry = () => {
+    console.log('[BIA DEBUG] StandOnKiosk — Retry clicked');
+    setShowStandOnKioskModal(false);
+    if (standOnKioskResolverRef.current) {
+      standOnKioskResolverRef.current();
+      standOnKioskResolverRef.current = null;
     }
   };
 
@@ -514,7 +691,7 @@ export default function BIACalculate({ user, onComplete }) {
 
   // Height sensor timeout: 10 seconds to get a stable reading
 
-  const HEIGHT_SENSOR_TIMEOUT_MS = 8000;
+  const HEIGHT_SENSOR_TIMEOUT_MS = 10000;
 
   const measureHeight = async () => {
     console.log("[BIA DEBUG] Starting height measurement (10s timeout)...");
@@ -586,18 +763,6 @@ export default function BIACalculate({ user, onComplete }) {
       throw new Error("Arm impedance failed");
 
     }
-
-    /*
-    
-    
-    */
-
-    // resultsRef.current.arms50k = {
-    //   fatPercentage: res.body_fat_percentage ?? "20",
-    //   waterPercentage: res.moisture_content_kg ?? "55",
-    //   muscleMassKg: res.muscle_mass_kg ?? "30",
-    //   boneMassKg: res.bone_mass_kg ?? "10",
-    // };
     setMeasuredValues((prev) => ({
       ...prev,
       arms50k: resultsRef.current.arms50k,
@@ -611,23 +776,18 @@ export default function BIACalculate({ user, onComplete }) {
       attempts: res.attempts
     };
     console.log(`[BIA DEBUG] Arm impedance stored: ${res.measurement.impedance.value} ${res.measurement.impedance.unit}`);
-    // updatePhaseState('arm', 'success');
     return res;
   };
 
   const measureImpedance = async (freq, attemptCount) => {
     console.log(`[BIA DEBUG] Starting impedance ${freq}kHz measurement...`);
-    // updatePhaseState(`impedance${freq}`, 'in_progress');
-    // setCurrentStatus(`Measuring impedance at ${freq}kHz...`);
     const res = await window.api.startImpedanceMeasurement(freq);
     console.log(`[BIA DEBUG] Impedance ${freq}kHz result:`, res);
 
     if (!res?.success) {
       console.error(`[BIA DEBUG] Impedance ${freq}kHz failed`);
-      // updatePhaseState(`impedance${freq}`, 'failed', `Impedance ${freq}kHz failed`);
       await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "8 electrode impedance measurement failed", storeUser?.data?.buffer_id, storeUser?.data?.user_id, Number(attemptCount + 1));
       throw new Error("Arm impedance failed");
-      // throw new Error(`Impedance ${freq}kHz failed`);
     }
 
     resultsRef.current.impedance[freq === "20" ? "k20" : "k100"] = {
@@ -637,77 +797,146 @@ export default function BIACalculate({ user, onComplete }) {
       segments: res.impedance.segments
     };
     console.log(`[BIA DEBUG] Impedance ${freq}kHz stored: avg=${res.impedance.avg.toFixed(1)}Ω`);
-    // updatePhaseState(`impedance${freq}`, 'success');
     return res;
   };
 
   /* =======================
-     PHASE 1: WEIGHT + HEIGHT
-     - Parallel measurement, one automatic 10s-timeout retry.
-     - No user button — fully automatic.
-     - Double failure → skip BIA entirely.
+     PHASE 1: WEIGHT + HEIGHT + FACE
   ======================= */
   const runPhase1_WeightHeight = async () => {
-    console.log("[BIA DEBUG] ========== PHASE 1: WEIGHT + HEIGHT ==========");
+    console.log("[BIA DEBUG] ========== PHASE 1: WEIGHT + HEIGHT + FACE ==========");
     setCurrentPhase('wh');
     navigate('/bia/wh');
 
-    // Run W+H in parallel; returns settled status without throwing.
-    const attemptWH = async () => {
-      const [wRes, hRes] = await Promise.allSettled([
-        measureWeight(),
-        measureHeight(),
-      ]);
-      return { weightOk: wRes.status === 'fulfilled', heightOk: hRes.status === 'fulfilled' };
+    /**
+     * Helper: call BIAComplete and navigate away — used by all skip paths.
+     */
+    const skipBIA = async (reason) => {
+      console.error(`[BIA DEBUG] Phase 1 SKIP — ${reason}`);
+      await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, reason, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
+      await Promise.allSettled([window.api.disconnectHeightPort()]);
+      const skipComplete = await BIAComplete({
+        session_id: storeUser?.data?.buffer_id,
+        screening_session_id: screeningState?.sessionId,
+      });
+      if (skipComplete?.screening) dispatch(setScreening(skipComplete.screening));
+      const skipRoute = getNextRoute(skipComplete?.screening?.next_stage, '/smoothie-slash');
+      console.log('[BIA] Phase 1 skip — navigating to:', skipRoute);
+      navigate(skipRoute);
     };
 
-    // --- Attempt 1 ---
-    console.log("[BIA DEBUG] Phase 1 — Attempt 1: W+H parallel");
-    let { weightOk, heightOk } = await attemptWH();
+    /**
+     * Checks if the detected face belongs to a different registered user.
+     * Returns true if different user (navigates to /welcome), false otherwise.
+     */
+    const checkDifferentUser = async (fptData) => {
+      if (!fptData) return false;
+      const fptUserId = fptData?.data?.matched_student?.user_id;
+      const currentUserId = storeUser?.data?.user_id;
+      const candidateList = fptData?.data?.candidates;
+      const isPresentInCandidateList = candidateList?.some((user) => user?.user_id === currentUserId);
+      console.log('[BIA DEBUG] Candidate match:', isPresentInCandidateList);
+      console.log(`[BIA DEBUG] Face user: ${fptUserId}, Session user: ${currentUserId}`);
 
-    if (!weightOk || !heightOk) {
-      console.warn(`[BIA DEBUG] Phase 1 Attempt 1 FAILED — W:${weightOk} H:${heightOk}`);
+      if (fptUserId && currentUserId && fptUserId !== currentUserId && !isPresentInCandidateList) {
+        console.warn('[BIA DEBUG] Different user detected — showing DifferentUserModal');
+        playErrorAudio('errors/different_user_found');
+        setShowDifferentUserModal(true);
+        await sleep(5000);
+        setShowDifferentUserModal(false);
+        navigate('/welcome');
+        return true;
+      }
+      if (currentUserId && (fptUserId === currentUserId || isPresentInCandidateList)) {
+        setSameUser(true);
+        faceVerifiedRef.current = true;
+        console.log('[BIA DEBUG] Same user confirmed');
+      }
+      return false;
+    };
 
-      if (!heightOk) {
-        // Height failed → show animated "Stand Properly" modal for 10 seconds
-        console.warn('[BIA DEBUG] Height failed — showing StandProperly modal for 10s');
+    /**
+     * Runs W+H (and FPT real-time face capture) in parallel.
+     * Returns { weightOk, heightOk, fptOk, fptData }.
+     */
+    const attemptWH = async (runFpt = true) => {
+      const promises = [measureWeight(), measureHeight()];
+      if (runFpt) promises.push(handleFptRealTime());
+
+      const results = await Promise.allSettled(promises);
+      const [wRes, hRes, fptRes] = results;
+
+      const fptData = (runFpt && fptRes?.status === 'fulfilled') ? fptRes.value : null;
+
+      return {
+        weightOk: wRes.status === 'fulfilled',
+        heightOk: hRes.status === 'fulfilled',
+        fptOk: !!fptData,
+        fptData,
+      };
+    };
+
+    // ── Attempt 1: W + H + F in parallel ────────────────────────────────────
+    console.log(`[BIA DEBUG] Phase 1 — Attempt 1/${RETRY_CONFIG.WEIGHT_HEIGHT}: W + H + F`);
+    let attempt = 1;
+    let { weightOk, heightOk, fptOk, fptData } = await attemptWH(true);
+    console.log(`[BIA DEBUG] Attempt 1 — W:${weightOk} H:${heightOk} F:${fptOk}`);
+
+    // Check if a different user was detected on Attempt 1
+    if (fptOk) {
+      const isDifferent = await checkDifferentUser(fptData);
+      if (isDifferent) return;
+    }
+
+    // ── Retry loop up to RETRY_CONFIG.WEIGHT_HEIGHT ────────────────────────
+    while ((!weightOk || !heightOk) && attempt < RETRY_CONFIG.WEIGHT_HEIGHT) {
+      attempt++;
+      console.log(`[BIA DEBUG] Phase 1 retry — Attempt ${attempt}/${RETRY_CONFIG.WEIGHT_HEIGHT}`);
+
+      // ── Scenario: W❌ H❌ F✅ — face present, scale empty ─────────────────
+      if (!weightOk && !heightOk && fptOk) {
+        console.warn('[BIA DEBUG] Scale empty but face detected — showing StandOnKiosk modal');
+        await showStandOnKioskPrompt(); // pauses until user clicks Retry
+        console.log('[BIA DEBUG] StandOnKiosk Retry clicked — re-running W+H + F');
+      }
+      // ── Scenario: H❌ (height missing, with or without weight) ────────────
+      else if (!heightOk) {
+        console.warn('[BIA DEBUG] Height failed — showing StandProperly modal 10s');
         await showHeightErrorModal();
-      } else {
-        // Only weight failed → show generic error for 3s
-        setErrorState({ title: ERROR_MESSAGES.weight, canRetry: false });
-        await sleep(3000);
-        setErrorState(null);
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (height retry): W+H + F`);
+      }
+      // ── Scenario: W❌ H✅ — only weight missing ───────────────────────────
+      else if (!weightOk) {
+        console.warn('[BIA DEBUG] Weight only failed — showing ErrorAlert 3s');
+        await showError(ERROR_MESSAGES.weight, 6000);
+        console.log(`[BIA DEBUG] Phase 1 — Attempt ${attempt} (weight retry): W+H + F`);
+      }
+      // ── Scenario: W❌ H❌ F❌ — nobody on kiosk, no face ─────────────────
+      else {
+        console.warn(`[BIA DEBUG] All absent — silent auto-retry Attempt ${attempt}`);
       }
 
-      // --- Attempt 2 (auto retry) ---
-      console.log("[BIA DEBUG] Phase 1 — Attempt 2 (auto-retry): W+H parallel");
-      ({ weightOk, heightOk } = await attemptWH());
+      // Re-run measurement with face check enabled on retries
+      ({ weightOk, heightOk, fptOk, fptData } = await attemptWH(true));
+      console.log(`[BIA DEBUG] Attempt ${attempt} result — W:${weightOk} H:${heightOk} F:${fptOk}`);
 
-      if (!weightOk || !heightOk) {
-        // Double fail — skip BIA
-        console.error(`[BIA DEBUG] Phase 1 DOUBLE FAIL — W:${weightOk} H:${heightOk} — skipping BIA`);
-        await trackStage(STAGES.WH_FINAL, STATUS.ERROR, {}, 'W+H failed after auto-retry', storeUser?.data?.buffer_id, storeUser?.data?.user_id);
-        console.log("[BIA REC] ⏏️  Phase 1 — W+H double fail → saveBuffer('wh_skip')");
-        // await saveBuffer('wh_skip');
-        // Disconnect ports before navigating away
-        console.log("[BIA DEBUG] Phase 1 double-fail — disconnecting BIA + height ports");
-        await Promise.allSettled([
-          // window.api.disconnectBiaPort(),
-          window.api.disconnectHeightPort(),
-        ]);
-        const whSkipComplete = await BIAComplete({
-          session_id: storeUser?.data?.buffer_id,
-          screening_session_id: screeningState?.sessionId,
-        });
-        if (whSkipComplete?.screening) dispatch(setScreening(whSkipComplete.screening));
-        const whSkipRoute = getNextRoute(whSkipComplete?.screening?.next_stage, '/smoothie-slash');
-        console.log('[BIA] Phase 1 W+H skip — navigating to:', whSkipRoute);
-        navigate(whSkipRoute);
-        return;
+      // Check if a different user stepped on during retry
+      if (fptOk) {
+        const isDifferent = await checkDifferentUser(fptData);
+        if (isDifferent) return;
       }
     }
 
-    // --- Both W+H succeeded ---
+    if (!weightOk || !heightOk) {
+      if (!heightOk) {
+        // Height retries exhausted — show BIA Error CTA before skipping
+        await showBiaMaxRetryError();
+      }
+      await skipBIA(`W+H failed after ${RETRY_CONFIG.WEIGHT_HEIGHT} attempts`);
+      return;
+    }
+
+    // ── All W+H succeeded (all paths land here) ───────────────────────────
     console.log("[BIA DEBUG] Phase 1 SUCCESS — W+H both measured");
     setDisplayValues({
       height: resultsRef.current?.height?.value ?? null,
@@ -718,12 +947,9 @@ export default function BIACalculate({ user, onComplete }) {
       height_cm: resultsRef.current?.height?.value,
     }, null, storeUser?.data?.buffer_id, storeUser?.data?.user_id);
 
-    // Disconnect BIA + height ports — W+H done, no longer needed
-    console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting BIA + height ports before Phase 2");
-    await Promise.allSettled([
-      // window.api.disconnectBiaPort(),
-      window.api.disconnectHeightPort(),
-    ]);
+    // Disconnect height port — no longer needed
+    console.log("[BIA DEBUG] Phase 1 SUCCESS — disconnecting height port before Phase 2");
+    // await Promise.allSettled([window.api.disconnectHeightPort()]);
 
     await runPhase2_LegCheck();
   };
@@ -757,7 +983,7 @@ export default function BIACalculate({ user, onComplete }) {
 
       const showCtaA = () => {
         setShoesCtaStep('ctaA');
-        startCtaTimer(10000, () => showCtaD());
+        startCtaTimer(20000, () => showCtaD());
       };
 
       const showCtaB_1st = () => {
@@ -828,7 +1054,8 @@ export default function BIACalculate({ user, onComplete }) {
       await sleep(300);
       console.log("[BIA DEBUG] lastLegErrorCodeRef after sleep:", lastLegErrorCodeRef.current);
       if (lastLegErrorCodeRef.current === 'ELECTRODE') {
-        console.log("[BIA DEBUG] ELECTRODE error — starting shoes CTA tree");
+        console.log("[BIA DEBUG] ELECTRODE error — awaiting 'remove shoes/socks' audio then showing CTA tree");
+        // await playErrorAudio('errors/remove_your_shoes_and_socks');
         const outcome = await runShoesCtaTree();
         console.log(`[BIA DEBUG] Shoes CTA resolved: ${outcome}`);
       } else {
@@ -1087,8 +1314,8 @@ export default function BIACalculate({ user, onComplete }) {
     const armOk = await runArm50kHz_v1();
 
     if (!armOk) {
-      // Arm completely failed after retries → show leg result
-      console.log("[BIA DEBUG] Arm 50kHz exhausted — showing leg result");
+      // Arm completely failed after retries → leg data exists, go straight to result
+      console.log("[BIA DEBUG] Arm 50kHz exhausted — leg data exists, skipping error CTA, showing leg result directly");
       await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "Arm 50kHz exhausted, showing leg result", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
       await finishWithImcomplete("leg_result_fallback");
       return;
@@ -1107,13 +1334,13 @@ export default function BIACalculate({ user, onComplete }) {
     const ok1 = await tryArm50kHz("Arm-v1-attempt-1", 0);
     if (ok1) return true;
 
-    // Attempt 2 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    // Attempt 2 — show retry-specific error first
+    await showError(ERROR_MESSAGES.armRetry, 8000);
     const ok2 = await tryArm50kHz("Arm-v1-attempt-2", 1);
     if (ok2) return true;
 
-    // Attempt 3 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    // Attempt 3 — show hand+body error first
+    await showError(ERROR_MESSAGES.handAndBody, 8000);
     const ok3 = await tryArm50kHz("Arm-v1-attempt-3", 2);
     return ok3;
   };
@@ -1146,7 +1373,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Show error before attempt 2
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 5000);
 
     // Attempt 2
     const ok2 = await try20kHz("20kHz-retry-2");
@@ -1166,8 +1393,8 @@ export default function BIACalculate({ user, onComplete }) {
       return;
     }
 
-    // Both retries failed → show 50kHz arm result
-    console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing 50kHz arm result");
+    // Both retries failed → leg/arm data exists, go straight to result (no error CTA)
+    console.log("[BIA DEBUG] 20kHz failed after 2 retries — showing available result directly");
     await trackStage(STAGES.IMPDEDANCE_20_100KHZ, STATUS.ERROR, {}, "20kHz failed after arm 50kHz retries", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     await finishWithImcomplete("arm50k_result_20khz_exhausted");
   };
@@ -1193,7 +1420,7 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 2 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.armRetry, 5000);
     const ok2 = await tryArm50kHz("NoLeg-arm-attempt-2", 1);
     if (ok2) {
       await finishWithImcomplete("noleg_arm50k_success_retry2");
@@ -1201,15 +1428,16 @@ export default function BIACalculate({ user, onComplete }) {
     }
 
     // Attempt 3 — show error first
-    await showError(ERROR_MESSAGES.armImpedance, 3000);
+    await showError(ERROR_MESSAGES.handAndBody, 5000);
     const ok3 = await tryArm50kHz("NoLeg-arm-attempt-3", 2);
     if (ok3) {
       await finishWithImcomplete("noleg_arm50k_success_retry3");
       return;
     }
 
-    // All failed → move to next screen
+    // All failed → show BIA Error CTA then move to next screen
     console.log("[BIA DEBUG] No-leg path: arm 50kHz exhausted — moving to next screen");
+    await showBiaMaxRetryError();
     await trackStage(STAGES.ARM_50KHZ, STATUS.ERROR, {}, "No-leg arm 50kHz exhausted", storeUser?.data?.buffer_id, storeUser?.data?.user_id);
     const result = await BIAComplete({
       session_id: storeUser?.data?.buffer_id,
@@ -1585,7 +1813,29 @@ export default function BIACalculate({ user, onComplete }) {
 
       {/* Stand Properly Modal — shown when height measurement fails */}
       {showHeightError && (
-        <StandProperlyModal countdown={heightErrorCountdown} />
+        <StandProperlyModal countdown={heightErrorCountdown} t={t} />
+      )}
+
+      {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
+      {showStandOnKioskModal && (
+        <StandOnKioskModal title={t("errors.bia_error_title")} description={t("errors.face_height_not_detected_desc")} onRetry={handleStandOnKioskRetry} playAudio={playErrorAudio} t={t} />
+      )}
+
+      {/* Different User Modal — shown when W✅ H✅ F✅ but different user */}
+      {showDifferentUserModal && (
+        <NoActivityFrame title={t("errors.different_user_found")} description={t("errors.different_user_found_desc")} />
+      )}
+
+      {/* BIA Error CTA — max retries exhausted for height or impedance */}
+      {showBiaErrorCta && (
+        <NoActivityFrame
+          variant="no-user"
+          title={t("errors.bia_error_title")}
+          description={t("errors.bia_max_retries")}
+          // showRetry
+          buttonText={t("errors.moving_to_next_scan")}
+          onRetry={handleBiaErrorCtaDismiss}
+        />
       )}
 
       {/* Shoes CTA Tree — driven by shoesCtaStep state */}
@@ -1593,6 +1843,8 @@ export default function BIACalculate({ user, onComplete }) {
         <ContinueWithShoesModal
           onYes={shoesCtaHandlersRef.current.onCtaAYes}
           onNo={shoesCtaHandlersRef.current.onCtaANo}
+          playAudio={playErrorAudio}
+          t={t}
         />
       )}
       {(shoesCtaStep === 'ctaB_1st' || shoesCtaStep === 'ctaB_2nd') && (
@@ -1601,6 +1853,8 @@ export default function BIACalculate({ user, onComplete }) {
           onStart={shoesCtaStep === 'ctaB_1st'
             ? shoesCtaHandlersRef.current.onCtaB1stStart
             : shoesCtaHandlersRef.current.onCtaB2ndStart}
+          playAudio={playErrorAudio}
+          t={t}
         />
       )}
       {shoesCtaStep === 'ctaC' && (
@@ -1608,6 +1862,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaCYes}
           onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
+          playAudio={playErrorAudio}
         />
       )}
       {shoesCtaStep === 'ctaD' && (
@@ -1615,6 +1870,7 @@ export default function BIACalculate({ user, onComplete }) {
           timeoutSecs={10}
           onYes={shoesCtaHandlersRef.current.onCtaDYes}
           onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
+          playAudio={playErrorAudio}
           t={t}
         />
       )}
@@ -1624,25 +1880,31 @@ export default function BIACalculate({ user, onComplete }) {
 
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
-const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
-  const [remaining, setRemaining] = React.useState(10);
+const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
+  const [remaining, setRemaining] = React.useState(15);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   const fireNo = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onNo?.();
   };
   const fireYes = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onYes?.();
   };
 
   React.useEffect(() => {
+    // Play the shoes/barefoot prompt audio on mount
+    playAudio?.('errors/remove_your_shoes_and_socks')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
+
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
         if (p <= 1) { clearInterval(intervalRef.current); setTimeout(fireNo, 0); return 0; }
@@ -1658,18 +1920,18 @@ const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
         <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
-          <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Do you want to continue with shoes?
+          <h2 className="text-[#8BC3E5] text-[30px] font-anta text-center m-0">
+            {t("errors.shoes_prompt")}<br /> {t("errors.shoes_prompt_choice")}
           </h2>
-          <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p>
+          {/* <p className="text-white/60 font-anta text-2xl">Auto-continuing in {remaining}s…</p> */}
           <div className="flex gap-10">
-            <button onClick={fireNo}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200">
-              🦶 No
+            <button onClick={fireNo} disabled={isAudioPlaying}
+              className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              🦶 {t("common.no")}
             </button>
-            <button onClick={fireYes}
-              className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
-              👟 Yes
+            <button onClick={fireYes} disabled={isAudioPlaying}
+              className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
+              👟 {t("common.yes")}
             </button>
           </div>
         </div>
@@ -1679,19 +1941,25 @@ const ContinueWithShoesModal = ({ onYes, onNo, t }) => {
 };
 
 /* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
+const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
   const [remaining, setRemaining] = React.useState(timeoutSecs);
   const firedRef = React.useRef(false);
   const intervalRef = React.useRef(null);
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
 
   const fireStart = () => {
-    if (firedRef.current) return;
+    if (firedRef.current || isAudioPlaying) return;
     firedRef.current = true;
     clearInterval(intervalRef.current);
     onStart?.();
   };
 
   React.useEffect(() => {
+    // Play the "press start when ready" audio on mount
+    playAudio?.('errors/press_start_once_you_are_ready')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
+
     intervalRef.current = setInterval(() => {
       setRemaining((p) => {
         if (p <= 1) { clearInterval(intervalRef.current); return 0; }
@@ -1708,12 +1976,12 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
         <div className="absolute flex flex-col items-center justify-center gap-8"
           style={{ top: '14%', bottom: '20%', left: '14%', right: '14%' }}>
           <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
-            Remove your socks and shoes,<br />then press Start.
-          </h2>
+            {t("errors.press_start_ready")
+            }          </h2>
           <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
-          <button onClick={fireStart}
-            className="w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200">
-            Start
+          <button onClick={fireStart} disabled={isAudioPlaying}
+            className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            {t("common.start")}
           </button>
         </div>
       </div>
@@ -1723,7 +1991,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart }) => {
 
 
 /* ── Stand Properly Modal — animated height error prompt ────────── */
-const StandProperlyModal = ({ countdown }) => {
+const StandProperlyModal = ({ countdown, t }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)' }}>
       <div style={{
@@ -1791,7 +2059,7 @@ const StandProperlyModal = ({ countdown }) => {
             letterSpacing: '0.02em',
             textShadow: '0 0 20px rgba(139,195,229,0.6)',
           }}>
-            Stand Straight &amp; Still
+            {t("errors.stand_straight_still")}
           </h2>
           <p style={{
             color: 'rgba(255,255,255,0.7)',
@@ -1799,7 +2067,7 @@ const StandProperlyModal = ({ countdown }) => {
             fontSize: '1.2rem',
             marginTop: '8px',
           }}>
-            Keep your arms at your sides and look forward
+            {t("errors.height_not_detected")}
           </p>
         </div>
 
@@ -1831,7 +2099,7 @@ const StandProperlyModal = ({ countdown }) => {
         </div>
 
         <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'Anta, sans-serif', fontSize: '1rem', margin: 0 }}>
-          Retrying in {countdown}s…
+          {t("common.retry_in", { countdown })}
         </p>
       </div>
 
@@ -1862,6 +2130,190 @@ const StandProperlyModal = ({ countdown }) => {
           50%       { opacity: 1;   transform: translateY(-6px); }
         }
       `}</style>
+    </div>
+  );
+};
+
+/* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
+const StandOnKioskModal = ({ onRetry, title, description, playAudio,t }) => {
+  const [isAudioPlaying, setIsAudioPlaying] = React.useState(true);
+
+  React.useEffect(() => {
+    playAudio?.('errors/stand_on_the_kiosk')?.then?.(() => {
+      setIsAudioPlaying(false);
+    });
+  }, []);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(0,0,0,0.82)' }}
+    >
+      {/* Frame container — sized to match the error_frame.png aspect ratio (~16:9 crop) */}
+      <div
+        style={{
+          position: 'relative',
+
+          animation: 'standProperlyFadeIn 0.4s ease',
+        }}
+      >
+        {/* Background frame image */}
+        <img
+          src={errorFrame}
+          alt=""
+          draggable={false}
+          style={{ width: '100%', height: 'auto', display: 'block', userSelect: 'none' }}
+        />
+
+        {/* Content overlay — centred within the frame's inner panel area */}
+        <div
+          style={{
+            position: 'absolute',
+            /* These offsets position content inside the panel — tweak if needed */
+            top: '22%',
+            bottom: '12%',
+            left: '10%',
+            right: '10%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '20px',
+          }}
+        >
+          {/* Title */}
+          <h2
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              color: '#FFC84A',
+              fontSize: 'clamp(1.4rem, 3vw, 2rem)',
+              fontFamily: 'Anta, sans-serif',
+              margin: 0,
+              letterSpacing: '0.04em',
+              textShadow: '0 0 16px rgba(255,200,74,0.55)',
+            }}
+          >
+            {/* ⊙ warning circle */}
+            <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+              style={{ flexShrink: 0, filter: 'drop-shadow(0 0 6px rgba(255,200,74,0.7))' }}
+            >
+              <circle cx="12" cy="12" r="10" stroke="#FFC84A" strokeWidth="2" />
+              <line x1="12" y1="8" x2="12" y2="12" stroke="#FFC84A" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="16" r="1" fill="#FFC84A" />
+            </svg>
+            {title}
+          </h2>
+
+          {/* Description */}
+          <p
+            style={{
+              color: '#FFC84A',
+              fontFamily: 'Anta, sans-serif',
+              fontSize: 'clamp(1.5rem, 3vw, 4rem)',
+              margin: 0,
+              textAlign: 'center',
+              opacity: 0.85,
+            }}
+          >
+            {description}
+          </p>
+
+          <BlackGradientButton onClick={onRetry} disabled={isAudioPlaying} className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta">
+            {t("common.retry")}
+          </BlackGradientButton>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Different User Modal — W✅ H✅ F✅ but wrong user ───────────────── */
+const DifferentUserModal = () => {
+  const [countdown, setCountdown] = React.useState(5);
+
+  React.useEffect(() => {
+    const tick = setInterval(() => {
+      setCountdown(p => Math.max(0, p - 1));
+    }, 1000);
+    return () => clearInterval(tick);
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.80)' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '28px',
+        animation: 'standProperlyFadeIn 0.4s ease',
+      }}>
+        {/* Warning icon */}
+        <div style={{
+          width: '100px',
+          height: '100px',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(255,80,80,0.2) 0%, transparent 70%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          animation: 'standGlowPulse 2s ease-in-out infinite',
+        }}>
+          <svg viewBox="0 0 80 80" width="80" height="80">
+            <circle cx="40" cy="40" r="36" fill="none" stroke="rgba(255,80,80,0.7)" strokeWidth="4" />
+            <text x="40" y="56" textAnchor="middle" fill="#FF5050" fontSize="44" fontFamily="Anta, sans-serif" style={{ filter: 'drop-shadow(0 0 8px rgba(255,80,80,0.8))' }}>!</text>
+          </svg>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{
+            color: '#FF5050',
+            fontSize: '2.2rem',
+            fontFamily: 'Anta, sans-serif',
+            margin: 0,
+            letterSpacing: '0.02em',
+            textShadow: '0 0 20px rgba(255,80,80,0.5)',
+          }}>
+            Looks like you are a different user
+          </h2>
+          <p style={{
+            color: 'rgba(255,255,255,0.65)',
+            fontFamily: 'Anta, sans-serif',
+            fontSize: '1.2rem',
+            marginTop: '10px',
+          }}>
+            Redirecting you to the home page...
+          </p>
+        </div>
+
+        {/* Countdown ring */}
+        <div style={{ position: 'relative', width: '70px', height: '70px' }}>
+          <svg viewBox="0 0 70 70" width="70" height="70" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="35" cy="35" r="28" fill="none" stroke="rgba(255,80,80,0.15)" strokeWidth="5" />
+            <circle
+              cx="35" cy="35" r="28"
+              fill="none"
+              stroke="#FF5050"
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={`${2 * Math.PI * 28}`}
+              strokeDashoffset={`${2 * Math.PI * 28 * (countdown / 5)}`}
+              style={{ transition: 'stroke-dashoffset 0.9s linear', filter: 'drop-shadow(0 0 6px #FF5050)' }}
+            />
+          </svg>
+          <div style={{
+            position: 'absolute', inset: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#FF5050',
+            fontSize: '1.5rem',
+            fontFamily: 'Anta, sans-serif',
+            fontWeight: 'bold',
+          }}>
+            {countdown}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

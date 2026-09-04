@@ -10,9 +10,9 @@ import blenderImage from '../../../assets/smoothie/blenderImage.svg';
 import ProgressStage from '../../ProgessStage';
 import cutSlice1 from '../../../assets/audio/smoothie/cutSlice.wav';
 import cutSlice2 from '../../../assets/audio/smoothie/cutSlice2.wav';
-import beAwareImg from '../../../assets/smoothie/intro/intro_step1.png';
-import howToDoImg from '../../../assets/smoothie/intro/intro_step2.png';
-import howToPlayImg from '../../../assets/smoothie/intro/intro_step3.png';
+import BeAware from './BeAware';
+import HowToDoNew from './HowToDo';
+import HowToPlay from './HowtoPlay';
 import bgMusic from '../../../assets/audio/smoothie/background2.wav';
 import banana from '../../../assets/smoothie/fruits/banana.png';
 import blueberry from '../../../assets/smoothie/fruits/blueberry.png';
@@ -198,6 +198,21 @@ const BUBBLES = Array.from({ length: 7 }, (_, i) => ({
   dur: 1.8 + Math.random() * 1.8,
   delay: Math.random() * 2,
 }));
+
+const slideVariants = {
+  enter: (direction) => ({
+    x: direction > 0 ? "100%" : direction < 0 ? "-100%" : 0,
+    opacity: 0,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+  },
+  exit: (direction) => ({
+    x: direction < 0 ? "100%" : direction > 0 ? "-100%" : 0,
+    opacity: 0,
+  }),
+};
 
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function SmoothieSlashGame() {
@@ -400,6 +415,30 @@ export default function SmoothieSlashGame() {
     }
     setScreen(SCREENS.COUNTDOWN); setCountdown(3);
   };
+
+  const [introDirection, setIntroDirection] = useState(0);
+
+  const goToSlide = useCallback((targetIndex) => {
+    if (targetIndex === introStep) return;
+    setIntroDirection(targetIndex > introStep ? 1 : -1);
+    setIntroStep(targetIndex);
+  }, [introStep]);
+
+  const handleNextSlide = useCallback(() => {
+    if (introStep < INTRO_SLIDES.length - 1) {
+      setIntroDirection(1);
+      setIntroStep(s => s + 1);
+    } else {
+      handleStart();
+    }
+  }, [introStep, handleStart]);
+
+  const handlePrevSlide = useCallback(() => {
+    if (introStep > 0) {
+      setIntroDirection(-1);
+      setIntroStep(s => s - 1);
+    }
+  }, [introStep]);
 
   useEffect(() => {
     if (screen !== SCREENS.COUNTDOWN) return;
@@ -857,9 +896,9 @@ export default function SmoothieSlashGame() {
   } : { display: "none" };
 
   const INTRO_SLIDES = [
-    { type: "image", src: beAwareImg, alt: "Be aware" },
-    { type: "image", src: howToDoImg, alt: "How to do" },
-    { type: "image", src: howToPlayImg, alt: "How to play" },
+    { type: "component", component: HowToPlay },
+    { type: "component", component: HowToDoNew },
+    { type: "component", component: BeAware },
   ];
   const CONSTRUCT_META = [
     ["divided_attention", "Divided Attention"],
@@ -903,61 +942,83 @@ export default function SmoothieSlashGame() {
               className="relative flex flex-col items-center"
               style={{ zIndex: 1, width: "100%", minHeight: "85vh", padding: "32px 24px 14px", gap: 20 }}
             >
-              {/* Slide */}
+              {/* Slide Carousel */}
               <div
-                className="flex-1 flex items-center justify-center w-full"
+                className="flex-1 flex items-center justify-center w-full overflow-hidden relative"
                 style={{ minHeight: 0 }}
               >
-                {INTRO_SLIDES[introStep].type === "image" ? (
-                  <img
-                    src={INTRO_SLIDES[introStep].src}
-                    alt={INTRO_SLIDES[introStep].alt}
-                    style={{
-                      width: "100%",
-                      maxHeight: "75vh",
-                      objectFit: "contain",
-                      borderRadius: 32,
-                      boxShadow: "0 24px 60px rgba(0,0,0,.55)",
+                <AnimatePresence custom={introDirection} initial={false} mode="popLayout">
+                  <motion.div
+                    key={introStep}
+                    custom={introDirection}
+                    variants={slideVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{
+                      x: { type: "spring", stiffness: 300, damping: 30 },
+                      opacity: { duration: 0.2 },
                     }}
-                  />
-                ) : (
-                  <div
-                    className="rounded-[36px] w-full"
-                    style={{
-                      background: "linear-gradient(180deg,rgba(46,26,74,.95),rgba(24,14,42,.95))",
-                      border: "1px solid rgba(200,160,245,.25)",
-                      padding: "34px 30px",
-                      boxShadow: "0 24px 60px rgba(0,0,0,.55)",
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(_, { offset, velocity }) => {
+                      const swipe = Math.abs(offset.x) * velocity.x;
+                      if (offset.x < -80 || swipe < -400) {
+                        if (introStep < INTRO_SLIDES.length - 1) {
+                          handleNextSlide();
+                        }
+                      } else if (offset.x > 80 || swipe > 400) {
+                        if (introStep > 0) {
+                          handlePrevSlide();
+                        }
+                      }
                     }}
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ touchAction: "pan-y" }}
                   >
-                    <p
-                      className="text-center font-extrabold mb-7"
-                      style={{ fontSize: "clamp(20px,1.8vw,28px)", color: "#E8D9F7", letterSpacing: ".22em" }}
-                    >
-                      TODAY'S RECIPE BOARD
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      {STAGES.map(s => (
-                        <div
-                          key={s.stageId}
-                          className="flex items-center gap-3 rounded-2xl"
-                          style={{ background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.12)", padding: "14px" }}
+                    {INTRO_SLIDES[introStep].type === "component" ? (
+                      (() => { const SlideComp = INTRO_SLIDES[introStep].component; return <SlideComp />; })()
+                    ) : (
+                      <div
+                        className="rounded-[36px] w-full"
+                        style={{
+                          background: "linear-gradient(180deg,rgba(46,26,74,.95),rgba(24,14,42,.95))",
+                          border: "1px solid rgba(200,160,245,.25)",
+                          padding: "34px 30px",
+                          boxShadow: "0 24px 60px rgba(0,0,0,.55)",
+                        }}
+                      >
+                        <p
+                          className="text-center font-extrabold mb-7"
+                          style={{ fontSize: "clamp(20px,1.8vw,28px)", color: "#E8D9F7", letterSpacing: ".22em" }}
                         >
-                          <div className="flex gap-1.5">
-                            {s.targets.map(c => (
-                              <span key={c} className="flex items-center justify-center rounded-xl" style={{ width: 44, height: 44, background: "rgba(255,255,255,.12)" }}>
-                                <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "72%", height: "72%", objectFit: "contain" }} />
+                          TODAY'S RECIPE BOARD
+                        </p>
+                        <div className="grid grid-cols-2 gap-4">
+                          {STAGES.map(s => (
+                            <div
+                              key={s.stageId}
+                              className="flex items-center gap-3 rounded-2xl"
+                              style={{ background: "rgba(255,255,255,.07)", border: "1px solid rgba(255,255,255,.12)", padding: "14px" }}
+                            >
+                              <div className="flex gap-1.5">
+                                {s.targets.map(c => (
+                                  <span key={c} className="flex items-center justify-center rounded-xl" style={{ width: 44, height: 44, background: "rgba(255,255,255,.12)" }}>
+                                    <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "72%", height: "72%", objectFit: "contain" }} />
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="font-bold" style={{ fontSize: "clamp(15px,1.2vw,19px)", color: "#EDE4F5" }}>
+                                {s.stageName}
                               </span>
-                            ))}
-                          </div>
-                          <span className="font-bold" style={{ fontSize: "clamp(15px,1.2vw,19px)", color: "#EDE4F5" }}>
-                            {s.stageName}
-                          </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
               {/* Dots */}
@@ -965,7 +1026,7 @@ export default function SmoothieSlashGame() {
                 {INTRO_SLIDES.map((_, i) => (
                   <button
                     key={i}
-                    onClick={() => setIntroStep(i)}
+                    onClick={() => goToSlide(i)}
                     aria-label={`Go to slide ${i + 1}`}
                     style={{
                       width: i === introStep ? 30 : 10,
@@ -982,61 +1043,60 @@ export default function SmoothieSlashGame() {
 
               {/* Nav */}
               <div className="flex gap-4 w-full">
-                {introStep > 0 && (
-                  <button
-                    onClick={() => setIntroStep(s => s - 1)}
-                    className="display active:scale-95 transition-transform"
-                    style={{
-                      flex: 1,
-                      background: "rgba(255,255,255,.12)",
-                      color: "#F0E6C8",
-                      border: "1px solid rgba(255,255,255,.25)",
-                      borderRadius: 60,
-                      padding: "20px 0",
-                      fontSize: "clamp(20px,1.8vw,26px)",
-                      fontWeight: 800,
-                    }}
-                  >
-                    BACK
-                  </button>
-                )}
-                {introStep < INTRO_SLIDES.length - 1 ? (
-                  <button
-                    onClick={() => setIntroStep(s => s + 1)}
-                    className="display active:scale-95 transition-transform"
-                    style={{
-                      flex: 2,
-                      background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
-                      color: "#2C1A00",
-                      boxShadow: "0 10px 0 #A87400",
-                      fontWeight: 900,
-                      letterSpacing: ".08em",
-                      fontSize: "clamp(24px,2.2vw,32px)",
-                      padding: "22px 0",
-                      borderRadius: 60,
-                    }}
-                  >
-                    NEXT
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleStart}
-                    className="display active:scale-95 transition-transform"
-                    style={{
-                      flex: 2,
-                      background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
-                      color: "#2C1A00",
-                      boxShadow: "0 10px 0 #A87400",
-                      fontWeight: 900,
-                      letterSpacing: ".08em",
-                      fontSize: "clamp(28px,2.4vw,36px)",
-                      padding: "22px 0",
-                      borderRadius: 60,
-                    }}
-                  >
-                    START
-                  </button>
-                )}
+                <AnimatePresence mode="popLayout">
+                  {introStep > 0 && (
+                    <motion.button
+                      key="back-btn"
+                      initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, x: -20 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={handlePrevSlide}
+                      className="display active:scale-95 transition-transform"
+                      style={{
+                        flex: 1,
+                        background: "rgba(255,255,255,.12)",
+                        color: "#F0E6C8",
+                        border: "1px solid rgba(255,255,255,.25)",
+                        borderRadius: 60,
+                        padding: "20px 0",
+                        fontSize: "clamp(20px,1.8vw,26px)",
+                        fontWeight: 800,
+                      }}
+                    >
+                      BACK
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
+                <button
+                  onClick={introStep < INTRO_SLIDES.length - 1 ? handleNextSlide : handleStart}
+                  className="display active:scale-95 transition-transform overflow-hidden relative"
+                  style={{
+                    flex: 2,
+                    background: "linear-gradient(180deg,#F5C842 0%,#E8A800 100%)",
+                    color: "#2C1A00",
+                    boxShadow: "0 10px 0 #A87400",
+                    fontWeight: 900,
+                    letterSpacing: ".08em",
+                    fontSize: introStep < INTRO_SLIDES.length - 1 ? "clamp(24px,2.2vw,32px)" : "clamp(28px,2.4vw,36px)",
+                    padding: "22px 0",
+                    borderRadius: 60,
+                  }}
+                >
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={introStep < INTRO_SLIDES.length - 1 ? "NEXT" : "START"}
+                      initial={{ y: 15, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: -15, opacity: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="block"
+                    >
+                      {introStep < INTRO_SLIDES.length - 1 ? "NEXT" : "START"}
+                    </motion.span>
+                  </AnimatePresence>
+                </button>
               </div>
             </div>
           </div>
@@ -1046,8 +1106,19 @@ export default function SmoothieSlashGame() {
       {/* ── COUNTDOWN ────────────────────────────────────────────── */}
       {
         screen === SCREENS.COUNTDOWN && (
-          <div className="flex-1 flex items-center justify-center" style={{ background: "linear-gradient(180deg,#123A34,#0E2B26)" }}>
-            <span className="display" style={{ fontSize: 140, color: "#FF9B6A" }}>{countdown === 0 ? "GO!" : countdown}</span>
+          <div
+            className="flex-1 flex items-center justify-center"
+            style={{
+              backgroundImage: `url(${bg})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              position: "relative",
+            }}
+          >
+            <div style={{ position: "absolute", inset: 0, background: "rgba(8,4,20,.4)" }} />
+            <span className="display" style={{ position: "relative", zIndex: 1, fontSize: 140, color: "#FF9B6A", textShadow: "0 4px 32px rgba(0,0,0,.6)" }}>
+              {countdown === 0 ? "GO!" : countdown}
+            </span>
           </div>
         )
       }
@@ -1110,7 +1181,7 @@ export default function SmoothieSlashGame() {
                 <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "90px", zIndex: 21 }}>
                   <div className="flex gap-2.5">
                     {stage.targets.map(c => (
-                      <div key={c} className="w-32 h-32 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.3)", backdropFilter: "blur(2px)", boxShadow: "0 4px 10px rgba(0,0,0,.35)" }}>
+                      <div key={c} className="w-36 h-36 rounded-2xl flex items-center justify-center" style={{ background: "rgba(255,255,255,.14)", border: "1px solid rgba(255,255,255,.3)", backdropFilter: "blur(2px)", boxShadow: "0 4px 10px rgba(0,0,0,.35)" }}>
                         <img src={FRUITS[c].img} alt={FRUITS[c].name} style={{ width: "68%", height: "68%", objectFit: "contain" }} />
                       </div>
                     ))}

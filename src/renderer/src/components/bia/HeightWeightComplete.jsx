@@ -1,6 +1,6 @@
 import HeightWeightDisplay from "./HeightWeightDisplay";
 import textbgframe from "../../assets/bia/biatextbgframe.svg";
-export default function HeightWeightComplete({ heightValue, weightValue, onNextClick }) {
+export default function HeightWeightComplete({ heightValue, weightValue, onNextClick, isAudioPlaying }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div
@@ -15,7 +15,7 @@ export default function HeightWeightComplete({ heightValue, weightValue, onNextC
                     draggable={false}
                 />
             </div>
-            <HeightWeightDisplay heightCm={heightValue} weightKg={weightValue} onNextClick={onNextClick} />
+            <HeightWeightDisplay heightCm={heightValue} weightKg={weightValue} onNextClick={onNextClick} isAudioPlaying={isAudioPlaying} />
         </div>
     );
 };

@@ -7,11 +7,8 @@ import textframe from "../../assets/textFrame.png"
 import { useTranslation } from "react-i18next"
 import BlueGradientButton from "../ui/BlueGradientButton"
 import HeightWeightDisplay from "./HeightWeightDisplay"
-import standstraightAudio from "../../assets/audio/standstraight_en.mp3"
-import wh_completeAudio from "../../assets/audio/wh_complete_en.mp3"
-import wh_measuringAudio from "../../assets/audio/wh_measuring_en.mp3"
-import impedanceAudio from "../../assets/audio/impedance_en.mp3"
-import im_completeAudio from "../../assets/audio/im_complete_en.mp3"
+// Audio files are resolved dynamically via getAudioForCurrentLanguage (see audioUtils.js)
+// to support multiple languages (en, br, etc.) without hardcoding en/ paths.
 import ReplayAudio from "../ReplayAudio"
 import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
@@ -510,27 +507,28 @@ export const BIAComponent = ({
 
 
 
-  /* ──────────────── audio helpers (unchanged) ──────────────── */
+  /* ──────────────── audio helpers ──────────────── */
+  // Keys use the "instructions/" prefix so audioUtils resolves them in the
+  // correct subfolder for each language (en, br, etc.).
   const getAudioBaseName = (type) => {
     const audioMap = {
-      wh: "wh_measuring",
-      whcomplete: "wh_complete",
-      im: "impedance",
-      imcomplete: "im_complete",
-      leg50: "standstraight"
+      wh: "instructions/wh_measuring",
+      whcomplete: "instructions/wh_complete",
+      im: "instructions/impedance",
+      imcomplete: "instructions/im_complete",
+      leg50: "instructions/standstraight",
+      hold: "instructions/impedance",
     }
-    return audioMap[type] || "standstraight"
+    return audioMap[type] || null
   }
 
   useEffect(() => { playAudio() }, [screenType])
 
   const playAudio = async () => {
     const baseName = getAudioBaseName(screenType)
-    let audioPath = await getAudioForCurrentLanguage(baseName)
-    if (!audioPath) {
-      console.log(`No audio found for ${baseName} in current language, using fallback`)
-      audioPath = getAudioPath(screenType)
-    }
+    // getAudioForCurrentLanguage already falls back to "en" if the current
+    // language file is missing — no need for a secondary static-import fallback.
+    const audioPath = await getAudioForCurrentLanguage(baseName)
     if (audioPath && audioRef.current) {
       audioRef.current.src = audioPath
       setIsAudioPlaying(true)
@@ -538,6 +536,8 @@ export const BIAComponent = ({
         console.log("Audio playback failed:", err)
         setIsAudioPlaying(false)
       })
+    } else {
+      console.warn(`[BIAComponent] No audio resolved for screenType="${screenType}" (key="${baseName}")`)
     }
   }
 
@@ -550,11 +550,6 @@ export const BIAComponent = ({
   }
 
   const handleAudioEnd = () => { setIsAudioPlaying(false) }
-
-  const getAudioPath = (type) => {
-    const audioMap = { leg50: standstraightAudio, wh: wh_measuringAudio, whcomplete: wh_completeAudio, hold: impedanceAudio, im: impedanceAudio, imcomplete: im_completeAudio }
-    return audioMap[type] || standstraightAudio
-  }
 
   const showWhResults = screenType === "whcomplete"
   const showIMResults = screenType === "imcomplete"
@@ -574,9 +569,11 @@ export const BIAComponent = ({
         <audio
           ref={audioRef}
           onEnded={handleAudioEnd}
+          onPause={() => setIsAudioPlaying(false)}
+          onError={() => setIsAudioPlaying(false)}
           onPlay={() => setIsAudioPlaying(true)}
         >
-          <source src={getAudioPath(screenType)} type="audio/mpeg" />
+          {/* src is set dynamically in playAudio() via getAudioForCurrentLanguage */}
           {t("common.audio_not_supported")}
         </audio>
 
@@ -669,12 +666,13 @@ export const BIAComponent = ({
           heightValue={heightValue}
           weightValue={weightValue}
           onNextClick={onNextClick}
+          isAudioPlaying={isAudioPlaying}
         />
       )}
 
       {screenType === "imcomplete" && (
         <div className="absolute bottom-20 left-[31%]">
-          <BlueGradientButton onClick={onNextVoiceClick}>
+          <BlueGradientButton onClick={onNextVoiceClick} disabled={isAudioPlaying}>
             {t("common.next")}
           </BlueGradientButton>
         </div>

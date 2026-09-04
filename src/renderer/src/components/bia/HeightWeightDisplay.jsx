@@ -11,6 +11,7 @@ const HeightWeightDisplay = ({
     onNextClick,
     isHideNext = false,
     isRandomHeightWeight = false,  // true = scanning animation, false = show settled values
+    isAudioPlaying = false,
 }) => {
     const [displayHeight, setDisplayHeight] = useState("---");
     const [displayWeight, setDisplayWeight] = useState("---");
@@ -132,7 +133,7 @@ const HeightWeightDisplay = ({
 
             {!isHideNext && (
                 <div className="absolute bottom-20 left-[31%]">
-                    <BlueGradientButton onClick={onNextClick}>
+                    <BlueGradientButton onClick={onNextClick} disabled={isAudioPlaying}>
                         {t("common.next")}
                     </BlueGradientButton>
                 </div>

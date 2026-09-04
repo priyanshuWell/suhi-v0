@@ -13,6 +13,7 @@ import { setUser, setLoginScreening } from '../../features/common/commonSlice'
 import { getNextRoute } from '../../utils/stageRouter'
 import { useTranslation } from 'react-i18next'
 import { getSessionId } from '../../utils/config'
+import { useKioskAudio } from '../../hooks/useKioskAudio'
 
 const MAX_RETRIES = 2
 
@@ -20,6 +21,7 @@ const LoginSuhi = () => {
   const navigate = useNavigate()
   const dispatch = useDispatch()
   const { t } = useTranslation()
+  const { play: playAudio } = useKioskAudio()
   const [suhiId, setSuhiId] = useState('')
   const [keyboardVisible, setKeyboardVisible] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -29,6 +31,18 @@ const LoginSuhi = () => {
   const [photoLoading, setPhotoLoading] = useState(false)
   const retryRef = useRef(0)
   const photoDebounceRef = useRef(null)
+  const errorAlertTimerRef = useRef(null)
+
+  // Auto-dismiss the ErrorAlert after 4 s — ErrorAlert no longer self-dismisses;
+  // the parent (us) is responsible for setting visible=false.
+  useEffect(() => {
+    if (!showErrorAlert) return
+    clearTimeout(errorAlertTimerRef.current)
+    errorAlertTimerRef.current = setTimeout(() => {
+      setShowErrorAlert(false)
+    }, 4000)
+    return () => clearTimeout(errorAlertTimerRef.current)
+  }, [showErrorAlert])
 
   const isButtonDisabled = !suhiId.trim() || loading
 
@@ -75,7 +89,7 @@ const LoginSuhi = () => {
       }
 
       if (!response.success || !response.data) {
-        throw new Error('Student is not available. Please check your SUHI ID')
+        throw new Error('Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance.')
       }
 
       // Save student data
@@ -104,10 +118,14 @@ const LoginSuhi = () => {
 
       if (attempt < MAX_RETRIES) {
         retryRef.current = attempt
+        // Play "invalid SUHI Id" audio feedback
+        playAudio('errors/invalid_suhi_id_coordinate')
         setError(err.message || t('loginSuhi.student_not_found'))
         setShowErrorAlert(true)
       } else {
         retryRef.current = 0
+        // Play "let's try another way" audio before redirecting
+        playAudio('errors/let_try_suhi_id')
         setError(t('loginSuhi.student_not_found'))
         setTimeout(() => {
           navigate('/welcome')
@@ -157,6 +175,20 @@ const LoginSuhi = () => {
                 {error}
               </p>
             )}
+
+            {/* Don't know SuHI ID button */}
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(t('loginSuhi.ask_teacher'))
+                  setShowErrorAlert(true)
+                }}
+                className="text-white/60 text-sm underline hover:text-white transition-colors"
+              >
+                {t('loginSuhi.dont_know_id', "Don't know your SuHi ID?")}
+              </button>
+            </div>
           </div>
         </div>
       </div>

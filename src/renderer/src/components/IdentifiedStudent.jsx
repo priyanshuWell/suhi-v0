@@ -5,16 +5,17 @@ import { setUser } from "../features/common/commonSlice"
 import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
-import FullscreenError from "./FullScreenError"
+import NoActivityFrame from "./ui/NoActivityFrame"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
+import { useKioskAudio } from "../hooks/useKioskAudio"
 
 const STEPS = ["suhi_id"]
 const RECORD_DURATION_S = 5
 
 const STEP_CONFIG = {
     suhi_id: {
-        label: "Enter your SUHI ID",
+        label: "Enter your SUHI Id",
         hint: "e.g. SUHI_210S0A642",
         filter: (candidates, value) =>
             candidates.filter((c) =>
@@ -138,6 +139,7 @@ const IdentifyStudent = () => {
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const { t } = useTranslation()
+    const { play: playAudio } = useKioskAudio()
 
     const candidates = useSelector((state) => state.common.candidates)
     const user = useSelector((state) => state.common.user)
@@ -201,10 +203,14 @@ const IdentifyStudent = () => {
         if (matches.length === 0) {
             retryRef.current += 1
             if (retryRef.current < MAX_RETRIES) {
+                // Play "invalid SUHI Id" audio feedback
+                playAudio('errors/invalid_suhi_id_coordinate')
                 setError("No match found. Please check and try again.")
                 setLoading(false)
                 return
             }
+            // Max retries reached — play redirect audio then show fullscreen error
+            playAudio('errors/let_try_suhi_id')
             setNoMatchError(true)
             setLoading(false)
             return
@@ -345,14 +351,15 @@ const IdentifyStudent = () => {
 
             {/* Fullscreen error */}
             {noMatchError && (
-                <FullscreenError
-                    title="Student not found"
-                    description="We couldn't find a match. Please try again."
+                <NoActivityFrame
+                    variant="error"
+                    title="Let's try another way"
+                    description="Please log in using your SuHi ID."
                     showDescription={true}
-                    redirectLabel="Going to home"
+                    redirectLabel="Going to SUHI Id login"
                     autoRedirectDelay={5000}
                     showRetry={false}
-                    onRedirect={() => { setNoMatchError(false); navigate("/welcome") }}
+                    onRedirect={() => { setNoMatchError(false); navigate("/login-suhi") }}
                 />
             )}
         </>

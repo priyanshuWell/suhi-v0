@@ -199,14 +199,30 @@ export const Setting = ({ setIsActive, isActive, onCalibrate, isCalibrated }) =>
             <h3 className="text-4xl font-bold text-white absolute landscape:left-[8vw] landscape:top-[7vh] top-[5vh] left-[11vw]">
               Language
             </h3>
-            <div className="absolute top-[10vh] left-[11vw] landscape:top-[18vh] landscape:left-[7vw] flex items-center gap-4">
-              <label className="flex items-center text-white text-3xl cursor-pointer">
-                <input type="radio" name="language" value="en" checked={selectedLanguage === 'en'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-4 w-5 h-5 accent-blue-500" />
+            <div className="absolute top-[10vh] left-[11vw] landscape:top-[16vh] landscape:left-[7vw] grid grid-cols-3 gap-4">
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="en" checked={selectedLanguage === 'en'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
                 English
               </label>
-              <label className="flex items-center text-white text-3xl cursor-pointer">
-                <input type="radio" name="language" value="hi" checked={selectedLanguage === 'hi'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-4 w-5 h-5 accent-blue-500" />
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="hi" checked={selectedLanguage === 'hi'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
                 Hindi
+              </label>
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="gu" checked={selectedLanguage === 'gu'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
+                Gujarati
+              </label>
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="mr" checked={selectedLanguage === 'mr'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
+                Marathi
+              </label>
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="bn" checked={selectedLanguage === 'bn'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
+                Bengali
+              </label>
+              <label className="flex items-center text-white text-2xl cursor-pointer">
+                <input type="radio" name="language" value="ar" checked={selectedLanguage === 'ar'} onChange={(e) => handleLanguageChange(e.target.value)} className="mr-3 w-5 h-5 accent-blue-500" />
+                Arabic
               </label>
             </div>
             <div className="absolute top-[16vh] left-[11vw] landscape:left-[7vw] landscape:top-[28vh] max-w-full">

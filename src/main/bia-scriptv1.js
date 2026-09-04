@@ -2159,15 +2159,15 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
           const calculatedHeight = 192.7 - distanceCm
 
           /* ---------- RANGE CHECK ---------- */
-          // if (calculatedHeight < 80) {
-          //   emitHeightStatus(0x01, calculatedHeight) // TOO LOW
-          //   continue
-          // }
+          if (calculatedHeight < 80) {
+            emitHeightStatus(0x01, calculatedHeight) // TOO LOW
+            continue
+          }
 
-          // if (calculatedHeight > 250) {
-          //   emitHeightStatus(0x02, calculatedHeight) // TOO HIGH
-          //   continue
-          // }
+          if (calculatedHeight > 250) {
+            emitHeightStatus(0x02, calculatedHeight) // TOO HIGH
+            continue
+          }
 
           /* ---------- STABILITY CHECK ---------- */
           if (!checkStability(distance)) {
