@@ -1,5 +1,5 @@
 appId: com.suhi.smooth
-productName: suhi-smooth
+productName: suhi-application
 icon: build/icons/512x512.png
 directories:
   buildResources: build
@@ -15,7 +15,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: suhi-smooth
+  executableName: suhi-application
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

@@ -558,7 +558,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                             className="text-white"
                             style={{ fontFamily: FONT, fontSize: '35px', maxWidth: '716px' }}
                         >
-                            {t('bia_result.download_report', 'Download Suhi Holistic Wellness report for more details')}
+                            {t('bia_result.download_report', 'Download SUHI Holistic Wellness report for more details.')}
                         </p>
                         <img src={qrCode} alt="QR Code" style={{ width: '134px', height: '134px' }} />
                     </div>

@@ -97,7 +97,7 @@ export default function RegisterCard() {
     // Use the next_stage from the backend (stored in Redux during login)
     const nextRoute = getNextRoute(nextStage, '/bia/leg50')
     console.log('[RegisterCard] navigating to next stage:', nextRoute)
-    navigate('/bia/leg50')
+    navigate(nextRoute)
   }
 
   const handleNotYou = () => {
@@ -133,7 +133,7 @@ export default function RegisterCard() {
             <h1
               className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta"
             >
-              {t("common.hi")}  ,{studentName}
+              {t("common.hi")}, {studentName}
             </h1>
             <p
               className="text-[40px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta"
