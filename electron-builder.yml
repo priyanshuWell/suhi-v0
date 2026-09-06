@@ -2,45 +2,45 @@ appId: com.suhi.smooth
 productName: suhi-application
 icon: build/icons/512x512.png
 directories:
-  buildResources: build
+    buildResources: build
 files:
-  - out/**
-  - resources/**
-  - package.json
-  - '!**/.vscode/*'
-  - '!src/*'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+    - out/**
+    - resources/**
+    - package.json
+    - "!**/.vscode/*"
+    - "!src/*"
+    - "!electron.vite.config.{js,ts,mjs,cjs}"
+    - "!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+    - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
 asarUnpack:
-  - resources/**
+    - resources/**
 win:
-  executableName: suhi-application
+    executableName: suhi-application
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
-  shortcutName: ${productName}
-  uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
+    artifactName: ${name}-${version}-setup.${ext}
+    shortcutName: ${productName}
+    uninstallDisplayName: ${productName}
+    createDesktopShortcut: always
 mac:
-  icon: build/icon.icns
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    - NSCameraUsageDescription: Application requests access to the device's camera.
-    - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
-    - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
-    - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
-  notarize: false
+    icon: build/icon.icns
+    entitlementsInherit: build/entitlements.mac.plist
+    extendInfo:
+        - NSCameraUsageDescription: Application requests access to the device's camera.
+        - NSMicrophoneUsageDescription: Application requests access to the device's microphone.
+        - NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
+        - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+    artifactName: ${name}-${version}.${ext}
 linux:
-  icon: build/icons/512x512.png
-  target:
-    - deb
-  maintainer: electronjs.org
-  category: Utility
+    icon: build/icons/512x512.png
+    target:
+        - deb
+    maintainer: electronjs.org
+    category: Utility
 appImage:
-  artifactName: ${name}-${version}.${ext}
+    artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+    provider: generic
+    url: https://example.com/auto-updates

@@ -15,7 +15,7 @@ export const getCoordinates = (percent, r, size) => {
     const scaleY = size.height / svgHeight
 
     return {
-      x: x * scaleX,
-      y: y * scaleY,
+        x: x * scaleX,
+        y: y * scaleY
     }
-  }
+}

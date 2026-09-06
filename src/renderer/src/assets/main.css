@@ -1,11 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Anta&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Anta&display=swap");
 @import "tailwindcss";
-
 
 @theme {
     --font-anta: "Anta", sans-serif;
     --breakpoint-xl: 1080px;
-
 }
 
 @layer base {

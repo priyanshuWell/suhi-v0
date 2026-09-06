@@ -31,7 +31,7 @@ const FullscreenError = ({
     autoRedirectDelay = 5000,
     showRetry = false,
     onRetry,
-    onRedirect,
+    onRedirect
 }) => {
     const [filling, setFilling] = useState(false)
     const [redirectCancelled, setRedirectCancelled] = useState(false)
@@ -70,7 +70,6 @@ const FullscreenError = ({
 
     return (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-md px-8">
-
             {/* Warning icon */}
             <div className="mb-8">
                 <svg viewBox="0 0 72 72" className="w-16 h-16" fill="none">
@@ -81,7 +80,14 @@ const FullscreenError = ({
                         strokeWidth="3.5"
                         strokeLinecap="round"
                     />
-                    <circle cx="36" cy="36" r="34" stroke="#ef4444" strokeWidth="2" strokeDasharray="6 4" />
+                    <circle
+                        cx="36"
+                        cy="36"
+                        r="34"
+                        stroke="#ef4444"
+                        strokeWidth="2"
+                        strokeDasharray="6 4"
+                    />
                 </svg>
             </div>
 
@@ -136,9 +142,7 @@ const FullscreenError = ({
                     className="absolute inset-0 rounded-2xl bg-white/25 origin-left"
                     style={{
                         transform: filling ? "scaleX(1)" : "scaleX(0)",
-                        transition: filling
-                            ? `transform ${fillDurationSec}s linear`
-                            : "none",
+                        transition: filling ? `transform ${fillDurationSec}s linear` : "none"
                     }}
                 />
 
@@ -155,7 +159,7 @@ const FullscreenError = ({
                                 className="w-1 h-1 rounded-full bg-white/60"
                                 style={{
                                     animation: "dotBounce 1.2s infinite",
-                                    animationDelay: `${i * 0.2}s`,
+                                    animationDelay: `${i * 0.2}s`
                                 }}
                             />
                         ))}

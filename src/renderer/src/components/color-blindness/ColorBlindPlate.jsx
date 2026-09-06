@@ -1,117 +1,126 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Volume2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router";
-import bg1 from "../../assets/lightbg.png";
+import React, { useEffect, useRef, useState } from "react"
+import { Volume2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import { useNavigate } from "react-router"
+import bg1 from "../../assets/lightbg.png"
 
-import InitialColorBlindImage from "../../assets/color_blindness/sample.png";
-import BlueGradientButton from "../ui/BlueGradientButton";
-import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api";
-import { useSelector } from "react-redux";
-import { getKioskId } from "../../utils/config";
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils";
-
+import InitialColorBlindImage from "../../assets/color_blindness/sample.png"
+import BlueGradientButton from "../ui/BlueGradientButton"
+import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api"
+import { useSelector } from "react-redux"
+import { getKioskId } from "../../utils/config"
+import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
 
 export const ColorBlindPlate = () => {
-    const user = useSelector((state) => state.common.user);
-    const screening = useSelector((state) => state.common.screening);
-    const { t, i18n } = useTranslation();
-    const navigate = useNavigate();
-    const [loading, setLoading] = useState(true);  // seeding + starting
-    const [sessionId, setSessionId] = useState(null);
-    const [error, setError] = useState(null);
-    const kioskId = getKioskId();
-    const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629";
+    const user = useSelector((state) => state.common.user)
+    const screening = useSelector((state) => state.common.screening)
+    const { t, i18n } = useTranslation()
+    const navigate = useNavigate()
+    const [loading, setLoading] = useState(true) // seeding + starting
+    const [sessionId, setSessionId] = useState(null)
+    const [error, setError] = useState(null)
+    const kioskId = getKioskId()
+    const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
 
     // ── Instruction audio ─────────────────────────────────────────────────────
-    const audioRef = useRef(null);
-    const [audioDone, setAudioDone] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
+    const audioRef = useRef(null)
+    const [audioDone, setAudioDone] = useState(false)
+    const [isPlaying, setIsPlaying] = useState(false)
 
     useEffect(() => {
-        let audio = null;
-        let cancelled = false;
+        let audio = null
+        let cancelled = false
 
-        const handleEnded = () => { if (!cancelled) { setAudioDone(true); setIsPlaying(false); } };
-        const handlePlay = () => { if (!cancelled) setIsPlaying(true); };
-        const handlePause = () => { if (!cancelled) setIsPlaying(false); };
+        const handleEnded = () => {
+            if (!cancelled) {
+                setAudioDone(true)
+                setIsPlaying(false)
+            }
+        }
+        const handlePlay = () => {
+            if (!cancelled) setIsPlaying(true)
+        }
+        const handlePause = () => {
+            if (!cancelled) setIsPlaying(false)
+        }
 
         const loadAndPlay = async () => {
             // Dynamically pick the correct language file
-            const src = await getAudioForCurrentLanguage("colorblindness_instruction");
+            const src = await getAudioForCurrentLanguage("colorblindness_instruction")
             if (cancelled || !src) {
-                console.warn("[ColorBlindPlate] No audio found for language:", i18n.language);
-                return;
+                console.warn("[ColorBlindPlate] No audio found for language:", i18n.language)
+                return
             }
 
-            audio = new Audio(src);
-            audioRef.current = audio;
+            audio = new Audio(src)
+            audioRef.current = audio
 
-            audio.addEventListener("ended", handleEnded);
-            audio.addEventListener("play", handlePlay);
-            audio.addEventListener("pause", handlePause);
+            audio.addEventListener("ended", handleEnded)
+            audio.addEventListener("play", handlePlay)
+            audio.addEventListener("pause", handlePause)
 
-            const playPromise = audio.play();
+            const playPromise = audio.play()
             if (playPromise !== undefined) {
                 playPromise.catch((err) => {
-                    console.warn("[ColorBlindPlate] Autoplay prevented:", err.message);
-                    if (!cancelled) setIsPlaying(false);
-                });
+                    console.warn("[ColorBlindPlate] Autoplay prevented:", err.message)
+                    if (!cancelled) setIsPlaying(false)
+                })
             }
-        };
+        }
 
-        loadAndPlay();
+        loadAndPlay()
 
         return () => {
-            cancelled = true;
+            cancelled = true
             if (audio) {
-                audio.removeEventListener("ended", handleEnded);
-                audio.removeEventListener("play", handlePlay);
-                audio.removeEventListener("pause", handlePause);
-                audio.pause();
-                audio.src = "";
+                audio.removeEventListener("ended", handleEnded)
+                audio.removeEventListener("play", handlePlay)
+                audio.removeEventListener("pause", handlePause)
+                audio.pause()
+                audio.src = ""
             }
-            audioRef.current = null;
-        };
-    }, [i18n.language]); // re-run whenever the language changes
+            audioRef.current = null
+        }
+    }, [i18n.language]) // re-run whenever the language changes
 
     const handleReplay = () => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        audio.currentTime = 0;
-        audio.play().catch((err) => console.warn("[ColorBlindPlate] Replay failed:", err.message));
-    };
+        const audio = audioRef.current
+        if (!audio) return
+        audio.currentTime = 0
+        audio.play().catch((err) => console.warn("[ColorBlindPlate] Replay failed:", err.message))
+    }
 
     useEffect(() => {
-        let cancelled = false;
+        let cancelled = false
 
-        (async () => {
+        ;(async () => {
             try {
-                await getColorBlindessPlates();
-                const res = await colorBlindessStart(userId, kioskId, screening?.sessionId);
+                await getColorBlindessPlates()
+                const res = await colorBlindessStart(userId, kioskId, screening?.sessionId)
                 console.log("res start colorblindess", res)
-                if (!res.success) throw new Error(res.error ?? "Start failed");
+                if (!res.success) throw new Error(res.error ?? "Start failed")
 
-                if (!cancelled) setSessionId(res.session_id);
+                if (!cancelled) setSessionId(res.session_id)
             } catch (err) {
-                if (!cancelled) setError(err.message);
+                if (!cancelled) setError(err.message)
             } finally {
-                if (!cancelled) setLoading(false);
+                if (!cancelled) setLoading(false)
             }
-        })();
+        })()
 
-        return () => { cancelled = true; };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+        return () => {
+            cancelled = true
+        }
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // ── Navigate to quiz, passing sessionId via router state ─────────────────
     const onNext = () => {
         // if (!sessionId) return; // still loading or errored
-        navigate("/colorblindness/quiz", { state: { sessionId } });
-    };
+        navigate("/colorblindness/quiz", { state: { sessionId } })
+    }
 
     return (
         <div className="flex flex-col gap-36 inset-0 w-screen h-screen overflow-hidden bg-black  ">
-
             {/* Background */}
             <div
                 className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
@@ -120,7 +129,6 @@ export const ColorBlindPlate = () => {
 
             {/* Content */}
             <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto pt-20 gap-10">
-
                 {/* Title badge */}
                 <div className="mt-12 z-10 w-[60%]">
                     <div className="relative text-center flex flex-col items-center gap-20">
@@ -145,8 +153,12 @@ export const ColorBlindPlate = () => {
                     {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")} */}
 
                     {t("colorBlindness.instruction")}
-                    <br /><br />
-                    {t("colorBlindness.instructions_example", "Example: This Number is 6. Click on next button to start!")}
+                    <br />
+                    <br />
+                    {t(
+                        "colorBlindness.instructions_example",
+                        "Example: This Number is 6. Click on next button to start!"
+                    )}
                 </p>
 
                 {/* Audio replay button */}
@@ -156,7 +168,9 @@ export const ColorBlindPlate = () => {
                 >
                     <Volume2 size={24} className={isPlaying ? "animate-pulse text-blue-300" : ""} />
                     <span className="text-lg tracking-wide">
-                        {isPlaying ? t('audio.playing', 'Playing…') : t('audio.replay', 'Replay Instructions')}
+                        {isPlaying
+                            ? t("audio.playing", "Playing…")
+                            : t("audio.replay", "Replay Instructions")}
                     </span>
                 </button>
 
@@ -176,14 +190,13 @@ export const ColorBlindPlate = () => {
                     </BlueGradientButton>
                     {!audioDone && (
                         <p className="text-white/50 text-sm tracking-wide mt-1">
-                            {t('audio.listenFirst', 'Please listen to the instructions first')}
+                            {t("audio.listenFirst", "Please listen to the instructions first")}
                         </p>
                     )}
                 </div>
-
             </div>
         </div>
-    );
-};
+    )
+}
 
-export default ColorBlindPlate;
+export default ColorBlindPlate

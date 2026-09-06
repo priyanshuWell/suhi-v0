@@ -15,52 +15,52 @@ import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
 import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
 import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
 import biaMuscleMassIcon from "../../assets/icons/bia-muscle-mass.svg"
-import heightIcon from '../../assets/bia/scale.svg'
-import weightIcon from '../../assets/bia/bag.svg'
-import visceralFatIcon from '../../assets/bia/visceral_fat.svg'
-import proteinMassIcon from '../../assets/bia/protein_mass.svg'
+import heightIcon from "../../assets/bia/scale.svg"
+import weightIcon from "../../assets/bia/bag.svg"
+import visceralFatIcon from "../../assets/bia/visceral_fat.svg"
+import proteinMassIcon from "../../assets/bia/protein_mass.svg"
 import HeightWeightComplete from "./HeightWeightComplete"
 
 const ARC_POSITIONS = {
-  "arc-left-top": {
-    left: "-8%",
-    top: "18%",
-  },
+    "arc-left-top": {
+        left: "-8%",
+        top: "18%"
+    },
 
-  "arc-left-middle": {
-    left: "-10%",
-    top: "44%",
-  },
+    "arc-left-middle": {
+        left: "-10%",
+        top: "44%"
+    },
 
-  "arc-left-bottom": {
-    left: "-3%",
-    top: "60%",
-  },
+    "arc-left-bottom": {
+        left: "-3%",
+        top: "60%"
+    },
 
-  "arc-right-top": {
-    left: "76%",
-    top: "18%",
-  },
+    "arc-right-top": {
+        left: "76%",
+        top: "18%"
+    },
 
-  "arc-right-middle": {
-    left: "80%",
-    top: "43%",
-  },
+    "arc-right-middle": {
+        left: "80%",
+        top: "43%"
+    },
 
-  "arc-right-bottom": {
-    left: "70%",
-    top: "60%",
-  },
+    "arc-right-bottom": {
+        left: "70%",
+        top: "60%"
+    },
 
-  "arc-center-top": {
-    left: "34%",
-    top: "-0%",
-  },
+    "arc-center-top": {
+        left: "34%",
+        top: "-0%"
+    },
 
-  "arc-center-bottom": {
-    left: "32.4%",
-    top: "80%",
-  },
+    "arc-center-bottom": {
+        left: "32.4%",
+        top: "80%"
+    }
 }
 /* ─────────────────────────────────────────────────────────────
    Inline keyframes injected once (avoids Tailwind limitations)
@@ -112,17 +112,26 @@ const BIA_CARD_STYLES = `
   }
 `
 
-const FLOAT_ANIMATIONS = ["biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD", "biaFloatA", "biaFloatB", "biaFloatC", "biaFloatD"]
+const FLOAT_ANIMATIONS = [
+    "biaFloatA",
+    "biaFloatB",
+    "biaFloatC",
+    "biaFloatD",
+    "biaFloatA",
+    "biaFloatB",
+    "biaFloatC",
+    "biaFloatD"
+]
 const FLOAT_DURATIONS = ["3.2s", "2.9s", "3.5s", "3.1s", "3.2s", "2.9s", "3.5s", "3.1s"]
 
 /* ─────────────────────────────────────────────────────────────
    Card position styles (absolute, around the video)
 ───────────────────────────────────────────────────────────── */
 const cardPositionStyle = (position) => ({
-  position: "absolute",
-  zIndex: 40,
-  transform: "translate(-50%, -50%)",
-  ...ARC_POSITIONS[position],
+    position: "absolute",
+    zIndex: 40,
+    transform: "translate(-50%, -50%)",
+    ...ARC_POSITIONS[position]
 })
 
 /* ─────────────────────────────────────────────────────────────
@@ -142,541 +151,539 @@ const cardPositionStyle = (position) => ({
    so buildBiaMetrics only ever has to read one consistent shape.
 ───────────────────────────────────────────────────────────── */
 const normalizeBiaSummary = (summary) => {
-  if (!summary) return null
-  return {
-    fatPercentage: summary.body_fat_percentage ?? summary.fatPercentage ?? null,
-    waterPercentage: summary.moisture_content_kg ?? summary.waterPercentage ?? null,
-    muscleMassKg: summary.muscle_mass_kg ?? summary.muscleMassKg ?? null,
-    boneMassKg: summary.bone_mass_kg ?? summary.boneMassKg ?? null,
-    skeletalMuscleMassKg: summary.skeletal_muscle_mass_kg ?? summary.skeletalMuscleMassKg ?? null,
-    visceralFat: summary.visceral_fat_level ?? summary.visceralFat ?? null,
-    proteinMassKg: summary.protein_mass_kg ?? summary.proteinMassKg ?? null,
-  }
+    if (!summary) return null
+    return {
+        fatPercentage: summary.body_fat_percentage ?? summary.fatPercentage ?? null,
+        waterPercentage: summary.moisture_content_kg ?? summary.waterPercentage ?? null,
+        muscleMassKg: summary.muscle_mass_kg ?? summary.muscleMassKg ?? null,
+        boneMassKg: summary.bone_mass_kg ?? summary.boneMassKg ?? null,
+        skeletalMuscleMassKg:
+            summary.skeletal_muscle_mass_kg ?? summary.skeletalMuscleMassKg ?? null,
+        visceralFat: summary.visceral_fat_level ?? summary.visceralFat ?? null,
+        proteinMassKg: summary.protein_mass_kg ?? summary.proteinMassKg ?? null
+    }
 }
 
 const hasAnyValue = (obj) => !!obj && Object.values(obj).some((v) => v != null)
 
 const resolveBiaSource = (bia20k_100khz, arms50k, leg50k) => {
-  const normalizedBia = normalizeBiaSummary(bia20k_100khz)
-  if (hasAnyValue(normalizedBia)) return { source: "full", data: normalizedBia }
-  if (hasAnyValue(arms50k)) return { source: "arm", data: arms50k }
-  if (hasAnyValue(leg50k)) return { source: "leg", data: leg50k }
-  return { source: null, data: {} }
+    const normalizedBia = normalizeBiaSummary(bia20k_100khz)
+    if (hasAnyValue(normalizedBia)) return { source: "full", data: normalizedBia }
+    if (hasAnyValue(arms50k)) return { source: "arm", data: arms50k }
+    if (hasAnyValue(leg50k)) return { source: "leg", data: leg50k }
+    return { source: null, data: {} }
 }
 
 /* ─────────────────────────────────────────────────────────────
    Single floating metric card
 ───────────────────────────────────────────────────────────── */
 const BiaMetricCard = ({ metric, value, isSettled, index, isInstant }) => {
-  const isRight = metric.position.startsWith("right")
+    const isRight = metric.position.startsWith("right")
 
-  const cardStyle = {
-    ...cardPositionStyle(metric.position),
-    background: "rgba(82, 82, 82, 0.13)",
-    border: "1px solid rgba(255, 255, 255, 0.72)",
-    borderRadius: "14px",
-    boxShadow: isSettled || isInstant
-      ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
-      : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
-    padding: "12px 20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    overflow: "hidden",
-    minWidth: "220px",
-    minHeight: "80px",
-    backdropFilter: "blur(8px)",
-    WebkitBackdropFilter: "blur(8px)",
-    animation: `${FLOAT_ANIMATIONS[index]} ${FLOAT_DURATIONS[index]} ease-in-out infinite`,
-    transition: "box-shadow 2.34px 18.716px 0 #9AD9FF;",
-    flexDirection: isRight ? "row-reverse" : "row",
-    fontFamily: "'Anta', sans-serif",
-  }
+    const cardStyle = {
+        ...cardPositionStyle(metric.position),
+        background: "rgba(82, 82, 82, 0.13)",
+        border: "1px solid rgba(255, 255, 255, 0.72)",
+        borderRadius: "14px",
+        boxShadow:
+            isSettled || isInstant
+                ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
+                : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
+        padding: "12px 20px",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        overflow: "hidden",
+        minWidth: "220px",
+        minHeight: "80px",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        animation: `${FLOAT_ANIMATIONS[index]} ${FLOAT_DURATIONS[index]} ease-in-out infinite`,
+        transition: "box-shadow 2.34px 18.716px 0 #9AD9FF;",
+        flexDirection: isRight ? "row-reverse" : "row",
+        fontFamily: "'Anta', sans-serif"
+    }
 
-  const shimmerStyle = {
-    position: "absolute",
-    top: 0,
-    left: "-100%",
-    width: "50%",
-    height: "100%",
-    background:
-      "linear-gradient(90deg, transparent, rgba(154,217,255,0.18), transparent)",
-    animation: isSettled ? "none" : "biaShimmer 1.35s linear infinite",
-    pointerEvents: "none",
-    display: isSettled ? "none" : "block",
-  }
+    const shimmerStyle = {
+        position: "absolute",
+        top: 0,
+        left: "-100%",
+        width: "50%",
+        height: "100%",
+        background: "linear-gradient(90deg, transparent, rgba(154,217,255,0.18), transparent)",
+        animation: isSettled ? "none" : "biaShimmer 1.35s linear infinite",
+        pointerEvents: "none",
+        display: isSettled ? "none" : "block"
+    }
 
-  const valueStyle = {
-    fontSize: "18px",
-    color: isSettled ? "#7affb2" : "#9ad9ff",
-    letterSpacing: "0.04em",
-    fontVariantNumeric: "tabular-nums",
-    minHeight: "20px",
-    transition: "color 0.6s",
-    textAlign: isRight ? "right" : "left",
-  }
+    const valueStyle = {
+        fontSize: "18px",
+        color: isSettled ? "#7affb2" : "#9ad9ff",
+        letterSpacing: "0.04em",
+        fontVariantNumeric: "tabular-nums",
+        minHeight: "20px",
+        transition: "color 0.6s",
+        textAlign: isRight ? "right" : "left"
+    }
 
-  const labelStyle = {
-    fontSize: "20px",
-    color: "#fff",
-    whiteSpace: "nowrap",
-    lineHeight: 1.1,
-    textAlign: isRight ? "right" : "left",
-  }
+    const labelStyle = {
+        fontSize: "20px",
+        color: "#fff",
+        whiteSpace: "nowrap",
+        lineHeight: 1.1,
+        textAlign: isRight ? "right" : "left"
+    }
 
-  return (
-    <div style={cardStyle}>
-      {/* shimmer sweep */}
-      <div style={shimmerStyle} />
+    return (
+        <div style={cardStyle}>
+            {/* shimmer sweep */}
+            <div style={shimmerStyle} />
 
-      {/* icon */}
-      <span style={{ fontSize: "26px", flexShrink: 0 }}>
-        <img src={metric.icon} alt={metric.label} style={{ width: "26px", height: "26px" }} />
-      </span>
+            {/* icon */}
+            <span style={{ fontSize: "26px", flexShrink: 0 }}>
+                <img
+                    src={metric.icon}
+                    alt={metric.label}
+                    style={{ width: "26px", height: "26px" }}
+                />
+            </span>
 
-      {/* text */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-        <span style={labelStyle}>{metric.label}</span>
-        <span style={valueStyle}>
-          {value ?? "—"}
-        </span>
-      </div>
-    </div>
-  )
+            {/* text */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                <span style={labelStyle}>{metric.label}</span>
+                <span style={valueStyle}>{value ?? "—"}</span>
+            </div>
+        </div>
+    )
 }
 
 /* ─────────────────────────────────────────────────────────────
    Main component
 ───────────────────────────────────────────────────────────── */
 export const BIAComponent = ({
-  screenConfig,
-  total = 28,
-  isComplete = false,
-  onVideoEnd,
-  heightValue,
-  weightValue,
-  onNextClick,
-  onNextVoiceClick,
-  arms50k,
-  leg50k,
-  bia20k_100khz,
-  user
+    screenConfig,
+    total = 28,
+    isComplete = false,
+    onVideoEnd,
+    heightValue,
+    weightValue,
+    onNextClick,
+    onNextVoiceClick,
+    arms50k,
+    leg50k,
+    bia20k_100khz,
+    user
 }) => {
-  const { t } = useTranslation()
-  const navigate = useNavigate()
-  const { screenType } = useParams()
-  const gender = user?.data?.gender?.toLowerCase() === "female" ? "female" : "male"
-  console.log("gender bia component", gender)
-  const currentScreen = screenConfig[screenType]
-  const title = currentScreen?.title
-  const description = currentScreen?.description
-  const videoSrc = currentScreen?.video?.[gender]
-  /* existing progress state */
-  const [progress, setProgress] = useState(0)
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const audioRef = useRef(null)
-  const videoRef = useRef(null)
-  const activeCount = Math.round((progress / 100) * total)
-  console.log("bia check", arms50k, leg50k, bia20k_100khz)
-  /* Stop video50k on complete screens, resume on active screens */
-  const COMPLETE_SCREENS = ["whcomplete", "imcomplete"]
-  useEffect(() => {
-    const video = videoRef.current
-    if (!video) return
-    if (COMPLETE_SCREENS.includes(screenType)) {
-      video.pause()
-    } else {
-      // Only play if the video is paused (avoid DOMException on already-playing)
-      if (video.paused) {
-        video.play().catch((err) => console.log("Video play failed:", err))
-      }
-    }
-  }, [screenType])
-
-  /* ── new: BIA card states ── */
-  const [biaValues, setBiaValues] = useState({})   // key → display string
-  const [isSettled, setIsSettled] = useState(false) // true when calc done
-  const biaIntervalRef = useRef(null)
-  // Keep a ref to the latest biaMetrics so closures always read fresh data
-  const biaMetricsRef = useRef([])
-
-  /* Resolve which dataset is actually populated: full 8-electrode BIA
-     takes priority, then arm 50kHz, then leg 50kHz. */
-  const { source: biaDataSource, data: resolvedBiaData } =
-    resolveBiaSource(bia20k_100khz, arms50k, leg50k)
-
-  const buildBiaMetrics = (biaData) => [
-    {
-      key: "hydration",
-      label: "Hydration",
-      icon: biaHydrationIcon,
-      final: biaData?.waterPercentage != null
-        ? `${parseFloat(biaData.waterPercentage).toFixed(1)}%`
-        : "--",
-      min: 30,
-      max: 80,
-      unit: "%",
-      dec: 1,
-      position: "arc-left-top",
-      isInstant: false,
-    },
-
-    {
-      key: "skeletalMass",
-      label: "Skeletal Mass",
-      icon: biaSkeletonIcon,
-      final: biaData?.skeletalMuscleMassKg != null
-        ? `${parseFloat(biaData.skeletalMuscleMassKg).toFixed(1)} kg`
-        : "--",
-      min: 8,
-      max: 20,
-      unit: " kg",
-      dec: 1,
-      position: "arc-left-middle",
-      isInstant: false,
-    },
-
-    {
-      key: "fatMass",
-      label: "Fat Mass",
-      icon: biaFatMassIcon,
-      final: biaData?.fatPercentage != null
-        ? `${parseFloat(biaData.fatPercentage).toFixed(1)}%`
-        : "--",
-      min: 5,
-      max: 40,
-      unit: "%",
-      dec: 1,
-      position: "arc-left-bottom",
-      isInstant: false,
-    },
-
-    {
-      key: "muscleMass",
-      label: "Muscle Mass",
-      icon: biaMuscleMassIcon,
-      final: biaData?.muscleMassKg != null
-        ? `${parseFloat(biaData.muscleMassKg).toFixed(1)} kg`
-        : "--",
-      min: 20,
-      max: 60,
-      unit: " kg",
-      dec: 1,
-      position: "arc-right-top",
-      isInstant: false,
-    },
-
-    {
-      key: "proteinMass",
-      label: "Protein Mass",
-      icon: proteinMassIcon,
-      final: biaData?.proteinMassKg != null
-        ? `${biaData.proteinMassKg} kg`
-        : "--",
-      min: 18,
-      max: 70,
-      unit: "kg",
-      dec: 1,
-      position: "arc-right-middle",
-      isInstant: false,
-    },
-
-    {
-      key: "visceralFat",
-      label: "Visceral Fat",
-      icon: visceralFatIcon,
-      final: biaData?.visceralFat != null
-        ? `${biaData.visceralFat}`
-        : "--",
-      min: 1,
-      max: 30,
-      unit: "",
-      dec: 0,
-      position: "arc-right-bottom",
-      isInstant: false,
-    },
-    {
-      key: "height",
-      label: "Height",
-      icon: heightIcon,
-      final: heightValue != null
-        ? `${heightValue.toFixed(1)} cm`
-        : "--",
-      min: 1,
-      max: 30,
-      unit: "cm",
-      dec: 0,
-      position: "arc-center-top",
-      isInstant: true,
-    },
-    {
-      key: "weight",
-      label: "Weight",
-      icon: weightIcon,
-      final: weightValue != null
-        ? `${weightValue.toFixed(1)} kg`
-
-        : "--",
-      min: 1,
-      max: 30,
-      unit: "kg",
-      dec: 0,
-      position: "arc-center-bottom",
-
-      isInstant: true,
-    },
-  ]
-
-  const biaMetrics = buildBiaMetrics(resolvedBiaData)
-  // Keep the ref in sync on every render so closures always read fresh data
-  biaMetricsRef.current = biaMetrics
-
-  /* ──────────────── random-number scramble ──────────────── */
-  const startScramble = () => {
-    if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
-    setIsSettled(false)
-
-    biaIntervalRef.current = setInterval(() => {
-      const next = {}
-      biaMetricsRef.current.forEach((metric) => {
-        const {
-          key,
-          min,
-          max,
-          unit,
-          dec,
-          final,
-          isInstant,
-        } = metric
-
-        // Already known metrics stay fixed
-        if (isInstant) {
-          next[key] = final
-          return
+    const { t } = useTranslation()
+    const navigate = useNavigate()
+    const { screenType } = useParams()
+    const gender = user?.data?.gender?.toLowerCase() === "female" ? "female" : "male"
+    console.log("gender bia component", gender)
+    const currentScreen = screenConfig[screenType]
+    const title = currentScreen?.title
+    const description = currentScreen?.description
+    const videoSrc = currentScreen?.video?.[gender]
+    /* existing progress state */
+    const [progress, setProgress] = useState(0)
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+    const audioRef = useRef(null)
+    const videoRef = useRef(null)
+    const activeCount = Math.round((progress / 100) * total)
+    console.log("bia check", arms50k, leg50k, bia20k_100khz)
+    /* Stop video50k on complete screens, resume on active screens */
+    const COMPLETE_SCREENS = ["whcomplete", "imcomplete"]
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+        if (COMPLETE_SCREENS.includes(screenType)) {
+            video.pause()
+        } else {
+            // Only play if the video is paused (avoid DOMException on already-playing)
+            if (video.paused) {
+                video.play().catch((err) => console.log("Video play failed:", err))
+            }
         }
+    }, [screenType])
 
-        // Scanning metrics animate
-        const rand = (
-          Math.random() * (max - min) + min
-        ).toFixed(dec)
+    /* ── new: BIA card states ── */
+    const [biaValues, setBiaValues] = useState({}) // key → display string
+    const [isSettled, setIsSettled] = useState(false) // true when calc done
+    const biaIntervalRef = useRef(null)
+    // Keep a ref to the latest biaMetrics so closures always read fresh data
+    const biaMetricsRef = useRef([])
 
-        next[key] = rand + unit
-      })
-      setBiaValues(next)
-    }, 80)
-  }
+    /* Resolve which dataset is actually populated: full 8-electrode BIA
+     takes priority, then arm 50kHz, then leg 50kHz. */
+    const { source: biaDataSource, data: resolvedBiaData } = resolveBiaSource(
+        bia20k_100khz,
+        arms50k,
+        leg50k
+    )
 
-  const settleValues = () => {
-    if (biaIntervalRef.current) {
-      clearInterval(biaIntervalRef.current)
-      biaIntervalRef.current = null
+    const buildBiaMetrics = (biaData) => [
+        {
+            key: "hydration",
+            label: "Hydration",
+            icon: biaHydrationIcon,
+            final:
+                biaData?.waterPercentage != null
+                    ? `${parseFloat(biaData.waterPercentage).toFixed(1)}%`
+                    : "--",
+            min: 30,
+            max: 80,
+            unit: "%",
+            dec: 1,
+            position: "arc-left-top",
+            isInstant: false
+        },
+
+        {
+            key: "skeletalMass",
+            label: "Skeletal Mass",
+            icon: biaSkeletonIcon,
+            final:
+                biaData?.skeletalMuscleMassKg != null
+                    ? `${parseFloat(biaData.skeletalMuscleMassKg).toFixed(1)} kg`
+                    : "--",
+            min: 8,
+            max: 20,
+            unit: " kg",
+            dec: 1,
+            position: "arc-left-middle",
+            isInstant: false
+        },
+
+        {
+            key: "fatMass",
+            label: "Fat Mass",
+            icon: biaFatMassIcon,
+            final:
+                biaData?.fatPercentage != null
+                    ? `${parseFloat(biaData.fatPercentage).toFixed(1)}%`
+                    : "--",
+            min: 5,
+            max: 40,
+            unit: "%",
+            dec: 1,
+            position: "arc-left-bottom",
+            isInstant: false
+        },
+
+        {
+            key: "muscleMass",
+            label: "Muscle Mass",
+            icon: biaMuscleMassIcon,
+            final:
+                biaData?.muscleMassKg != null
+                    ? `${parseFloat(biaData.muscleMassKg).toFixed(1)} kg`
+                    : "--",
+            min: 20,
+            max: 60,
+            unit: " kg",
+            dec: 1,
+            position: "arc-right-top",
+            isInstant: false
+        },
+
+        {
+            key: "proteinMass",
+            label: "Protein Mass",
+            icon: proteinMassIcon,
+            final: biaData?.proteinMassKg != null ? `${biaData.proteinMassKg} kg` : "--",
+            min: 18,
+            max: 70,
+            unit: "kg",
+            dec: 1,
+            position: "arc-right-middle",
+            isInstant: false
+        },
+
+        {
+            key: "visceralFat",
+            label: "Visceral Fat",
+            icon: visceralFatIcon,
+            final: biaData?.visceralFat != null ? `${biaData.visceralFat}` : "--",
+            min: 1,
+            max: 30,
+            unit: "",
+            dec: 0,
+            position: "arc-right-bottom",
+            isInstant: false
+        },
+        {
+            key: "height",
+            label: "Height",
+            icon: heightIcon,
+            final: heightValue != null ? `${heightValue.toFixed(1)} cm` : "--",
+            min: 1,
+            max: 30,
+            unit: "cm",
+            dec: 0,
+            position: "arc-center-top",
+            isInstant: true
+        },
+        {
+            key: "weight",
+            label: "Weight",
+            icon: weightIcon,
+            final: weightValue != null ? `${weightValue.toFixed(1)} kg` : "--",
+            min: 1,
+            max: 30,
+            unit: "kg",
+            dec: 0,
+            position: "arc-center-bottom",
+
+            isInstant: true
+        }
+    ]
+
+    const biaMetrics = buildBiaMetrics(resolvedBiaData)
+    // Keep the ref in sync on every render so closures always read fresh data
+    biaMetricsRef.current = biaMetrics
+
+    /* ──────────────── random-number scramble ──────────────── */
+    const startScramble = () => {
+        if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+        setIsSettled(false)
+
+        biaIntervalRef.current = setInterval(() => {
+            const next = {}
+            biaMetricsRef.current.forEach((metric) => {
+                const { key, min, max, unit, dec, final, isInstant } = metric
+
+                // Already known metrics stay fixed
+                if (isInstant) {
+                    next[key] = final
+                    return
+                }
+
+                // Scanning metrics animate
+                const rand = (Math.random() * (max - min) + min).toFixed(dec)
+
+                next[key] = rand + unit
+            })
+            setBiaValues(next)
+        }, 80)
     }
-    const final = {}
-    // Always read from the ref so we get the latest resolved BIA data
-    biaMetricsRef.current.forEach(({ key, final: v }) => { final[key] = v })
-    setBiaValues(final)
-    setIsSettled(true)
-  }
 
-  /* start scramble when entering im screen */
-  useEffect(() => {
-    if (screenType === "im") {
-      startScramble()
-    } else if (screenType === "imcomplete") {
-      settleValues()
-    } else {
-      if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
-      setIsSettled(false)
-      setBiaValues({})
+    const settleValues = () => {
+        if (biaIntervalRef.current) {
+            clearInterval(biaIntervalRef.current)
+            biaIntervalRef.current = null
+        }
+        const final = {}
+        // Always read from the ref so we get the latest resolved BIA data
+        biaMetricsRef.current.forEach(({ key, final: v }) => {
+            final[key] = v
+        })
+        setBiaValues(final)
+        setIsSettled(true)
     }
-    return () => {
-      if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
-    }
-  }, [screenType])
 
-  /* Re-settle whenever the resolved BIA data arrives/updates on the
+    /* start scramble when entering im screen */
+    useEffect(() => {
+        if (screenType === "im") {
+            startScramble()
+        } else if (screenType === "imcomplete") {
+            settleValues()
+        } else {
+            if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+            setIsSettled(false)
+            setBiaValues({})
+        }
+        return () => {
+            if (biaIntervalRef.current) clearInterval(biaIntervalRef.current)
+        }
+    }, [screenType])
+
+    /* Re-settle whenever the resolved BIA data arrives/updates on the
      imcomplete screen. This handles the race where navigate() fires
      before setMeasuredValues has propagated arms50k/leg50k/bia20k_100khz
      down to this component, and also handles late-arriving upgrades
      (e.g. leg50k shown first, then full bia20k_100khz lands). */
-  useEffect(() => {
-    if (screenType === "imcomplete") {
-      settleValues()
+    useEffect(() => {
+        if (screenType === "imcomplete") {
+            settleValues()
+        }
+    }, [arms50k, leg50k, bia20k_100khz])
+
+    /* ──────────────── audio helpers ──────────────── */
+    // Keys use the "instructions/" prefix so audioUtils resolves them in the
+    // correct subfolder for each language (en, br, etc.).
+    const getAudioBaseName = (type) => {
+        const audioMap = {
+            wh: "instructions/wh_measuring",
+            whcomplete: "instructions/wh_complete",
+            im: "instructions/impedance",
+            imcomplete: "instructions/im_complete",
+            leg50: "instructions/standstraight",
+            hold: "instructions/impedance"
+        }
+        return audioMap[type] || null
     }
-  }, [arms50k, leg50k, bia20k_100khz])
 
+    useEffect(() => {
+        playAudio()
+    }, [screenType])
 
-
-  /* ──────────────── audio helpers ──────────────── */
-  // Keys use the "instructions/" prefix so audioUtils resolves them in the
-  // correct subfolder for each language (en, br, etc.).
-  const getAudioBaseName = (type) => {
-    const audioMap = {
-      wh: "instructions/wh_measuring",
-      whcomplete: "instructions/wh_complete",
-      im: "instructions/impedance",
-      imcomplete: "instructions/im_complete",
-      leg50: "instructions/standstraight",
-      hold: "instructions/impedance",
+    const playAudio = async () => {
+        const baseName = getAudioBaseName(screenType)
+        // getAudioForCurrentLanguage already falls back to "en" if the current
+        // language file is missing — no need for a secondary static-import fallback.
+        const audioPath = await getAudioForCurrentLanguage(baseName)
+        if (audioPath && audioRef.current) {
+            audioRef.current.src = audioPath
+            setIsAudioPlaying(true)
+            audioRef.current.play().catch((err) => {
+                console.log("Audio playback failed:", err)
+                setIsAudioPlaying(false)
+            })
+        } else {
+            console.warn(
+                `[BIAComponent] No audio resolved for screenType="${screenType}" (key="${baseName}")`
+            )
+        }
     }
-    return audioMap[type] || null
-  }
 
-  useEffect(() => { playAudio() }, [screenType])
+    const stopAudio = () => {
+        if (audioRef.current) {
+            audioRef.current.pause()
+            audioRef.current.currentTime = 0
+            setIsAudioPlaying(false)
+        }
+    }
 
-  const playAudio = async () => {
-    const baseName = getAudioBaseName(screenType)
-    // getAudioForCurrentLanguage already falls back to "en" if the current
-    // language file is missing — no need for a secondary static-import fallback.
-    const audioPath = await getAudioForCurrentLanguage(baseName)
-    if (audioPath && audioRef.current) {
-      audioRef.current.src = audioPath
-      setIsAudioPlaying(true)
-      audioRef.current.play().catch((err) => {
-        console.log("Audio playback failed:", err)
+    const handleAudioEnd = () => {
         setIsAudioPlaying(false)
-      })
-    } else {
-      console.warn(`[BIAComponent] No audio resolved for screenType="${screenType}" (key="${baseName}")`)
     }
-  }
 
-  const stopAudio = () => {
-    if (audioRef.current) {
-      audioRef.current.pause()
-      audioRef.current.currentTime = 0
-      setIsAudioPlaying(false)
-    }
-  }
+    const showWhResults = screenType === "whcomplete"
+    const showIMResults = screenType === "imcomplete"
 
-  const handleAudioEnd = () => { setIsAudioPlaying(false) }
+    /* ──────────────── video source ──────────────── */
+    // const videoSrc =
+    //   screenType === "wh" || screenType === "leg50" || screenType === "whcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? bmiWH_female : bmiWH_male :
+    //     screenType === "im" || screenType === "leg20" || screenType === "imcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? biaIm_female : biaIm_male :
+    //       null
 
-  const showWhResults = screenType === "whcomplete"
-  const showIMResults = screenType === "imcomplete"
+    return (
+        <>
+            {/* inject keyframes once */}
+            <style>{BIA_CARD_STYLES}</style>
 
-  /* ──────────────── video source ──────────────── */
-  // const videoSrc =
-  //   screenType === "wh" || screenType === "leg50" || screenType === "whcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? bmiWH_female : bmiWH_male :
-  //     screenType === "im" || screenType === "leg20" || screenType === "imcomplete" || screenType === "imcomplete" ? user?.gender === "female" ? biaIm_female : biaIm_male :
-  //       null
+            <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
+                <audio
+                    ref={audioRef}
+                    onEnded={handleAudioEnd}
+                    onPause={() => setIsAudioPlaying(false)}
+                    onError={() => setIsAudioPlaying(false)}
+                    onPlay={() => setIsAudioPlaying(true)}
+                >
+                    {/* src is set dynamically in playAudio() via getAudioForCurrentLanguage */}
+                    {t("common.audio_not_supported")}
+                </audio>
 
-  return (
-    <>
-      {/* inject keyframes once */}
-      <style>{BIA_CARD_STYLES}</style>
-
-      <div className="fixed inset-0 w-screen h-screen overflow-hidden bg-black">
-        <audio
-          ref={audioRef}
-          onEnded={handleAudioEnd}
-          onPause={() => setIsAudioPlaying(false)}
-          onError={() => setIsAudioPlaying(false)}
-          onPlay={() => setIsAudioPlaying(true)}
-        >
-          {/* src is set dynamically in playAudio() via getAudioForCurrentLanguage */}
-          {t("common.audio_not_supported")}
-        </audio>
-
-        {/* Background */}
-        <div
-          className="absolute inset-0 bg-center bg-cover z-0"
-          style={{ backgroundImage: `url(${bg1})` }}
-        />
-
-        {/* TEXT + PROGRESS */}
-        <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
-          <div className="relative flex flex-col items-center">
-
-            {/* Title */}
-            <p className="text-white text-center portrait:text-[44px] tracking-wider">
-              {title}
-            </p>
-
-            {/* Description */}
-            <p className="mt-6 text-[#8BC3E5] font-medium tracking-tight landscape:text-4xl portrait:text-[38px] text-center">
-              {description}
-            </p>
-
-          </div>
-        </div>
-      </div>
-
-
-      {/* ─── VIDEO + FLOATING BIA CARDS ─── */}
-      {videoSrc && (
-        <div
-          className="absolute z-0 inset-0 flex justify-center items-end mb-22 xl:items-center xl:justify-center  pointer-events-none mt-[26rem]"
-        >
-          {/* wrapper keeps cards relative to the video */}
-          <div style={{ position: "relative", width: "60%", display: "flex", justifyContent: "center" }}>
-            {/* video */}
-            <video
-              ref={videoRef}
-              key={videoSrc}
-              src={videoSrc}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="rounded-4xl object-cover w-full "
-            />
-
-            {/* ── floating metric cards (im screen only) ── */}
-            {screenType === "im" &&
-              biaMetrics.map((metric, i) => (
-                <BiaMetricCard
-                  key={metric.key}
-                  metric={metric}
-                  value={biaValues[metric.key]}
-                  isSettled={isSettled}
-                  index={i}
-                  isInstant={metric.isInstant}
+                {/* Background */}
+                <div
+                    className="absolute inset-0 bg-center bg-cover z-0"
+                    style={{ backgroundImage: `url(${bg1})` }}
                 />
-              ))}
 
-            {screenType === "imcomplete" &&
-              biaMetrics.map((metric, i) => (
-                <BiaMetricCard
-                  key={metric.key}
-                  metric={metric}
-                  value={biaValues[metric.key]}
-                  isSettled={isSettled}
-                  index={i}
-                  isInstant={metric.isInstant}
+                {/* TEXT + PROGRESS */}
+                <div className="absolute landscape:top-15 landscape:left-[20%] portrait:top-30 portrait:left-[20%] z-10 w-[60%] pt-6">
+                    <div className="relative flex flex-col items-center">
+                        {/* Title */}
+                        <p className="text-white text-center portrait:text-[44px] tracking-wider">
+                            {title}
+                        </p>
+
+                        {/* Description */}
+                        <p className="mt-6 text-[#8BC3E5] font-medium tracking-tight landscape:text-4xl portrait:text-[38px] text-center">
+                            {description}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* ─── VIDEO + FLOATING BIA CARDS ─── */}
+            {videoSrc && (
+                <div className="absolute z-0 inset-0 flex justify-center items-end mb-22 xl:items-center xl:justify-center  pointer-events-none mt-[26rem]">
+                    {/* wrapper keeps cards relative to the video */}
+                    <div
+                        style={{
+                            position: "relative",
+                            width: "60%",
+                            display: "flex",
+                            justifyContent: "center"
+                        }}
+                    >
+                        {/* video */}
+                        <video
+                            ref={videoRef}
+                            key={videoSrc}
+                            src={videoSrc}
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                            className="rounded-4xl object-cover w-full "
+                        />
+
+                        {/* ── floating metric cards (im screen only) ── */}
+                        {screenType === "im" &&
+                            biaMetrics.map((metric, i) => (
+                                <BiaMetricCard
+                                    key={metric.key}
+                                    metric={metric}
+                                    value={biaValues[metric.key]}
+                                    isSettled={isSettled}
+                                    index={i}
+                                    isInstant={metric.isInstant}
+                                />
+                            ))}
+
+                        {screenType === "imcomplete" &&
+                            biaMetrics.map((metric, i) => (
+                                <BiaMetricCard
+                                    key={metric.key}
+                                    metric={metric}
+                                    value={biaValues[metric.key]}
+                                    isSettled={isSettled}
+                                    index={i}
+                                    isInstant={metric.isInstant}
+                                />
+                            ))}
+                    </div>
+                </div>
+            )}
+
+            {/* WH Screen overlay */}
+            {screenType === "wh" && (
+                <HeightWeightDisplay
+                    heightValue={heightValue}
+                    weightValue={weightValue}
+                    isHideNext={true}
+                    isRandomHeightWeight={true}
                 />
-              ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* WH Screen overlay */}
-      {screenType === "wh" && (
-        <HeightWeightDisplay
-          heightValue={heightValue}
-          weightValue={weightValue}
-          isHideNext={true}
-          isRandomHeightWeight={true}
+            {/* SVG Result Frames (whcomplete screen) */}
+            {showWhResults && (
+                <HeightWeightComplete
+                    heightValue={heightValue}
+                    weightValue={weightValue}
+                    onNextClick={onNextClick}
+                    isAudioPlaying={isAudioPlaying}
+                />
+            )}
 
-        />
-      )}
-
-      {/* SVG Result Frames (whcomplete screen) */}
-      {showWhResults && (
-        <HeightWeightComplete
-          heightValue={heightValue}
-          weightValue={weightValue}
-          onNextClick={onNextClick}
-          isAudioPlaying={isAudioPlaying}
-        />
-      )}
-
-      {screenType === "imcomplete" && (
-        <div className="absolute bottom-20 left-[31%]">
-          <BlueGradientButton onClick={onNextVoiceClick} disabled={isAudioPlaying}>
-            {t("common.next")}
-          </BlueGradientButton>
-        </div>
-      )}
-    </>
-  )
+            {screenType === "imcomplete" && (
+                <div className="absolute bottom-20 left-[31%]">
+                    <BlueGradientButton onClick={onNextVoiceClick} disabled={isAudioPlaying}>
+                        {t("common.next")}
+                    </BlueGradientButton>
+                </div>
+            )}
+        </>
+    )
 }

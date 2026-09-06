@@ -1,258 +1,257 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router'
-import { useDispatch } from 'react-redux'
-import LoginComponent from '../ui/LoginComponent'
-import fingerprintImg from '../../assets/fingerprint.svg'
-import profilePicFallback from '../../assets/profile-pic.png'
-import BlueGradientButton from '../ui/BlueGradientButton'
-import BlackGradientButton from '../ui/BlackGradientButton'
-import KeyboardContainer from '../ui/KeyboardContainer'
-import ErrorAlert from '../ErrorAlert'
-import { loginSuhi, getStudentBySuhi } from '../../utils/api'
-import { setUser, setLoginScreening } from '../../features/common/commonSlice'
-import { getNextRoute } from '../../utils/stageRouter'
-import { useTranslation } from 'react-i18next'
-import { getSessionId } from '../../utils/config'
-import { useKioskAudio } from '../../hooks/useKioskAudio'
+import React, { useState, useEffect, useRef } from "react"
+import { useNavigate } from "react-router"
+import { useDispatch } from "react-redux"
+import LoginComponent from "../ui/LoginComponent"
+import fingerprintImg from "../../assets/fingerprint.svg"
+import profilePicFallback from "../../assets/profile-pic.png"
+import BlueGradientButton from "../ui/BlueGradientButton"
+import BlackGradientButton from "../ui/BlackGradientButton"
+import KeyboardContainer from "../ui/KeyboardContainer"
+import ErrorAlert from "../ErrorAlert"
+import { loginSuhi, getStudentBySuhi } from "../../utils/api"
+import { setUser, setLoginScreening } from "../../features/common/commonSlice"
+import { getNextRoute } from "../../utils/stageRouter"
+import { useTranslation } from "react-i18next"
+import { getSessionId } from "../../utils/config"
+import { useKioskAudio } from "../../hooks/useKioskAudio"
 
 const MAX_RETRIES = 2
 
 const LoginSuhi = () => {
-  const navigate = useNavigate()
-  const dispatch = useDispatch()
-  const { t } = useTranslation()
-  const { play: playAudio } = useKioskAudio()
-  const [suhiId, setSuhiId] = useState('')
-  const [keyboardVisible, setKeyboardVisible] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [showErrorAlert, setShowErrorAlert] = useState(false)
-  const [studentPhoto, setStudentPhoto] = useState(null)
-  const [photoLoading, setPhotoLoading] = useState(false)
-  const retryRef = useRef(0)
-  const photoDebounceRef = useRef(null)
-  const errorAlertTimerRef = useRef(null)
+    const navigate = useNavigate()
+    const dispatch = useDispatch()
+    const { t } = useTranslation()
+    const { play: playAudio } = useKioskAudio()
+    const [suhiId, setSuhiId] = useState("")
+    const [keyboardVisible, setKeyboardVisible] = useState(false)
+    const [loading, setLoading] = useState(false)
+    const [error, setError] = useState("")
+    const [showErrorAlert, setShowErrorAlert] = useState(false)
+    const [studentPhoto, setStudentPhoto] = useState(null)
+    const [photoLoading, setPhotoLoading] = useState(false)
+    const retryRef = useRef(0)
+    const photoDebounceRef = useRef(null)
+    const errorAlertTimerRef = useRef(null)
 
-  // Auto-dismiss the ErrorAlert after 4 s — ErrorAlert no longer self-dismisses;
-  // the parent (us) is responsible for setting visible=false.
-  useEffect(() => {
-    if (!showErrorAlert) return
-    clearTimeout(errorAlertTimerRef.current)
-    errorAlertTimerRef.current = setTimeout(() => {
-      setShowErrorAlert(false)
-    }, 4000)
-    return () => clearTimeout(errorAlertTimerRef.current)
-  }, [showErrorAlert])
+    // Auto-dismiss the ErrorAlert after 4 s — ErrorAlert no longer self-dismisses;
+    // the parent (us) is responsible for setting visible=false.
+    useEffect(() => {
+        if (!showErrorAlert) return
+        clearTimeout(errorAlertTimerRef.current)
+        errorAlertTimerRef.current = setTimeout(() => {
+            setShowErrorAlert(false)
+        }, 4000)
+        return () => clearTimeout(errorAlertTimerRef.current)
+    }, [showErrorAlert])
 
-  const isButtonDisabled = !suhiId.trim() || loading
+    const isButtonDisabled = !suhiId.trim() || loading
 
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === "Backspace") {
+                setSuhiId((v) => v.slice(0, -1))
+                setError("")
+            } else if (e.key === "Enter") {
+                handleNext()
+            } else if (e.key.length === 1) {
+                setSuhiId((v) => v + e.key)
+                setError("")
+                setKeyboardVisible(false)
+            }
+        }
+        window.addEventListener("keydown", handleKeyDown)
+        return () => window.removeEventListener("keydown", handleKeyDown)
+    }, [suhiId, loading])
 
+    const handleNext = async () => {
+        if (!suhiId.trim()) return
 
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Backspace') {
-        setSuhiId(v => v.slice(0, -1))
-        setError('')
-      } else if (e.key === 'Enter') {
-        handleNext()
-      } else if (e.key.length === 1) {
-        setSuhiId(v => v + e.key)
-        setError('')
-        setKeyboardVisible(false)
-      }
+        setLoading(true)
+        setError("")
+
+        try {
+            // Verify student only when Next is clicked
+            const response = await getStudentBySuhi(suhiId.trim())
+            const normalizedUser = {
+                ...response.data,
+                buffer_id: getSessionId(),
+                suhi_id: response.suhi_id || response.data?.suhi_id || suhiId.trim(),
+                gender: response.data?.gender,
+                student_name: response.data?.student_name
+            }
+
+            if (!response.success || !response.data) {
+                throw new Error(
+                    "Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance."
+                )
+            }
+
+            // Save student data
+            dispatch(
+                setUser({
+                    success: true,
+                    data: normalizedUser,
+                    screening: response.data?.screening,
+                    class_section: response.data?.class_section
+                })
+            )
+
+            // Save screening if API returns it
+            //  This is the login step — sessionId is locked in here and never
+            // overwritten by later stage-complete calls (BIA, voice, DMIT, etc.)
+            if (response.data?.screening) {
+                dispatch(setLoginScreening(response.data?.screening))
+            }
+
+            retryRef.current = 0
+
+            // Go to RegisterCard
+            navigate("/verified")
+        } catch (err) {
+            const attempt = retryRef.current + 1
+
+            if (attempt < MAX_RETRIES) {
+                retryRef.current = attempt
+                // Play "invalid SUHI Id" audio feedback
+                playAudio("errors/invalid_suhi_id_coordinate")
+                setError(err.message || t("loginSuhi.student_not_found"))
+                setShowErrorAlert(true)
+            } else {
+                retryRef.current = 0
+                // Play "let's try another way" audio before redirecting
+                playAudio("errors/let_try_suhi_id")
+                setError(t("loginSuhi.student_not_found"))
+                setTimeout(() => {
+                    navigate("/welcome")
+                }, 1500)
+            }
+        } finally {
+            setLoading(false)
+        }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [suhiId, loading])
-
-  const handleNext = async () => {
-    if (!suhiId.trim()) return
-
-    setLoading(true)
-    setError('')
-
-    try {
-      // Verify student only when Next is clicked
-      const response = await getStudentBySuhi(suhiId.trim())
-      const normalizedUser = {
-        ...response.data,
-        buffer_id: getSessionId(),
-        suhi_id:
-          response.suhi_id ||
-          response.data?.suhi_id ||
-          suhiId.trim(),
-        gender: response.data?.gender,
-        student_name: response.data?.student_name,
-
-
-
-      }
-
-      if (!response.success || !response.data) {
-        throw new Error('Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance.')
-      }
-
-      // Save student data
-      dispatch(
-        setUser({
-          success: true,
-          data: normalizedUser,
-          screening: response.data?.screening,
-          class_section: response.data?.class_section,
-        })
-      )
-
-      // Save screening if API returns it
-      //  This is the login step — sessionId is locked in here and never
-      // overwritten by later stage-complete calls (BIA, voice, DMIT, etc.)
-      if (response.data?.screening) {
-        dispatch(setLoginScreening(response.data?.screening))
-      }
-
-      retryRef.current = 0
-
-      // Go to RegisterCard
-      navigate('/verified')
-    } catch (err) {
-      const attempt = retryRef.current + 1
-
-      if (attempt < MAX_RETRIES) {
-        retryRef.current = attempt
-        // Play "invalid SUHI Id" audio feedback
-        playAudio('errors/invalid_suhi_id_coordinate')
-        setError(err.message || t('loginSuhi.student_not_found'))
-        setShowErrorAlert(true)
-      } else {
-        retryRef.current = 0
-        // Play "let's try another way" audio before redirecting
-        playAudio('errors/let_try_suhi_id')
-        setError(t('loginSuhi.student_not_found'))
-        setTimeout(() => {
-          navigate('/welcome')
-        }, 1500)
-      }
-    } finally {
-      setLoading(false)
-    }
-  }
-  return (
-    <>
-      <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[600px]">
-        <p className="text-5xl text-center font-light leading-snug text-white">
-          {t('loginSuhi.title')}
-        </p>
-      </div>
-      <LoginComponent />
-
-      {/* form */}
-      <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px]">
-        <div className="w-full flex flex-col gap-10 cursor-pointer">
-          <div className="suhi-id">
-            <div className="leading-[28px] relative text-white text-xl tracking-wide">
-              {t('loginSuhi.id_label')}{' '}
-              <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
+    return (
+        <>
+            <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[600px]">
+                <p className="text-5xl text-center font-light leading-snug text-white">
+                    {t("loginSuhi.title")}
+                </p>
             </div>
-            <div className="relative min-h-[50px] text-3xl flex items-center">
-              {/* <p className="absolute left-2 text-white">DPKS</p> */}
-              {/* <div className="border-t-2 border-white w-10 mt-2 h-12 rotate-90 absolute left-12" /> */}
-              <input
-                type="text"
-                value={suhiId}
-                autoCapitalize="characters"
-                readOnly
-                className="w-full bg-transparent border-none outline-none text-white  caret-transparent"
-                onFocus={() => {
-                  setKeyboardVisible(true)
-                  setError('')
-                }}
-              />
-            </div>
-            <div className="border-t-2 border-white w-full mt-2" />
+            <LoginComponent />
 
-            {/* Error message */}
-            {error && (
-              <p className="text-red-400 text-sm mt-3 text-center animate-pulse">
-                {error}
-              </p>
+            {/* form */}
+            <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px]">
+                <div className="w-full flex flex-col gap-10 cursor-pointer">
+                    <div className="suhi-id">
+                        <div className="leading-[28px] relative text-white text-xl tracking-wide">
+                            {t("loginSuhi.id_label")}{" "}
+                            <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
+                        </div>
+                        <div className="relative min-h-[50px] text-3xl flex items-center">
+                            {/* <p className="absolute left-2 text-white">DPKS</p> */}
+                            {/* <div className="border-t-2 border-white w-10 mt-2 h-12 rotate-90 absolute left-12" /> */}
+                            <input
+                                type="text"
+                                value={suhiId}
+                                autoCapitalize="characters"
+                                readOnly
+                                className="w-full bg-transparent border-none outline-none text-white  caret-transparent"
+                                onFocus={() => {
+                                    setKeyboardVisible(true)
+                                    setError("")
+                                }}
+                            />
+                        </div>
+                        <div className="border-t-2 border-white w-full mt-2" />
+
+                        {/* Error message */}
+                        {error && (
+                            <p className="text-red-400 text-sm mt-3 text-center animate-pulse">
+                                {error}
+                            </p>
+                        )}
+
+                        {/* Don't know SuHI ID button */}
+                        <div className="mt-4 text-center">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setError(t("loginSuhi.ask_teacher"))
+                                    setShowErrorAlert(true)
+                                }}
+                                className="text-white/60 text-sm underline hover:text-white transition-colors"
+                            >
+                                {t("loginSuhi.dont_know_id", "Don't know your SuHi ID?")}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="fixed top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2">
+                <BlueGradientButton
+                    disabled={isButtonDisabled}
+                    width={"w-[clamp(16rem,32vw,31.25rem)]"}
+                    onClick={handleNext}
+                >
+                    {loading ? (
+                        <span className="flex items-center justify-center gap-3">
+                            <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none">
+                                <circle
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="white"
+                                    strokeWidth="3"
+                                    opacity="0.3"
+                                />
+                                <path
+                                    d="M12 2a10 10 0 019.8 8"
+                                    stroke="white"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                />
+                            </svg>
+                            {t("loginSuhi.verifying")}
+                        </span>
+                    ) : (
+                        t("common.next")
+                    )}
+                </BlueGradientButton>
+            </div>
+
+            {keyboardVisible && (
+                <KeyboardContainer
+                    onKeyPress={(k) => {
+                        setSuhiId((v) => v + k)
+                        setError("")
+                    }}
+                    onBackspace={() => {
+                        setSuhiId((v) => v.slice(0, -1))
+                        setError("")
+                    }}
+                    onSubmit={() => {
+                        setKeyboardVisible(false)
+                        handleNext()
+                    }}
+                    onClose={() => setKeyboardVisible(false)}
+                />
             )}
 
-            {/* Don't know SuHI ID button */}
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setError(t('loginSuhi.ask_teacher'))
-                  setShowErrorAlert(true)
+            <ErrorAlert
+                visible={showErrorAlert}
+                title={t("loginSuhi.login_failed")}
+                description={error}
+                onRetry={() => {
+                    setShowErrorAlert(false)
+                    // handleNext()
                 }}
-                className="text-white/60 text-sm underline hover:text-white transition-colors"
-              >
-                {t('loginSuhi.dont_know_id', "Don't know your SuHi ID?")}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="fixed top-[62%] left-1/2 -translate-x-1/2 -translate-y-1/2">
-        <BlueGradientButton
-          disabled={isButtonDisabled}
-          width={'w-[clamp(16rem,32vw,31.25rem)]'}
-          onClick={handleNext}
-        >
-          {loading ? (
-            <span className="flex items-center justify-center gap-3">
-              <svg
-                className="animate-spin h-6 w-6"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  cx="12" cy="12" r="10"
-                  stroke="white" strokeWidth="3" opacity="0.3"
-                />
-                <path
-                  d="M12 2a10 10 0 019.8 8"
-                  stroke="white" strokeWidth="3" strokeLinecap="round"
-                />
-              </svg>
-              {t('loginSuhi.verifying')}
-            </span>
-          ) : (
-            t('common.next')
-          )}
-        </BlueGradientButton>
-      </div>
-
-      {keyboardVisible && (
-        <KeyboardContainer
-          onKeyPress={(k) => {
-            setSuhiId((v) => v + k)
-            setError('')
-          }}
-          onBackspace={() => {
-            setSuhiId((v) => v.slice(0, -1))
-            setError('')
-          }}
-          onSubmit={() => { setKeyboardVisible(false); handleNext() }}
-          onClose={() => setKeyboardVisible(false)}
-        />
-      )}
-
-      <ErrorAlert
-        visible={showErrorAlert}
-        title={t('loginSuhi.login_failed')}
-        description={error}
-        onRetry={() => {
-          setShowErrorAlert(false)
-          // handleNext()
-        }}
-        onClose={() => {
-          setShowErrorAlert(false)
-          retryRef.current = 0
-        }}
-      />
-    </>
-  )
+                onClose={() => {
+                    setShowErrorAlert(false)
+                    retryRef.current = 0
+                }}
+            />
+        </>
+    )
 }
 
 export default LoginSuhi

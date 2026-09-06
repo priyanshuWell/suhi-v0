@@ -1,8 +1,8 @@
-import { RotateCcw, Volume2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
+import { RotateCcw, Volume2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 const ReplayAudio = ({ playAudio, className }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation()
     return (
         <button
             onClick={playAudio}
@@ -14,4 +14,4 @@ const ReplayAudio = ({ playAudio, className }) => {
     )
 }
 
-export default ReplayAudio;
+export default ReplayAudio

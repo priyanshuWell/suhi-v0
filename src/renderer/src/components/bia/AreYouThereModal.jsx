@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import textbgframe from "../../assets/textbgframe.svg";
+import React, { useEffect, useRef, useState } from "react"
+import textbgframe from "../../assets/textbgframe.svg"
 
 /**
  * Reusable "Are you there?" modal with a visible countdown.
@@ -11,50 +11,50 @@ import textbgframe from "../../assets/textbgframe.svg";
  * @param {Function} onNo         Called when user taps "No" OR timer reaches 0
  */
 export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAudio }) {
-    const [remaining, setRemaining] = useState(timeoutSecs);
-    const intervalRef = useRef(null);
-    const firedRef = useRef(false); // prevent double-fire
-    const [isAudioPlaying, setIsAudioPlaying] = useState(true);
+    const [remaining, setRemaining] = useState(timeoutSecs)
+    const intervalRef = useRef(null)
+    const firedRef = useRef(false) // prevent double-fire
+    const [isAudioPlaying, setIsAudioPlaying] = useState(true)
 
     const fireNo = () => {
-        if (firedRef.current || isAudioPlaying) return;
-        firedRef.current = true;
-        clearInterval(intervalRef.current);
-        onNo?.();
-    };
+        if (firedRef.current || isAudioPlaying) return
+        firedRef.current = true
+        clearInterval(intervalRef.current)
+        onNo?.()
+    }
 
     const fireYes = () => {
-        if (firedRef.current || isAudioPlaying) return;
-        firedRef.current = true;
-        clearInterval(intervalRef.current);
-        onYes?.();
-    };
+        if (firedRef.current || isAudioPlaying) return
+        firedRef.current = true
+        clearInterval(intervalRef.current)
+        onYes?.()
+    }
 
     useEffect(() => {
         // Play the "are you still there?" audio on mount
-        playAudio?.('errors/are_you_still_there')?.then?.(() => {
-            setIsAudioPlaying(false);
-        });
+        playAudio?.("errors/are_you_still_there")?.then?.(() => {
+            setIsAudioPlaying(false)
+        })
 
         intervalRef.current = setInterval(() => {
             setRemaining((prev) => {
                 if (prev <= 1) {
-                    clearInterval(intervalRef.current);
+                    clearInterval(intervalRef.current)
                     // defer so state settles before callback
-                    setTimeout(fireNo, 0);
-                    return 0;
+                    setTimeout(fireNo, 0)
+                    return 0
                 }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(intervalRef.current);
-    }, []);
+                return prev - 1
+            })
+        }, 1000)
+        return () => clearInterval(intervalRef.current)
+    }, [])
 
     // Stroke-dasharray progress ring
-    const RADIUS = 28;
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-    const progress = remaining / timeoutSecs;
-    const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+    const RADIUS = 28
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+    const progress = remaining / timeoutSecs
+    const strokeDashoffset = CIRCUMFERENCE * (1 - progress)
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -78,14 +78,18 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
                         <svg width="80" height="80">
                             {/* Track */}
                             <circle
-                                cx="40" cy="40" r={RADIUS}
+                                cx="40"
+                                cy="40"
+                                r={RADIUS}
                                 fill="none"
                                 stroke="rgba(255,255,255,0.15)"
                                 strokeWidth="6"
                             />
                             {/* Progress */}
                             <circle
-                                cx="40" cy="40" r={RADIUS}
+                                cx="40"
+                                cy="40"
+                                r={RADIUS}
                                 fill="none"
                                 stroke="#8BC3E5"
                                 strokeWidth="6"
@@ -114,7 +118,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
                 hover:border-white
                 active:scale-[0.98]
                 transition-all duration-200
-                ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : ''}
+                ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : ""}
               `}
                         >
                             Yes
@@ -123,5 +127,5 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
                 </div>
             </div>
         </div>
-    );
+    )
 }

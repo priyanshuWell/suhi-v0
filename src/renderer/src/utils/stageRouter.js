@@ -13,14 +13,14 @@
  */
 
 export const STAGE_ROUTE_MAP = {
-  bia: '/bia/leg50',
-  divide_attention: '/smoothie-slash',
-  smoothie_slash: '/smoothie-slash',
-  voice_analysis: '/voice',
-  color_blindness: '/colorblindness',
-  result: '/bia/result',
-  login: '/welcome'
-};
+    bia: "/bia/leg50",
+    divide_attention: "/smoothie-slash",
+    smoothie_slash: "/smoothie-slash",
+    voice_analysis: "/voice",
+    color_blindness: "/colorblindness",
+    result: "/bia/result",
+    login: "/welcome"
+}
 
 /**
  * Returns the frontend route for a given `next_stage` object or raw stage_key string.
@@ -41,22 +41,20 @@ export const STAGE_ROUTE_MAP = {
  *   const route = getNextRoute(screening?.nextStage);
  *   navigate(route);
  */
-export function getNextRoute(nextStage, fallback = '/welcome') {
-  const key = typeof nextStage === 'string'
-    ? nextStage
-    : nextStage?.stage_key;
+export function getNextRoute(nextStage, fallback = "/welcome") {
+    const key = typeof nextStage === "string" ? nextStage : nextStage?.stage_key
 
-  if (!key) {
-    console.warn('[stageRouter] next_stage is null/undefined — using fallback route:', fallback);
-    return fallback;
-  }
+    if (!key) {
+        console.warn("[stageRouter] next_stage is null/undefined — using fallback route:", fallback)
+        return fallback
+    }
 
-  const route = STAGE_ROUTE_MAP[key];
-  if (!route) {
-    console.warn(`[stageRouter] Unknown stage_key "${key}" — using fallback route:`, fallback);
-    return fallback;
-  }
+    const route = STAGE_ROUTE_MAP[key]
+    if (!route) {
+        console.warn(`[stageRouter] Unknown stage_key "${key}" — using fallback route:`, fallback)
+        return fallback
+    }
 
-  console.log(`[stageRouter] stage_key="${key}" → "${route}"`);
-  return route;
+    console.log(`[stageRouter] stage_key="${key}" → "${route}"`)
+    return route
 }

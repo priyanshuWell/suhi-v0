@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-import BlueGradientButton from '../../ui/BlueGradientButton'
+import BlueGradientButton from "../../ui/BlueGradientButton"
 import { useTranslation } from "react-i18next"
 import { getAudioForCurrentLanguage } from "../../../utils/audioUtils"
 import { Volume2 } from "lucide-react"
@@ -16,9 +16,18 @@ export function SpaceConvoyText({ onStartDemo }) {
         let audio = null
         let cancelled = false
 
-        const handleEnded = () => { if (!cancelled) { setAudioDone(true); setIsPlaying(false) } }
-        const handlePlay = () => { if (!cancelled) setIsPlaying(true) }
-        const handlePause = () => { if (!cancelled) setIsPlaying(false) }
+        const handleEnded = () => {
+            if (!cancelled) {
+                setAudioDone(true)
+                setIsPlaying(false)
+            }
+        }
+        const handlePlay = () => {
+            if (!cancelled) setIsPlaying(true)
+        }
+        const handlePause = () => {
+            if (!cancelled) setIsPlaying(false)
+        }
 
         const loadAndPlay = async () => {
             const src = await getAudioForCurrentLanguage("cognitive_game_instruction")
@@ -39,7 +48,10 @@ export function SpaceConvoyText({ onStartDemo }) {
             if (playPromise !== undefined) {
                 playPromise.catch((err) => {
                     console.warn("[SpaceConvoyText] Autoplay prevented:", err.message)
-                    if (!cancelled) { setIsPlaying(false); setAudioDone(true) }
+                    if (!cancelled) {
+                        setIsPlaying(false)
+                        setAudioDone(true)
+                    }
                 })
             }
         }
@@ -70,12 +82,12 @@ export function SpaceConvoyText({ onStartDemo }) {
         <div className="relative z-10 flex flex-col gap-14 items-center justify-center w-full h-full">
             <div className="relative flex flex-col items-center justify-center h-16 w-full text-center">
                 <p className="text-white portrait:text-[32px] tracking-wider z-10">
-                    {t('spaceConvoy.title')}
+                    {t("spaceConvoy.title")}
                 </p>
             </div>
 
             <h1 className="text-[#8BC3E5] text-center text-2xl tracking-wider portrait:text-4xl font-anta max-w-lg">
-                {t('spaceConvoy.instruction')}
+                {t("spaceConvoy.instruction")}
             </h1>
 
             {/* Audio replay button */}
@@ -85,7 +97,9 @@ export function SpaceConvoyText({ onStartDemo }) {
             >
                 <Volume2 size={24} className={isPlaying ? "animate-pulse text-blue-300" : ""} />
                 <span className="text-lg tracking-wide">
-                    {isPlaying ? t('audio.playing', 'Playing…') : t('audio.replay', 'Replay Instructions')}
+                    {isPlaying
+                        ? t("audio.playing", "Playing…")
+                        : t("audio.replay", "Replay Instructions")}
                 </span>
             </button>
 
@@ -96,11 +110,11 @@ export function SpaceConvoyText({ onStartDemo }) {
                     onClick={onStartDemo}
                     disabled={!audioDone}
                 >
-                    {t('spaceConvoy.start')}
+                    {t("spaceConvoy.start")}
                 </BlueGradientButton>
                 {!audioDone && (
                     <p className="text-white/50 text-sm tracking-wide mt-1">
-                        {t('audio.listenFirst', 'Please listen to the instructions first')}
+                        {t("audio.listenFirst", "Please listen to the instructions first")}
                     </p>
                 )}
             </div>

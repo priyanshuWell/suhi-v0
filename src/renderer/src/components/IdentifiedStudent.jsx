@@ -18,17 +18,15 @@ const STEP_CONFIG = {
         label: "Enter your SUHI Id",
         hint: "e.g. SUHI_210S0A642",
         filter: (candidates, value) =>
-            candidates.filter((c) =>
-                c.suhi_id?.trim().toLowerCase() === value.trim().toLowerCase()
-            ),
-    },
+            candidates.filter((c) => c.suhi_id?.trim().toLowerCase() === value.trim().toLowerCase())
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MicButton — shows SVG countdown ring while recording, fully disabled during
 //             PROCESSING so user can't tap again mid-transcribe
 // ─────────────────────────────────────────────────────────────────────────────
-const RING_R = 24          // radius of countdown ring
+const RING_R = 24 // radius of countdown ring
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_R
 
 const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
@@ -38,9 +36,7 @@ const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
     const isDisabled = disabled || isRecording || isProcessing
 
     // Progress: 1 (full) → 0 (empty) as secondsLeft goes 5 → 0
-    const progress = isRecording && secondsLeft != null
-        ? secondsLeft / RECORD_DURATION_S
-        : 1
+    const progress = isRecording && secondsLeft != null ? secondsLeft / RECORD_DURATION_S : 1
 
     const strokeOffset = RING_CIRCUMFERENCE * (1 - progress)
 
@@ -53,28 +49,34 @@ const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
         relative flex-shrink-0 flex items-center justify-center
         w-14 h-14 rounded-full
         border-2 transition-all duration-300
-        ${isRecording ? "border-red-500/40 bg-red-500/10"
-                    : isError ? "border-yellow-400 bg-yellow-500/10"
-                        : isDisabled ? "border-white/20 bg-white/5"
-                            : "border-white/30 bg-white/10 hover:border-white/60 hover:bg-white/15 active:scale-95 cursor-pointer"}
+        ${
+            isRecording
+                ? "border-red-500/40 bg-red-500/10"
+                : isError
+                  ? "border-yellow-400 bg-yellow-500/10"
+                  : isDisabled
+                    ? "border-white/20 bg-white/5"
+                    : "border-white/30 bg-white/10 hover:border-white/60 hover:bg-white/15 active:scale-95 cursor-pointer"
+        }
       `}
         >
             {/* SVG countdown ring — only visible while recording */}
             {isRecording && (
-                <svg
-                    className="absolute inset-0 w-full h-full -rotate-90"
-                    viewBox="0 0 56 56"
-                >
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 56 56">
                     {/* Track */}
                     <circle
-                        cx="28" cy="28" r={RING_R}
+                        cx="28"
+                        cy="28"
+                        r={RING_R}
                         stroke="rgba(239,68,68,0.2)"
                         strokeWidth="3"
                         fill="none"
                     />
                     {/* Progress arc */}
                     <circle
-                        cx="28" cy="28" r={RING_R}
+                        cx="28"
+                        cy="28"
+                        r={RING_R}
                         stroke="#ef4444"
                         strokeWidth="3"
                         fill="none"
@@ -90,8 +92,20 @@ const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
             {isProcessing ? (
                 /* Spinner */
                 <svg className="animate-spin w-5 h-5 text-white/50" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.2" />
-                    <path d="M12 2a10 10 0 019.8 8" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        opacity="0.2"
+                    />
+                    <path
+                        d="M12 2a10 10 0 019.8 8"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                    />
                 </svg>
             ) : isRecording ? (
                 /* Countdown number */
@@ -117,19 +131,21 @@ const MicButton = ({ voiceState, secondsLeft, onClick, disabled }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 const VoiceStatusLabel = ({ voiceState, voiceError, secondsLeft }) => {
     const map = {
-        [VOICE_STATE.RECORDING]: { text: `Recording… ${secondsLeft ?? RECORD_DURATION_S}s`, color: "text-red-400" },
+        [VOICE_STATE.RECORDING]: {
+            text: `Recording… ${secondsLeft ?? RECORD_DURATION_S}s`,
+            color: "text-red-400"
+        },
         [VOICE_STATE.PROCESSING]: { text: "Transcribing…", color: "text-white/50" },
-        [VOICE_STATE.ERROR]: { text: voiceError || "Couldn't process audio. Try again.", color: "text-yellow-400" },
+        [VOICE_STATE.ERROR]: {
+            text: voiceError || "Couldn't process audio. Try again.",
+            color: "text-yellow-400"
+        }
     }
 
     const cfg = map[voiceState]
     if (!cfg) return null
 
-    return (
-        <p className={`text-sm mt-2 text-center ${cfg.color}`}>
-            {cfg.text}
-        </p>
-    )
+    return <p className={`text-sm mt-2 text-center ${cfg.color}`}>{cfg.text}</p>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,7 +181,7 @@ const IdentifyStudent = () => {
             setInputValue(text)
             setError("")
         },
-        onError: (msg) => console.warn("[IDENTIFY] Voice error:", msg),
+        onError: (msg) => console.warn("[IDENTIFY] Voice error:", msg)
     })
 
     // Guard: no candidates
@@ -204,13 +220,13 @@ const IdentifyStudent = () => {
             retryRef.current += 1
             if (retryRef.current < MAX_RETRIES) {
                 // Play "invalid SUHI Id" audio feedback
-                playAudio('errors/invalid_suhi_id_coordinate')
+                playAudio("errors/invalid_suhi_id_coordinate")
                 setError("No match found. Please check and try again.")
                 setLoading(false)
                 return
             }
             // Max retries reached — play redirect audio then show fullscreen error
-            playAudio('errors/let_try_suhi_id')
+            playAudio("errors/let_try_suhi_id")
             setNoMatchError(true)
             setLoading(false)
             return
@@ -218,7 +234,9 @@ const IdentifyStudent = () => {
         console.log("matches", matches, filteredCandidates, candidates)
         if (matches.length === 1 || stepIndex === STEPS.length - 1) {
             const matched = matches[0]
-            dispatch(setUser({ success: true, data: { ...matched, buffer_id: user?.data?.buffer_id } }))
+            dispatch(
+                setUser({ success: true, data: { ...matched, buffer_id: user?.data?.buffer_id } })
+            )
             // screening is already set from the face-scan step; don't overwrite it
             navigate("/verified")
             return
@@ -233,8 +251,7 @@ const IdentifyStudent = () => {
     const isRecordingOrProcessing =
         voiceState === VOICE_STATE.RECORDING || voiceState === VOICE_STATE.PROCESSING
 
-    const isButtonDisabled =
-        !inputValue.trim() || loading || isRecordingOrProcessing
+    const isButtonDisabled = !inputValue.trim() || loading || isRecordingOrProcessing
 
     return (
         <>
@@ -249,10 +266,13 @@ const IdentifyStudent = () => {
                     {STEPS.map((s, i) => (
                         <div
                             key={s}
-                            className={`h-1.5 rounded-full transition-all duration-300 ${i === stepIndex ? "w-8 bg-white"
-                                : i < stepIndex ? "w-4 bg-white/60"
-                                    : "w-4 bg-white/20"
-                                }`}
+                            className={`h-1.5 rounded-full transition-all duration-300 ${
+                                i === stepIndex
+                                    ? "w-8 bg-white"
+                                    : i < stepIndex
+                                      ? "w-4 bg-white/60"
+                                      : "w-4 bg-white/20"
+                            }`}
                         />
                     ))}
                 </div>
@@ -324,8 +344,20 @@ const IdentifyStudent = () => {
                     {loading ? (
                         <span className="flex items-center justify-center gap-3">
                             <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" opacity="0.3" />
-                                <path d="M12 2a10 10 0 019.8 8" stroke="white" strokeWidth="3" strokeLinecap="round" />
+                                <circle
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="white"
+                                    strokeWidth="3"
+                                    opacity="0.3"
+                                />
+                                <path
+                                    d="M12 2a10 10 0 019.8 8"
+                                    stroke="white"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                />
                             </svg>
                             Checking...
                         </span>
@@ -342,9 +374,18 @@ const IdentifyStudent = () => {
             {/* Keyboard */}
             {keyboardVisible && (
                 <KeyboardContainer
-                    onKeyPress={(k) => { setInputValue((v) => v + k); setError("") }}
-                    onBackspace={() => { setInputValue((v) => v.slice(0, -1)); setError("") }}
-                    onSubmit={() => { setKeyboardVisible(false); handleNext() }}
+                    onKeyPress={(k) => {
+                        setInputValue((v) => v + k)
+                        setError("")
+                    }}
+                    onBackspace={() => {
+                        setInputValue((v) => v.slice(0, -1))
+                        setError("")
+                    }}
+                    onSubmit={() => {
+                        setKeyboardVisible(false)
+                        handleNext()
+                    }}
                     onClose={() => setKeyboardVisible(false)}
                 />
             )}
@@ -359,7 +400,10 @@ const IdentifyStudent = () => {
                     redirectLabel="Going to SUHI Id login"
                     autoRedirectDelay={5000}
                     showRetry={false}
-                    onRedirect={() => { setNoMatchError(false); navigate("/login-suhi") }}
+                    onRedirect={() => {
+                        setNoMatchError(false)
+                        navigate("/login-suhi")
+                    }}
                 />
             )}
         </>

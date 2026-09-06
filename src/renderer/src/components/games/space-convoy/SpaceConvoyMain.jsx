@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import React, { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import divideAttentionBg from "../../../assets/games/divideAttentionbg.png"
 import stimulus_1 from "../../../assets/games/stimulus_1.png"
 import stimulus_2 from "../../../assets/games/stimulus_2.png"
@@ -16,16 +16,16 @@ import stimulus_error_1 from "../../../assets/games/stimulus_error_1.png"
 import stimulus_error_2 from "../../../assets/games/stimulus_error_2.png"
 import stimulus_error_3 from "../../../assets/games/stimulus_error_3.png"
 import bg1 from "../../../assets/lightbg.png"
-import { SpaceConvoyText } from './SpaceConvoyText'
-import SpaceConveyDemo from './SpaceConveyDemo'
-import { StartCountDown } from './StartCountDown'
-import DivideAttentionGame from './DivideAttentionGame'
-import { useNavigate } from 'react-router'
-import { DivideAttentionSession } from '../../../utils/api' // adjust path as needed
-import { useSelector } from 'react-redux'
-import { useDispatch } from 'react-redux'
-import { SpaceConvoyComplete } from './SpaceConveyComplete'
-import { store } from '../../../../../store/store'
+import { SpaceConvoyText } from "./SpaceConvoyText"
+import SpaceConveyDemo from "./SpaceConveyDemo"
+import { StartCountDown } from "./StartCountDown"
+import DivideAttentionGame from "./DivideAttentionGame"
+import { useNavigate } from "react-router"
+import { DivideAttentionSession } from "../../../utils/api" // adjust path as needed
+import { useSelector } from "react-redux"
+import { useDispatch } from "react-redux"
+import { SpaceConvoyComplete } from "./SpaceConveyComplete"
+import { store } from "../../../../../store/store"
 
 // ─── Asset loading utilities (shared) ───
 // Vite resolves SVG/PNG imports to data: URIs or hashed paths at build time.
@@ -33,11 +33,11 @@ import { store } from '../../../../../store/store'
 // Simply set img.src directly; the browser handles data: URIs natively.
 async function loadAsset(src) {
     return new Promise((resolve) => {
-        const i = new Image();
-        i.onload = () => resolve(i);
-        i.onerror = () => resolve(null);
-        i.src = src;
-    });
+        const i = new Image()
+        i.onload = () => resolve(i)
+        i.onerror = () => resolve(null)
+        i.src = src
+    })
 }
 
 const SCREENS = {
@@ -46,7 +46,7 @@ const SCREENS = {
     DEMO: "DEMO",
     COUNTDOWN: "COUNTDOWN",
     GAME: "GAME",
-    COMPLETE: "COMPLETE",
+    COMPLETE: "COMPLETE"
 }
 
 const SpaceConvoyMain = () => {
@@ -54,27 +54,29 @@ const SpaceConvoyMain = () => {
     const [screen, setScreen] = useState(SCREENS.LOADING)
     const activeSessionId = useRef(null)
     const assetsRef = useRef(null)
-    const navigate = useNavigate();
-    const storeUser = useSelector((state) => state.common.user);
-    const screening = useSelector((state) => state.common.screening); //  proper selector
+    const navigate = useNavigate()
+    const storeUser = useSelector((state) => state.common.user)
+    const screening = useSelector((state) => state.common.screening) //  proper selector
 
     // ─── Preload ALL assets once at mount ───
     useEffect(() => {
-        (async () => {
+        ;(async () => {
             const [stim, glow, correct, error, distImgs, bg] = await Promise.all([
                 // Stimuli — use loadAsset: no fetch(), just Image.src directly
                 Promise.all([stimulus_1, stimulus_2, stimulus_3].map(loadAsset)),
                 // Glow variants
                 Promise.all([stimulus_glow_1, stimulus_glow_2, stimulus_glow_3].map(loadAsset)),
                 // Correct variants
-                Promise.all([stimulus_correct_1, stimulus_correct_2, stimulus_correct_3].map(loadAsset)),
+                Promise.all(
+                    [stimulus_correct_1, stimulus_correct_2, stimulus_correct_3].map(loadAsset)
+                ),
                 // Error variants
                 Promise.all([stimulus_error_1, stimulus_error_2, stimulus_error_3].map(loadAsset)),
                 // Distractors
                 Promise.all([distractor_1, distractor_2].map(loadAsset)),
                 // Background
-                loadAsset(divideAttentionBg),
-            ]);
+                loadAsset(divideAttentionBg)
+            ])
 
             assetsRef.current = {
                 stim,
@@ -83,31 +85,35 @@ const SpaceConvoyMain = () => {
                 error,
                 distImgs: distImgs.filter(Boolean),
                 bg,
-                loaded: true,
-            };
+                loaded: true
+            }
 
             // Assets ready → show instruction screen
-            setScreen(SCREENS.INSTRUCTION);
-        })();
-    }, []);
+            setScreen(SCREENS.INSTRUCTION)
+        })()
+    }, [])
 
     const handleMoveToComplete = () => {
         setScreen(SCREENS.COMPLETE)
     }
-    const handleStartDemo =  async () => {
+    const handleStartDemo = async () => {
         // TODO: replace with real userId from your auth/Redux store
-        const userId = storeUser?.data?.user_id;
+        const userId = storeUser?.data?.user_id
         //  Read session from Redux screening slice (camelCase) — no UUID fallback
-        const screeningSessionId = screening?.sessionId; //  fixed — was storeUser?.common (wrong) + store.getState() (undefined)
+        const screeningSessionId = screening?.sessionId //  fixed — was storeUser?.common (wrong) + store.getState() (undefined)
         if (!screeningSessionId) {
-          console.error('[SpaceConvoy] No screening session — aborting game session creation');
-          return;
+            console.error("[SpaceConvoy] No screening session — aborting game session creation")
+            return
         }
-        const result = await DivideAttentionSession(userId,screeningSessionId, "practice")
+        const result = await DivideAttentionSession(userId, screeningSessionId, "practice")
         if (result.success) {
-            activeSessionId.current = result?.data?.game_session_id;
+            activeSessionId.current = result?.data?.game_session_id
             // setSessionId(result.data.game_session_id ??  null)
-            console.log("[SpaceConvoy] Session created:", result.data.game_session_id,activeSessionId)
+            console.log(
+                "[SpaceConvoy] Session created:",
+                result.data.game_session_id,
+                activeSessionId
+            )
         } else {
             console.warn("[SpaceConvoy] Session create failed, continuing offline")
         }
@@ -116,7 +122,7 @@ const SpaceConvoyMain = () => {
     const handleDemoComplete = () => setScreen(SCREENS.COUNTDOWN)
     const handleCountdownComplete = () => {
         setScreen(SCREENS.GAME)
-        navigate('/divide-attention', {state:activeSessionId})
+        navigate("/divide-attention", { state: activeSessionId })
     }
 
     // Use lightbg for instruction/countdown, divideAttentionBg for demo/game
@@ -129,7 +135,7 @@ const SpaceConvoyMain = () => {
                 className="absolute inset-0 bg-center bg-cover z-0"
                 style={{
                     backgroundImage: `url(${bgImage})`,
-                    opacity: isGameScreen ? 1 : 0.5,
+                    opacity: isGameScreen ? 1 : 0.5
                 }}
             />
 
@@ -139,21 +145,21 @@ const SpaceConvoyMain = () => {
                 </div>
             )}
 
-            {screen === SCREENS.INSTRUCTION && (
-                <SpaceConvoyText onStartDemo={handleStartDemo} />
-            )}
+            {screen === SCREENS.INSTRUCTION && <SpaceConvoyText onStartDemo={handleStartDemo} />}
 
             {screen === SCREENS.DEMO && (
-                <SpaceConveyDemo handleMoveToComplete={handleMoveToComplete} activeSessionId={activeSessionId.current}  onComplete={handleDemoComplete} />
+                <SpaceConveyDemo
+                    handleMoveToComplete={handleMoveToComplete}
+                    activeSessionId={activeSessionId.current}
+                    onComplete={handleDemoComplete}
+                />
             )}
 
             {screen === SCREENS.COUNTDOWN && (
                 <StartCountDown onComplete={handleCountdownComplete} />
             )}
 
-            {screen === SCREENS.COMPLETE && (
-                <SpaceConvoyComplete />
-            )}
+            {screen === SCREENS.COMPLETE && <SpaceConvoyComplete />}
         </div>
     )
 }

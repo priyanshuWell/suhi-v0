@@ -57,7 +57,7 @@ export function StartCountDown({ onComplete }) {
                         key={step}
                         className="text-white text-[28rem] font-bold tracking-tight"
                         style={{
-                            animation: "slideInDiag 300ms linear forwards",
+                            animation: "slideInDiag 300ms linear forwards"
                         }}
                     >
                         {current}

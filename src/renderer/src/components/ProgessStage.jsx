@@ -1,18 +1,18 @@
-import { Fragment } from "react";
-import { useSelector } from "react-redux";
+import { Fragment } from "react"
+import { useSelector } from "react-redux"
 
 const steps = [
     { id: 1, key: "login", label: "Face Scan" },
     { id: 2, key: "bia", label: "Body Scan" },
     { id: 3, key: "smoothie_slash", label: "Mind Scan" },
     { id: 4, key: "voice_analysis", label: "Voice Scan" },
-    { id: 5, key: "color_blindness", label: "Vision Scan" },
-];
+    { id: 5, key: "color_blindness", label: "Vision Scan" }
+]
 
 export default function ProgressStage({ current = 1 }) {
-    const user = useSelector((state) => state.common.user);
-    const completedStages = user?.screening?.completed_stages || [];
-    const activeStepNum = current;
+    const user = useSelector((state) => state.common.user)
+    const completedStages = user?.screening?.completed_stages || []
+    const activeStepNum = current
 
     return (
         <div
@@ -30,15 +30,13 @@ export default function ProgressStage({ current = 1 }) {
                     activeStepNum >= steps.length
                         ? "0 2px 22px 0 rgba(100, 255, 180, 0.55)"
                         : "0 2px 20px 0 rgba(154, 217, 255, 0.62)",
-                WebkitBackdropFilter: "blur(6px)",
+                WebkitBackdropFilter: "blur(6px)"
             }}
         >
             {steps.map((step, index) => {
-                const isDone =
-                    completedStages.includes(step.key) ||
-                    step.id < activeStepNum;
+                const isDone = completedStages.includes(step.key) || step.id < activeStepNum
 
-                const isActive = step.id === activeStepNum;
+                const isActive = step.id === activeStepNum
 
                 const circleClass =
                     isDone || isActive
@@ -52,12 +50,12 @@ export default function ProgressStage({ current = 1 }) {
               bg-[#616161]
               text-white
               border border-[#8a8a8a]
-            `;
+            `
 
                 const labelClass =
                     isDone || isActive
                         ? "text-[rgba(255,255,255,0.92)]"
-                        : "text-[rgba(255,255,255,0.6)]";
+                        : "text-[rgba(255,255,255,0.6)]"
 
                 const lineClass =
                     step.id < activeStepNum
@@ -65,7 +63,7 @@ export default function ProgressStage({ current = 1 }) {
               bg-[#9ad9ff]
               shadow-[0_0_10px_rgba(154,217,255,0.9)]
             `
-                        : "bg-[#8e8e8e]";
+                        : "bg-[#8e8e8e]"
 
                 return (
                     <Fragment key={step.id}>
@@ -118,8 +116,8 @@ export default function ProgressStage({ current = 1 }) {
                             />
                         )}
                     </Fragment>
-                );
+                )
             })}
         </div>
-    );
+    )
 }
