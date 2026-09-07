@@ -1,36 +1,26 @@
 import { Route, Routes } from "react-router"
-import BufferCollectionManager from "./components/BufferCollectionManager"
-import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
-import SplashScreen from "./components/SplashScreen"
-import Versions from "./components/Versions"
-import { StartScreen } from "./components/StartScreen"
-import VideoCaptureScreen from "./components/VideoCaptureScreen"
 import BIACalcuate from "./components/bia/BIACalcuate"
-import RegisterCard from "./components/RegisterCard"
-import ErrorAlert from "./components/ErrorAlert"
-import BIAResult from "./components/bia/BIAResult"
-import VoiceAnalysis from "./components/voice/VoiceAnalysis"
-import UserDetailsForm from "./components/forms/UserDetailsForm"
-import FaceCapture from "./components/forms/FaceCapture"
-import ConfirmationScreen from "./components/forms/ConfirmationScreen"
-import LoginSuhi from "./components/forms/LoginSuhi"
-import LoginFather from "./components/forms/LoginFather"
-import FingerPrintScreen from "./components/forms/FingerPrintScreen"
+import BiaReportRouter from "./components/bia/BiaReportRouter"
+import BufferCollectionManager from "./components/BufferCollectionManager"
 import ColorBlindPlate from "./components/color-blindness/ColorBlindPlate"
 import ColorBlindQuiz from "./components/color-blindness/ColorBlindQuiz"
-import SpaceConvoyMain from "./components/games/space-convoy/SpaceConvoyMain"
-import DivideAttentionGame from "./components/games/space-convoy/DivideAttentionGame"
-import SpaceConveyDemo from "./components/games/space-convoy/SpaceConveyDemo"
-import { StartCountDown } from "./components/games/space-convoy/StartCountDown"
-import { SpaceConvoyComplete } from "./components/games/space-convoy/SpaceConveyComplete"
-import ScreeningLayout from "./components/ScreeningLayout"
-import View360Viewer from "./components/voice/View360Viewer"
-import Result from "./components/bia/Result"
-import BiaReportRouter from "./components/bia/BiaReportRouter"
+import ConfirmationScreen from "./components/forms/ConfirmationScreen"
+import FaceCapture from "./components/forms/FaceCapture"
+import FingerPrintScreen from "./components/forms/FingerPrintScreen"
+import LoginFather from "./components/forms/LoginFather"
+import LoginSuhi from "./components/forms/LoginSuhi"
+import PerilousPath from "./components/games/perlious-path/PerilousPath"
 import SmoothieSlashGame from "./components/games/smoothie-slash/SmoothieSlashGame"
+import DivideAttentionGame from "./components/games/space-convoy/DivideAttentionGame"
 import IdentifyStudent from "./components/IdentifiedStudent"
+import RegisterCard from "./components/RegisterCard"
+import ScreeningLayout from "./components/ScreeningLayout"
+import { StartScreen } from "./components/StartScreen"
 import NoActivityFrame from "./components/ui/NoActivityFrame"
-import AutoIdleRedirect from "./components/AutoIdleRedirect"
+import VideoCaptureScreen from "./components/VideoCaptureScreen"
+import VoiceAnalysis from "./components/voice/VoiceAnalysis"
+import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
+import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 
 function App() {
     // Play looping background music on all routes except voice & game sections
@@ -65,7 +55,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<SplashScreen />} />
+                <Route path="/" element={<PerilousPath />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
