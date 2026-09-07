@@ -323,10 +323,13 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             }
 
             try {
-                const result = timedOut
-                    ? await perilousPathApi.trialTimeout(payload)
-                    : await perilousPathApi.trialComplete(payload)
-                onFinish?.(result)
+              const result = timedOut
+                  ? await perilousPathApi.trialTimeout(payload)
+                  : await perilousPathApi.trialComplete(payload)
+              console.log("TRIAL RESULT", result)
+              console.log("CALLING PARENT onFinish")
+              await onFinish?.(result)
+              console.log("PARENT onFinish COMPLETE")
             } catch (err) {
                 hasSubmittedRef.current = false
                 setSubmitError(err.message || "Couldn't submit your run.")
@@ -364,6 +367,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     const handleTileClick = useCallback(
         (row, col) => {
             if (phase !== PHASE.RESPONSE) return
+            if (hasSubmittedRef.current) return // trial already submitted (or submitting) — ignore trailing taps from an in-flight drag
             const tileNumber = rowColToTile(row, col)
             if (tileNumber === board.start.tile) return // spec: never include the start tile in taps
 
@@ -392,10 +396,12 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     // (which would otherwise pin every event to the tile first pressed)
     // can't break drag tracking.
     const isDraggingRef = useRef(false)
+    const lastPointRef = useRef(null) // last {x, y} we sampled, for interpolating fast drags
 
     useEffect(() => {
         const stopDragging = () => {
             isDraggingRef.current = false
+            lastPointRef.current = null
         }
         window.addEventListener("pointerup", stopDragging)
         window.addEventListener("pointercancel", stopDragging)
@@ -416,14 +422,40 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
         [handleTileClick]
     )
 
+    // Walks from the last sampled point to the current one in small steps so
+    // a fast swipe can't jump over an intermediate tile between two
+    // pointermove events (which would otherwise register as a bogus
+    // non-adjacent hop, or silently drop a tile from the traced path).
+    const SAMPLE_STEP_PX = 20
+    const processPointerPath = useCallback(
+        (clientX, clientY) => {
+            const prev = lastPointRef.current
+            lastPointRef.current = { x: clientX, y: clientY }
+
+            if (!prev) {
+                processPointerPosition(clientX, clientY)
+                return
+            }
+
+            const distance = Math.hypot(clientX - prev.x, clientY - prev.y)
+            const steps = Math.max(1, Math.ceil(distance / SAMPLE_STEP_PX))
+            for (let i = 1; i <= steps; i++) {
+                const t = i / steps
+                processPointerPosition(prev.x + (clientX - prev.x) * t, prev.y + (clientY - prev.y) * t)
+            }
+        },
+        [processPointerPosition]
+    )
+
     const handleBoardPointerDown = (e) => {
         isDraggingRef.current = true
-        processPointerPosition(e.clientX, e.clientY)
+        lastPointRef.current = null
+        processPointerPath(e.clientX, e.clientY)
     }
 
     const handleBoardPointerMove = (e) => {
         if (!isDraggingRef.current) return
-        processPointerPosition(e.clientX, e.clientY)
+        processPointerPath(e.clientX, e.clientY)
     }
 
     const showHazards = phase === PHASE.PROBE

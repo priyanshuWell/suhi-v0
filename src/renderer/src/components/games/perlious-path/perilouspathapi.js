@@ -255,93 +255,258 @@ function dummyNextGrid({ user_id, session_id, kiosk_id }) {
     return buildNextGridResponse(session, trial, false)
 }
 
+function areAdjacent(tileA, tileB) {
+    const a = tileToRowCol(tileA)
+    const b = tileToRowCol(tileB)
+
+    const rowDiff = Math.abs(a.row - b.row)
+    const colDiff = Math.abs(a.col - b.col)
+
+    // Only up / down / left / right.
+    // Diagonal movement is not allowed.
+    return rowDiff + colDiff === 1
+}
+
+function isContinuousRoute(startTile, taps) {
+    let previousTile = startTile
+
+    for (const tap of taps) {
+        if (!areAdjacent(previousTile, tap.tile_number)) {
+            return false
+        }
+
+        previousTile = tap.tile_number
+    }
+
+    return true
+}
+
 function scoreTrial(trial, { response_started_at, taps, forcedFail }) {
     const { board, levelConfig } = trial
+
     const hazardSet = new Set(board.hazard_tiles)
-    const startedAtMs = response_started_at ? new Date(response_started_at).getTime() : null
+    const startedAtMs = response_started_at
+        ? new Date(response_started_at).getTime()
+        : null
 
     const visited = new Set()
+
     let prevTapMs = startedAtMs
+
     const mappedTaps = taps.map((tap, i) => {
         const { row, col } = tileToRowCol(tap.tile_number)
+
         const tapMs = new Date(tap.tapped_at).getTime()
-        const latency_ms = prevTapMs != null && !Number.isNaN(tapMs) ? Math.max(0, tapMs - prevTapMs) : null
+
+        const latency_ms =
+            prevTapMs != null && !Number.isNaN(tapMs)
+                ? Math.max(0, tapMs - prevTapMs)
+                : null
+
         prevTapMs = tapMs
+
         const hazard_hit = hazardSet.has(tap.tile_number)
         const backtrack = visited.has(tap.tile_number)
+
         visited.add(tap.tile_number)
-        const z_tap = latency_ms != null ? Number(((latency_ms - 800) / 250).toFixed(2)) : null
+
+        const z_tap =
+            latency_ms != null
+                ? Number(((latency_ms - 800) / 250).toFixed(2))
+                : null
+
         return {
             tap_order: i + 1,
             tile_number: tap.tile_number,
             row,
             col,
+
             session_elapsed_s:
-                startedAtMs != null && !Number.isNaN(tapMs) ? Number(((tapMs - startedAtMs) / 1000).toFixed(1)) : null,
+                startedAtMs != null && !Number.isNaN(tapMs)
+                    ? Number(((tapMs - startedAtMs) / 1000).toFixed(1))
+                    : null,
+
             latency_ms,
             hazard_hit,
-            motor_slip: false, // NOT replicated locally — real detection is server-side only
+
+            // Real motor-slip detection remains server-side.
+            motor_slip: false,
+
             backtrack,
             z_tap,
         }
     })
 
-    const hazardHits = mappedTaps.filter((t) => t.hazard_hit).length
-    const backtrackCount = mappedTaps.filter((t) => t.backtrack).length
-    const lastTap = mappedTaps[mappedTaps.length - 1]
-    const destinationReached = !forcedFail && !!lastTap && lastTap.tile_number === board.destination.tile
+    const hazardHits = mappedTaps.filter(
+        (tap) => tap.hazard_hit
+    ).length
 
-    const shortestPathLength = shortestHopCount(board.start.tile, board.destination.tile, hazardSet)
+    const backtrackCount = mappedTaps.filter(
+        (tap) => tap.backtrack
+    ).length
+
+    const lastTap = mappedTaps[mappedTaps.length - 1]
+
+    const destinationReached =
+        !!lastTap &&
+        lastTap.tile_number === board.destination.tile
+
+    // ---------------------------------------------------------
+    // NEW: Validate that the entire route is continuous.
+    // START is the first point even though it is not included
+    // in the submitted taps.
+    // ---------------------------------------------------------
+    const routeIsContinuous = isContinuousRoute(
+        board.start.tile,
+        taps
+    )
+
+    const routeIsValid =
+        !forcedFail &&
+        destinationReached &&
+        routeIsContinuous
+
+    let invalidReason = null
+
+    if (forcedFail) {
+        invalidReason = "response_window_timed_out"
+    } else if (!destinationReached) {
+        invalidReason = "destination_not_reached"
+    } else if (!routeIsContinuous) {
+        invalidReason = "non_adjacent_move"
+    }
+
+    // ---------------------------------------------------------
+    // Shortest route
+    // ---------------------------------------------------------
+    const shortestPathLength = shortestHopCount(
+        board.start.tile,
+        board.destination.tile,
+        hazardSet
+    )
+
+    // Number of submitted taps = number of hops because START
+    // is not included in taps.
     const actualPathLength = mappedTaps.length
+
     const efficiency =
-        destinationReached && shortestPathLength != null && actualPathLength > 0
-            ? Number((shortestPathLength / actualPathLength).toFixed(2))
+        routeIsValid &&
+        shortestPathLength != null &&
+        actualPathLength > 0
+            ? Number(
+                  (
+                      shortestPathLength / actualPathLength
+                  ).toFixed(2)
+              )
             : null
 
-    const recall = hazardSet.size > 0 ? Number((1 - hazardHits / hazardSet.size).toFixed(2)) : mappedTaps.length ? 1.0 : null
+    // ---------------------------------------------------------
+    // Hazard recall
+    // ---------------------------------------------------------
+    const recall =
+        hazardSet.size > 0
+            ? Number(
+                  (
+                      1 -
+                      hazardHits / hazardSet.size
+                  ).toFixed(2)
+              )
+            : mappedTaps.length
+              ? 1.0
+              : null
 
-    const routeIsValid = !forcedFail && destinationReached
-    const invalidReason = forcedFail ? "response_window_timed_out" : !destinationReached ? "destination_not_reached" : null
+    // ---------------------------------------------------------
+    // Latency
+    // ---------------------------------------------------------
+    const latencies = mappedTaps
+        .map((tap) => tap.latency_ms)
+        .filter((value) => value != null)
 
-    const latencies = mappedTaps.map((t) => t.latency_ms).filter((v) => v != null)
-    const meanLatency = latencies.length ? latencies.reduce((a, b) => a + b, 0) / latencies.length : null
-    const sdLatency = latencies.length
-        ? Math.sqrt(latencies.reduce((sum, v) => sum + (v - meanLatency) ** 2, 0) / latencies.length)
+    const meanLatency = latencies.length
+        ? latencies.reduce((a, b) => a + b, 0) /
+          latencies.length
         : null
 
-    // Local placeholder scoring only — NOT the real formula.
+    const sdLatency = latencies.length
+        ? Math.sqrt(
+              latencies.reduce(
+                  (sum, value) =>
+                      sum +
+                      (value - meanLatency) ** 2,
+                  0
+              ) / latencies.length
+          )
+        : null
+
+    // ---------------------------------------------------------
+    // Local placeholder scoring
+    // ---------------------------------------------------------
     let pointsAwarded = 0
     let shortestRouteBonus = false
+
     if (routeIsValid) {
-        pointsAwarded = Math.max(0, POINTS_FOR_SAFE_CROSSING - hazardHits * 20)
-        if (hazardHits === 0 && efficiency != null && efficiency >= 1) {
+        pointsAwarded = Math.max(
+            0,
+            POINTS_FOR_SAFE_CROSSING -
+                hazardHits * 20
+        )
+
+        if (
+            hazardHits === 0 &&
+            efficiency != null &&
+            efficiency >= 1
+        ) {
             pointsAwarded += POINTS_FOR_SHORTEST_ROUTE
             shortestRouteBonus = true
         }
     }
-    const neuroArcsAwarded = Math.round(pointsAwarded / 4)
+
+    const neuroArcsAwarded = Math.round(
+        pointsAwarded / 4
+    )
 
     return {
         trial_id: trial.trial_id,
         level_number: levelConfig.level_number,
+
         route_is_valid: routeIsValid,
         invalid_reason: invalidReason,
+
         taps: mappedTaps,
+
         aggregates: {
             hazard_count: hazardSet.size,
             hazard_hits: hazardHits,
+
             recall,
+
             destination_reached: destinationReached,
+
             shortest_path_length: shortestPathLength,
             actual_path_length: actualPathLength,
             efficiency,
+
             backtrack_count: backtrackCount,
+
             valid_tap_count: mappedTaps.length,
             total_tap_count: mappedTaps.length,
+
             motor_slip_count: 0,
-            mean_latency_ms: meanLatency != null ? Number(meanLatency.toFixed(1)) : null,
-            sd_latency_ms: sdLatency != null ? Number(sdLatency.toFixed(1)) : null,
+
+            mean_latency_ms:
+                meanLatency != null
+                    ? Number(meanLatency.toFixed(1))
+                    : null,
+
+            sd_latency_ms:
+                sdLatency != null
+                    ? Number(sdLatency.toFixed(1))
+                    : null,
+
+            // Useful for debugging the dummy backend.
+            route_is_continuous: routeIsContinuous,
         },
+
         scoring: {
             points_awarded: pointsAwarded,
             neuro_arcs_awarded: neuroArcsAwarded,

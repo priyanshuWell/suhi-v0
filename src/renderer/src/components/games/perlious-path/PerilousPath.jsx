@@ -75,7 +75,8 @@ export default function PerilousPath({
     )
 
     const loadNextLevel = useCallback(async () => {
-        setLevelData(null) // shows the loading state below until the new board arrives
+        setLevelData(null)
+
         try {
             const response = await perilousPathApi.nextGrid({
                 user_id: resolvedUserId,
@@ -83,24 +84,36 @@ export default function PerilousPath({
                 kiosk_id: kioskId,
                 dummyFlag,
             })
+
             setGameSessionId(response.game_session_id)
             setLevelData(response)
             setScreen(SCREENS.GAME)
         } catch (err) {
             if (err.status === 409) {
-                // All 6 levels (demo + 5 scored) already resolved — wrap up.
                 await finalizeGame(gameSessionId)
                 return
             }
+
             const message =
                 err.status === 503
                     ? "Perilous Path isn't ready yet. Please try again shortly."
                     : err.message || "Something went wrong loading the next level."
-            setErrorInfo({ message, onRetry: loadNextLevel })
+
+            setErrorInfo({
+                message,
+                onRetry: loadNextLevel,
+            })
+
             setScreen(SCREENS.ERROR)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [resolvedUserId, sessionId, kioskId, dummyFlag, finalizeGame, gameSessionId])
+    }, [
+        resolvedUserId,
+        sessionId,
+        kioskId,
+        dummyFlag,
+        finalizeGame,
+        gameSessionId,
+    ])
 
     const handleStart = () => {
         onGameStart?.()
@@ -109,9 +122,21 @@ export default function PerilousPath({
     }
 
     const handleLevelFinish = useCallback(
-        (trialResult) => {
-            gameProps.onFinish?.(trialResult)
-            loadNextLevel() // next-grid decides whether there's another level or it's time to finalize
+        async (trialResult) => {
+            try {
+                // Let the consumer know the trial finished.
+                // Don't let a consumer callback prevent the game
+                // from loading the next level.
+                try {
+                    await gameProps.onFinish?.(trialResult)
+                } catch (err) {
+                    console.error("gameProps.onFinish failed:", err)
+                }
+
+                await loadNextLevel()
+            } catch (err) {
+                console.error("Failed to load next level:", err)
+            }
         },
         [gameProps, loadNextLevel]
     )
@@ -128,7 +153,13 @@ export default function PerilousPath({
     let content
     if (screen === SCREENS.GAME) {
         content = levelData ? (
-            <PerilousPathGame {...gameProps} level={levelData} dummyFlag={dummyFlag} onFinish={handleLevelFinish} />
+          <PerilousPathGame
+              key={levelData.trial_id}
+              {...gameProps}
+              level={levelData}
+              dummyFlag={dummyFlag}
+              onFinish={handleLevelFinish}
+          />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
                 <p className="animate-pulse font-anton text-lg">Loading next challenge…</p>
