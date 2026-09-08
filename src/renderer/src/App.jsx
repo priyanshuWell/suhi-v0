@@ -76,6 +76,8 @@ function App() {
                     <Route path="/colorblindness" element={<ColorBlindPlate />} />
                     <Route path="/perilous-path" element={<PerilousPath />} />
                     <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
+                    
+
                     {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
 
                     {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />

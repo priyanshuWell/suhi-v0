@@ -669,6 +669,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] whComplete Next button clicked")
 
         const screeningOrder = screeningState?.screeningOrder ?? 1
+        console.log("[BIA DEBUG] Current screening order:", screeningState,screeningOrder)
 
         if (screeningOrder === 2) {
             // ── Screening 2: height_weight stage ends here (no impedance needed) ──
@@ -691,7 +692,7 @@ export default function BIACalculate({ user, onComplete }) {
             }
 
             // Navigate to next Screening 2 stage (or result page if done)
-            const nextRoute = resolvePostStageRoute(result?.screening, "/")
+            const nextRoute = getNextRoute(result?.screening, "/adaptive-eye")
             console.log("[BIA] Screening 2 H+W complete — navigating to:", nextRoute)
             navigate(nextRoute)
             return
