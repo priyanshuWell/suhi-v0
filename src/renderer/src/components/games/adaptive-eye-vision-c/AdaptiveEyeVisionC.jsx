@@ -25,7 +25,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
-  const sessionId = screening?.sessionId
+  const screeningId = screening?.screeningId
 
   const [phase, setPhase] = useState('instruction'); // 'instruction' | 'testing' | 'modal'
   const [eye, setEye] = useState('right');
@@ -85,7 +85,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       setPhase('modal');
       // Both eyes done — mark the game session complete. Fire-and-forget so
       // a slow/failed network call never blocks the completed modal.
-      visualAcuityComplete(gameSessionId, sessionId).catch((err) => {
+      visualAcuityComplete(gameSessionId, screeningId).catch((err) => {
         console.warn('[AdaptiveEyeVisionC] Failed to complete session:', err.message)
       })
     }

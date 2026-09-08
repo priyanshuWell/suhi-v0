@@ -18,7 +18,7 @@ import {
 import { measureHeight } from "../../utils/measurementUtils"
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux"
 import { BIAComplete, BIAMeasurementStage, realtimeCapture } from "../../utils/api"
-import { getNextRoute } from "../../utils/stageRouter"
+import { getNextRoute, resolvePostStageRoute } from "../../utils/stageRouter"
 import {
     mapArmsPayloadToBIAMeasurement,
     mapLegsPayloadToBIAMeasurement
@@ -665,8 +665,39 @@ export default function BIACalculate({ user, onComplete }) {
         }
     }
 
-    const handleWhNextClick = () => {
+    const handleWhNextClick = async () => {
         console.log("[BIA DEBUG] whComplete Next button clicked")
+
+        const screeningOrder = screeningState?.screeningOrder ?? 1
+
+        if (screeningOrder === 2) {
+            // ── Screening 2: height_weight stage ends here (no impedance needed) ──
+            // Resolve the promise so runPhase2_LegCheck can proceed past its await,
+            // but runPhase3_Impedance will be skipped by the gate below.
+            if (whCompleteResolver.current) {
+                whCompleteResolver.current()
+                whCompleteResolver.current = null
+            }
+
+            // Call BIAComplete to mark the height_weight stage done and get next_stage
+            console.log("[BIA] Screening 2 — calling BIAComplete after H+W")
+            const result = await BIAComplete({
+                session_id: storeUser?.data?.buffer_id,
+                screening_session_id: screeningState?.sessionId
+            })
+
+            if (result?.screening) {
+                dispatch(setScreening(result.screening))
+            }
+
+            // Navigate to next Screening 2 stage (or result page if done)
+            const nextRoute = resolvePostStageRoute(result?.screening, "/")
+            console.log("[BIA] Screening 2 H+W complete — navigating to:", nextRoute)
+            navigate(nextRoute)
+            return
+        }
+
+        // ── Screening 1: resolve promise so Phase 3 (impedance) starts ──
         if (whCompleteResolver.current) {
             whCompleteResolver.current()
             whCompleteResolver.current = null
@@ -780,7 +811,7 @@ export default function BIACalculate({ user, onComplete }) {
                 "[BIA DEBUG] Height error/timeout — disconnecting port before re-throw:",
                 err.message
             )
-            await window.api.disconnectHeightPort().catch(() => {})
+            await window.api.disconnectHeightPort().catch(() => { })
             throw err
         }
     }
@@ -1010,7 +1041,7 @@ export default function BIACalculate({ user, onComplete }) {
             }
 
             // Re-run measurement with face check enabled on retries
-            ;({ weightOk, heightOk, fptOk, fptData } = await attemptWH(true))
+            ; ({ weightOk, heightOk, fptOk, fptData } = await attemptWH(true))
             console.log(
                 `[BIA DEBUG] Attempt ${attempt} result — W:${weightOk} H:${heightOk} F:${fptOk}`
             )
@@ -1236,7 +1267,12 @@ export default function BIACalculate({ user, onComplete }) {
         await new Promise((resolve) => {
             whCompleteResolver.current = resolve
         })
-        await runPhase3_Impedance()
+
+        // Screening 2 (height_weight stage): handleWhNextClick already called BIAComplete
+        // and navigated away. Phase 3 impedance measurements are NOT needed.
+        if ((screeningState?.screeningOrder ?? 1) !== 2) {
+            await runPhase3_Impedance()
+        }
     }
 
     /* =======================
@@ -2490,7 +2526,7 @@ const StandProperlyModal = ({ countdown, t }) => {
                         style={{
                             color: "#8BC3E5",
                             fontSize: "2.4rem",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             margin: 0,
                             letterSpacing: "0.02em",
                             textShadow: "0 0 20px rgba(139,195,229,0.6)"
@@ -2501,7 +2537,7 @@ const StandProperlyModal = ({ countdown, t }) => {
                     <p
                         style={{
                             color: "rgba(255,255,255,0.7)",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             fontSize: "1.2rem",
                             marginTop: "8px"
                         }}
@@ -2551,7 +2587,7 @@ const StandProperlyModal = ({ countdown, t }) => {
                             justifyContent: "center",
                             color: "#8BC3E5",
                             fontSize: "1.6rem",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             fontWeight: "bold"
                         }}
                     >
@@ -2562,7 +2598,7 @@ const StandProperlyModal = ({ countdown, t }) => {
                 <p
                     style={{
                         color: "rgba(255,255,255,0.45)",
-                        fontFamily: "Anta, sans-serif",
+                        fontFamily: "'Anta', sans-serif",
                         fontSize: "1rem",
                         margin: 0
                     }}
@@ -2657,7 +2693,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio, t }) => {
                             gap: "10px",
                             color: "#FFC84A",
                             fontSize: "clamp(1.4rem, 3vw, 2rem)",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             margin: 0,
                             letterSpacing: "0.04em",
                             textShadow: "0 0 16px rgba(255,200,74,0.55)"
@@ -2694,7 +2730,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio, t }) => {
                     <p
                         style={{
                             color: "#FFC84A",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             fontSize: "clamp(1.5rem, 3vw, 4rem)",
                             margin: 0,
                             textAlign: "center",
@@ -2784,7 +2820,7 @@ const DifferentUserModal = () => {
                         style={{
                             color: "#FF5050",
                             fontSize: "2.2rem",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             margin: 0,
                             letterSpacing: "0.02em",
                             textShadow: "0 0 20px rgba(255,80,80,0.5)"
@@ -2795,7 +2831,7 @@ const DifferentUserModal = () => {
                     <p
                         style={{
                             color: "rgba(255,255,255,0.65)",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             fontSize: "1.2rem",
                             marginTop: "10px"
                         }}
@@ -2845,7 +2881,7 @@ const DifferentUserModal = () => {
                             justifyContent: "center",
                             color: "#FF5050",
                             fontSize: "1.5rem",
-                            fontFamily: "Anta, sans-serif",
+                            fontFamily: "'Anta', sans-serif",
                             fontWeight: "bold"
                         }}
                     >
