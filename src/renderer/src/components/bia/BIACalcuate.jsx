@@ -683,15 +683,15 @@ export default function BIACalculate({ user, onComplete }) {
             // Call BIAComplete to mark the height_weight stage done and get next_stage
             console.log("[BIA] Screening 2 — calling BIAComplete after H+W")
             const result = await heightWeightSubmit({
-                session_id: storeUser?.data?.buffer_id,
+                session_id: screeningState?.sessionId,
                 screening_id: screeningState?.screeningId,
                 user_id: storeUser?.data?.user_id,
                 height: resultsRef.current.height?.value,
                 weight: resultsRef.current.weight?.value
             })
 
-            if (result?.screening) {
-                dispatch(setScreening(result.screening))
+            if (result?.data) {
+                dispatch(setScreening(result.data?.next_stage))
             }
 
             // Navigate to next Screening 2 stage (or result page if done)
