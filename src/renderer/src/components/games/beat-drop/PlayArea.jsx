@@ -13,7 +13,7 @@ import decoyTriangle from "../../../assets/beat-drop/playArea/decoy_triangle.png
 import decoyStar from "../../../assets/beat-drop/playArea/decoy_star.png"
 import Piano from "../../Piano"
 import { PIANO_SPEC } from "../../pianoSpec"
-import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, pct } from "./frame"
+import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, oswald, pct } from "./frame"
 
 const LANE_COUNT = 5
 const NOTE_IMGS = [yellow, green, pink, blue, purple]
@@ -244,14 +244,25 @@ export default function PlayArea({
                         paddingTop: "6%"
                     }}
                 >
-                    <span style={{ ...anton, fontSize: cqw(26), color: "#D8F0FF" }}>Time</span>
+                    <span
+                        style={{
+                            ...oswald,
+                            fontSize: cqw(48),
+                            color: "#FFFFFF",
+                            lineHeight: "100%",
+                            letterSpacing: "0%"
+                        }}
+                    >
+                        Time
+                    </span>
                     <span
                         style={{
                             ...anton,
                             fontSize: cqw(48),
                             color: "#FFFFFF",
-                            marginTop: 2,
-                            textShadow: "0 0 14px rgba(0,210,255,0.55)"
+                            lineHeight: cqw(32),
+                            letterSpacing: "1.2px",
+                            marginTop: cqw(18)
                         }}
                     >
                         {formatTime(secondsLeft)}
@@ -294,14 +305,25 @@ export default function PlayArea({
                         paddingTop: "6%"
                     }}
                 >
-                    <span style={{ ...anton, fontSize: cqw(26), color: "#FFE7A0" }}>Score</span>
+                    <span
+                        style={{
+                            ...oswald,
+                            fontSize: cqw(48),
+                            color: "#FFB703",
+                            lineHeight: "100%",
+                            letterSpacing: "0%"
+                        }}
+                    >
+                        Score
+                    </span>
                     <span
                         style={{
                             ...anton,
                             fontSize: cqw(48),
                             color: "#FFFFFF",
-                            marginTop: 2,
-                            textShadow: "0 0 14px rgba(255,183,3,0.45)"
+                            lineHeight: "100%",
+                            letterSpacing: "0%",
+                            marginTop: cqw(18)
                         }}
                     >
                         {score}
