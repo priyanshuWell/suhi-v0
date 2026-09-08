@@ -27,8 +27,8 @@ export const STAGE_ROUTE_MAP = {
     height_weight: "/bia/leg50",
     perilous_path: "/perilous-path",
     visual_acuity: "/adaptive-eye",
-    beat_drop: "/bia/result",
-    
+    beat_drop: "/beat-drop",
+    result: "/bia/result",
 }
 
 /**

@@ -113,7 +113,7 @@ export default function PerilousPath() {
     // (fallback to Redux if missing).
     const handleNavigateNext = useCallback(() => {
         const nextStage = finalResult?.screening?.next_stage ?? screeningState?.nextStage
-        const route = getNextRoute(nextStage, "/bia/result")
+        const route = getNextRoute(nextStage, "/adaptive-eye")
         navigate(route)
     }, [finalResult, screeningState?.nextStage, navigate])
 

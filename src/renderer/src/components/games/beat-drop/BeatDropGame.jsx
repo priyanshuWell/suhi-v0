@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
+import { useNavigate } from "react-router"
+import { useSelector } from "react-redux"
 import { AnimatePresence } from "framer-motion"
 import BeatDropStage from "./BeatDropStage"
 import IntroScreen from "./IntroScreen"
@@ -6,6 +8,7 @@ import AvoidNotesPopup from "./AvoidNotesPopup"
 import SpeedIncreasePopup from "./SpeedIncreasePopup"
 import PlayArea from "./PlayArea"
 import ResultsScreen from "./ResultsScreen"
+import { getNextRoute } from "../../../utils/stageRouter"
 
 const SCREENS = {
     INTRO: "intro",
@@ -24,9 +27,11 @@ const SPEED_POPUP_AT_SEC = 22
  *   Intro → Start Game (instant) → Avoid Notes popup
  *        → Got it → Play Area
  *        → (demo) Speed Increase popup mid-run
- *        → timer ends → Results → Next → Intro
+ *        → timer ends → Results → Next → /bia/result
  */
 export default function BeatDropGame() {
+    const navigate = useNavigate()
+    const screening = useSelector((state) => state.common.screening)
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [showAvoid, setShowAvoid] = useState(false)
     const [showSpeed, setShowSpeed] = useState(false)
@@ -70,9 +75,9 @@ export default function BeatDropGame() {
     }, [])
 
     const handleNext = () => {
-        setScreen(SCREENS.INTRO)
-        setShowAvoid(false)
-        setShowSpeed(false)
+        const nextStage = screening?.nextStage
+        const route = getNextRoute(nextStage, "/bia/result")
+        navigate(route)
     }
 
     // Demo countdown while playing
