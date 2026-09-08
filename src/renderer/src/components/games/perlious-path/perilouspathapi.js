@@ -600,6 +600,9 @@ function dummyGameComplete({ game_session_id }) {
         total_points: session.total_points,
         total_neuro_arcs: session.total_neuro_arcs,
         best_streak: session.best_streak,
+        screening: {
+            next_stage: { stage_key: "visual_acuity" },
+        },
     }
 
     session.final_result = result

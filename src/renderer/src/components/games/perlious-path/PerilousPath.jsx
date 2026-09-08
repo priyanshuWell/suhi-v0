@@ -6,7 +6,8 @@ import PerilousScoreBoard from "./PerilousScoreBoard"
 import background from "../../../assets/perilous_path/Play area.png"
 import { stageStyle } from "./theme"
 import { perilousPathApi, DUMMY_FLAG } from "./perilouspathapi"
-import { useSelector } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
 
@@ -42,6 +43,7 @@ const dummyFlag = DUMMY_FLAG
  * not a per-level / per-phase countdown.
  */
 export default function PerilousPath() {
+    const dispatch = useDispatch()
     const storeUser = useSelector((state) => state.common.user)
     const screeningState = useSelector((state) => state.common.screening)
     const navigate = useNavigate()
@@ -89,6 +91,9 @@ export default function PerilousPath() {
                     game_session_id: targetSessionId,
                     dummyFlag,
                 })
+                if (response?.screening) {
+                    dispatch(setScreening(response.screening))
+                }
                 setFinalResult(response)
                 setScreen(SCREENS.SCOREBOARD)
             } catch (err) {
@@ -99,15 +104,17 @@ export default function PerilousPath() {
                 setScreen(SCREENS.ERROR)
             }
         },
-        [gameSessionId, stopTimer]
+        [gameSessionId, stopTimer, dispatch]
     )
 
     // Navigate to the next screening stage — called when player taps "Next"
-    // on the scoreboard. Reads next_stage from Redux (same pattern as other games).
+    // on the scoreboard. Reads next_stage from game/complete API response
+    // (fallback to Redux if missing).
     const handleNavigateNext = useCallback(() => {
-        const route = getNextRoute(screeningState?.nextStage, "/bia/result")
+        const nextStage = finalResult?.screening?.next_stage ?? screeningState?.nextStage
+        const route = getNextRoute(nextStage, "/bia/result")
         navigate(route)
-    }, [screeningState?.nextStage, navigate])
+    }, [finalResult, screeningState?.nextStage, navigate])
 
     // ── Level loading ────────────────────────────────────────────────────
     const loadNextLevel = useCallback(async () => {
