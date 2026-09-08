@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
+import { AnimatePresence, motion } from "framer-motion"
 import PerilousPathGame from "./PerilousPathGame"
 import PerilousPathIntro from "./PerilousPathIntro"
 import PerilousScoreBoard from "./PerilousScoreBoard"
@@ -188,18 +189,18 @@ export default function PerilousPath() {
             />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
-                <p className="animate-pulse font-anton text-lg">Loading next challenge…</p>
+                <p className="animate-pulse font-anton text-[3.2cqw]">Loading next challenge…</p>
             </div>
         )
     } else if (screen === SCREENS.SCOREBOARD) {
         content = <PerilousScoreBoard result={finalResult} onNext={handleNavigateNext} />
     } else if (screen === SCREENS.ERROR) {
         content = (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center text-white">
-                <p className="font-anton text-lg">{errorInfo?.message}</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-[2cqw] px-[4cqw] text-center text-white">
+                <p className="font-anton text-[3.2cqw]">{errorInfo?.message}</p>
                 <button
                     type="button"
-                    className="rounded-full bg-cyan-500 px-6 py-2 font-anton text-sm text-black"
+                    className="rounded-full bg-cyan-500 px-[4cqw] py-[1.5cqw] font-anton text-[2.6cqw] text-black"
                     onClick={errorInfo?.onRetry}
                 >
                     Retry
@@ -219,7 +220,18 @@ export default function PerilousPath() {
                     className="absolute inset-0 h-full w-full object-cover"
                     draggable={false}
                 />
-                {content}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={screen}
+                        className="absolute inset-0"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.02 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                    >
+                        {content}
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     )
