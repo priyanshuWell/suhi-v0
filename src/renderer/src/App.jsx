@@ -21,6 +21,7 @@ import VideoCaptureScreen from "./components/VideoCaptureScreen"
 import VoiceAnalysis from "./components/voice/VoiceAnalysis"
 import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
+import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
 
 function App() {
     // Play looping background music on all routes except voice & game sections
@@ -58,7 +59,6 @@ function App() {
                 <Route path="/" element={<StartScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
-                {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
                 <Route path="/capture" element={<VideoCaptureScreen />} />
                 <Route path="/login-suhi" element={<LoginSuhi />} />
                 <Route path="/divide-attention" element={<DivideAttentionGame />} />
@@ -76,12 +76,8 @@ function App() {
                     <Route path="/colorblindness" element={<ColorBlindPlate />} />
                     <Route path="/perilous-path" element={<PerilousPath />} />
                     <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
-                    
+                    <Route path="/beat-drop" element={<BeatDropGame />} />
 
-                    {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
-
-                    {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
-          <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} /> */}
                     <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
                 </Route>

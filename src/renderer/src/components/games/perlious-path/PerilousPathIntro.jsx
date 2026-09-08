@@ -1,5 +1,6 @@
 import PropTypes from "prop-types"
 import { useState } from "react"
+import { motion } from "framer-motion"
 import { COLORS } from "./theme"
 
 import howToPlayFrame from "../../../assets/perilous_path/how_to_Play_frame.png"
@@ -57,16 +58,6 @@ const STEPS = [
     },
 ]
 
-/**
- * The Perilous Path instructions screen. Its parent owns the shared 9:16
- * stage and background; this component renders only the screen overlays.
- *
- * There is no dedicated "start game" API call — per the integration guide,
- * the first POST /next-grid (made by the parent once it switches to the
- * game screen) is what actually creates the game session. This screen just
- * signals "go"; the `starting` flag below only guards against double-taps
- * while that transition happens.
- */
 export default function PerilousPathIntro({ onStart }) {
     const [starting, setStarting] = useState(false)
 
@@ -77,15 +68,30 @@ export default function PerilousPathIntro({ onStart }) {
     }
 
     return (
-        <div className="absolute inset-0">
-            <img
+        <motion.div
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.35 }}
+        >
+            {/* Logo with smooth spring entrance */}
+            <motion.img
                 src={logo}
                 alt="Perilous Path"
                 className="absolute left-[29.8%] top-[2.6%] w-[40.4%] select-none"
                 draggable={false}
+                initial={{ y: -30, opacity: 0, scale: 0.9 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 350, damping: 20 }}
             />
 
-            <div className="absolute left-[6%] top-[18.9%] h-[64.2%] w-[88%]">
+            {/* Instruction container panel */}
+            <motion.div
+                className="absolute left-[6%] top-[18.9%] h-[64.2%] w-[88%]"
+                initial={{ y: 25, opacity: 0, scale: 0.96 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.1 }}
+            >
                 <img
                     src={titleBarFrame}
                     alt=""
@@ -94,16 +100,34 @@ export default function PerilousPathIntro({ onStart }) {
                     draggable={false}
                 />
 
+                {/* How to Play Header */}
                 <div className="absolute left-[5.7%] top-[-3%] w-[90.5%]">
                     <img src={howToPlayFrame} alt="" className="w-full" draggable={false} />
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="font-anton text-[4.6cqw] leading-none text-white">How to Play?</span>
+                        <span className="font-anton text-[4.6cqw] leading-none text-white tracking-wide">
+                            How to Play?
+                        </span>
                     </div>
                 </div>
 
-                {STEPS.map((step) => (
-                    <div key={step.number} className="absolute inset-x-0" style={{ top: `${step.top}%` }}>
-                        <img src={step.board} alt="" className="absolute left-[12.8%] top-0 w-[32.6%]" draggable={false} />
+                {STEPS.map((step, idx) => (
+                    <motion.div
+                        key={step.number}
+                        className="absolute inset-x-0"
+                        style={{ top: `${step.top}%` }}
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.4, delay: 0.2 + idx * 0.12, ease: "easeOut" }}
+                    >
+                        {/* Board preview illustration */}
+                        <motion.img
+                            src={step.board}
+                            alt=""
+                            className="absolute left-[12.8%] top-0 w-[32.6%]"
+                            draggable={false}
+                            whileHover={{ scale: 1.05 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                        />
 
                         <div className="absolute left-[47.4%] top-[3.2cqh] w-[48%]">
                             <div className="flex items-center gap-[3.5%]">
@@ -126,24 +150,32 @@ export default function PerilousPathIntro({ onStart }) {
                                 {step.description}
                             </p>
                         </div>
-                    </div>
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
 
-            <PerilousButton
-                title={starting ? "Starting…" : "Start Game"}
-                onClick={handleStart}
-                disabled={starting}
-                titleColor={COLORS.cyan}
+            {/* Start Button */}
+            <motion.div
                 className="absolute left-[23.2%] top-[83.8%] w-[55%]"
-            />
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.45, duration: 0.3 }}
+            >
+                <PerilousButton
+                    title={starting ? "Starting…" : "Start Game"}
+                    onClick={handleStart}
+                    disabled={starting}
+                    titleColor={COLORS.cyan}
+                    className="w-full"
+                />
+            </motion.div>
 
             <style>{`
                 .step-copy em { color: ${COLORS.cyan}; font-style: normal; }
                 .step-copy strong { color: ${COLORS.magenta}; }
                 .step-copy mark { color: ${COLORS.danger}; background: none; }
             `}</style>
-        </div>
+        </motion.div>
     )
 }
 

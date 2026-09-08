@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
+import { AnimatePresence, motion } from "framer-motion"
 import PerilousPathGame from "./PerilousPathGame"
 import PerilousPathIntro from "./PerilousPathIntro"
 import PerilousScoreBoard from "./PerilousScoreBoard"
 import background from "../../../assets/perilous_path/Play area.png"
 import { stageStyle } from "./theme"
 import { perilousPathApi, DUMMY_FLAG } from "./perilouspathapi"
-import { useSelector } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
 
@@ -42,6 +44,7 @@ const dummyFlag = DUMMY_FLAG
  * not a per-level / per-phase countdown.
  */
 export default function PerilousPath() {
+    const dispatch = useDispatch()
     const storeUser = useSelector((state) => state.common.user)
     const screeningState = useSelector((state) => state.common.screening)
     const navigate = useNavigate()
@@ -89,6 +92,9 @@ export default function PerilousPath() {
                     game_session_id: targetSessionId,
                     dummyFlag,
                 })
+                if (response?.screening) {
+                    dispatch(setScreening(response.screening))
+                }
                 setFinalResult(response)
                 setScreen(SCREENS.SCOREBOARD)
             } catch (err) {
@@ -99,15 +105,17 @@ export default function PerilousPath() {
                 setScreen(SCREENS.ERROR)
             }
         },
-        [gameSessionId, stopTimer]
+        [gameSessionId, stopTimer, dispatch]
     )
 
     // Navigate to the next screening stage — called when player taps "Next"
-    // on the scoreboard. Reads next_stage from Redux (same pattern as other games).
+    // on the scoreboard. Reads next_stage from game/complete API response
+    // (fallback to Redux if missing).
     const handleNavigateNext = useCallback(() => {
-        const route = getNextRoute(screeningState?.nextStage, "/bia/result")
+        const nextStage = finalResult?.screening?.next_stage ?? screeningState?.nextStage
+        const route = getNextRoute(nextStage, "/adaptive-eye")
         navigate(route)
-    }, [screeningState?.nextStage, navigate])
+    }, [finalResult, screeningState?.nextStage, navigate])
 
     // ── Level loading ────────────────────────────────────────────────────
     const loadNextLevel = useCallback(async () => {
@@ -181,18 +189,18 @@ export default function PerilousPath() {
             />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
-                <p className="animate-pulse font-anton text-lg">Loading next challenge…</p>
+                <p className="animate-pulse font-anton text-[3.2cqw]">Loading next challenge…</p>
             </div>
         )
     } else if (screen === SCREENS.SCOREBOARD) {
         content = <PerilousScoreBoard result={finalResult} onNext={handleNavigateNext} />
     } else if (screen === SCREENS.ERROR) {
         content = (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center text-white">
-                <p className="font-anton text-lg">{errorInfo?.message}</p>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-[2cqw] px-[4cqw] text-center text-white">
+                <p className="font-anton text-[3.2cqw]">{errorInfo?.message}</p>
                 <button
                     type="button"
-                    className="rounded-full bg-cyan-500 px-6 py-2 font-anton text-sm text-black"
+                    className="rounded-full bg-cyan-500 px-[4cqw] py-[1.5cqw] font-anton text-[2.6cqw] text-black"
                     onClick={errorInfo?.onRetry}
                 >
                     Retry
@@ -212,7 +220,18 @@ export default function PerilousPath() {
                     className="absolute inset-0 h-full w-full object-cover"
                     draggable={false}
                 />
-                {content}
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={screen}
+                        className="absolute inset-0"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 1.02 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                    >
+                        {content}
+                    </motion.div>
+                </AnimatePresence>
             </div>
         </div>
     )

@@ -25,9 +25,10 @@ export const STAGE_ROUTE_MAP = {
     // ── Screening 2 stages ─────────────────────────────────────
     // height_weight is the BMI Scan — reuses the existing BIACalculate flow
     height_weight: "/bia/leg50",
-    perilous_path: "/",
-    visual_acuity: "/visual-acuity",
-    // beat_drop: TBD — will be added when the screen is implemented
+    perilous_path: "/perilous-path",
+    visual_acuity: "/adaptive-eye",
+    beat_drop: "/beat-drop",
+    result: "/bia/result",
 }
 
 /**
