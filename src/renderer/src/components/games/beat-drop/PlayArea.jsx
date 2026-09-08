@@ -20,44 +20,77 @@ const NOTE_IMGS = [yellow, green, pink, blue, purple]
 const DECOY_IMGS = [decoySquare, decoyTriangle, decoyStar]
 
 /**
+ * Native canvas size + measured note-head width (opaque square/shape at bottom).
+ * Pink/blue exports have huge side padding, so we scale by headW — not canvas W —
+ * so every lane shows the same on-screen head size.
+ */
+const NOTE_NATIVE = new Map([
+    [yellow, { w: 724, h: 2172, headW: 527 }],
+    [green, { w: 778, h: 2022, headW: 535 }],
+    [pink, { w: 1029, h: 1528, headW: 419 }],
+    [blue, { w: 940, h: 1672, headW: 402 }],
+    [purple, { w: 768, h: 2046, headW: 513 }],
+    [decoySquare, { w: 1024, h: 1536, headW: 636 }],
+    [decoyTriangle, { w: 1087, h: 1447, headW: 766 }],
+    [decoyStar, { w: 1024, h: 1536, headW: 559 }]
+])
+
+/** Display width of the full PNG so its measured head equals `headTarget`. */
+function noteDisplayWidth(img, headTarget) {
+    const native = NOTE_NATIVE.get(img)
+    if (!native) return headTarget
+    return headTarget * (native.w / native.headW)
+}
+
+/**
  * Unified play-field geometry (design px on 1513×2678).
- * Vertical dividers, hit line, note lanes and piano keys all share this grid
- * so every edge lines up exactly like Figma.
+ * Vertical rails sit on black-key centers and run from the top of the stage
+ * down to the hit line; white-key centers define note lanes.
  */
 const FIELD_MARGIN = 72
 const FIELD_LEFT = FIELD_MARGIN
 const FIELD_WIDTH = FRAME_W - FIELD_MARGIN * 2
-const LANE_W = FIELD_WIDTH / LANE_COUNT
 
-/**
- * The keybed spec is authored in 1:1 CSS pixels for the 1080 × 1920 window;
- * this play field is FRAME_W wide. Piano.jsx owns the internal key grid — here
- * we only place its chassis rect on the field.
- */
-const SPEC_WINDOW_W = 1080
-const cssToDesign = (v) => (v * FRAME_W) / SPEC_WINDOW_W
-
-const PIANO_BOTTOM = 36
-const PIANO_WIDTH = cssToDesign(PIANO_SPEC.frameW)
-const PIANO_HEIGHT = cssToDesign(PIANO_SPEC.frameH)
-const PIANO_LEFT = (FRAME_W - PIANO_WIDTH) / 2
+/** Piano box slightly narrower than the field, centered. */
+const PIANO_FIELD_INSET = 58
+const PIANO_WIDTH = FIELD_WIDTH - PIANO_FIELD_INSET * 2
+const PIANO_LEFT = FIELD_LEFT + PIANO_FIELD_INSET
+const PIANO_BOTTOM = 220
+const PIANO_SCALE = PIANO_WIDTH / PIANO_SPEC.frameW
+const PIANO_HEIGHT = PIANO_SPEC.frameH * PIANO_SCALE
 const PIANO_TOP = FRAME_H - PIANO_BOTTOM - PIANO_HEIGHT
 
-/** Hit line sits just above the piano frame (Figma). */
-const HIT_LINE_THICKNESS = 8
-const HIT_LINE_TOP = PIANO_TOP - 18
+/** Hit line sits just above the piano frame — same width as the piano. */
+const HIT_LINE_THICKNESS = 15
+const HIT_LINE_TOP = PIANO_TOP - 22
 
-/** Vertical neon rails: below HUD → hit line */
-const DIVIDER_TOP = 340
+/**
+ * Map a keybed X (unscaled frame px) into design-frame X.
+ * Keys live at left: padX inside the chassis.
+ */
+const bedX = (xInKeys) => PIANO_LEFT + (PIANO_SPEC.padX + xInKeys) * PIANO_SCALE
+
+/** 4 black-key centers → vertical neon rails */
+const BLACK_CENTERS = Array.from({ length: 4 }, (_, i) => {
+    const leftInKeys = PIANO_SPEC.pitch * (i + 1) - PIANO_SPEC.blackOffset
+    return bedX(leftInKeys + PIANO_SPEC.blackW / 2)
+})
+
+/** 5 white-key centers → falling-note lanes */
+const WHITE_CENTERS = Array.from({ length: LANE_COUNT }, (_, i) =>
+    bedX(PIANO_SPEC.pitch * i + PIANO_SPEC.whiteW / 2)
+)
+
+const LANE_W =
+    WHITE_CENTERS.length > 1 ? WHITE_CENTERS[1] - WHITE_CENTERS[0] : FIELD_WIDTH / LANE_COUNT
+
+/** Rails: full stage top → hit line */
+const DIVIDER_TOP = 0
 const DIVIDER_HEIGHT = HIT_LINE_TOP - DIVIDER_TOP
 const DIVIDER_WIDTH = 3
 
-function laneEdge(i) {
-    return FIELD_LEFT + i * LANE_W
-}
-
 function laneCenter(i) {
-    return FIELD_LEFT + (i + 0.5) * LANE_W
+    return WHITE_CENTERS[i]
 }
 
 function formatTime(sec) {
@@ -90,9 +123,9 @@ function NeonHitLine() {
         <div
             style={{
                 position: "absolute",
-                left: pct(FIELD_LEFT, "x"),
+                left: 0,
                 top: pct(HIT_LINE_TOP),
-                width: pct(FIELD_WIDTH, "x"),
+                width: "100%",
                 height: pct(HIT_LINE_THICKNESS),
                 background: "#FFFFFF",
                 boxShadow: NEON_GLOW,
@@ -117,9 +150,10 @@ function useDemoNotes(active, speedMul = 1) {
         const spawn = () => {
             const lane = Math.floor(Math.random() * LANE_COUNT)
             const isDecoy = Math.random() < 0.18
+            // Color is independent of lane — any note can fall in any column.
             const img = isDecoy
                 ? DECOY_IMGS[Math.floor(Math.random() * DECOY_IMGS.length)]
-                : NOTE_IMGS[lane]
+                : NOTE_IMGS[Math.floor(Math.random() * NOTE_IMGS.length)]
             const duration = (2.6 + Math.random() * 1.1) / speedMul
             const note = { id: ++id, lane, img, isDecoy, duration }
             setNotes((prev) => [...prev.slice(-18), note])
@@ -138,7 +172,7 @@ function useDemoNotes(active, speedMul = 1) {
 
 export default function PlayArea({
     active,
-    secondsLeft = 45,
+    secondsLeft = 4,
     score = 0,
     speedMul = 1,
     onKeyPress,
@@ -155,7 +189,9 @@ export default function PlayArea({
     }
     const handleNoteOff = (note, info) => onNoteOff?.(note, info)
 
-    const noteWidth = LANE_W * 0.55
+    /* Same on-screen head size for every color.
+       Sized so the most padded export (pink) still fits in a lane. */
+    const headTarget = LANE_W * 0.38
 
     return (
         <div style={{ position: "absolute", inset: 0 }}>
@@ -273,37 +309,48 @@ export default function PlayArea({
                 </div>
             </div>
 
-            {/* 4 vertical neon rails → 5 equal lanes */}
-            {Array.from({ length: LANE_COUNT - 1 }, (_, i) => (
-                <NeonDivider key={i} x={laneEdge(i + 1)} />
+            {/* 4 neon rails on black-key centers, top → hit line */}
+            {BLACK_CENTERS.map((x, i) => (
+                <NeonDivider key={i} x={x} />
             ))}
 
             <NeonHitLine />
 
-            {/* Falling notes centered on lane centers */}
+            {/* Falling notes — equal head size; any color in any lane. */}
             <AnimatePresence>
                 {notes.map((note) => {
-                    const left = laneCenter(note.lane) - noteWidth / 2
+                    const native = NOTE_NATIVE.get(note.img) ?? { w: 1, h: 1, headW: 1 }
+                    const width = noteDisplayWidth(note.img, headTarget)
+                    const left = laneCenter(note.lane) - width / 2
+                    const endBottom = FRAME_H - HIT_LINE_TOP
                     return (
                         <motion.img
                             key={note.id}
                             src={note.img}
                             alt=""
                             draggable={false}
-                            initial={{ top: pct(DIVIDER_TOP), opacity: 0.25 }}
-                            animate={{ top: pct(HIT_LINE_TOP - 40), opacity: 1 }}
-                            exit={{ opacity: 0, scale: 0.55 }}
-                            transition={{ duration: note.duration, ease: "linear" }}
+                            initial={{ bottom: pct(FRAME_H + 500) }}
+                            animate={{ bottom: pct(endBottom) }}
+                            exit={{ opacity: 0 }}
+                            transition={{
+                                bottom: { duration: note.duration, ease: "linear" },
+                                opacity: { duration: 0.1 }
+                            }}
                             style={{
                                 position: "absolute",
                                 left: pct(left, "x"),
-                                width: pct(noteWidth, "x"),
+                                top: "auto",
+                                width: pct(width, "x"),
                                 height: "auto",
+                                aspectRatio: `${native.w} / ${native.h}`,
+                                objectFit: "contain",
+                                objectPosition: "center bottom",
                                 zIndex: 5,
                                 pointerEvents: "none",
+                                opacity: 1,
                                 filter: note.isDecoy
-                                    ? "drop-shadow(0 0 10px rgba(255,0,120,0.55))"
-                                    : "drop-shadow(0 0 14px rgba(0,210,255,0.45))"
+                                    ? "drop-shadow(0 0 18px rgba(255,40,140,0.9)) brightness(1.1)"
+                                    : "drop-shadow(0 0 20px rgba(255,210,80,0.7)) brightness(1.12)"
                             }}
                         />
                     )
