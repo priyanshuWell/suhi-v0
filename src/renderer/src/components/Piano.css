@@ -1,0 +1,196 @@
+/* Piano keybed — geometry authored in 1:1 CSS pixels for a 1080-wide window.
+ *
+ * THE ONLY NUMBERS THAT MATTER
+ *   pitch 192   white-key stride, left edge -> next left edge
+ *   wkw   166   white key box width  (asset trimmed to this aspect)
+ *   wkh   313   white key box height
+ *   bkw    81   black key box width  (0.422 x pitch)
+ *   bkh   184   black key box height (0.588 x wkh)
+ *   pad   52 / 36 / 60   chassis bezel left-right / top / bottom
+ *
+ * Derived: keys 934 x 313, chassis 1038 x 409, black offset 53.5.
+ * Every offset below is expressed against those vars, so the bed can never
+ * drift: change one number and the whole keybed follows.
+ */
+.piano {
+    --pitch: 192px;
+    --wkw: 166px;
+    --wkh: 313px;
+    --bkw: 81px;
+    --bkh: 184px;
+    --pad-x: 52px;
+    --pad-t: 36px;
+    --pad-b: 60px;
+
+    --keys-w: calc(var(--pitch) * 4 + var(--wkw));
+    --frame-w: calc(var(--keys-w) + var(--pad-x) * 2);
+    --frame-h: calc(var(--wkh) + var(--pad-t) + var(--pad-b));
+    --bk-offset: calc((var(--pitch) - var(--wkw) + var(--bkw)) / 2);
+
+    --piano-scale: 1;
+
+    /* width/height are set inline from the measured scale (see Piano.jsx) so the
+       outer box never depends on --piano-scale. */
+    position: relative;
+    flex: none;
+}
+
+/* The bed is authored at exact spec px, then scaled as one unit. Measuring any
+   key at scale 1 therefore returns the spec number with no rounding drift. */
+.piano__frame {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: var(--frame-w);
+    height: var(--frame-h);
+    transform: scale(var(--piano-scale));
+    transform-origin: top left;
+    border-radius: 38px;
+    background: linear-gradient(#242424, #0a0a0a 42%, #080808 58%, #1e1e1e);
+    box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.85),
+        0 2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* chrome bezel ring */
+.piano__frame::before {
+    content: "";
+    position: absolute;
+    inset: 9px;
+    border-radius: 30px;
+    background:
+        radial-gradient(120% 70% at 50% -14%, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 46%),
+        radial-gradient(120% 70% at 50% 114%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 46%),
+        radial-gradient(60% 130% at -8% 50%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 42%),
+        radial-gradient(60% 130% at 108% 50%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 42%),
+        linear-gradient(#4a4a4a, #0e0e0e 38%, #0b0b0b 62%, #3d3d3d);
+}
+
+/* dark well the keys sit in */
+.piano__frame::after {
+    content: "";
+    position: absolute;
+    inset: 17px;
+    border-radius: 23px;
+    background: linear-gradient(#151515, #040404);
+    box-shadow:
+        inset 0 8px 18px rgba(0, 0, 0, 0.95),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+}
+
+/* keybed: absolute positioning, NOT flex/grid */
+.piano__keys {
+    position: absolute;
+    left: var(--pad-x);
+    top: var(--pad-t);
+    width: var(--keys-w);
+    height: var(--wkh);
+}
+
+.piano__key {
+    position: absolute;
+    top: 0;
+    padding: 0;
+    border: 0;
+    appearance: none;
+    background-color: transparent;
+    background-repeat: no-repeat;
+    background-size: 100% 100%; /* trimmed asset -> box == visible key */
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+    transition:
+        transform 0.06s ease-out,
+        filter 0.06s ease-out;
+}
+
+.piano__key--white {
+    width: var(--wkw);
+    height: var(--wkh);
+    z-index: 1;
+    background-image: var(--img-white);
+}
+
+.piano__key--white.is-on {
+    background-image: var(--img-white-pressed);
+}
+
+/* Decorative only. Pointer-transparent, so a press over the overlap falls
+   through to the white key underneath and the bed has no dead keys. */
+.piano__key--black {
+    width: var(--bkw);
+    height: var(--bkh);
+    z-index: 2;
+    background-image: var(--img-black);
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.6));
+    pointer-events: none;
+    cursor: default;
+}
+
+.piano__key--black.is-on {
+    transform: translateY(6px);
+    filter: brightness(1.35) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7));
+}
+
+.piano__glow {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% - 6px);
+    transform: translateX(-50%);
+    width: 70%;
+    height: 170px;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(160, 220, 255, 0.55), transparent 70%);
+    opacity: 0;
+    transition: opacity 0.12s;
+}
+
+.piano__key.is-on .piano__glow {
+    opacity: 1;
+}
+
+/* ── measurement overlay ─────────────────────────────────────────── */
+.piano__guides {
+    position: absolute;
+    left: var(--pad-x);
+    top: var(--pad-t);
+    width: var(--keys-w);
+    height: var(--wkh);
+    z-index: 5;
+    pointer-events: none;
+}
+
+.piano__guide--white {
+    position: absolute;
+    top: 0;
+    width: var(--wkw);
+    height: var(--wkh);
+    outline: 2px dashed #35f0a0;
+}
+
+.piano__guide--black {
+    position: absolute;
+    top: 0;
+    width: var(--bkw);
+    height: var(--bkh);
+    outline: 2px dashed #ff5fa2;
+}
+
+.piano__guide--center {
+    position: absolute;
+    top: -30px;
+    height: calc(var(--wkh) + 46px);
+    width: 2px;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.piano__guide-label {
+    position: absolute;
+    top: calc(var(--wkh) + 14px);
+    transform: translateX(-50%);
+    color: #35f0a0;
+    font: 700 20px ui-monospace, SFMono-Regular, monospace;
+}
