@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { useEffect, useRef, useState, useCallback } from "react"
 import bg from "../../../assets/beat-drop/playArea/play_area_bg_card.png"
 import timeBox from "../../../assets/beat-drop/playArea/time_box_blank.png"
 import scoreBox from "../../../assets/beat-drop/playArea/score_blank.png"
@@ -14,16 +13,12 @@ import decoyStar from "../../../assets/beat-drop/playArea/decoy_star.png"
 import Piano from "../../Piano"
 import { PIANO_SPEC } from "../../pianoSpec"
 import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, oswald, pct } from "./frame"
+import { createBeatDropEngine } from "./beatDropEngine"
 
 const LANE_COUNT = 5
-const NOTE_IMGS = [yellow, green, pink, blue, purple]
-const DECOY_IMGS = [decoySquare, decoyTriangle, decoyStar]
+const NOTE_BY_LANE = [yellow, green, pink, blue, purple]
+const DECOY_BY_SIM = { 1: decoyStar, 2: decoyTriangle, 3: decoySquare }
 
-/**
- * Native canvas size + measured note-head width (opaque square/shape at bottom).
- * Pink/blue exports have huge side padding, so we scale by headW — not canvas W —
- * so every lane shows the same on-screen head size.
- */
 const NOTE_NATIVE = new Map([
     [yellow, { w: 724, h: 2172, headW: 527 }],
     [green, { w: 778, h: 2022, headW: 535 }],
@@ -35,23 +30,22 @@ const NOTE_NATIVE = new Map([
     [decoyStar, { w: 1024, h: 1536, headW: 559 }]
 ])
 
-/** Display width of the full PNG so its measured head equals `headTarget`. */
 function noteDisplayWidth(img, headTarget) {
     const native = NOTE_NATIVE.get(img)
     if (!native) return headTarget
     return headTarget * (native.w / native.headW)
 }
 
-/**
- * Unified play-field geometry (design px on 1513×2678).
- * Vertical rails sit on black-key centers and run from the top of the stage
- * down to the hit line; white-key centers define note lanes.
- */
+function imgForEvent(event) {
+    if (event.event_type === "decoy_note") {
+        return DECOY_BY_SIM[event.similarity_level] || decoySquare
+    }
+    return NOTE_BY_LANE[event.lane_intended - 1] || yellow
+}
+
 const FIELD_MARGIN = 72
 const FIELD_LEFT = FIELD_MARGIN
 const FIELD_WIDTH = FRAME_W - FIELD_MARGIN * 2
-
-/** Piano box slightly narrower than the field, centered. */
 const PIANO_FIELD_INSET = 58
 const PIANO_WIDTH = FIELD_WIDTH - PIANO_FIELD_INSET * 2
 const PIANO_LEFT = FIELD_LEFT + PIANO_FIELD_INSET
@@ -59,39 +53,25 @@ const PIANO_BOTTOM = 220
 const PIANO_SCALE = PIANO_WIDTH / PIANO_SPEC.frameW
 const PIANO_HEIGHT = PIANO_SPEC.frameH * PIANO_SCALE
 const PIANO_TOP = FRAME_H - PIANO_BOTTOM - PIANO_HEIGHT
-
-/** Hit line sits just above the piano frame — same width as the piano. */
 const HIT_LINE_THICKNESS = 15
 const HIT_LINE_TOP = PIANO_TOP - 22
 
-/**
- * Map a keybed X (unscaled frame px) into design-frame X.
- * Keys live at left: padX inside the chassis.
- */
 const bedX = (xInKeys) => PIANO_LEFT + (PIANO_SPEC.padX + xInKeys) * PIANO_SCALE
-
-/** 4 black-key centers → vertical neon rails */
 const BLACK_CENTERS = Array.from({ length: 4 }, (_, i) => {
     const leftInKeys = PIANO_SPEC.pitch * (i + 1) - PIANO_SPEC.blackOffset
     return bedX(leftInKeys + PIANO_SPEC.blackW / 2)
 })
-
-/** 5 white-key centers → falling-note lanes */
 const WHITE_CENTERS = Array.from({ length: LANE_COUNT }, (_, i) =>
     bedX(PIANO_SPEC.pitch * i + PIANO_SPEC.whiteW / 2)
 )
-
 const LANE_W =
     WHITE_CENTERS.length > 1 ? WHITE_CENTERS[1] - WHITE_CENTERS[0] : FIELD_WIDTH / LANE_COUNT
 
-/** Rails: full stage top → hit line */
 const DIVIDER_TOP = 0
 const DIVIDER_HEIGHT = HIT_LINE_TOP - DIVIDER_TOP
 const DIVIDER_WIDTH = 3
 
-function laneCenter(i) {
-    return WHITE_CENTERS[i]
-}
+const HEAD_TARGET = LANE_W * 0.38
 
 function formatTime(sec) {
     const s = Math.max(0, Math.floor(sec))
@@ -137,61 +117,108 @@ function NeonHitLine() {
     )
 }
 
-function useDemoNotes(active, speedMul = 1) {
+/**
+ * Play field driven by Beat Drop chart + engine.
+ */
+export default function PlayArea({
+    active,
+    paused = false,
+    secondsLeft = 100,
+    score = 0,
+    onScore,
+    onSessionEnd,
+    onSpeedPopup,
+    onAvoidPopup,
+    speedAtMs = 20000,
+    avoidAtMs = 53000,
+    engineRef
+}) {
     const [notes, setNotes] = useState([])
+    const engine = useRef(null)
+    const raf = useRef(0)
+    const speedPopupSent = useRef(false)
+    const avoidPopupSent = useRef(false)
+    const startedRef = useRef(false)
+    const endedGuard = useRef(false)
 
     useEffect(() => {
-        if (!active) {
-            setNotes([])
+        engine.current = createBeatDropEngine({
+            hitLineTop: HIT_LINE_TOP,
+            headH: HEAD_TARGET
+        })
+        if (engineRef) engineRef.current = engine.current
+        return () => {
+            engine.current?.stop()
+            if (engineRef) engineRef.current = null
+        }
+    }, [engineRef])
+
+    useEffect(() => {
+        if (!engine.current) return
+        if (paused) engine.current.pause()
+        else if (startedRef.current) engine.current.resume()
+    }, [paused])
+
+    useEffect(() => {
+        if (!active || !engine.current) {
+            cancelAnimationFrame(raf.current)
+            if (!active) {
+                startedRef.current = false
+                setNotes([])
+            }
             return undefined
         }
 
-        let id = 0
-        const spawn = () => {
-            const lane = Math.floor(Math.random() * LANE_COUNT)
-            const isDecoy = Math.random() < 0.18
-            // Color is independent of lane — any note can fall in any column.
-            const img = isDecoy
-                ? DECOY_IMGS[Math.floor(Math.random() * DECOY_IMGS.length)]
-                : NOTE_IMGS[Math.floor(Math.random() * NOTE_IMGS.length)]
-            const duration = (2.6 + Math.random() * 1.1) / speedMul
-            const note = { id: ++id, lane, img, isDecoy, duration }
-            setNotes((prev) => [...prev.slice(-18), note])
-            window.setTimeout(() => {
-                setNotes((prev) => prev.filter((n) => n.id !== note.id))
-            }, duration * 1000)
+        if (!startedRef.current) {
+            speedPopupSent.current = false
+            avoidPopupSent.current = false
+            endedGuard.current = false
+            engine.current.start()
+            startedRef.current = true
         }
 
-        spawn()
-        const timer = window.setInterval(spawn, 700 / speedMul)
-        return () => window.clearInterval(timer)
-    }, [active, speedMul])
+        const tick = () => {
+            if (!engine.current) return
+            const snap = engine.current.getSnapshot()
+            setNotes(snap.notes)
+            onScore?.(snap.score)
 
-    return notes
-}
+            if (!speedPopupSent.current && snap.t >= speedAtMs) {
+                speedPopupSent.current = true
+                onSpeedPopup?.()
+            }
+            if (!avoidPopupSent.current && snap.t >= avoidAtMs) {
+                avoidPopupSent.current = true
+                onAvoidPopup?.()
+            }
 
-export default function PlayArea({
-    active,
-    secondsLeft = 4,
-    score = 0,
-    speedMul = 1,
-    onKeyPress,
-    onNoteOn,
-    onNoteOff
-}) {
-    const notes = useDemoNotes(active, speedMul)
+            if (snap.done && !endedGuard.current) {
+                endedGuard.current = true
+                engine.current.stop()
+                startedRef.current = false
+                onSessionEnd?.(engine.current.getLog(), {
+                    score: engine.current.getScore(),
+                    streak: engine.current.getBestStreak()
+                })
+                return
+            }
+            raf.current = requestAnimationFrame(tick)
+        }
+        raf.current = requestAnimationFrame(tick)
+        return () => cancelAnimationFrame(raf.current)
+    }, [active, onScore, onSessionEnd, onSpeedPopup, onAvoidPopup, speedAtMs, avoidAtMs])
 
-    /* The keybed owns its own pressed visuals; the game only needs the events.
-       Black keys carry no lane, so lane-based scoring ignores them. */
-    const handleNoteOn = (note, info) => {
-        onNoteOn?.(note, info)
-        if (info.lane != null) onKeyPress?.(info.lane, note, info)
-    }
-    const handleNoteOff = (note, info) => onNoteOff?.(note, info)
-
-    /* Same on-screen head size for every color.
-       Sized so the most padded export (pink) still fits in a lane. */
-    const headTarget = LANE_W * 0.38
+    const handleNoteOn = useCallback(
+        (_note, info) => {
+            if (paused || info.lane == null || !engine.current) return
+            const x = WHITE_CENTERS[info.lane]
+            engine.current.handleLaneTap(info.lane, x, HIT_LINE_TOP)
+            const snap = engine.current.getSnapshot()
+            onScore?.(snap.score)
+            setNotes(snap.notes)
+        },
+        [onScore, paused]
+    )
 
     return (
         <div style={{ position: "absolute", inset: 0 }}>
@@ -331,53 +358,42 @@ export default function PlayArea({
                 </div>
             </div>
 
-            {/* 4 neon rails on black-key centers, top → hit line */}
             {BLACK_CENTERS.map((x, i) => (
                 <NeonDivider key={i} x={x} />
             ))}
-
             <NeonHitLine />
 
-            {/* Falling notes — equal head size; any color in any lane. */}
-            <AnimatePresence>
-                {notes.map((note) => {
-                    const native = NOTE_NATIVE.get(note.img) ?? { w: 1, h: 1, headW: 1 }
-                    const width = noteDisplayWidth(note.img, headTarget)
-                    const left = laneCenter(note.lane) - width / 2
-                    const endBottom = FRAME_H - HIT_LINE_TOP
-                    return (
-                        <motion.img
-                            key={note.id}
-                            src={note.img}
-                            alt=""
-                            draggable={false}
-                            initial={{ bottom: pct(FRAME_H + 500) }}
-                            animate={{ bottom: pct(endBottom) }}
-                            exit={{ opacity: 0 }}
-                            transition={{
-                                bottom: { duration: note.duration, ease: "linear" },
-                                opacity: { duration: 0.1 }
-                            }}
-                            style={{
-                                position: "absolute",
-                                left: pct(left, "x"),
-                                top: "auto",
-                                width: pct(width, "x"),
-                                height: "auto",
-                                aspectRatio: `${native.w} / ${native.h}`,
-                                objectFit: "contain",
-                                objectPosition: "center bottom",
-                                zIndex: 5,
-                                pointerEvents: "none",
-                                opacity: 1,
-                                filter: note.isDecoy
-                                    ? "drop-shadow(0 0 18px rgba(255,40,140,0.9)) brightness(1.1)"
-                                    : "drop-shadow(0 0 20px rgba(255,210,80,0.7)) brightness(1.12)"
-                            }}
-                        />
-                    )
-                })}
-            </AnimatePresence>
+            {notes.map((n) => {
+                const img = imgForEvent(n.event)
+                const native = NOTE_NATIVE.get(img) ?? { w: 1, h: 1 }
+                const width = noteDisplayWidth(img, HEAD_TARGET)
+                const left = WHITE_CENTERS[n.laneIndex] - width / 2
+                return (
+                    <img
+                        key={n.key}
+                        src={img}
+                        alt=""
+                        draggable={false}
+                        style={{
+                            position: "absolute",
+                            left: pct(left, "x"),
+                            top: "auto",
+                            bottom: pct(n.cssBottom),
+                            width: pct(width, "x"),
+                            height: "auto",
+                            aspectRatio: `${native.w} / ${native.h}`,
+                            objectFit: "contain",
+                            objectPosition: "center bottom",
+                            zIndex: 5,
+                            pointerEvents: "none",
+                            opacity: n.event.tapped ? 0.35 : 1,
+                            filter: n.event.event_type === "decoy_note"
+                                ? "drop-shadow(0 0 18px rgba(255,40,140,0.9)) brightness(1.1)"
+                                : "drop-shadow(0 0 20px rgba(255,210,80,0.7)) brightness(1.12)"
+                        }}
+                    />
+                )
+            })}
 
             <div
                 style={{
@@ -388,7 +404,7 @@ export default function PlayArea({
                     zIndex: 7
                 }}
             >
-                <Piano onNoteOn={handleNoteOn} onNoteOff={handleNoteOff} />
+                <Piano onNoteOn={handleNoteOn} />
             </div>
         </div>
     )
