@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import { useNavigate } from "react-router"
 import { AnimatePresence, motion } from "framer-motion"
 import PerilousPathGame from "./PerilousPathGame"
@@ -55,38 +55,11 @@ export default function PerilousPath() {
     const [finalResult, setFinalResult] = useState(null)
     const [errorInfo, setErrorInfo] = useState(null)
 
-    // ── Total elapsed game timer ─────────────────────────────────────────
-    // Ticks up from 0 once the player taps Start; persists across all level
-    // transitions. Passed to PerilousPathGame so the Time badge shows total
-    // game time rather than a per-phase countdown.
-    const [totalElapsed, setTotalElapsed] = useState(0)
-    const gameStartTimeRef = useRef(null)
-    const timerIntervalRef = useRef(null)
-
-    const startTimer = useCallback(() => {
-        gameStartTimeRef.current = Date.now()
-        timerIntervalRef.current = setInterval(() => {
-            setTotalElapsed(Math.floor((Date.now() - gameStartTimeRef.current) / 1000))
-        }, 1000)
-    }, [])
-
-    const stopTimer = useCallback(() => {
-        clearInterval(timerIntervalRef.current)
-        timerIntervalRef.current = null
-    }, [])
-
-    // Clean up the interval if the component unmounts mid-game
-    useEffect(() => {
-        return () => {
-            clearInterval(timerIntervalRef.current)
-        }
-    }, [])
 
     // ── Game finalization ────────────────────────────────────────────────
     const finalizeGame = useCallback(
         async (sessionIdOverride) => {
             const targetSessionId = sessionIdOverride ?? gameSessionId
-            stopTimer()
             try {
                 const response = await perilousPathApi.gameComplete({
                     game_session_id: targetSessionId,
@@ -105,7 +78,7 @@ export default function PerilousPath() {
                 setScreen(SCREENS.ERROR)
             }
         },
-        [gameSessionId, stopTimer, dispatch]
+        [gameSessionId, dispatch]
     )
 
     // Navigate to the next screening stage — called when player taps "Next"
@@ -154,9 +127,8 @@ export default function PerilousPath() {
 
     // ── Handlers ─────────────────────────────────────────────────────────
     const handleStart = useCallback(() => {
-        startTimer()
         loadNextLevel()
-    }, [startTimer, loadNextLevel])
+    }, [loadNextLevel])
 
     const handleLevelFinish = useCallback(async () => {
         try {
@@ -167,14 +139,12 @@ export default function PerilousPath() {
     }, [loadNextLevel])
 
     const handleRestart = useCallback(() => {
-        stopTimer()
-        setTotalElapsed(0)
         setGameSessionId(null)
         setLevelData(null)
         setFinalResult(null)
         setErrorInfo(null)
         setScreen(SCREENS.INTRO)
-    }, [stopTimer])
+    }, [])
 
     // ── Render ────────────────────────────────────────────────────────────
     let content
@@ -185,7 +155,6 @@ export default function PerilousPath() {
                 level={levelData}
                 dummyFlag={dummyFlag}
                 onFinish={handleLevelFinish}
-                totalElapsedSeconds={totalElapsed}
             />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
