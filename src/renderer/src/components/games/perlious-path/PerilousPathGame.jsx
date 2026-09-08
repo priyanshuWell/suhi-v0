@@ -40,6 +40,14 @@ const OBJECTIVE_TEXT = {
     [PHASE.SUBMITTING]: "Submitting…",
 }
 
+// How long the "+N Safe crossing" / fail banner stays up (in the objective
+// bar) once a trial's result comes back, before the parent is told to load
+// the next board. Mirrors RoundManager.Succeed/Fail showing a result before
+// DelayedNextRound/ShowLevelCompleteAfterDelay kicks in on the CS side —
+// without it, PerilousPath.jsx swaps this component out the instant the
+// fetch resolves and the player never sees what they scored.
+const RESULT_HOLD_MS = 900
+
 function cellKey(row, col) {
     return `${row}-${col}`
 }
@@ -50,6 +58,26 @@ function formatSeconds(total) {
     const sec = s % 60
     return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`
 }
+
+// Orthogonal-neighbor check for the current grid: a tile can only be added
+// to the trace if it sits directly up/down/left/right of wherever the path
+// currently ends. This is the client-side mirror of
+// GridManager.AreAdjacent(..., allowDiagonal: false) on the CS side, which
+// is what PathInputController.TryAddTile gates every step on.
+function areAdjacent(tileA, tileB) {
+    const a = tileToRowCol(tileA)
+    const b = tileToRowCol(tileB)
+    return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1
+}
+
+// Neon glow tuning for the path beam / connector nodes below. A flat line
+// asset or icon reads as thin no matter how big its bounding box is — the
+// reference look is built from a blurred color wash layered behind the
+// real art (the standard "neon tube" trick: bloom sells the thickness,
+// the crisp asset on top sells the edge). Reuses the same cyan already
+// used for the Trace-phase objective text so it stays on-brand instead of
+// introducing a new color no one signed off on.
+const PATH_GLOW_COLOR = COLORS.cyan
 
 // ── Path-beam geometry ───────────────────────────────────────────────────
 // Must stay in sync with the grid's `gap-[3%]` class below — this lets us
@@ -71,9 +99,9 @@ function cellCenterPct(index, count) {
 /**
  * Builds the glowing connector beams that trace the player's path across the
  * board: one segment per adjacent hop in `pathSequence` (tile numbers, start
- * tile first). Non-adjacent hops (shouldn't normally happen, but taps aren't
- * geometrically validated client-side) are skipped since there's no straight
- * beam asset for them.
+ * tile first). Non-adjacent hops (shouldn't normally happen now that
+ * handleTileClick gates every tap on adjacency, but kept as a guard) are
+ * skipped since there's no straight beam asset for them.
  *
  * Each segment always anchors its bright glow end at the *earlier* tile in
  * the hop (already-visited) and grows toward the newly-tapped tile, which is
@@ -134,7 +162,22 @@ function buildPathSegments(pathSequence, rows, cols) {
     return segments
 }
 
-/** One animated glowing beam connecting two adjacent tile centers. */
+/**
+ * One animated glowing beam connecting two adjacent tile centers.
+ *
+ * Built as a small stack rather than a single image, matching the reference
+ * art's "energy tube" look:
+ *   1. a wide, heavily-blurred wash — the soft outer bloom
+ *   2. a tighter, brighter blurred core — the visible "glass" of the tube
+ *   3. the original line asset on top — a crisp, defined edge
+ *   4. a thin near-white filament through the center — the hot core
+ * All four live inside the same scaling wrapper so the whole bundle grows
+ * and retracts together. The outer motion.div owns the exit fade (so
+ * AnimatePresence has something to hold onto while it plays), and the inner
+ * motion.div does the grow-in / shrink-back-out via scaleX/scaleY from the
+ * anchored end — this is what makes an undone step visually "unwind"
+ * instead of just vanishing.
+ */
 function PathSegment({ orientation, flip, style }) {
     const isHorizontal = orientation === "horizontal"
     const asset = isHorizontal ? horizontalLine : verticalLine
@@ -147,27 +190,51 @@ function PathSegment({ orientation, flip, style }) {
           : "center top"
 
     return (
-        <div className="absolute" style={style}>
+        <motion.div className="absolute" style={style} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: "easeIn" }}>
             <motion.div
-                className="h-full w-full"
+                className="relative h-full w-full"
                 style={{ transformOrigin }}
                 initial={isHorizontal ? { scaleX: 0 } : { scaleY: 0 }}
                 animate={isHorizontal ? { scaleX: 1 } : { scaleY: 1 }}
+                exit={isHorizontal ? { scaleX: 0 } : { scaleY: 0 }}
                 transition={{ duration: 0.16, ease: "easeOut" }}
             >
+                {/* Outer bloom: wide + soft */}
+                <motion.div
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: PATH_GLOW_COLOR, filter: "blur(9px)" }}
+                    animate={{ opacity: [0.35, 0.6, 0.35] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                />
+                {/* Inner bloom: brighter + tighter */}
+                <motion.div
+                    className="absolute inset-0 rounded-full"
+                    style={{ background: PATH_GLOW_COLOR, filter: "blur(3px)" }}
+                    animate={{ opacity: [0.6, 0.95, 0.6] }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+                />
+                {/* Original line art on top, brightened, for a crisp defined edge */}
                 <motion.img
                     src={asset}
                     alt=""
-                    className="h-full w-full"
+                    className="absolute inset-0 h-full w-full"
                     style={{
                         transform: flip ? (isHorizontal ? "scaleX(-1)" : "scaleY(-1)") : "none",
+                        filter: "brightness(1.4) saturate(1.3)",
                     }}
                     draggable={false}
-                    animate={{ opacity: [0.8, 1, 0.8] }}
+                    animate={{ opacity: [0.85, 1, 0.85] }}
                     transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
                 />
+                {/* Hot white filament through the center */}
+                <div
+                    className={`absolute rounded-full bg-white/90 ${
+                        isHorizontal ? "left-0 right-0 top-1/2 h-[22%] -translate-y-1/2" : "top-0 bottom-0 left-1/2 w-[22%] -translate-x-1/2"
+                    }`}
+                    style={{ filter: "blur(1.5px)" }}
+                />
             </motion.div>
-        </div>
+        </motion.div>
     )
 }
 
@@ -224,17 +291,45 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
                     />
                 )}
             </AnimatePresence>
-            {isOnPath && !isStart && !isEnd && (
-                <motion.img
-                    src={connectorNode}
-                    alt=""
-                    className="absolute left-1/2 top-1/2 w-[45%] -translate-x-1/2 -translate-y-1/2"
-                    initial={{ opacity: 0, scale: 0.2 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 18 }}
-                    draggable={false}
-                />
-            )}
+            <AnimatePresence>
+                {isOnPath &&
+                    !isStart &&
+                    !isEnd && [
+                        // Glow halo — sits strictly behind the node art (z-index 0,
+                        // rendered first) and kept smaller/dimmer than the dot itself
+                        // so it reads as ambient light, not a shape competing with it.
+                        <motion.div
+                            key="connector-glow"
+                            className="pointer-events-none absolute left-1/2 top-1/2 w-[50%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+                            style={{ background: PATH_GLOW_COLOR, filter: "blur(6px)", zIndex: 0 }}
+                            initial={{ opacity: 0, scale: 0.2 }}
+                            animate={{ opacity: [0.3, 0.5, 0.3], scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.2 }}
+                            transition={{
+                                scale: { type: "spring", stiffness: 500, damping: 18 },
+                                opacity: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
+                            }}
+                        />,
+                        // Node art — sits strictly in front (z-index 1, rendered
+                        // last) with its own tight drop-shadow so it stays crisp and
+                        // legible instead of washing out into the aura behind it.
+                        <motion.img
+                            key="connector"
+                            src={connectorNode}
+                            alt=""
+                            className="absolute left-1/2 top-1/2 w-[45%] -translate-x-1/2 -translate-y-1/2"
+                            style={{
+                                filter: `brightness(1.35) saturate(1.3) drop-shadow(0 0 4px ${PATH_GLOW_COLOR})`,
+                                zIndex: 1,
+                            }}
+                            initial={{ opacity: 0, scale: 0.2 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.2 }}
+                            transition={{ type: "spring", stiffness: 500, damping: 18 }}
+                            draggable={false}
+                        />,
+                    ]}
+            </AnimatePresence>
             <AnimatePresence>
                 {justHit && (
                     <motion.span
@@ -250,8 +345,14 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
     )
 }
 
-/** Time / Score display: a Figma frame with a small label over a larger value. */
-function StatBadge({ frame, label, value, labelColor, style }) {
+/**
+ * Time / Score display: a Figma frame with a small label over a larger value.
+ * When `animateChanges` is set, the value pops in with a little spring bump
+ * whenever it changes — used for the score badge to sell "you just earned
+ * points" without needing any new art. Left off for the timer so it keeps
+ * ticking cleanly instead of bouncing every second.
+ */
+function StatBadge({ frame, label, value, labelColor, style, animateChanges = false }) {
     return (
         <div className="absolute" style={style}>
             <img src={frame} alt="" className="w-full" draggable={false} />
@@ -259,9 +360,25 @@ function StatBadge({ frame, label, value, labelColor, style }) {
                 <span className="font-bold leading-none" style={{ fontSize: "2.2cqw", color: labelColor }}>
                     {label}
                 </span>
-                <span className="font-extrabold leading-none text-white" style={{ fontSize: "2.8cqw" }}>
-                    {value}
-                </span>
+                {animateChanges ? (
+                    <AnimatePresence mode="popLayout" initial={false}>
+                        <motion.span
+                            key={value}
+                            className="font-extrabold leading-none text-white"
+                            style={{ fontSize: "2.8cqw" }}
+                            initial={{ opacity: 0, y: -8, scale: 1.4 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 8, scale: 0.7 }}
+                            transition={{ duration: 0.28, ease: "easeOut" }}
+                        >
+                            {value}
+                        </motion.span>
+                    </AnimatePresence>
+                ) : (
+                    <span className="font-extrabold leading-none text-white" style={{ fontSize: "2.8cqw" }}>
+                        {value}
+                    </span>
+                )}
             </div>
         </div>
     )
@@ -276,7 +393,11 @@ function StatBadge({ frame, label, value, labelColor, style }) {
  * All board data, timing, and scoring come from the `level` prop (a
  * POST /next-grid response) — this component never decides correctness or
  * points itself, it only captures raw taps with real timestamps and
- * displays whatever the server told it to show.
+ * displays whatever the server told it to show. The one exception is the
+ * result banner below: once the server responds, we hold on screen for
+ * RESULT_HOLD_MS so the player actually sees what happened, mirroring
+ * RoundManager.Succeed/Fail on the CS side — the server's numbers are still
+ * the only ones that count, we just don't hide them from the player.
  *
  * IMPORTANT ASSUMPTION: this component expects to be fully unmounted and
  * remounted by its parent between levels (see PerilousPath.jsx, which shows
@@ -301,6 +422,16 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     const [tappedTiles, setTappedTiles] = useState([]) // ordered tile_numbers, for rendering only
     const [hazardHitTiles, setHazardHitTiles] = useState(() => new Set())
     const [submitError, setSubmitError] = useState(null)
+    const [resultBanner, setResultBanner] = useState(null) // { tone: 'success' | 'fail', text }
+    const [displayedScore, setDisplayedScore] = useState(progress.total_points)
+    // Whether a tile the player stepped on that happened to be a hazard is
+    // allowed to show its red indicator yet. Hazard hits are tracked the
+    // whole time (hazardHitTiles below), but must stay invisible during
+    // RESPONSE — showing red the instant you touch one turns "memorize the
+    // danger tiles" into "just tap around and watch for red", which defeats
+    // the whole point of the recall task. It only flips true once the trial
+    // result is in, same moment the CS side's RevealAllHazards runs.
+    const [revealHazards, setRevealHazards] = useState(false)
 
     const tapsRef = useRef([]) // ordered { tile_number, tapped_at } — the real API payload
     const responseStartedAtRef = useRef(null)
@@ -313,6 +444,8 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             hasSubmittedRef.current = true
             lastTimedOutRef.current = timedOut
             setSubmitError(null)
+            setResultBanner(null)
+            setRevealHazards(false)
             setPhase(PHASE.SUBMITTING)
 
             const payload = {
@@ -327,11 +460,29 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                   ? await perilousPathApi.trialTimeout(payload)
                   : await perilousPathApi.trialComplete(payload)
               console.log("TRIAL RESULT", result)
+
+              // Mirror RoundManager.Succeed/Fail: show what happened and bump the
+              // score badge for a beat before the parent swaps in the next board.
+              const earned = result?.scoring?.points_awarded ?? 0
+              const routeValid = result?.route_is_valid ?? false
+              setResultBanner(
+                  routeValid
+                      ? { tone: "success", text: earned > 0 ? `+${earned} Safe crossing` : "Crossed — no points" }
+                      : { tone: "fail", text: timedOut ? "Time ran out" : "Path not completed" }
+              )
+              if (result?.game_totals?.total_points != null) {
+                  setDisplayedScore(result.game_totals.total_points)
+              }
+              setRevealHazards(true)
+              await new Promise((resolve) => setTimeout(resolve, RESULT_HOLD_MS))
+
               console.log("CALLING PARENT onFinish")
               await onFinish?.(result)
               console.log("PARENT onFinish COMPLETE")
             } catch (err) {
                 hasSubmittedRef.current = false
+                setResultBanner(null)
+                setRevealHazards(false)
                 setSubmitError(err.message || "Couldn't submit your run.")
             }
         },
@@ -364,17 +515,58 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
         return () => clearTimeout(id)
     }, [phase, secondsLeft, advancePhase])
 
+    // ── Tap handling ─────────────────────────────────────────────────────
+    // Mirrors PathInputController.TryAddTile: a tap only ever does one of
+    // three things — is ignored, undoes the last step (backtrack), or
+    // extends the path by exactly one adjacent tile. `taps` excludes the
+    // start tile (per the API spec), but the start tile is still the
+    // implicit first point of the route, so it has to be treated as a
+    // legal backtrack target once exactly one tile has been tapped —
+    // that's why the backtrack check runs *before* the "ignore start tile"
+    // guard below, not after.
     const handleTileClick = useCallback(
         (row, col) => {
             if (phase !== PHASE.RESPONSE) return
             if (hasSubmittedRef.current) return // trial already submitted (or submitting) — ignore trailing taps from an in-flight drag
+
             const tileNumber = rowColToTile(row, col)
-            if (tileNumber === board.start.tile) return // spec: never include the start tile in taps
+            const taps = tapsRef.current
+            const lastTile = taps.length ? taps[taps.length - 1].tile_number : board.start.tile
+            const secondLastTile =
+                taps.length >= 2 ? taps[taps.length - 2].tile_number : taps.length === 1 ? board.start.tile : null
 
-            const lastTap = tapsRef.current[tapsRef.current.length - 1]
-            if (lastTap && lastTap.tile_number === tileNumber) return // dragging/lingering over the same tile shouldn't spam taps
+            if (tileNumber === lastTile) return // dragging/lingering over the same tile shouldn't spam taps
 
-            tapsRef.current = [...tapsRef.current, { tile_number: tileNumber, tapped_at: new Date().toISOString() }]
+            // Backward step: tapping (or dragging back onto) the tile the player
+            // was just on before their current one retraces the path by one hop
+            // — same as CS's backtrack-to-undo. This can legally land back on
+            // the start tile itself. The beam segment for that hop and the
+            // tile's connector marker both animate away via their own exit
+            // effects, so the line visibly retracts.
+            if (secondLastTile !== null && tileNumber === secondLastTile) {
+                tapsRef.current = taps.slice(0, -1)
+                setTappedTiles((prev) => prev.slice(0, -1))
+                setHazardHitTiles((prev) => {
+                    if (!prev.has(lastTile)) return prev
+                    const next = new Set(prev)
+                    next.delete(lastTile)
+                    return next
+                })
+                return
+            }
+
+            if (tileNumber === board.start.tile) return // spec: never include the start tile in taps (and it's not a valid forward step once you've left it)
+
+            // A tile already used earlier in the route (not the immediate
+            // backtrack case above) is a no-op — no shortcuts or loops.
+            if (taps.some((t) => t.tile_number === tileNumber)) return
+
+            // Only a neighbor of wherever the trace currently ends can be added
+            // next — mirrors GridManager.AreAdjacent gating every step in
+            // PathInputController.TryAddTile.
+            if (!areAdjacent(lastTile, tileNumber)) return
+
+            tapsRef.current = [...taps, { tile_number: tileNumber, tapped_at: new Date().toISOString() }]
             setTappedTiles((prev) => [...prev, tileNumber])
 
             if (board.hazard_tiles.includes(tileNumber)) {
@@ -504,8 +696,9 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             <StatBadge
                 frame={scoreFrame}
                 label="Score"
-                value={progress.total_points}
+                value={displayedScore}
                 labelColor={COLORS.gold}
+                animateChanges
                 style={{
                     left: `${LAYOUT.scoreBadge.left}%`,
                     top: `${LAYOUT.scoreBadge.top}%`,
@@ -530,7 +723,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                 </div>
             </div>
 
-            {/* Objective bar — reflects the current phase */}
+            {/* Objective bar — reflects the current phase, or the trial result once it's in */}
             <div
                 className="absolute"
                 style={{
@@ -543,15 +736,22 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                 <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
                     <AnimatePresence mode="wait">
                         <motion.span
-                            key={phase}
+                            key={resultBanner ? `result-${resultBanner.text}` : phase}
                             initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0, scale: resultBanner ? [1, 1.08, 1] : 1 }}
                             exit={{ opacity: 0, y: -6 }}
                             transition={{ duration: 0.22 }}
                             className="font-extrabold tracking-wide"
-                            style={{ fontSize: "3cqw", color: COLORS.cyan }}
+                            style={{
+                                fontSize: "3cqw",
+                                color: resultBanner
+                                    ? resultBanner.tone === "success"
+                                        ? COLORS.gold
+                                        : "#ff6b6b"
+                                    : COLORS.cyan,
+                            }}
                         >
-                            {OBJECTIVE_TEXT[phase]}
+                            {resultBanner ? resultBanner.text : OBJECTIVE_TEXT[phase]}
                         </motion.span>
                     </AnimatePresence>
                 </div>
@@ -595,7 +795,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                                 isEnd={isEnd}
                                 isDanger={dangerSet.has(key)}
                                 isOnPath={pathSet.has(key)}
-                                isHazardTapped={hazardTapSet.has(key)}
+                                isHazardTapped={revealHazards && hazardTapSet.has(key)}
                                 onClick={handleTileClick}
                             />
                         )
@@ -612,9 +812,11 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                         bottom: `${LAYOUT.boardInset.bottom}%`,
                     }}
                 >
-                    {pathSegments.map((segment) => (
-                        <PathSegment key={segment.key} {...segment} />
-                    ))}
+                    <AnimatePresence>
+                        {pathSegments.map((segment) => (
+                            <PathSegment key={segment.key} {...segment} />
+                        ))}
+                    </AnimatePresence>
                 </div>
             </div>
 

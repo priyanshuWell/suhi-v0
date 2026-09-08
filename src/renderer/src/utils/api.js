@@ -351,6 +351,139 @@ export async function getColorBlindessPlates() {
     }
 }
 
+// ─── Visual Acuity (Adaptive Landolt-C) ────────────────────────────────────
+export async function visualAcuityStart(userId, screeningSessionId) {
+    try {
+        const payload = {
+            user_id: userId,
+            screening_session_id: screeningSessionId
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/start`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            console.log('Failed to start visual acuity session:', response.status, response.statusText)
+            return {
+                success: false,
+                error: response.statusText
+            }
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error starting visual acuity session:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+
+export async function visualAcuitySubmit({
+    userId,
+    sessionId,
+    gameSessionId,
+    eyeType,
+    sizeLevel,
+    snellen,
+    attempt,
+    gapDirection,
+    response: userResponse,
+    outcome
+}) {
+    try {
+        const payload = {
+            user_id: userId,
+            session_id: sessionId,
+            game_session_id: gameSessionId,
+            eye_type: eyeType,
+            size_level: sizeLevel,
+            snellen,
+            attempt,
+            gap_direction: gapDirection,
+            response: userResponse,
+            outcome
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/response`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            console.log('Failed to submit visual acuity response:', response.status, response.statusText)
+            return {
+                success: false,
+                error: response.statusText
+            }
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error submitting visual acuity response:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+/**
+ * Marks a visual-acuity game session as complete.
+ * @param {string} gameSessionId - id returned by visualAcuityStart
+ * @param {string} screeningId - screening session id
+ */
+export async function visualAcuityComplete(gameSessionId, screeningId) {
+    try {
+        const payload = {
+            game_session_id: gameSessionId,
+            screening_id: screeningId
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error completing visual acuity session:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
 export async function runFPT(shmPath, kioskId) {
     try {
         const payload = {

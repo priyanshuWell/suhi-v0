@@ -62,12 +62,12 @@ export class ApiError extends Error {
 // this whole object is unused and the real seeded values apply instead.
 // ─────────────────────────────────────────────────────────────────────────
 const LEVELS_CONFIG = [
-    { level_id: 0, level_number: 0, level_code: "DEMO", level_name: "Demo", hazard_count: 1, probe_seconds: 5, pause_delay_seconds: 5, response_window_seconds: 20, is_practice: true, is_scored: false },
-    { level_id: 1, level_number: 1, level_code: "L1", level_name: "Level 1", hazard_count: 2, probe_seconds: 5, pause_delay_seconds: 8, response_window_seconds: 20, is_practice: false, is_scored: true },
-    { level_id: 2, level_number: 2, level_code: "L2", level_name: "Level 2", hazard_count: 3, probe_seconds: 5, pause_delay_seconds: 12, response_window_seconds: 20, is_practice: false, is_scored: true },
-    { level_id: 3, level_number: 3, level_code: "L3", level_name: "Level 3", hazard_count: 4, probe_seconds: 5, pause_delay_seconds: 16, response_window_seconds: 20, is_practice: false, is_scored: true },
-    { level_id: 4, level_number: 4, level_code: "L4", level_name: "Level 4", hazard_count: 5, probe_seconds: 4, pause_delay_seconds: 20, response_window_seconds: 20, is_practice: false, is_scored: true },
-    { level_id: 5, level_number: 5, level_code: "L5", level_name: "Level 5", hazard_count: 6, probe_seconds: 4, pause_delay_seconds: 24, response_window_seconds: 20, is_practice: false, is_scored: true },
+    { level_id: 0, level_number: 0, level_code: "DEMO", level_name: "Demo", hazard_count: 1, probe_seconds: 5, pause_delay_seconds: 2, response_window_seconds: 20, is_practice: true, is_scored: false },
+    { level_id: 1, level_number: 1, level_code: "L1", level_name: "Level 1", hazard_count: 2, probe_seconds: 5, pause_delay_seconds: 2, response_window_seconds: 20, is_practice: false, is_scored: true },
+    { level_id: 2, level_number: 2, level_code: "L2", level_name: "Level 2", hazard_count: 3, probe_seconds: 5, pause_delay_seconds: 3, response_window_seconds: 20, is_practice: false, is_scored: true },
+    { level_id: 3, level_number: 3, level_code: "L3", level_name: "Level 3", hazard_count: 4, probe_seconds: 5, pause_delay_seconds: 4, response_window_seconds: 20, is_practice: false, is_scored: true },
+    { level_id: 4, level_number: 4, level_code: "L4", level_name: "Level 4", hazard_count: 5, probe_seconds: 4, pause_delay_seconds: 4, response_window_seconds: 20, is_practice: false, is_scored: true },
+    { level_id: 5, level_number: 5, level_code: "L5", level_name: "Level 5", hazard_count: 6, probe_seconds: 4, pause_delay_seconds: 4, response_window_seconds: 20, is_practice: false, is_scored: true },
 ]
 const TOTAL_SCORED_LEVELS = 5
 const MAX_POINTS = 600

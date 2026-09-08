@@ -1,12 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import bg1 from "../../../assets/lightbg.png"
-// NOTE: submitLandoltCResponse is assumed to live in utils/api.js, mirroring
-// getColorBlindessPlates / colorBlindessStart in ColorBlindPlate.jsx. If your
-// real function has a different name/signature, update this import and the
-// single call site in handleAnswer below — the payload shape stays the same.
-// import { submitLandoltCResponse } from '../../../utils/api'
-import { pickRandomDirection, computeEyeResult, EYE_TYPE } from './constants';
+import { visualAcuityStart, visualAcuitySubmit, visualAcuityComplete } from '../../../utils/api'
+import { pickRandomDirection, computeEyeResult, SIZE_LEVELS } from './constants';
 import InstructionScreen from './InstructionScreen';
 import GameScreen from './GameScreen';
 import CompletedModal from './CompletedModal';
@@ -26,12 +22,8 @@ import CompletedModal from './CompletedModal';
 /*      mounted/frozen, disabled, rather than being unmounted).        */
 /* ------------------------------------------------------------------ */
 export default function AdaptiveEyeVisionC({ onComplete } = {}) {
-  // Same redux shape ColorBlindPlate.jsx reads from — user_id/session_id for
-  // the response payload below come from here rather than props.
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
-  // NOTE: this fallback UUID mirrors the dev fallback already used in
-  // ColorBlindPlate.jsx — worth confirming that's intentional for prod.
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
   const sessionId = screening?.sessionId
 
@@ -49,6 +41,30 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   const [lastPassedLevel, setLastPassedLevel] = useState(0);
   const [results, setResults] = useState({ right: null, left: null });
 
+  // One game session covers both eyes — created once up front (mirrors
+  // colorBlindessStart in ColorBlindPlate.jsx) and reused for every
+  // per-attempt submit + the final complete call.
+  const [gameSessionId, setGameSessionId] = useState(null);
+  const [starting, setStarting] = useState(false);
+
+  const startSession = async () => {
+    setStarting(true);
+    try {
+      const res = await visualAcuityStart(userId, sessionId);
+      if (res.success) {
+        setGameSessionId(res.game_session_id ?? null);
+      } else {
+        console.warn('[AdaptiveEyeVisionC] Failed to start session:', res.error);
+      }
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  useEffect(() => {
+    startSession();
+  }, []);
+
   const handleStart = () => {
     setLevel(1);
     setAttempt(1);
@@ -57,10 +73,6 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     setPhase('testing');
   };
 
-  // passedLevel is passed explicitly (rather than read back off state)
-  // because this fires from inside the same setTimeout tick that may have
-  // just called setLastPassedLevel — reading state here could still see
-  // the pre-update value.
   const finishEye = (passedLevel) => {
     const eyeResult = computeEyeResult(passedLevel);
     setResults((prev) => ({ ...prev, [eye]: eyeResult }));
@@ -71,6 +83,11 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       setPhase('instruction');   // <-- left eye's InstructionScreen, not straight into testing
     } else {
       setPhase('modal');
+      // Both eyes done — mark the game session complete. Fire-and-forget so
+      // a slow/failed network call never blocks the completed modal.
+      visualAcuityComplete(gameSessionId, sessionId).catch((err) => {
+        console.warn('[AdaptiveEyeVisionC] Failed to complete session:', err.message)
+      })
     }
   };
 
@@ -80,23 +97,20 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     setLocked(true);
     setFeedback({ dirId: chosenId, correct });
 
-    // Log this tap — every attempt, including the retry — as its own
-    // payload. Sent immediately (not inside the setTimeout below) so it
-    // captures level/attempt/direction exactly as shown for this item;
-    // fire-and-forget so a slow/failed network call never delays the
-    // 700ms feedback animation.
-    // submitLandoltCResponse({
-    //   user_id: userId,
-    //   session_id: sessionId,
-    //   type: EYE_TYPE[eye],
-    //   size_level: level,
-    //   retry: attempt,
-    //   right_direction: direction,
-    //   response: chosenId,
-    //   outcome: correct,
-    // }).catch((err) => {
-    //   console.warn('[AdaptiveEyeVisionC] Failed to submit response:', err.message)
-    // })
+    visualAcuitySubmit({
+      userId,
+      sessionId,
+      gameSessionId,
+      eyeType: eye,
+      sizeLevel: level,
+      snellen: SIZE_LEVELS[level - 1]?.snellen,
+      attempt,
+      gapDirection: direction,
+      response: chosenId,
+      outcome: correct,
+    }).catch((err) => {
+      console.warn('[AdaptiveEyeVisionC] Failed to submit response:', err.message)
+    })
 
     setTimeout(() => {
       setFeedback(null);
@@ -129,7 +143,9 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     setFeedback(null);
     setLocked(false);
     setResults({ right: null, left: null });
+    setGameSessionId(null);
     setPhase('instruction');
+    startSession();
   };
 
   return (
@@ -142,7 +158,14 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
 
       {/* Content */}
       <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto pt-20 gap-10">
-        {phase === 'instruction' && <InstructionScreen eye={eye} onStart={handleStart} />}
+        {phase === 'instruction' && (
+          <InstructionScreen
+            eye={eye}
+            onStart={handleStart}
+            disabled={eye === 'right' && !gameSessionId}
+            loading={eye === 'right' && starting}
+          />
+        )}
         {/* GameScreen now also renders during 'modal' (frozen + disabled)
             so CompletedModal overlays on top of the last question instead
             of the screen going blank behind it. */}

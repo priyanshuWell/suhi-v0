@@ -6,7 +6,7 @@ import { EYE_INFO } from './constants';
 /* ------------------------------------------------------------------ */
 /*  Instruction screen — shown before each eye's test                  */
 /* ------------------------------------------------------------------ */
-export default function InstructionScreen({ eye, onStart }) {
+export default function InstructionScreen({ eye, onStart, disabled = false, loading = false }) {
   const info = EYE_INFO[eye];
   return (
     <>
@@ -51,7 +51,9 @@ export default function InstructionScreen({ eye, onStart }) {
 
       {/* Start button */}
       <div className="flex flex-col items-center gap-2 pb-16">
-        <BlueGradientButton onClick={onStart}>Start</BlueGradientButton>
+        <BlueGradientButton onClick={onStart} disabled={disabled}>
+          {loading ? 'Preparing\u2026' : 'Start'}
+        </BlueGradientButton>
       </div>
     </>
   );
