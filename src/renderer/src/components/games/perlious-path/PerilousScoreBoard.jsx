@@ -9,46 +9,11 @@ const LAYOUT = {
     panel: { left: 13, top: 29, width: 74, height: 42 },
 }
 
-// The original design's 3-row panel used centers at 24/51/78 (top pad 24%,
-// bottom pad 22%, evenly spaced in between). Generalized here so the same
-// panel art can host any row count — still lands exactly on 24/51/78 when
-// count === 3.
-function rowCenters(count) {
-    if (count <= 1) return [51]
-    const top = 24
-    const bottom = 78
-    return Array.from({ length: count }, (_, i) => top + ((bottom - top) * i) / (count - 1))
-}
+// Three evenly-spaced row centers inside the panel (top 24%, mid 51%, bot 78%)
+const ROW_CENTERS = [24, 51, 78]
 
 const ICON_BOX = { left: 13, width: 20 }
 const LABEL_BOX = { left: 39, width: 54 }
-
-// Shown only if `result` hasn't arrived yet — shouldn't normally happen,
-// since the parent only renders this screen once /game/complete resolves.
-const FALLBACK_STATS = [{ key: "loading", icon: "⏳", label: "Results", value: "Calculating…" }]
-
-const CONSTRUCT_ORDER = ["recall", "working_memory", "spatial_sequencing", "processing_speed", "sustained_attention"]
-
-const CONSTRUCT_DISPLAY = {
-    recall: { icon: "🧠", label: "Recall" },
-    working_memory: { icon: "🧩", label: "Working Memory" },
-    spatial_sequencing: { icon: "🧭", label: "Spatial Sequencing" },
-    processing_speed: { icon: "⚡", label: "Processing Speed" },
-    sustained_attention: { icon: "🎯", label: "Sustained Attention" },
-}
-
-function buildStatsFromResult(result) {
-    return CONSTRUCT_ORDER.map((key) => {
-        const construct = result[key]
-        const display = CONSTRUCT_DISPLAY[key]
-        return {
-            key,
-            icon: display.icon,
-            label: display.label,
-            value: construct ? `${Math.round(construct.score_0_1 * 100)}% · ${construct.band}` : "—",
-        }
-    })
-}
 
 function StatRow({ icon, label, value, centerPercent }) {
     return (
@@ -81,29 +46,37 @@ function StatRow({ icon, label, value, centerPercent }) {
 
 /**
  * PerilousScoreBoard
- * Final results screen — shown once, after POST /game/complete resolves
- * (NOT between individual levels). `result` is that endpoint's response:
- * the 5 cognitive construct scores plus run totals.
- *
- * NOTE: statsPanelFrame's art was originally designed for a 3-row layout.
- * Rendering all 5 constructs here stretches the same frame over 5 evenly
- * spaced rows — it will likely want a taller/redesigned panel asset from
- * design; flagging this rather than guessing at new artwork.
- *
- * Also renamed the CTA from "Next" to "Play Again", since it calls
- * `onNext` -> the parent's restart handler, which goes all the way back to
- * the intro screen (there's no "next level" concept here anymore — that's
- * driven entirely by the /next-grid loop before this screen is ever
- * shown). Confirm this is the intended end-of-run behavior.
+ * Final results screen — shown once after POST /game/complete resolves.
+ * Displays total_points, total_neuro_arcs (NeuroCoins), and best_streak
+ * from the game/complete response.
  *
  * Props:
  *  - result: the POST /game/complete response.
  *  - onNext: called when the button is tapped (restarts the run).
  */
 export default function PerilousScoreBoard({ result, onNext }) {
-    const stats = result ? buildStatsFromResult(result) : FALLBACK_STATS
-    const centers = rowCenters(stats.length)
     const handleNext = onNext ?? (() => console.log("Play Again tapped — no onNext handler wired up"))
+
+    const stats = [
+        {
+            key: "points",
+            icon: "⭐",
+            label: "Total Points",
+            value: result ? result.total_points : "—",
+        },
+        {
+            key: "neurocoins",
+            icon: "🪙",
+            label: "NeuroCoins",
+            value: result ? result.total_neuro_arcs : "—",
+        },
+        {
+            key: "streak",
+            icon: "🔥",
+            label: "Best Streak",
+            value: result ? result.best_streak : "—",
+        },
+    ]
 
     return (
         <div className="absolute inset-0">
@@ -141,18 +114,12 @@ export default function PerilousScoreBoard({ result, onNext }) {
                     draggable={false}
                 />
                 {stats.map((stat, i) => (
-                    <StatRow key={stat.key} {...stat} centerPercent={centers[i]} />
+                    <StatRow key={stat.key} {...stat} centerPercent={ROW_CENTERS[i]} />
                 ))}
             </div>
 
-            {result && (
-                <p className="absolute left-0 top-[74%] w-full text-center text-xs text-white/80">
-                    {result.total_points} pts · {result.total_neuro_arcs} NeuroArcs · best streak {result.best_streak}
-                </p>
-            )}
-
             <PerilousButton
-                title="Play Again"
+                title="Next"
                 className="absolute left-[23%] top-[80%] w-[54%] text-white"
                 onClick={handleNext}
             />

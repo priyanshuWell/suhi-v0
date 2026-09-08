@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useNavigate } from "react-router"
 import PerilousPathGame from "./PerilousPathGame"
 import PerilousPathIntro from "./PerilousPathIntro"
 import PerilousScoreBoard from "./PerilousScoreBoard"
@@ -6,6 +7,7 @@ import background from "../../../assets/perilous_path/Play area.png"
 import { stageStyle } from "./theme"
 import { perilousPathApi, DUMMY_FLAG } from "./perilouspathapi"
 import { useSelector } from "react-redux"
+import { getNextRoute } from "../../../utils/stageRouter"
 
 const SCREENS = {
     INTRO: "intro",
@@ -41,6 +43,7 @@ const dummyFlag = DUMMY_FLAG
 export default function PerilousPath() {
     const storeUser = useSelector((state) => state.common.user)
     const screeningState = useSelector((state) => state.common.screening)
+    const navigate = useNavigate()
 
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [gameSessionId, setGameSessionId] = useState(null)
@@ -97,6 +100,13 @@ export default function PerilousPath() {
         },
         [gameSessionId, stopTimer]
     )
+
+    // Navigate to the next screening stage — called when player taps "Next"
+    // on the scoreboard. Reads next_stage from Redux (same pattern as other games).
+    const handleNavigateNext = useCallback(() => {
+        const route = getNextRoute(screeningState?.nextStage, "/bia/result")
+        navigate(route)
+    }, [screeningState?.nextStage, navigate])
 
     // ── Level loading ────────────────────────────────────────────────────
     const loadNextLevel = useCallback(async () => {
@@ -174,7 +184,7 @@ export default function PerilousPath() {
             </div>
         )
     } else if (screen === SCREENS.SCOREBOARD) {
-        content = <PerilousScoreBoard result={finalResult} onNext={handleRestart} />
+        content = <PerilousScoreBoard result={finalResult} onNext={handleNavigateNext} />
     } else if (screen === SCREENS.ERROR) {
         content = (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center text-white">

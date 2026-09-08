@@ -692,7 +692,7 @@ export default function BIACalculate({ user, onComplete }) {
             }
 
             // Navigate to next Screening 2 stage (or result page if done)
-            const nextRoute = getNextRoute(result?.screening, "/adaptive-eye")
+            const nextRoute = getNextRoute(result?.screening?.next_stage, "/adaptive-eye")
             console.log("[BIA] Screening 2 H+W complete — navigating to:", nextRoute)
             navigate(nextRoute)
             return
