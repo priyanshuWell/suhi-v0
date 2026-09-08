@@ -52,12 +52,12 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     try {
       const res = await visualAcuityStart(userId, sessionId);
       if (res.success) {
-        setGameSessionId(res.game_session_id ?? null);
+        setGameSessionId(res?.data?.game_session_id ?? null);
       } else {
         console.warn('[AdaptiveEyeVisionC] Failed to start session:', res.error);
       }
-    } finally {
-      setStarting(false);
+    } catch (err) {
+      console.warn('[AdaptiveEyeVisionC] Failed to start session:', err.message);
     }
   };
 
@@ -162,8 +162,6 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
           <InstructionScreen
             eye={eye}
             onStart={handleStart}
-            disabled={eye === 'right' && !gameSessionId}
-            loading={eye === 'right' && starting}
           />
         )}
         {/* GameScreen now also renders during 'modal' (frozen + disabled)

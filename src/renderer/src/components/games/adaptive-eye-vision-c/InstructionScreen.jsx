@@ -51,8 +51,8 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
 
       {/* Start button */}
       <div className="flex flex-col items-center gap-2 pb-16">
-        <BlueGradientButton onClick={onStart} disabled={disabled}>
-          {loading ? 'Preparing\u2026' : 'Start'}
+        <BlueGradientButton onClick={onStart}>
+          Start
         </BlueGradientButton>
       </div>
     </>

@@ -416,7 +416,7 @@ export async function visualAcuitySubmit({
             outcome
         }
 
-        const response = await fetch(`${API_BASE_URL}/visual-acuity/response`, {
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/user-details`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
