@@ -26,7 +26,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   const screening = useSelector((state) => state.common.screening)
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
   const sessionId = screening?.sessionId
-
+  console.log("[AdaptiveEyeVisionC] userId:", userId, "sessionId:", sessionId)
   const [phase, setPhase] = useState('instruction'); // 'instruction' | 'testing' | 'modal'
   const [eye, setEye] = useState('right');
   const [level, setLevel] = useState(1);
@@ -52,13 +52,13 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     try {
       const res = await visualAcuityStart(userId, sessionId);
       if (res.success) {
-        setGameSessionId(res.game_session_id ?? null);
+        setGameSessionId(res?.data?.game_session_id ?? null);
       } else {
         console.warn('[AdaptiveEyeVisionC] Failed to start session:', res.error);
       }
-    } finally {
-      setStarting(false);
-    }
+    } catch (err) {
+      console.warn('[AdaptiveEyeVisionC] Failed to start session:', err.message);
+    } 
   };
 
   useEffect(() => {
@@ -162,8 +162,6 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
           <InstructionScreen
             eye={eye}
             onStart={handleStart}
-            disabled={eye === 'right' && !gameSessionId}
-            loading={eye === 'right' && starting}
           />
         )}
         {/* GameScreen now also renders during 'modal' (frozen + disabled)

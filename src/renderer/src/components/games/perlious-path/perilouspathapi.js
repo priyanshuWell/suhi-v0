@@ -14,7 +14,7 @@
 // testing UI flow only — it is NOT the real scoring formula. Real points
 // only ever come from the server when dummyFlag is false.
 
-export const DUMMY_FLAG = true
+export const DUMMY_FLAG = false
 
 const BASE_URL = "/perilous-path"
 
