@@ -524,6 +524,34 @@ export async function runFPT(shmPath, kioskId) {
     }
 }
 
+export async function heightWeightSubmit(payload) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/height-weight`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error submitting height and weight:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
 export async function bufferCollection(shm_video_path, user_id, session_id, buffer_type, kiosk_id) {
     try {
         console.log("🔄 [BUFFER COLLECTION API] Starting buffer collection API call")

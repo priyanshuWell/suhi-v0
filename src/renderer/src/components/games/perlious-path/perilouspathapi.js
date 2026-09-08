@@ -14,6 +14,8 @@
 // testing UI flow only — it is NOT the real scoring formula. Real points
 // only ever come from the server when dummyFlag is false.
 
+import { API_BASE_URL } from "../../../utils/config"
+
 export const DUMMY_FLAG = false
 
 const BASE_URL = "/perilous-path"
@@ -638,7 +640,7 @@ function dummyGetGameStatus(gameSessionId) {
 async function request(path, { method = "POST", body } = {}) {
     let response
     try {
-        response = await fetch(`${BASE_URL}${path}`, {
+        response = await fetch(`${API_BASE_URL}${BASE_URL}${path}`, {
             method,
             headers: body ? { "Content-Type": "application/json" } : undefined,
             body: body ? JSON.stringify(body) : undefined,

@@ -6,6 +6,7 @@ import background from "../../../assets/perilous_path/Play area.png"
 import { stageStyle } from "./theme"
 import { perilousPathApi, DUMMY_FLAG } from "./perilouspathapi"
 import { useSelector } from "react-redux"
+import { getKioskId } from "../../../utils/config"
 
 const SCREENS = {
     INTRO: "intro",
@@ -106,7 +107,7 @@ export default function PerilousPath() {
             const response = await perilousPathApi.nextGrid({
                 user_id: storeUser?.data?.user_id,
                 session_id: screeningState?.sessionId,
-                kiosk_id: null,
+                kiosk_id: getKioskId(),
                 dummyFlag,
             })
 
