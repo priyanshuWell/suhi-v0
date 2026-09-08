@@ -26,7 +26,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   const screening = useSelector((state) => state.common.screening)
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
   const screeningId = screening?.screeningId
-
+  const sessionId = screening?.sessionId ;
   const [phase, setPhase] = useState('instruction'); // 'instruction' | 'testing' | 'modal'
   const [eye, setEye] = useState('right');
   const [level, setLevel] = useState(1);
