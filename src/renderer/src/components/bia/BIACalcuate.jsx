@@ -17,7 +17,7 @@ import {
 } from "../../features/common/commonSlice"
 import { measureHeight } from "../../utils/measurementUtils"
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux"
-import { BIAComplete, BIAMeasurementStage, realtimeCapture } from "../../utils/api"
+import { BIAComplete, BIAMeasurementStage, heightWeightSubmit, realtimeCapture } from "../../utils/api"
 import { getNextRoute, resolvePostStageRoute } from "../../utils/stageRouter"
 import {
     mapArmsPayloadToBIAMeasurement,
@@ -682,9 +682,12 @@ export default function BIACalculate({ user, onComplete }) {
 
             // Call BIAComplete to mark the height_weight stage done and get next_stage
             console.log("[BIA] Screening 2 — calling BIAComplete after H+W")
-            const result = await BIAComplete({
+            const result = await heightWeightSubmit({
                 session_id: storeUser?.data?.buffer_id,
-                screening_session_id: screeningState?.sessionId
+                screening_id: screeningState?.screeningId,
+                user_id: storeUser?.data?.user_id,
+                height: resultsRef.current.height?.value,
+                weight: resultsRef.current.weight?.value
             })
 
             if (result?.screening) {
