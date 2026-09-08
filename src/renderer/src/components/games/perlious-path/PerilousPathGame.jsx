@@ -414,7 +414,7 @@ function StatBadge({ frame, label, value, labelColor, style, animateChanges = fa
  *    responsible for loading the next level (or finalizing the game).
  *  - dummyFlag: optional override for local-mode testing.
  */
-export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
+export default function PerilousPathGame({ level, onFinish, dummyFlag, totalElapsedSeconds = 0 }) {
     const { board, timing, grid, level: levelMeta, progress } = level
 
     const [phase, setPhase] = useState(PHASE.PROBE)
@@ -684,7 +684,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             <StatBadge
                 frame={timeFrame}
                 label="Time"
-                value={formatSeconds(secondsLeft)}
+                value={formatSeconds(totalElapsedSeconds)}
                 labelColor={COLORS.white}
                 style={{
                     left: `${LAYOUT.timeBadge.left}%`,

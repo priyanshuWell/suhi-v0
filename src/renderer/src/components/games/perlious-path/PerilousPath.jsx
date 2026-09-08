@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import PerilousPathGame from "./PerilousPathGame"
 import PerilousPathIntro from "./PerilousPathIntro"
 import PerilousScoreBoard from "./PerilousScoreBoard"
 import background from "../../../assets/perilous_path/Play area.png"
 import { stageStyle } from "./theme"
-import { perilousPathApi, generateUuid } from "./perilouspathapi"
+import { perilousPathApi, DUMMY_FLAG } from "./perilouspathapi"
+import { useSelector } from "react-redux"
 
 const SCREENS = {
     INTRO: "intro",
@@ -13,48 +14,72 @@ const SCREENS = {
     ERROR: "error",
 }
 
+const dummyFlag = DUMMY_FLAG
+
 /**
  * PerilousPath
  *
- * Owns the whole run: prefetches nothing, calls POST /next-grid once per
- * level (demo + 5 scored levels), lets PerilousPathGame play exactly one
- * trial and submit it, then loops back for the next board — until
- * /next-grid returns 409, at which point it calls POST /game/complete and
- * shows the final scoreboard.
+ * Self-contained orchestrator — reads user + session from Redux (same
+ * pattern as SpaceConvoyMain). No external prop callbacks needed.
  *
- * Props:
- *  - userId: pass a real signed-in user id if you have one. If omitted, a
- *    random UUID is generated once and reused for the whole run — fine for
- *    local/dummy testing, but almost certainly needs to come from real
- *    auth/session context in production.
- *  - sessionId: real internal.user_screenings session id, if this run is
- *    tied to a broader screening flow. Leave null for a standalone run.
- *  - kioskId: optional, for analytics.
- *  - dummyFlag: defaults to perilousPathApi.DUMMY_FLAG (true). Set to
- *    false to hit the real backend instead of the local simulator.
+ * API loop (demo + levels 1–5):
+ *   1. POST /next-grid           → board for this level
+ *   2. render PerilousPathGame   → collect taps
+ *   3a. POST /trial/complete     → player reached the goal
+ *   3b. POST /trial/timeout      → response window ran out
+ *   4. repeat from 1 (next-grid advances automatically)
+ *      loop ends when /next-grid returns 409
+ *
+ * After all 5 scored levels resolve:
+ *   5. POST /game/complete       → final 5 construct scores → SCOREBOARD
+ *
+ * Timer: a single wall-clock elapsed timer starts when the player taps
+ * "Start" and keeps running across all level transitions. It is passed
+ * down to PerilousPathGame so the Time badge always shows total game time,
+ * not a per-level / per-phase countdown.
  */
-export default function PerilousPath({
-    userId,
-    sessionId = null,
-    kioskId = null,
-    dummyFlag = perilousPathApi.DUMMY_FLAG,
-    introProps = {},
-    gameProps = {},
-    scoreboardProps = {},
-    onGameStart,
-    onGameFinish,
-    onRestart,
-}) {
-    const [resolvedUserId] = useState(() => userId || generateUuid())
+export default function PerilousPath() {
+    const storeUser = useSelector((state) => state.common.user)
+    const screeningState = useSelector((state) => state.common.screening)
+
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [gameSessionId, setGameSessionId] = useState(null)
     const [levelData, setLevelData] = useState(null)
     const [finalResult, setFinalResult] = useState(null)
     const [errorInfo, setErrorInfo] = useState(null)
 
+    // ── Total elapsed game timer ─────────────────────────────────────────
+    // Ticks up from 0 once the player taps Start; persists across all level
+    // transitions. Passed to PerilousPathGame so the Time badge shows total
+    // game time rather than a per-phase countdown.
+    const [totalElapsed, setTotalElapsed] = useState(0)
+    const gameStartTimeRef = useRef(null)
+    const timerIntervalRef = useRef(null)
+
+    const startTimer = useCallback(() => {
+        gameStartTimeRef.current = Date.now()
+        timerIntervalRef.current = setInterval(() => {
+            setTotalElapsed(Math.floor((Date.now() - gameStartTimeRef.current) / 1000))
+        }, 1000)
+    }, [])
+
+    const stopTimer = useCallback(() => {
+        clearInterval(timerIntervalRef.current)
+        timerIntervalRef.current = null
+    }, [])
+
+    // Clean up the interval if the component unmounts mid-game
+    useEffect(() => {
+        return () => {
+            clearInterval(timerIntervalRef.current)
+        }
+    }, [])
+
+    // ── Game finalization ────────────────────────────────────────────────
     const finalizeGame = useCallback(
         async (sessionIdOverride) => {
             const targetSessionId = sessionIdOverride ?? gameSessionId
+            stopTimer()
             try {
                 const response = await perilousPathApi.gameComplete({
                     game_session_id: targetSessionId,
@@ -62,7 +87,6 @@ export default function PerilousPath({
                 })
                 setFinalResult(response)
                 setScreen(SCREENS.SCOREBOARD)
-                onGameFinish?.(response)
             } catch (err) {
                 setErrorInfo({
                     message: err.message || "Couldn't finalize your results.",
@@ -71,17 +95,18 @@ export default function PerilousPath({
                 setScreen(SCREENS.ERROR)
             }
         },
-        [gameSessionId, dummyFlag, onGameFinish]
+        [gameSessionId, stopTimer]
     )
 
+    // ── Level loading ────────────────────────────────────────────────────
     const loadNextLevel = useCallback(async () => {
         setLevelData(null)
 
         try {
             const response = await perilousPathApi.nextGrid({
-                user_id: resolvedUserId,
-                session_id: sessionId,
-                kiosk_id: kioskId,
+                user_id: storeUser?.data?.user_id,
+                session_id: screeningState?.sessionId,
+                kiosk_id: null,
                 dummyFlag,
             })
 
@@ -90,6 +115,7 @@ export default function PerilousPath({
             setScreen(SCREENS.GAME)
         } catch (err) {
             if (err.status === 409) {
+                // All levels done — finalize and show scoreboard
                 await finalizeGame(gameSessionId)
                 return
             }
@@ -103,70 +129,52 @@ export default function PerilousPath({
                 message,
                 onRetry: loadNextLevel,
             })
-
             setScreen(SCREENS.ERROR)
         }
-    }, [
-        resolvedUserId,
-        sessionId,
-        kioskId,
-        dummyFlag,
-        finalizeGame,
-        gameSessionId,
-    ])
+    }, [storeUser, screeningState, finalizeGame, gameSessionId])
 
-    const handleStart = () => {
-        onGameStart?.()
-        setScreen(SCREENS.GAME)
+    // ── Handlers ─────────────────────────────────────────────────────────
+    const handleStart = useCallback(() => {
+        startTimer()
         loadNextLevel()
-    }
+    }, [startTimer, loadNextLevel])
 
-    const handleLevelFinish = useCallback(
-        async (trialResult) => {
-            try {
-                // Let the consumer know the trial finished.
-                // Don't let a consumer callback prevent the game
-                // from loading the next level.
-                try {
-                    await gameProps.onFinish?.(trialResult)
-                } catch (err) {
-                    console.error("gameProps.onFinish failed:", err)
-                }
+    const handleLevelFinish = useCallback(async () => {
+        try {
+            await loadNextLevel()
+        } catch (err) {
+            console.error("Failed to load next level:", err)
+        }
+    }, [loadNextLevel])
 
-                await loadNextLevel()
-            } catch (err) {
-                console.error("Failed to load next level:", err)
-            }
-        },
-        [gameProps, loadNextLevel]
-    )
-
-    const handleRestart = () => {
+    const handleRestart = useCallback(() => {
+        stopTimer()
+        setTotalElapsed(0)
         setGameSessionId(null)
         setLevelData(null)
         setFinalResult(null)
         setErrorInfo(null)
         setScreen(SCREENS.INTRO)
-        onRestart?.()
-    }
+    }, [stopTimer])
 
+    // ── Render ────────────────────────────────────────────────────────────
     let content
     if (screen === SCREENS.GAME) {
         content = levelData ? (
-          <PerilousPathGame
-              key={levelData.trial_id}
-              {...gameProps}
-              level={levelData}
-              dummyFlag={dummyFlag}
-              onFinish={handleLevelFinish}
-          />
+            <PerilousPathGame
+                key={levelData.trial_id}
+                level={levelData}
+                dummyFlag={dummyFlag}
+                onFinish={handleLevelFinish}
+                totalElapsedSeconds={totalElapsed}
+            />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
                 <p className="animate-pulse font-anton text-lg">Loading next challenge…</p>
             </div>
         )
     } else if (screen === SCREENS.SCOREBOARD) {
-        content = <PerilousScoreBoard {...scoreboardProps} result={finalResult} onNext={handleRestart} />
+        content = <PerilousScoreBoard result={finalResult} onNext={handleRestart} />
     } else if (screen === SCREENS.ERROR) {
         content = (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center text-white">
@@ -181,7 +189,7 @@ export default function PerilousPath({
             </div>
         )
     } else {
-        content = <PerilousPathIntro {...introProps} onStart={handleStart} />
+        content = <PerilousPathIntro onStart={handleStart} />
     }
 
     return (
