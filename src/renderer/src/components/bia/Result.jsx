@@ -131,6 +131,7 @@ const formatColorBlindness = (val, type) => {
     }
 }
 
+
 /* Full-width single-row pill (Color Blindness / Emotion) */
 const InfoPill = ({ icon, label, value, color }) => (
     <div
@@ -155,7 +156,7 @@ const InfoPill = ({ icon, label, value, color }) => (
 /* ─────────────────────────────────────────────
    MAIN COMPONENT
 ───────────────────────────────────────────── */
-const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
+const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningOrder }) => {
     const navigate = useNavigate()
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
@@ -177,10 +178,10 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             value: `${apiReport.vitals.heart_rate} bpm`
         },
         apiReport?.vitals?.breathing_rate != null &&
-            apiReport?.vitals?.breathing_rate != 0.0 && {
-                label: "Breathing Rate",
-                value: `${apiReport.vitals.breathing_rate} breaths/min`
-            },
+        apiReport?.vitals?.breathing_rate != 0.0 && {
+            label: "Breathing Rate",
+            value: `${apiReport.vitals.breathing_rate} breaths/min`
+        },
         //  (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
         // {
         //     label: 'Blood Pressure',
@@ -246,31 +247,94 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const mergeWithFallback = (api) => ({
         height: api?.height ?? fallbackPartialJson.height,
         weight: api?.weight ?? fallbackPartialJson.weight,
-        body_constitution: api?.body_constitution ?? fallbackPartialJson.body_constitution,
-        hydration: api?.hydration ?? fallbackPartialJson.hydration,
-        learner_type: api?.learner_type ?? fallbackPartialJson.learner_type,
-        personality: api?.personality ?? fallbackPartialJson.personality,
-        attention: api?.attention ?? fallbackPartialJson.attention,
-        memory: api?.memory ?? fallbackPartialJson.memory,
-        self_esteem: api?.self_esteem ?? fallbackPartialJson.self_esteem,
-        emotional_regulation: api?.emotional_regulation ?? fallbackPartialJson.emotional_regulation,
-        color_blindness: api?.color_blindness ?? fallbackPartialJson.color_blindness,
-        muscle_mass: api?.muscle_mass ?? fallbackPartialJson.muscle_mass,
-        fat_mass: api?.fat_mass ?? fallbackPartialJson.fat_mass,
-        // merge field-by-field so a partially-populated vitals object
-        // (e.g. heart_rate present, breathing_rate missing) doesn't get
-        // clobbered wholesale by the fallback
-        vitals: {
-            heart_rate: api?.vitals?.heart_rate ?? fallbackPartialJson.vitals.heart_rate,
-            breathing_rate:
-                api?.vitals?.breathing_rate ?? fallbackPartialJson.vitals.breathing_rate,
-            stress: api?.vitals?.stress ?? fallbackPartialJson.vitals.stress
-            // blood_pressure: api?.vitals?.blood_pressure ?? fallbackPartialJson.vitals.blood_pressure,
+
+        body_constitution:
+            api?.body_constitution ??
+            fallbackPartialJson.body_constitution,
+
+        hydration:
+            api?.hydration ??
+            fallbackPartialJson.hydration,
+
+        learner_type:
+            api?.learner_type ??
+            fallbackPartialJson.learner_type,
+
+        personality:
+            api?.personality ??
+            fallbackPartialJson.personality,
+
+        attention:
+            api?.attention ??
+            fallbackPartialJson.attention,
+
+        memory:
+            api?.memory ??
+            fallbackPartialJson.memory,
+
+        self_esteem:
+            api?.self_esteem ??
+            fallbackPartialJson.self_esteem,
+
+        emotional_regulation:
+            api?.emotional_regulation ??
+            fallbackPartialJson.emotional_regulation,
+
+        color_blindness:
+            api?.color_blindness ??
+            fallbackPartialJson.color_blindness,
+
+        muscle_mass:
+            api?.muscle_mass ??
+            fallbackPartialJson.muscle_mass,
+
+        fat_mass:
+            api?.fat_mass ??
+            fallbackPartialJson.fat_mass,
+
+        // ───────── SESSION 2 ─────────
+        mind: api?.mind ?? {
+            short_term_recall: null,
+            fine_motor_skills: null,
+            visual_spatial_judgement: null
         },
-        emotion: api?.emotion ?? fallbackPartialJson.emotion
+
+        brain: api?.brain ?? {
+            musical_preference: null,
+            learning_style: null,
+            stress: null
+        },
+
+        body: api?.body ?? {
+            visual_acuity: null,
+            reaction_time: null,
+            motor_coordination: null
+        },
+
+        vitals: {
+            heart_rate:
+                api?.vitals?.heart_rate ??
+                fallbackPartialJson.vitals.heart_rate,
+
+            breathing_rate:
+                api?.vitals?.breathing_rate ??
+                fallbackPartialJson.vitals.breathing_rate,
+
+            stress:
+                api?.vitals?.stress ??
+                fallbackPartialJson.vitals.stress,
+
+            blood_pressure:
+                api?.vitals?.blood_pressure ??
+                null
+        },
+
+        emotion:
+            api?.emotion ??
+            fallbackPartialJson.emotion
     })
 
-    const mapReportToUI = (api) => {
+    const mapSession1ReportToUI = (api) => {
         if (!api) return null
         const d = api.data
         return {
@@ -287,27 +351,27 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
             // backend key is `divided_attention`, not `attention`
             attention: d?.divided_attention
                 ? {
-                      level: d.divided_attention.level,
-                      tracking_accuracy: d.divided_attention.tracking_accuracy
-                  }
+                    level: d.divided_attention.level,
+                    tracking_accuracy: d.divided_attention.tracking_accuracy
+                }
                 : null,
             // backend key is `cognitive_flexibility`, not `memory`
             memory: d?.cognitive_flexibility
                 ? {
-                      level: d.cognitive_flexibility.level,
-                      score: d.cognitive_flexibility.score
-                  }
+                    level: d.cognitive_flexibility.level,
+                    score: d.cognitive_flexibility.score
+                }
                 : null,
             self_esteem: d?.self_esteem,
             emotional_regulation: d?.emotional_regulation,
             color_blindness: d?.color_blindness
                 ? {
-                      result: d.color_blindness.result,
-                      deficiency_type: d.color_blindness.deficiency_type,
-                      normal_score: d.color_blindness.normal_score,
-                      colorblind_score: d.color_blindness.colorblind_score,
-                      irrelevant_score: d.color_blindness.irrelevant_score
-                  }
+                    result: d.color_blindness.result,
+                    deficiency_type: d.color_blindness.deficiency_type,
+                    normal_score: d.color_blindness.normal_score,
+                    colorblind_score: d.color_blindness.colorblind_score,
+                    irrelevant_score: d.color_blindness.irrelevant_score
+                }
                 : null,
             muscle_mass: { level: d?.bia?.muscle_mass?.status },
             fat_mass: { level: d?.bia?.fat_mass?.status },
@@ -334,6 +398,90 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         }
     }
 
+    const mapSession2ReportToUI = (api) => {
+        const d = api?.data ?? api
+
+        return {
+            height: d?.height ?? null,
+
+            weight: d?.weight ?? null,
+
+            body_constitution: d?.prakriti
+                ? {
+                    vata: d.prakriti.vata,
+                    pitta: d.prakriti.pitta,
+                    kapha: d.prakriti.kapha
+                }
+                : null,
+
+            mind: {
+                short_term_recall: d?.short_term_recall ?? null,
+                fine_motor_skills: d?.fine_motor_skills ?? null,
+                visual_spatial_judgement:
+                    d?.visual_spatial_judgement ?? null
+            },
+
+            brain: {
+                musical_preference:
+                    d?.musical_preference ?? null,
+
+                learning_style:
+                    d?.learning_style ?? null,
+
+                stress:
+                    d?.stress ?? null
+            },
+
+            body: {
+                visual_acuity:
+                    d?.visual_acuity ?? null,
+
+                reaction_time:
+                    d?.reaction_time ?? null,
+
+                motor_coordination:
+                    d?.motor_coordination ?? null
+            },
+
+            vitals: {
+                heart_rate:
+                    d?.heart_rate ?? null,
+
+                breathing_rate:
+                    d?.breathing_rate ?? null,
+
+                blood_pressure:
+                    d?.blood_pressure ?? null
+            },
+
+            emotion: {
+                label:
+                    d?.emotion ??
+                    d?.facial_emotion ??
+                    null
+            }
+        }
+    }
+
+    const mapReportToUI = (api, screeningOrder) => {
+        if (!api) return null
+
+        if (
+            screeningOrder === 1 ||
+            screeningOrder === "1"
+        ) {
+            return mapSession1ReportToUI(api)
+        }
+
+        if (
+            screeningOrder === 2 ||
+            screeningOrder === "2"
+        ) {
+            return mapSession2ReportToUI(api)
+        }
+
+        return null
+    }
     const fetchBiometricReport = async () => {
         setReportError(false)
         try {
@@ -356,16 +504,25 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
         }
     }
 
+
+
     useEffect(() => {
-        // If the router already fetched the report, use it directly — no second request
-        if (apiReportRaw) {
-            setApiReport(mergeWithFallback(mapReportToUI(apiReportRaw)))
-            if (reportErrorProp) setReportError(true)
+        if (!apiReportRaw) {
+            setApiReport(null)
             return
         }
-        const timer = setTimeout(fetchBiometricReport, 0)
-        return () => clearTimeout(timer)
-    }, [])
+
+        const mappedReport = mapReportToUI(
+            apiReportRaw,
+            screeningOrder
+        )
+
+        setApiReport(
+            mergeWithFallback(mappedReport)
+        )
+
+        setReportError(reportErrorProp)
+    }, [apiReportRaw, screeningOrder, reportErrorProp])
 
     /* ── derived values ── */
     const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
@@ -379,6 +536,201 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const learnerStyleLabel = learnerType
         ? learnerType.charAt(0).toUpperCase() + learnerType.slice(1)
         : "Visual"
+
+    const getBoxContent = (screeningOrder, apiReport) => {
+        // SCREENING 1
+        if (
+            screeningOrder === 1 ||
+            screeningOrder === "1"
+        ) {
+            return {
+                mind: [
+                    {
+                        label: "Emotion Regulation",
+                        value: formatLabel(
+                            apiReport?.emotional_regulation?.level,
+                            "Good"
+                        )
+                    },
+                    {
+                        label: "Self-Esteem",
+                        value: formatLabel(
+                            apiReport?.self_esteem?.level,
+                            "Well Developed"
+                        )
+                    },
+                    {
+                        label: "Personality",
+                        value: formatLabel(
+                            apiReport?.personality?.animal,
+                            "Dominant"
+                        )
+                    }
+                ],
+
+                brain: [
+                    {
+                        label: "Divided Attention",
+                        value: formatLabel(
+                            apiReport?.attention?.level,
+                            "Good"
+                        )
+                    },
+                    {
+                        label: "Cognitive Flexibility",
+                        value: formatLabel(
+                            apiReport?.memory?.level,
+                            "Developing"
+                        )
+                    },
+                    {
+                        label: "Learning Style",
+                        value: learnerStyleLabel
+                    }
+                ],
+
+                body: [
+                    {
+                        label: "Hydration",
+                        value: formatLabel(
+                            apiReport?.hydration?.level,
+                            "Ideal"
+                        )
+                    },
+                    {
+                        label: "Muscle Mass",
+                        value: formatLabel(
+                            apiReport?.muscle_mass?.level,
+                            "Ideal"
+                        )
+                    },
+                    {
+                        label: "Fat Mass",
+                        value: formatLabel(
+                            apiReport?.fat_mass?.level,
+                            "Low"
+                        )
+                    }
+                ],
+
+                vitals: vitalsRows
+            }
+        }
+
+        // SCREENING 2
+        if (
+            screeningOrder === 2 ||
+            screeningOrder === "2"
+        ) {
+            return {
+                mind: [
+                    {
+                        label: "Short Term Recall",
+                        value: formatLabel(
+                            apiReport?.mind?.short_term_recall,
+                            "Developing"
+                        )
+                    },
+                    {
+                        label: "Fine Motor Skills",
+                        value: formatLabel(
+                            apiReport?.mind?.fine_motor_skills,
+                            "Strong"
+                        )
+                    },
+                    {
+                        label: "Visual Spatial Judgement",
+                        value: formatLabel(
+                            apiReport?.mind?.visual_spatial_judgement,
+                            "Strong"
+                        )
+                    }
+                ],
+
+                brain: [
+                    {
+                        label: "Musical Preference",
+                        value: formatLabel(
+                            apiReport?.brain?.musical_preference,
+                            "Strong"
+                        )
+                    },
+                    {
+                        label: "Learning Style",
+                        value: formatLabel(
+                            apiReport?.brain?.learning_style,
+                            "Reader"
+                        )
+                    },
+                    {
+                        label: "Stress",
+                        value: formatLabel(
+                            apiReport?.brain?.stress,
+                            "Low"
+                        )
+                    }
+                ],
+
+                body: [
+                    {
+                        label: "Visual Acuity",
+                        value: formatLabel(
+                            apiReport?.body?.visual_acuity,
+                            "Good"
+                        )
+                    },
+                    {
+                        label: "Reaction Time",
+                        value: formatLabel(
+                            apiReport?.body?.reaction_time,
+                            "Strong"
+                        )
+                    },
+                    {
+                        label: "Motor Coordination",
+                        value: formatLabel(
+                            apiReport?.body?.motor_coordination,
+                            "Developing"
+                        )
+                    }
+                ],
+
+                vitals: [
+                    {
+                        label: "Heart Rate",
+                        value: apiReport?.vitals?.heart_rate != null
+                            ? `${apiReport.vitals.heart_rate} bpm`
+                            : "—"
+                    },
+                    {
+                        label: "Breathing Rate",
+                        value: apiReport?.vitals?.breathing_rate != null
+                            ? `${apiReport.vitals.breathing_rate} breaths/min`
+                            : "—"
+                    },
+                    {
+                        label: "BP",
+                        value: formatLabel(
+                            apiReport?.vitals?.blood_pressure,
+                            "—"
+                        )
+                    }
+                ]
+            }
+        }
+
+        return {
+            mind: [],
+            brain: [],
+            body: [],
+            vitals: []
+        }
+    }
+
+    const boxContent = getBoxContent(
+        screeningOrder,
+        apiReport
+    )
 
     // /* ── vitals display values: real reading if present, otherwise the
     //      stable per-mount random fallback ── */
@@ -527,42 +879,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                             title="Mind"
                             icon={<MindIcon style={{ width: "100%", height: "100%" }} />}
                             color="#29ABE2"
-                            rows={[
-                                {
-                                    label: "Emotion Regulation",
-                                    value: formatLabel(
-                                        apiReport?.emotional_regulation?.level,
-                                        "Good"
-                                    )
-                                },
-                                {
-                                    label: "Self-Esteem",
-                                    value: formatLabel(
-                                        apiReport?.self_esteem?.level,
-                                        "Well Developed"
-                                    )
-                                },
-                                {
-                                    label: "Personality",
-                                    value: formatLabel(apiReport?.personality?.animal, "Dominant")
-                                }
-                            ]}
+                            rows={boxContent.mind}
                         />
                         <StatCard
                             title="Brain"
                             icon={<BrainIconS style={{ width: "100%", height: "100%" }} />}
                             color="#2CEF94"
-                            rows={[
-                                {
-                                    label: "Divided Attention",
-                                    value: formatLabel(apiReport?.attention?.level, "Good")
-                                },
-                                {
-                                    label: "Cognitive Flexibility",
-                                    value: formatLabel(apiReport?.memory?.level, "Developing")
-                                },
-                                { label: "Learning Style", value: learnerStyleLabel }
-                            ]}
+                            rows={boxContent.brain}
                         />
                     </div>
 
@@ -578,20 +901,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                                 />
                             }
                             color="#FF9D5C"
-                            rows={[
-                                {
-                                    label: "Hydration",
-                                    value: formatLabel(apiReport?.hydration?.level, "Ideal")
-                                },
-                                {
-                                    label: "Muscle Mass",
-                                    value: formatLabel(apiReport?.muscle_mass?.level, "Ideal")
-                                },
-                                {
-                                    label: "Fat Mass",
-                                    value: formatLabel(apiReport?.fat_mass?.level, "Low")
-                                }
-                            ]}
+                            rows={boxContent.body}
                         />
                         <StatCard
                             title="Vitals"
@@ -603,7 +913,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                                 />
                             }
                             color="#EA73FF"
-                            rows={vitalsRows}
+                            rows={boxContent.vitals}
                         />
                     </div>
 

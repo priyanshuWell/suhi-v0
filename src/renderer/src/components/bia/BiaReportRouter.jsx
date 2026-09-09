@@ -2,55 +2,105 @@ import { useEffect, useState } from "react"
 import { useSelector } from "react-redux"
 import axios from "axios"
 import Result from "./Result"
-import BIAResult from "./BIAResult"
 import { API_BASE_URL } from "../../utils/config"
 import bgTexture from "../../assets/lightbg.png"
-export const hasValue = (obj) =>
-    !!obj && Object.values(obj).some((v) => v !== null && v !== undefined && v !== "")
 
-export const hasAnyVitals = (d) =>
-    hasValue(d?.heart_rate) ||
-    // hasValue(d?.blood_pressure) ||
-    hasValue(d?.facial_emotion) ||
-    hasValue(d?.breathing_rate)
 const BiaReportRouter = () => {
     const storeUser = useSelector((s) => s.common.user)
     const screening = useSelector((s) => s.common.screening)
 
     const [rawReport, setRawReport] = useState(null)
-    const [showFullResult, setShowFullResult] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(false)
+
+    const screeningOrder = screening?.screeningOrder
+    const sessionId = screening?.sessionId
+    const userId = storeUser?.data?.user_id
 
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const sessionId = screening?.sessionId
-                const userId = storeUser?.data?.user_id
-                const res = await axios.post(`${API_BASE_URL}/report/`, {
-                    user_id: userId,
-                    session_id: sessionId,
-                    screening_session_id: sessionId
-                })
-                console.log("[BiaReportRouter] report api result", res.data)
+                setLoading(true)
+                setError(false)
+
+                let res
+
+                console.log(
+                    "[BiaReportRouter] screeningOrder:",
+                    screeningOrder
+                )
+
+                // ─────────────────────────────────────
+                // SCREENING ORDER 1
+                // ─────────────────────────────────────
+                if (screeningOrder === 1 || screeningOrder === "1") {
+                    res = await axios.post(`${API_BASE_URL}/report/`, {
+                        user_id: userId,
+                        session_id: sessionId,
+                        screening_session_id: sessionId
+                    })
+                }
+
+                // ─────────────────────────────────────
+                // SCREENING ORDER 2
+                // ─────────────────────────────────────
+                else if (
+                    screeningOrder === 2 ||
+                    screeningOrder === "2"
+                ) {
+                    res = await axios.get(
+                        `${API_BASE_URL}/report/session-2/${userId}`
+                    )
+                }
+
+                // ─────────────────────────────────────
+                // UNKNOWN SCREENING ORDER
+                // ─────────────────────────────────────
+                else {
+                    console.error(
+                        "[BiaReportRouter] Unknown screeningOrder:",
+                        screeningOrder
+                    )
+
+                    setError(true)
+                    return
+                }
+
+                console.log(
+                    "[BiaReportRouter] Report response:",
+                    res?.data
+                )
+
                 if (res?.data?.success) {
                     setRawReport(res.data)
-                    setShowFullResult(hasAnyVitals(res.data.data))
                 } else {
+                    console.error(
+                        "[BiaReportRouter] API returned success:false",
+                        res?.data
+                    )
+
                     setError(true)
                 }
             } catch (err) {
-                console.error("[BiaReportRouter] Report fetch failed:", err)
+                console.error(
+                    "[BiaReportRouter] Report fetch failed:",
+                    err
+                )
+
                 setError(true)
             } finally {
                 setLoading(false)
             }
         }
-        const timer = setTimeout(fetchReport, 0)
-        return () => clearTimeout(timer)
-    }, [])
 
-    if (loading)
+        if (!userId || !screeningOrder) {
+            return
+        }
+
+        fetchReport()
+    }, [userId, sessionId, screeningOrder])
+
+    if (loading) {
         return (
             <div
                 style={{
@@ -65,7 +115,6 @@ const BiaReportRouter = () => {
                     overflow: "hidden"
                 }}
             >
-                {/* Same textured background as Result.jsx */}
                 <img
                     src={bgTexture}
                     alt=""
@@ -79,7 +128,7 @@ const BiaReportRouter = () => {
                         pointerEvents: "none"
                     }}
                 />
-                {/* Spinner + label, on top of the background */}
+
                 <div
                     style={{
                         position: "relative",
@@ -100,6 +149,7 @@ const BiaReportRouter = () => {
                             animation: "spin 0.9s linear infinite"
                         }}
                     />
+
                     <p
                         style={{
                             fontFamily: "'Anta', sans-serif",
@@ -111,14 +161,27 @@ const BiaReportRouter = () => {
                         Loading your results…
                     </p>
                 </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+                <style>
+                    {`
+                        @keyframes spin {
+                            to {
+                                transform: rotate(360deg);
+                            }
+                        }
+                    `}
+                </style>
             </div>
         )
+    }
 
-    return showFullResult ? (
-        <Result apiReportRaw={rawReport} reportError={error} />
-    ) : (
-        <BIAResult apiReportRaw={rawReport} reportError={error} />
+    return (
+        <Result
+            apiReportRaw={rawReport}
+            reportError={error}
+            screeningOrder={screeningOrder}
+
+        />
     )
 }
 
