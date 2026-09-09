@@ -27,7 +27,6 @@ import {
 import { getKioskId } from "../../../utils/config"
 import { getNextRoute } from "../../../utils/stageRouter"
 import backingTrack from "../../../assets/beat-drop/audio/beatdrop_backing_44k1_16bit.wav"
-import { useNavigate } from "react-router"
 
 const SCREENS = {
     INTRO: "intro",
@@ -63,7 +62,6 @@ export default function BeatDropGame() {
     const [coins, setCoins] = useState(500)
     const [streak, setStreak] = useState(0)
     const [completing, setCompleting] = useState(false)
-    const navigate = useNavigate()
     const [results, setResults] = useState(null)
     const audioRef = useRef(null)
     const engineRef = useRef(null)
