@@ -3,7 +3,7 @@ import { useNavigate } from "react-router"
 import { useSelector, useDispatch } from "react-redux"
 import { useTranslation } from "react-i18next"
 import audioBufferToWav from "audiobuffer-to-wav"
-import { sendVoiceToBackend, runVoice } from "../../utils/api"
+import { sendVoiceToBackend, runVoice, voiceBufferApi } from "../../utils/api"
 import { getKioskId } from "../../utils/config"
 import { setScreening } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
@@ -432,7 +432,15 @@ export default function VoiceAnalysis() {
                         session_id: sessionId,
                         screening_session_id: screeningSessionId
                     }
+                    const bufferPayload = {
+                        user_id: userId,
+                        session_id: sessionId,
+                        file: new Blob([wavArrayBuffer], { type: "audio/wav" }),
+                        fileName: `${userId || "voice"}_${Date.now()}.wav`
+                    }
                     const runResult = await runVoice(runPayload)
+                    const bufferResult = await voiceBufferApi(bufferPayload)
+                    console.log("[Voice] bufferResult:", bufferResult)
 
                     if (runResult.success) {
                         if (runResult.screening) {
@@ -681,8 +689,8 @@ export default function VoiceAnalysis() {
                                         cursor: isCentered
                                             ? "pointer"
                                             : isAdjacent
-                                              ? "pointer"
-                                              : "grab",
+                                                ? "pointer"
+                                                : "grab",
                                         pointerEvents: Math.abs(off) > 2.2 ? "none" : "auto"
                                     }}
                                 >

@@ -1,5 +1,5 @@
 import axios from "axios"
-import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL } from "./config"
+import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL, AI_SERVER_URL } from "./config"
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
@@ -633,25 +633,43 @@ export const BIAMeasurementStage = async (stage) => {
     }
 }
 
-export const voiceSaveApi = async (payload) => {
+export const voiceBufferApi = async (data) => {
     try {
-        const response = await fetch(`${VOICE_API_BASE_URL}/voice/analyze`, {
+        const formData = new FormData()
+        const userId = data?.user_id || data?.userId
+        const sessionId = data?.session_id || data?.sessionId
+        const file = data?.file || data?.audioBlob || data?.blob || data?.buffer
+        const filename = data?.filename || data?.fileName || `${userId || "voice"}_${Date.now()}.wav`
+
+        if (userId) formData.append("user_id", userId)
+        if (sessionId) formData.append("session_id", sessionId)
+
+        if (file) {
+            let blobFile = file
+            if (file instanceof ArrayBuffer || ArrayBuffer.isView(file)) {
+                blobFile = new Blob([file], { type: "audio/wav" })
+            }
+            formData.append("file", blobFile, filename)
+        }
+
+        const response = await fetch(`${AI_SERVER_URL}/voice-buffer`, {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                Accept: "application/json"
             },
-            body: JSON.stringify(payload)
+            body: formData
         })
 
         if (!response.ok) {
-            throw new Error(`Voice API tatus: ${response.status}`)
+            const errorText = await response.text().catch(() => "")
+            throw new Error(`Voice API status: ${response.status} - ${errorText}`)
         }
 
-        const data = await response.json()
-        console.log("Voice save response:", data)
+        const resData = await response.json()
+        console.log("Voice save response:", resData)
         return {
             success: true,
-            ...data
+            ...resData
         }
     } catch (error) {
         console.error("Error sending voice save to backend:", error)
@@ -661,6 +679,8 @@ export const voiceSaveApi = async (payload) => {
         }
     }
 }
+
+
 
 export const DivideAttentionSession = async (userId, sessionId, sessionType) => {
     /*

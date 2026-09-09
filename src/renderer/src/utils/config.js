@@ -21,6 +21,9 @@ export const IMAGE_SERVER_URL =
     "http://127.0.0.1:5174"
 // ─────────────────────────────────────────────────────────────────────────────
 
+export const AI_SERVER_URL =
+    (typeof import.meta !== "undefined" && import.meta.env?.VITE_AI_SERVER_URL) ||
+    "https://api-models-staging.suhi.ai"
 export const VIDEO_CONFIG = {
     // Video buffer duration in milliseconds
     // Can be adjusted based on requirements (5000ms = 5 seconds, 7000ms = 7 seconds, etc.)
