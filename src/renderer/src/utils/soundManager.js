@@ -16,8 +16,7 @@
  */
 
 // import roundStartSfx      from "../assets/sounds/forceField_000.ogg";
-import freezeSfx from "../assets/audio/space_convoy/space_convoy_freeze.wav"
-import particleTapSfx from "../assets/audio/space_convoy/laserSmall_000.wav" // correct hit + false alarm — same sound
+// import particleTapSfx from "../assets/audio/space_convoy/laserSmall_000.wav" // correct hit + false alarm — same sound
 // import collisionSfx       from "../assets/audio/space_convoy/laserSmall_001.ogg";   // particle-to-particle collision
 // import speedBonusSfx      from "../assets/sounds/laserRetro_001.ogg";
 import submitSfx from "../assets/audio/space_convoy/Submit_Button_Tap.wav"
@@ -25,15 +24,20 @@ import submitSfx from "../assets/audio/space_convoy/Submit_Button_Tap.wav"
 // import levelUpSfx         from "../assets/sounds/laserLarge_002.ogg";
 // import sessionCompleteSfx from "../assets/sounds/laserLarge_004.ogg";
 // import hoverSfx           from "../assets/sounds/computerNoise_000.ogg";
-import ambientLoopSfx from "../assets/audio/space_convoy/game_background.wav"
+// import ambientLoopSfx from "../assets/audio/space_convoy/game_background.wav"
+
+// ── Perilous Path audio assets ────────────────────────────────────────────────
+import ppBgSfx from "../assets/audio/space_convoy/bg_perilous.wav"
+import ppLaserSfx from "../assets/audio/space_convoy/laserSmall_000.ogg"
+import ppClearRoundSfx from "../assets/audio/space_convoy/clear_round.wav"
 
 const SOUND_FILES = {
     // round_start:      roundStartSfx,
-    freeze: freezeSfx,
-    particle_tap: particleTapSfx,
+    // freeze: freezeSfx,
+    // particle_tap: particleTapSfx,
     // collision:        collisionSfx,
     // speed_bonus:      speedBonusSfx,
-    submit: submitSfx
+    // submit: submitSfx
     // burst:            burstSfx,
     // level_up:         levelUpSfx,
     // session_complete: sessionCompleteSfx,
@@ -497,3 +501,191 @@ export class SoundManager {
 }
 
 export const sfx = new SoundManager()
+
+// ─── Perilous Path Sound Manager ──────────────────────────────────────────────
+
+const PP_SOUND_FILES = {
+    pp_bg: ppBgSfx,
+    pp_laser: ppLaserSfx,
+    pp_clear_round: ppClearRoundSfx,
+}
+
+const PP_SOUND_VOLUMES = {
+    pp_bg: 0.7,
+    pp_laser: 0.45,
+    pp_clear_round: 0.7,
+}
+
+/**
+ * PerilousPathSoundManager
+ *
+ * Dedicated audio engine for the Perilous Path game.
+ *
+ * Sounds:
+ *  - startBg()      → looping background ambience (game_backgrnd.wav)
+ *  - stopBg()       → fade out background music
+ *  - laser()        → tile-trace laser tick (laserSmall_000.ogg)
+ *                     throttled to 80 ms so fast drags don't spam it
+ *  - clearRound()   → success fanfare when a round is cleared (clear_round.wav)
+ */
+export class PerilousPathSoundManager {
+    constructor() {
+        this._ctx = null
+        this._master = null
+        this._buffers = {}
+        this._bgSrc = null
+        this._bgGain = null
+        this._muted = false
+        this._volume = 0.8
+        this._lastLaserAt = 0
+        this._laserCooldown = 80
+        this._bgRequested = false // set true when startBg() is called before buffers are ready
+    }
+
+    // ── Setup ──────────────────────────────────────────────────────────────────
+
+    unlock() {
+        if (this._ctx) return
+        try {
+            this._ctx = new (window.AudioContext || window.webkitAudioContext)()
+        } catch {
+            return
+        }
+        this._master = this._ctx.createGain()
+        this._master.gain.value = this._volume
+        this._master.connect(this._ctx.destination)
+        if (this._ctx.state === "suspended") this._ctx.resume()
+        this._preloadAll()
+    }
+
+    async _preloadAll() {
+        await Promise.all(
+            Object.entries(PP_SOUND_FILES).map(async ([name, url]) => {
+                if (!url) return
+                try {
+                    const res = await fetch(url)
+                    const ab = await res.arrayBuffer()
+                    this._buffers[name] = await this._ctx.decodeAudioData(ab)
+                } catch (e) {
+                    console.warn(`[PerilousPathSfx] "${name}" failed to load.`, e)
+                }
+            })
+        )
+        // If startBg() was called before buffers were ready, start it now
+        if (this._bgRequested && !this._bgSrc) {
+            this._startBgNow()
+        }
+    }
+
+    _play(name) {
+        const buf = this._buffers[name]
+        if (!buf || !this._ctx) return false
+        const gainNode = this._ctx.createGain()
+        gainNode.gain.value = PP_SOUND_VOLUMES[name] ?? 0.5
+        gainNode.connect(this._master)
+        const src = this._ctx.createBufferSource()
+        src.buffer = buf
+        src.connect(gainNode)
+        src.start(this._ctx.currentTime)
+        return true
+    }
+
+    get _ready() {
+        return !!this._ctx && !this._muted
+    }
+
+    mute() {
+        this._muted = true
+        if (this._master) this._master.gain.value = 0
+    }
+    unmute() {
+        this._muted = false
+        if (this._master) this._master.gain.value = this._volume
+    }
+
+    // ── Game Sounds ────────────────────────────────────────────────────────────
+
+    /** Start looping background music. Safe to call multiple times. */
+    startBg() {
+        if (!this._ready) return
+        if (this._bgSrc) return // already playing
+        this._bgRequested = true
+        // If buffer already loaded, play immediately; otherwise _preloadAll will pick it up
+        this._startBgNow()
+    }
+
+    /** Internal — actually starts playback once the buffer is confirmed loaded. */
+    _startBgNow() {
+        if (!this._ready) return
+        if (this._bgSrc) return
+        const buf = this._buffers["pp_bg"]
+        if (!buf) return // still loading — _preloadAll will retry
+        const gainNode = this._ctx.createGain()
+        gainNode.gain.setValueAtTime(0, this._ctx.currentTime)
+        gainNode.gain.linearRampToValueAtTime(PP_SOUND_VOLUMES.pp_bg, this._ctx.currentTime + 2)
+        gainNode.connect(this._master)
+        const src = this._ctx.createBufferSource()
+        src.buffer = buf
+        src.loop = true
+        src.connect(gainNode)
+        src.start(this._ctx.currentTime)
+        this._bgSrc = src
+        this._bgGain = gainNode
+    }
+
+    /** Fade out and stop background music. */
+    stopBg() {
+        const ctx = this._ctx
+        if (!ctx || !this._bgGain) return
+        this._bgGain.gain.linearRampToValueAtTime(0, ctx.currentTime + 1.2)
+        const srcToStop = this._bgSrc
+        setTimeout(() => {
+            try { srcToStop?.stop() } catch {}
+        }, 1300)
+        this._bgSrc = null
+        this._bgGain = null
+    }
+
+    /**
+     * Laser tile-trace sound.
+     * Throttled so rapid dragging doesn't flood the channel.
+     */
+    laser() {
+        if (!this._ready) return
+        const now = performance.now()
+        if (now - this._lastLaserAt < this._laserCooldown) return
+        this._lastLaserAt = now
+        if (this._play("pp_laser")) return
+        // Synth fallback — short rising sweep
+        playSweep(this._ctx, this._master, {
+            startFreq: 300,
+            endFreq: 600,
+            type: "sine",
+            duration: 0.08,
+            volume: 0.28,
+            curve: "exp",
+        })
+    }
+
+    /** Success fanfare — plays when a round is cleared. */
+    clearRound() {
+        if (!this._ready) return
+        if (this._play("pp_clear_round")) return
+        // Synth fallback — ascending arpeggio
+        ;[523, 659, 784, 1047].forEach((freq, i) =>
+            setTimeout(
+                () =>
+                    playTone(this._ctx, this._master, {
+                        freq,
+                        type: "sine",
+                        duration: 0.22,
+                        volume: 0.28,
+                    }),
+                i * 70
+            )
+        )
+    }
+}
+
+export const perilousPathSfx = new PerilousPathSoundManager()
+

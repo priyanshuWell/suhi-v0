@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { COLORS } from "./theme"
 import { perilousPathApi, rowColToTile, tileToRowCol } from "./perilouspathapi"
+import { perilousPathSfx } from "../../../utils/soundManager"
 
 // ── Assets (exported straight from Figma) ──────────────────────────────────
 import boardFrame from "../../../assets/perilous_path/perilous_board.png"
@@ -485,6 +486,9 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                         ? { tone: "success", text: earned > 0 ? `+${earned} Safe crossing` : "Crossed — no points" }
                         : { tone: "fail", text: timedOut ? "Time ran out" : "Path not completed" }
                 )
+                if (routeValid) {
+                    perilousPathSfx.clearRound()
+                }
                 if (result?.game_totals?.total_points != null) {
                     setDisplayedScore(result.game_totals.total_points)
                 }
@@ -583,6 +587,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
 
             tapsRef.current = [...taps, { tile_number: tileNumber, tapped_at: new Date().toISOString() }]
             setTappedTiles((prev) => [...prev, tileNumber])
+            perilousPathSfx.laser()
 
             if (board.hazard_tiles.includes(tileNumber)) {
                 setHazardHitTiles((prev) => new Set(prev).add(tileNumber))

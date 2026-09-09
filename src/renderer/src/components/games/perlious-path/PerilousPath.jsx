@@ -12,6 +12,7 @@ import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
 import { useSetProgressStage } from "../../ProgressStageContext"
+import { perilousPathSfx } from "../../../utils/soundManager"
 
 const SCREENS = {
     INTRO: "intro",
@@ -62,6 +63,19 @@ export default function PerilousPath() {
         setProgressStage(screen === SCREENS.INTRO)
     }, [screen, setProgressStage])
 
+    // Start background music as soon as the intro screen appears.
+    // In Electron the autoplay restriction is lifted so this works without
+    // a user gesture. handleStart also calls unlock()+startBg() as a
+    // belt-and-suspenders fallback for browser environments.
+    useEffect(() => {
+        perilousPathSfx.unlock()
+        perilousPathSfx.startBg()
+        return () => {
+            // Stop music when leaving the game entirely (unmount)
+            perilousPathSfx.stopBg()
+        }
+    }, [])
+
 
     // ── Game finalization ────────────────────────────────────────────────
     const finalizeGame = useCallback(
@@ -77,6 +91,7 @@ export default function PerilousPath() {
                 }
                 setFinalResult(response)
                 setScreen(SCREENS.SCOREBOARD)
+                perilousPathSfx.stopBg()
             } catch (err) {
                 setErrorInfo({
                     message: err.message || "Couldn't finalize your results.",
@@ -134,6 +149,9 @@ export default function PerilousPath() {
 
     // ── Handlers ─────────────────────────────────────────────────────────
     const handleStart = useCallback(() => {
+        // Unlock Web Audio on user gesture (required by browsers) and start bg music
+        perilousPathSfx.unlock()
+        perilousPathSfx.startBg()
         loadNextLevel()
     }, [loadNextLevel])
 
