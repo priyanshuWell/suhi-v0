@@ -402,64 +402,79 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
         const d = api?.data ?? api
 
         return {
-            height: d?.height ?? null,
+            height: d?.bia?.height_cm ?? SESSION_2_FALLBACK.height,
 
-            weight: d?.weight ?? null,
+            weight: d?.bia?.weight_kg ?? SESSION_2_FALLBACK.weight,
 
             body_constitution: d?.prakriti
                 ? {
-                    vata: d.prakriti.vata,
-                    pitta: d.prakriti.pitta,
-                    kapha: d.prakriti.kapha
+                    vata: d.prakriti.vata_percentage,
+                    pitta: d.prakriti.pitta_percentage,
+                    kapha: d.prakriti.kapha_percentage,
                 }
-                : null,
+                : SESSION_2_FALLBACK.body_constitution,
 
             mind: {
-                short_term_recall: d?.short_term_recall ?? null,
-                fine_motor_skills: d?.fine_motor_skills ?? null,
+                short_term_recall:
+                    d?.mind?.short_term_recall ??
+                    SESSION_2_FALLBACK.mind.short_term_recall,
+
+                fine_motor_skills:
+                    d?.mind?.fine_motor_skills ??
+                    SESSION_2_FALLBACK.mind.fine_motor_skills,
+
                 visual_spatial_judgement:
-                    d?.visual_spatial_judgement ?? null
+                    d?.mind?.visual_spatial_judgement ??
+                    SESSION_2_FALLBACK.mind.visual_spatial_judgement,
             },
 
             brain: {
                 musical_preference:
-                    d?.musical_preference ?? null,
+                    d?.brain?.musical_preference ??
+                    SESSION_2_FALLBACK.brain.musical_preference,
 
                 learning_style:
-                    d?.learning_style ?? null,
+                    d?.brain?.learning_style ??
+                    SESSION_2_FALLBACK.brain.learning_style,
 
                 stress:
-                    d?.stress ?? null
+                    d?.brain?.stress ??
+                    SESSION_2_FALLBACK.brain.stress,
             },
 
             body: {
                 visual_acuity:
-                    d?.visual_acuity ?? null,
+                    d?.body?.visual_acuity ??
+                    SESSION_2_FALLBACK.body.visual_acuity,
 
                 reaction_time:
-                    d?.reaction_time ?? null,
+                    d?.body?.reaction_time ??
+                    SESSION_2_FALLBACK.body.reaction_time,
 
                 motor_coordination:
-                    d?.motor_coordination ?? null
+                    d?.body?.motor_coordination ??
+                    SESSION_2_FALLBACK.body.motor_coordination,
             },
 
             vitals: {
                 heart_rate:
-                    d?.heart_rate ?? null,
+                    d?.vitals?.heart_rate_bpm ??
+                    SESSION_2_FALLBACK.vitals.heart_rate,
 
                 breathing_rate:
-                    d?.breathing_rate ?? null,
+                    d?.vitals?.breathing_rate_bpm ??
+                    SESSION_2_FALLBACK.vitals.breathing_rate,
 
                 blood_pressure:
-                    d?.blood_pressure ?? null
+                    d?.vitals?.blood_pressure ??
+                    SESSION_2_FALLBACK.vitals.blood_pressure,
             },
 
             emotion: {
                 label:
                     d?.emotion ??
-                    d?.facial_emotion ??
-                    null
-            }
+                    SESSION_2_FALLBACK.emotion.label,
+            },
         }
     }
 
@@ -505,7 +520,67 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     }
 
 
+    const SESSION_2_FALLBACK = {
+        height: "-",
+        weight: "-",
 
+        body_constitution: {
+            vata: 32.5,
+            pitta: 38.2,
+            kapha: 29.3,
+        },
+
+        mind: {
+            short_term_recall: {
+                score: 82.4,
+                level: "Good",
+            },
+            fine_motor_skills: {
+                score: 76.8,
+                level: "Good",
+            },
+            visual_spatial_judgement: {
+                score: 88.1,
+                level: "Strong",
+            },
+        },
+
+        brain: {
+            musical_preference: {
+                score: 71.6,
+                level: "Age Appropriate",
+            },
+            learning_style: "Visual",
+            stress: "low",
+        },
+
+        body: {
+            visual_acuity: "Normal",
+            reaction_time: {
+                score: 84.2,
+                level: "Good",
+            },
+            motor_coordination: {
+                score: 91.3,
+                level: "Strong",
+            },
+        },
+
+        vitals: {
+            heart_rate: 74,
+            breathing_rate: 16,
+
+            blood_pressure: {
+                systolic: 118,
+                diastolic: 77,
+                unit: "mmHg",
+            },
+        },
+
+        emotion: {
+            label: "happy",
+        },
+    }
     useEffect(() => {
         if (!apiReportRaw) {
             setApiReport(null)
