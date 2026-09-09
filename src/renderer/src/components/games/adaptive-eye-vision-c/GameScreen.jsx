@@ -20,7 +20,7 @@ export default function GameScreen({ eye, level, attempt, direction, feedback, l
   return (
     <div className="flex flex-col items-center gap-10 w-full pb-16">
       <p
-        className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[900px]"
+        className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[900px] pt-20"
         style={{ fontSize: 'clamp(1rem, 3vw, 2rem)' }}
       >
         Look at the C shape and tap the matching gap button
@@ -34,17 +34,6 @@ export default function GameScreen({ eye, level, attempt, direction, feedback, l
           onAnswer={onAnswer}
           ringSizePx={sizeLevel.pxSize}
         />
-      </div>
-
-      <div className="h-10">
-        {statusText && (
-          <p
-            className={`text-center font-anta ${feedback.correct ? 'text-emerald-400' : 'text-rose-400'}`}
-            style={{ fontSize: 'clamp(1rem, 2vw, 1.5rem)' }}
-          >
-            {statusText}
-          </p>
-        )}
       </div>
     </div>
   );

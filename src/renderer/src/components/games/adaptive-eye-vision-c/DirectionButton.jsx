@@ -20,8 +20,8 @@ export default function DirectionButton({
     feedback === 'correct'
       ? 'linear-gradient(135deg, #34D399 0%, #059669 100%)'
       : feedback === 'incorrect'
-      ? 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)'
-      : 'linear-gradient(135deg, #0097D6 0%, #002EB9 100%)';
+        ? 'linear-gradient(135deg, #FB7185 0%, #E11D48 100%)'
+        : 'linear-gradient(135deg, #0097D6 0%, #002EB9 100%)';
 
   return (
     <button

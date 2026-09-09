@@ -22,7 +22,7 @@ import VoiceAnalysis from "./components/voice/VoiceAnalysis"
 import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
-
+import SplashScreen from "./components/SplashScreen"
 function App() {
     // Play looping background music on all routes except voice & game sections
     useBackgroundAudio()
@@ -56,7 +56,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<StartScreen />} />
+                <Route path="/" element={<AdaptiveEyeVisionC />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />

@@ -1,4 +1,5 @@
 import clsx from "clsx"
+import { motion } from "framer-motion"
 
 export default function BlueGradientButton({
     onClick,
@@ -9,12 +10,16 @@ export default function BlueGradientButton({
     height
 }) {
     return (
-        <button
+        <motion.button
             onClick={onClick}
             disabled={disabled}
+            whileHover={disabled ? {} : { scale: 1.025, filter: "brightness(1.12)" }}
+            whileTap={disabled ? {} : { scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 450, damping: 20 }}
             className={clsx(
                 width ?? "w-[clamp(16rem,40vw,31.25rem)]",
                 height ?? "h-[clamp(4rem,8vh,6.25rem)]",
+                "relative overflow-hidden",
                 "flex items-center justify-center",
                 "text-center",
                 "rounded-[20px]",
@@ -24,14 +29,21 @@ export default function BlueGradientButton({
                 "text-white",
                 "text-[clamp(2rem,4vw,6rem)]",
                 "tracking-wide",
-                "active:scale-[0.98]",
-                "transition-all duration-300 ease-in-out",
-                "hover:border-white",
+                "cursor-pointer select-none",
                 disabled && "opacity-50 cursor-not-allowed",
                 className
             )}
         >
-            {children}
-        </button>
+            {/* Ambient shimmer sweep */}
+            {!disabled && (
+                <motion.span
+                    className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-[-25deg] pointer-events-none"
+                    animate={{ translateX: ["-100%", "200%"] }}
+                    transition={{ repeat: Infinity, repeatDelay: 3, duration: 1.4, ease: "easeInOut" }}
+                />
+            )}
+            <span className="relative z-10">{children}</span>
+        </motion.button>
     )
 }
+

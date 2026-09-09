@@ -22,6 +22,7 @@ import {
 } from "./beatDropApi"
 import { getKioskId } from "../../../utils/config"
 import backingTrack from "../../../assets/beat-drop/audio/beatdrop_backing_44k1_16bit.wav"
+import { getNextRoute } from "../../../utils/stageRouter"
 
 const SCREENS = {
     INTRO: "intro",
@@ -240,6 +241,10 @@ export default function BeatDropGame() {
         setScreen(SCREENS.INTRO)
         setShowAvoid(false)
         setShowSpeed(false)
+        // const nextStage = screening?.nextStage
+        const nextStage = "/bia/result"
+        const route = getNextRoute(nextStage, "/bia/result")
+        navigate(route)
     }
 
     useEffect(() => {

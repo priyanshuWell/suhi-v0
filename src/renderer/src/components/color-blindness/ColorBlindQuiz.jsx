@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 import { useTranslation } from "react-i18next"
 import { useLocation, useNavigate } from "react-router"
 import bg1 from "../../assets/lightbg.png"
@@ -282,7 +283,7 @@ export const ColorBlindQuiz = () => {
         const arr = [...options]
         for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1))
-            ;[arr[i], arr[j]] = [arr[j], arr[i]]
+                ;[arr[i], arr[j]] = [arr[j], arr[i]]
         }
         return arr
     }, [currentIndex]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -319,13 +320,24 @@ export const ColorBlindQuiz = () => {
                     currentPlate={currentIndex + 1}
                 />
 
-                {/* Plate image */}
-                <div className="bg-transparent rounded-3xl p-4 w-[800px] h-[800px] max-w-full aspect-square flex items-center justify-center shadow-2xl">
-                    <img
-                        src={image}
-                        alt={t("colorBlindness.plateAlt", "Color blindness plate")}
-                        className="w-full h-full object-contain rounded-2xl"
-                    />
+                {/* Plate image with animated card transition */}
+                <div className="w-[800px] h-[800px] max-w-full aspect-square flex items-center justify-center relative">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentIndex}
+                            initial={{ opacity: 0, scale: 0.9, rotateY: 15 }}
+                            animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                            exit={{ opacity: 0, scale: 1.05, rotateY: -15 }}
+                            transition={{ duration: 0.28, ease: "easeOut" }}
+                            className="bg-transparent rounded-3xl p-4 w-full h-full flex items-center justify-center shadow-2xl"
+                        >
+                            <img
+                                src={image}
+                                alt={t("colorBlindness.plateAlt", "Color blindness plate")}
+                                className="w-full h-full object-contain rounded-2xl drop-shadow-[0_0_30px_rgba(0,179,255,0.35)]"
+                            />
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
 
                 {/* Answer buttons */}
