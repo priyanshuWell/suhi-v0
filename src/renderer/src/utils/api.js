@@ -450,12 +450,15 @@ export async function visualAcuitySubmit({
  * Marks a visual-acuity game session as complete.
  * @param {string} gameSessionId - id returned by visualAcuityStart
  * @param {string} screeningId - screening session id
+ * @param {string} sessionId - session id
  */
-export async function visualAcuityComplete(gameSessionId, screeningId) {
+export async function visualAcuityComplete(gameSessionId, screeningId, sessionId) {
+    console.log("Completing visual acuity session:", { gameSessionId, screeningId, sessionId })
     try {
         const payload = {
             game_session_id: gameSessionId,
-            screening_id: screeningId
+            screening_id: screeningId,
+            session_id: sessionId
         }
 
         const response = await fetch(`${API_BASE_URL}/visual-acuity/complete`, {

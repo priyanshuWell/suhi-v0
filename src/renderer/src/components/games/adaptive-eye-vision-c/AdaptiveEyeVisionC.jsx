@@ -89,7 +89,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       setPhase('instruction');   // <-- left eye's InstructionScreen, not straight into testing
     } else {
       setPhase('modal');
-      visualAcuityComplete(gameSessionId, screeningId)
+      visualAcuityComplete(gameSessionId, screeningId, sessionId)
         .then((res) => {
           if (res?.screening) {
             dispatch(setScreening(res.screening))
