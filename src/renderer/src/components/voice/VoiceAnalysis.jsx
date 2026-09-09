@@ -434,16 +434,15 @@ export default function VoiceAnalysis() {
                     }
                     const bufferPayload = {
                         user_id: userId,
-                        session_id: sessionId,
+                        session_id: screeningSessionId,
                         file: new Blob([wavArrayBuffer], { type: "audio/wav" }),
                         fileName: `${userId || "voice"}_${Date.now()}.wav`
                     }
                     console.log("[VoiceAnalysis] Calling runVoice with:", runPayload)
-                    const runResult = await runVoice(runPayload)
-                    console.log("[VoiceAnalysis] runVoice result:", runResult)
+                    // const runResult = await runVoice(runPayload)
                     console.log("[VoiceAnalysis] Calling voiceBufferApi with userId:", userId, "sessionId:", sessionId)
-                    const bufferResult = await voiceBufferApi(bufferPayload)
-                    console.log("[VoiceAnalysis] voiceBufferApi result:", bufferResult)
+                    const runResult = await voiceBufferApi(bufferPayload)
+                    console.log("[VoiceAnalysis] voiceBufferApi result:", runResult)
 
                     if (runResult.success) {
                         if (runResult.screening) {

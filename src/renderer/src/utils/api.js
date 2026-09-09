@@ -655,7 +655,7 @@ export const voiceBufferApi = async (data) => {
             formData.append("file", blobFile, filename)
         }
 
-        const response = await fetch(`${AI_SERVER_URL}/voice-buffer`, {
+        const response = await fetch(`${API_BASE_URL}/buffer-voice`, {
             method: "POST",
             headers: {
                 Accept: "application/json"
