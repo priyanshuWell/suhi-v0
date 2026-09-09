@@ -52,7 +52,7 @@ const HeightWeightDisplay = ({
 
     return (
         <>
-            <div className="fixed  bottom-60 left-20 z-40 flex items-center gap-10 font-anta">
+            <div className="fixed  bottom-60 left-12 z-40 flex items-center gap-10 font-anta">
                 {/* Height Card */}
                 <div
                     className="
