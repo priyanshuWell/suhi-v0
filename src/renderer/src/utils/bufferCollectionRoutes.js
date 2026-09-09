@@ -27,6 +27,18 @@ export const BUFFER_COLLECTION_STEPS = [
     {
         bufferType: "SMOOTH_SLASH",
         routes: ["/smoothie-slash"]
+    },
+    {
+        bufferType: "PERILOUS_PATH",
+        routes: ["/perilous-path"]
+    },
+    {
+        bufferType: "BEAT_DROP",
+        routes: ["/beat-drop"]
+    },
+    {
+        bufferType: "VISION_ACUITY",
+        routes: ["/adaptive-eye"]
     }
 ]
 

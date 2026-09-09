@@ -1,4 +1,5 @@
 import clsx from "clsx"
+import { motion } from "framer-motion"
 
 export default function BlackGradientButton({
     onClick,
@@ -10,9 +11,12 @@ export default function BlackGradientButton({
     style = {}
 }) {
     return (
-        <button
+        <motion.button
             onClick={onClick}
             disabled={disabled}
+            whileHover={disabled ? {} : { scale: 1.025, filter: "brightness(1.12)" }}
+            whileTap={disabled ? {} : { scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 450, damping: 20 }}
             style={{
                 boxShadow: "0px 3.58px 28.62px #9ad9ff",
                 borderRadius: "20px",
@@ -35,13 +39,19 @@ export default function BlackGradientButton({
                 "overflow-hidden",
                 "isolate",
                 "gap-2",
-                "cursor-pointer",
-                "active:scale-[0.98]",
-                "transition-transform duration-300 ease-in-out",
+                "cursor-pointer select-none",
                 disabled && "opacity-50 cursor-not-allowed",
                 className
             )}
         >
+            {/* Ambient shimmer sheen */}
+            {!disabled && (
+                <motion.span
+                    className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent skew-x-[-25deg] pointer-events-none z-[3]"
+                    animate={{ translateX: ["-100%", "200%"] }}
+                    transition={{ repeat: Infinity, repeatDelay: 3.5, duration: 1.5, ease: "easeInOut" }}
+                />
+            )}
             {/* Lenses container for blur effect */}
             <div className="absolute inset-0 w-[calc(100%+1.4px)] h-full -left-[0.72px] -right-[0.68px] blur-[5.72px] z-0">
                 {/* Blur layer 1 */}
@@ -107,6 +117,6 @@ export default function BlackGradientButton({
             >
                 {children}
             </span>
-        </button>
+        </motion.button>
     )
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { AnimatePresence, motion } from "framer-motion"
 import PerilousPathGame from "./PerilousPathGame"
@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux"
 import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
+import { useSetProgressStage } from "../../ProgressStageContext"
 
 const SCREENS = {
     INTRO: "intro",
@@ -48,12 +49,18 @@ export default function PerilousPath() {
     const storeUser = useSelector((state) => state.common.user)
     const screeningState = useSelector((state) => state.common.screening)
     const navigate = useNavigate()
+    const setProgressStage = useSetProgressStage()
 
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [gameSessionId, setGameSessionId] = useState(null)
     const [levelData, setLevelData] = useState(null)
     const [finalResult, setFinalResult] = useState(null)
     const [errorInfo, setErrorInfo] = useState(null)
+
+    // Show progress bar only on the intro screen
+    useEffect(() => {
+        setProgressStage(screen === SCREENS.INTRO)
+    }, [screen, setProgressStage])
 
 
     // ── Game finalization ────────────────────────────────────────────────

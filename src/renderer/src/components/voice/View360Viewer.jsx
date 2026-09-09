@@ -9,6 +9,7 @@ import fingerIcon from "../../assets/voice/finger_icon.svg"
 import { useNavigate } from "react-router"
 import { Loader } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import { motion, AnimatePresence } from "framer-motion"
 
 const BAR_WIDTH = 12.1111
 const BAR_RADIUS = 6.05556
@@ -236,68 +237,86 @@ export default function View360Viewer({
 
             {/* ── Voice Complete modal ─────────────────────────────────── */}
             {/*   Shown when timer ends. User must click Next to proceed.  */}
-            {isComplete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-                    <div
-                        className="relative w-screen"
-                        style={{
-                            filter: "drop-shadow(0px 0px 40px rgba(139, 195, 229, 0.4))"
-                        }}
+            <AnimatePresence>
+                {isComplete && (
+                    <motion.div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, ease: "backOut" }}
                     >
-                        {/* Background frame */}
-                        <img
-                            src={textbgframe}
-                            alt=""
-                            className="w-full h-full block"
-                            draggable={false}
-                        />
-
-                        {/* Content */}
-                        <div
-                            className="absolute flex flex-col items-center justify-center"
+                        <motion.div
+                            className="relative w-screen"
+                            initial={{ y: -180, opacity: 0, scale: 0.94 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            exit={{ y: -120, opacity: 0, scale: 0.94 }}
+                            transition={{
+                                type: "spring",
+                                stiffness: 280,
+                                damping: 25,
+                                mass: 0.85
+                            }}
                             style={{
-                                top: "14%",
-                                bottom: "20%",
-                                left: "14%",
-                                right: "14%"
+                                filter: "drop-shadow(0px 0px 45px rgba(139, 195, 229, 0.45))",
+                                willChange: "transform, opacity"
                             }}
                         >
-                            {/* Optional image */}
-                            {/* <img
-                                src={voiceComplete}
-                                alt="voice-complete"
-                                className="w-[220px] mb-8"
-                            /> */}
+                            {/* Background frame */}
+                            <img
+                                src={textbgframe}
+                                alt=""
+                                className="w-full h-full block"
+                                draggable={false}
+                            />
 
-                            {/* Title */}
-                            <h2 className="text-[#8BC3E5] text-[42px] font-anta text-center mb-4">
-                                {t("voice.status.task_completed")}
-                            </h2>
-
-                            {/* Subtitle */}
-                            <p className="text-white text-[28px] font-anta text-center mb-12">
-                                {t("voice.status.saved")}
-                            </p>
-
-                            {/* Next button */}
-                            <BlueGradientButton
-                                onClick={!loading ? onNext : undefined}
+                            {/* Content */}
+                            <div
+                                className="absolute flex flex-col items-center justify-center"
                                 style={{
-                                    opacity: loading ? 0.6 : 1,
-                                    pointerEvents: loading ? "none" : "auto",
-                                    cursor: loading ? "not-allowed" : "pointer"
+                                    top: "14%",
+                                    bottom: "20%",
+                                    left: "14%",
+                                    right: "14%"
                                 }}
                             >
-                                {loading ? (
-                                    <Loader className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    t("common.next")
-                                )}
-                            </BlueGradientButton>
-                        </div>
-                    </div>
-                </div>
-            )}
+                                {/* Optional image */}
+                                {/* <img
+                                    src={voiceComplete}
+                                    alt="voice-complete"
+                                    className="w-[220px] mb-8"
+                                /> */}
+
+                                {/* Title */}
+                                <h2 className="text-[#8BC3E5] text-[42px] font-anta text-center mb-4">
+                                    {t("voice.status.task_completed")}
+                                </h2>
+
+                                {/* Subtitle */}
+                                <p className="text-white text-[28px] font-anta text-center mb-12">
+                                    {t("voice.status.saved")}
+                                </p>
+
+                                {/* Next button */}
+                                <BlueGradientButton
+                                    onClick={!loading ? onNext : undefined}
+                                    style={{
+                                        opacity: loading ? 0.6 : 1,
+                                        pointerEvents: loading ? "none" : "auto",
+                                        cursor: loading ? "not-allowed" : "pointer"
+                                    }}
+                                >
+                                    {loading ? (
+                                        <Loader className="w-6 h-6 animate-spin" />
+                                    ) : (
+                                        t("common.next")
+                                    )}
+                                </BlueGradientButton>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Error overlay ────────────────────────────────────────── */}
             {isError && (
@@ -312,77 +331,78 @@ export default function View360Viewer({
                 </div>
             )}
             {/* ── Intro CTA overlay ────────────────────────────────────── */}
-            {isReady && showCTA && (
-                <div
-                    className="absolute inset-0 z-40 flex items-center justify-center"
-                    style={{
-                        background: "rgba(0,0,0,0.20)",
-                        backdropFilter: "blur(6px)"
-                    }}
-                >
-                    <div
-                        className="flex flex-col items-center gap-10 px-10 py-12 rounded-3xl max-w-lg text-center"
+            <AnimatePresence>
+                {isReady && showCTA && (
+                    <motion.div
+                        className="absolute inset-0 z-40 flex items-center justify-center"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.35 }}
                         style={{
-                            background: "rgba(255,255,255,0.08)",
-                            border: "1px solid rgba(154,217,255,0.3)",
-                            boxShadow: "0 0 60px rgba(154,217,255,0.12)"
+                            background: "rgba(0,0,0,0.30)",
+                            backdropFilter: "blur(6px)"
                         }}
                     >
-                        <img src={icon360} alt="360-icon" className="w-24 h-24" />
-                        <p
-                            className="text-white text-2xl font-semibold leading-relaxed"
-                            style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}
-                        >
-                            {t("voice.cta_intro")}
-                        </p>
-                        <BlueGradientButton
-                            onClick={() => {
-                                setShowCTA(false)
-                                onStart?.() // start recording
-                                // Also kick off the timer right away
-                                if (!interactFiredRef.current) {
-                                    interactFiredRef.current = true // prevent double-fire on drag
-                                    setHasInteracted(true)
-                                    // NOTE: onFirstInteract NOT called here to avoid a second
-                                    // startRecording() call; recording already started via onStart
-                                }
+                        <motion.div
+                            className="flex flex-col items-center gap-10 px-10 py-12 rounded-3xl max-w-lg text-center"
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: -20 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 24 }}
+                            style={{
+                                background: "rgba(255,255,255,0.08)",
+                                border: "1px solid rgba(154,217,255,0.3)",
+                                boxShadow: "0 0 60px rgba(154,217,255,0.12)"
                             }}
-                            className="px-4 py-2  text-white font-bold text-xl tracking-widest "
-                            // style={{
-                            //     background: "linear-gradient(135deg, #1a7fd4 0%, #0d4fa8 100%)",
-                            //     boxShadow: "0 0 40px rgba(26,127,212,0.55), 0 4px 20px rgba(0,0,0,0.4)",
-                            //     border: "1px solid rgba(154,217,255,0.4)",
-                            //     letterSpacing: "0.2em",
-                            // }}
                         >
-                            {t("voice.cta_start")}
-                        </BlueGradientButton>
-                    </div>
-                </div>
-            )}
+                            <img src={icon360} alt="360-icon" className="w-24 h-24" />
+                            <p
+                                className="text-white text-2xl font-semibold leading-relaxed"
+                                style={{ textShadow: "0 2px 12px rgba(0,0,0,0.8)" }}
+                            >
+                                {t("voice.cta_intro")}
+                            </p>
+                            <BlueGradientButton
+                                onClick={() => {
+                                    setShowCTA(false)
+                                    onStart?.() // start recording
+                                    // Also kick off the timer right away
+                                    if (!interactFiredRef.current) {
+                                        interactFiredRef.current = true // prevent double-fire on drag
+                                        setHasInteracted(true)
+                                        // NOTE: onFirstInteract NOT called here to avoid a second
+                                        // startRecording() call; recording already started via onStart
+                                    }
+                                }}
+                                className="px-4 py-2 text-white font-bold text-xl tracking-widest"
+                            >
+                                {t("voice.cta_start")}
+                            </BlueGradientButton>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* ── Drag-to-start nudge ──────────────────────────────────── */}
-            {isReady && !hasInteracted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex flex-col items-center gap-20">
-                    <img src={icon360} alt="360-icon" className="w-[100px] h-[100px]" />
+            <AnimatePresence>
+                {isReady && !showCTA && !hasInteracted && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex flex-col items-center gap-20 pointer-events-none"
+                    >
+                        <img src={icon360} alt="360-icon" className="w-[100px] h-[100px] animate-pulse" />
 
-                    <p className="text-2xl bg-black/50 rounded-4xl text-white font-medium whitespace-nowrap flex  items-center py-3 px-10">
-                        <img src={fingerIcon} alt="finger-icon" className="w-10 h-10 ml-2" />
-                        <span>{t("voice.tap_to_rotate")}</span>
-                    </p>
-                </div>
-            )}
-
-            {/* ── Drag-to-start nudge ──────────────────────────────────── */}
-            {isReady && !showCTA && !hasInteracted && (
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex flex-col items-center gap-20">
-                    <img src={icon360} alt="360-icon" className="w-[100px] h-[100px]" />
-
-                    <p className="text-2xl bg-black/50 rounded-4xl text-white font-medium whitespace-nowrap flex  items-center py-3 px-10">
-                        <img src={fingerIcon} alt="finger-icon" className="w-10 h-10 ml-2" />
-                        <span>{t("voice.tap_to_rotate")}</span>
-                    </p>
-                </div>
-            )}
+                        <p className="text-2xl bg-black/50 rounded-4xl text-white font-medium whitespace-nowrap flex items-center py-3 px-10 backdrop-blur-sm border border-white/10">
+                            <img src={fingerIcon} alt="finger-icon" className="w-10 h-10 ml-2" />
+                            <span>{t("voice.tap_to_rotate")}</span>
+                        </p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── HUD ─────────────────────────────────────────────────── */}
             {showHUD && isReady && (

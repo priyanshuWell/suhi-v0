@@ -21,3 +21,10 @@ export const anton = {
     lineHeight: 1,
     letterSpacing: 0
 }
+
+export const oswald = {
+    fontFamily: "'Oswald', sans-serif",
+    fontWeight: 700,
+    lineHeight: 1,
+    letterSpacing: 0
+}

@@ -1,20 +1,22 @@
-import { motion } from "framer-motion"
 import speedCard from "../../../assets/beat-drop/popup/speed_increase_blank_card.png"
-import PillButton, { absBox } from "./PillButton"
-import { anton, cqw } from "./frame"
+import PillButton from "./PillButton"
+import { anton, cqw, FRAME_W, pct } from "./frame"
+
+/** Native speed-card art size — lock aspect so text sits on the PNG. */
+const CARD_ART_W = 1149
+const CARD_ART_H = 1368
+const CARD_W = 1080
+const CARD_H = (CARD_W * CARD_ART_H) / CARD_ART_W
+const CARD_LEFT = (FRAME_W - CARD_W) / 2
+const CARD_TOP = 560
 
 /**
- * speed_increase_blank_card.png already bakes in the header pill, sparkles,
- * music notes, the 4 note-lane previews and the speed-up chevrons — this
- * component only needs to lay the two text blocks over it.
+ * Notes Speed will Increase — same layout pattern as AvoidNotesPopup.
+ * Card art includes header pill, note lanes, chevrons, sparkles.
  */
 export default function SpeedIncreasePopup({ onGotIt }) {
     return (
-        <motion.div
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0 }}
+        <div
             style={{
                 position: "absolute",
                 inset: 0,
@@ -25,7 +27,11 @@ export default function SpeedIncreasePopup({ onGotIt }) {
             <div
                 style={{
                     position: "absolute",
-                    ...absBox({ left: 192, top: 715, width: 1125, height: 1248 })
+                    left: pct(CARD_LEFT, "x"),
+                    top: pct(CARD_TOP),
+                    width: pct(CARD_W, "x"),
+                    height: pct(CARD_H),
+                    zIndex: 1
                 }}
             >
                 <img
@@ -42,48 +48,66 @@ export default function SpeedIncreasePopup({ onGotIt }) {
                     }}
                 />
 
-                <p
+                {/* Title — Anton 64 / #F2F14F, spaced from top like Avoid popup */}
+                <div
                     style={{
                         position: "absolute",
                         top: "5.5%",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        margin: 0,
-                        width: "90%",
-                        textAlign: "center",
-                        ...anton,
-                        fontSize: cqw(56),
-                        color: "#F2F14F",
-                        whiteSpace: "nowrap",
-                        zIndex: 2
+                        left: "8%",
+                        right: "8%",
+                        height: "9%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 2,
+                        pointerEvents: "none"
                     }}
                 >
-                    Notes Speed will Increase!
-                </p>
+                    <p
+                        style={{
+                            margin: 0,
+                            textAlign: "center",
+                            ...anton,
+                            fontSize: cqw(64),
+                            lineHeight: 1,
+                            letterSpacing: "0%",
+                            color: "#F2F14F",
+                            whiteSpace: "nowrap"
+                        }}
+                    >
+                        Notes Speed will Increase!
+                    </p>
+                </div>
 
-                <p
+                {/* Body — Anton 40, “come faster” highlighted */}
+                <div
                     style={{
                         position: "absolute",
-                        top: "19%",
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        margin: 0,
-                        width: "80%",
-                        textAlign: "center",
-                        ...anton,
-                        fontSize: cqw(40),
-                        letterSpacing: "0.35px",
-                        lineHeight: 1.15,
-                        color: "#FFFFFF",
-                        zIndex: 2
+                        top: "19.5%",
+                        left: "8%",
+                        right: "8%",
+                        zIndex: 2,
+                        pointerEvents: "none"
                     }}
                 >
-                    <span style={{ display: "block" }}>Get Ready!</span>
-                    <span style={{ display: "block" }}>
+                    <p
+                        style={{
+                            margin: 0,
+                            textAlign: "center",
+                            ...anton,
+                            fontSize: cqw(40),
+                            lineHeight: 1.2,
+                            letterSpacing: "0.35px",
+                            color: "#FFFFFF"
+                        }}
+                    >
+                        Get Ready!
+                        <br />
                         The notes will <span style={{ color: "#F2F14F" }}>come faster</span> now!
-                    </span>
-                </p>
+                    </p>
+                </div>
 
+                {/* Got it — lift off card bottom so it isn’t flush with the frame */}
                 <PillButton
                     variant="gotIt"
                     label="Got it!"
@@ -92,15 +116,15 @@ export default function SpeedIncreasePopup({ onGotIt }) {
                     onClick={onGotIt}
                     style={{
                         position: "absolute",
-                        left: "19%",
-                        bottom: "4.5%",
-                        width: "62%",
+                        left: "18%",
+                        bottom: "7.5%",
+                        width: "64%",
                         aspectRatio: "2170 / 725",
                         height: "auto",
                         zIndex: 3
                     }}
                 />
             </div>
-        </motion.div>
+        </div>
     )
 }
