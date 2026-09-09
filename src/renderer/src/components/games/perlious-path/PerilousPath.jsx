@@ -92,7 +92,7 @@ export default function PerilousPath() {
     // on the scoreboard. Reads next_stage from game/complete API response
     // (fallback to Redux if missing).
     const handleNavigateNext = useCallback(() => {
-        const nextStage = finalResult?.screening?.next_stage ?? screeningState?.nextStage
+        const nextStage = finalResult?.data?.next_stage ;
         const route = getNextRoute(nextStage, "/adaptive-eye")
         navigate(route)
     }, [finalResult, screeningState?.nextStage, navigate])
