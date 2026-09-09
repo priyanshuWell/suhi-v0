@@ -604,8 +604,64 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
     const userName = storeUser?.data?.name || t("bia_result.default_name", "there")
 
-    const formatLabel = (v, fallback = "Not Available") =>
-        v === null || v === undefined || v === "" ? fallback : String(v)
+    const formatLabel = (value, fallback = "—") => {
+        if (value === null || value === undefined || value === "") {
+            return fallback
+        }
+
+        if (typeof value === "number") {
+            return Number.isFinite(value)
+                ? value.toFixed(2)
+                : fallback
+        }
+
+        if (typeof value !== "object") {
+            return String(value)
+        }
+
+        // score + level object
+        if ("score" in value || "level" in value) {
+            const parts = []
+
+            if (value.score != null && Number.isFinite(Number(value.score))) {
+                parts.push(Number(value.score).toFixed(2))
+            }
+
+            if (value.level) {
+                parts.push(value.level)
+            }
+
+            return parts.length ? parts.join(" • ") : fallback
+        }
+
+        // Blood pressure
+        if ("systolic" in value || "diastolic" in value) {
+            const systolic =
+                value.systolic != null
+                    ? Number(value.systolic).toFixed(2)
+                    : "—"
+
+            const diastolic =
+                value.diastolic != null
+                    ? Number(value.diastolic).toFixed(2)
+                    : "—"
+
+            return `${systolic}/${diastolic}${value.unit ? ` ${value.unit}` : ""
+                }`
+        }
+
+        // Generic nested object
+        return Object.entries(value)
+            .filter(([, v]) => v !== null && v !== undefined && v !== "")
+            .map(([key, val]) => {
+                const label = key
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase())
+
+                return `${label}: ${formatLabel(val, "")}`
+            })
+            .join(" • ") || fallback
+    }
 
     const learnerType = apiReport?.learner_type?.type
     const learnerStyleLabel = learnerType
