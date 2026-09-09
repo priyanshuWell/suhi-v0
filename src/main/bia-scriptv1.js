@@ -917,15 +917,104 @@ let impedance100kHzResults = null
 export let finalweight = null
 export let finalheight = null
 
+// ======================== DEVICE CONFIG CALIBRATION ========================
+// MDM writes weight/height calibration to this file (same file the camera
+// rotations come from). We read it once at startup so a technician can
+// correct calibration in the field without a code change. Any value missing
+// from the file, or the file itself being missing/unreadable/invalid JSON,
+// falls back to the defaults this script has always used — capture must
+// never be blocked by a bad or absent config file.
+const DEVICE_CONFIG_PATH = "/etc/wellwiz-mdm/device-config.json"
+
+const DEFAULT_WEIGHT_ZERO_OFFSET = 0.0 // rawWeight subtracted before applying factor
+const DEFAULT_WEIGHT_CALIBRATION_FACTOR = 1.53138 // multiply (rawWeight - zeroOffset) to get kg
+const DEFAULT_HEIGHT_CALIBRATION_FACTOR = 192.7 // cm; sensor-to-floor reference distance
+
+function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
+    const calibration = {
+        weightZeroOffset: DEFAULT_WEIGHT_ZERO_OFFSET,
+        weightCalibrationFactor: DEFAULT_WEIGHT_CALIBRATION_FACTOR,
+        heightCalibrationFactor: DEFAULT_HEIGHT_CALIBRATION_FACTOR
+    }
+
+    let raw
+    try {
+        raw = fs.readFileSync(configPath, "utf8")
+    } catch (err) {
+        console.warn(
+            `[CAL] device-config not found/unreadable at ${configPath} (${err.code || err.message}); using default calibration`
+        )
+        return calibration
+    }
+
+    let data
+    try {
+        data = JSON.parse(raw)
+    } catch (err) {
+        console.warn(
+            `[CAL] device-config at ${configPath} is not valid JSON (${err.message}); using default calibration`
+        )
+        return calibration
+    }
+
+    const weight = data.weight
+    if (weight && typeof weight === "object") {
+        if (typeof weight.zeroOffset === "number") {
+            calibration.weightZeroOffset = weight.zeroOffset
+        } else if (weight.zeroOffset !== undefined) {
+            console.warn(`[CAL] device-config weight.zeroOffset is not a number; using default`)
+        }
+
+        if (typeof weight.calibrationFactor === "number") {
+            calibration.weightCalibrationFactor = weight.calibrationFactor
+        } else if (weight.calibrationFactor !== undefined) {
+            console.warn(
+                `[CAL] device-config weight.calibrationFactor is not a number; using default`
+            )
+        }
+    }
+
+    const height = data.height
+    if (height && typeof height === "object") {
+        if (typeof height.calibrationFactor === "number") {
+            calibration.heightCalibrationFactor = height.calibrationFactor
+        } else if (height.calibrationFactor !== undefined) {
+            console.warn(
+                `[CAL] device-config height.calibrationFactor is not a number; using default`
+            )
+        }
+    }
+
+    console.log(
+        `[CAL] Loaded from device-config: weight.zeroOffset=${calibration.weightZeroOffset}, ` +
+            `weight.calibrationFactor=${calibration.weightCalibrationFactor}, ` +
+            `height.calibrationFactor=${calibration.heightCalibrationFactor}`
+    )
+
+    return calibration
+}
+
+const deviceCalibration = loadDeviceCalibration()
+
 // ======================== DYNAMIC CALIBRATION ========================
-// Module-level calibration state — loaded from disk by index.js on startup.
-// Falls back to the original hardcoded values so existing behaviour is preserved
-// if no calibration file exists yet.
+// Module-level calibration state. Initial values come from device-config.json
+// (read above); calibratedAt/isCalibrated below still get updated at runtime
+// by performTare()/performFullCalibration() (and, as before, may also be
+// overwritten by index.js on startup from its own calibration flow).
+// Falls back to the original hardcoded values so existing behaviour is
+// preserved if no config file exists yet.
 export let weightCalibration = {
-    zeroOffset: 0.0, // rawWeight subtracted before applying factor
-    factor: 1.53138, // multiply (rawWeight - zeroOffset) to get kg
+    zeroOffset: deviceCalibration.weightZeroOffset, // from device-config.json: weight.zeroOffset (default 0.0)
+    factor: deviceCalibration.weightCalibrationFactor, // from device-config.json: weight.calibrationFactor (default 1.53138)
     calibratedAt: null, // ISO timestamp of last full calibration
     isCalibrated: true // false until a real calibration has been performed
+}
+
+// Height calibration — same idea as weightCalibration above.
+// calibrationFactor is the sensor-to-floor reference distance (cm) used as
+// `calibrationFactor - distanceCm` to compute height.
+export let heightCalibration = {
+    calibrationFactor: deviceCalibration.heightCalibrationFactor // from device-config.json: height.calibrationFactor (default 192.7)
 }
 
 const READ_CMD = Buffer.from([0x55, 0xaa, 0x01, 0x01, 0x01])
@@ -2006,128 +2095,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
             parity: "none"
         })
 
-        // ====================================================================
-        // DATA HANDLER WITH ERROR CHECKING
-        // ====================================================================
-
-        // heightPort.on('data', (data) => {
-        //     try {
-        //         if (isMeasurementStopped) return;
-
-        //         heightBuffer = Buffer.concat([heightBuffer, data]);
-
-        //         while (heightBuffer.length >= 7) {
-        //             const start = heightBuffer.indexOf(Buffer.from([0x55, 0xaa]));
-
-        //             // No frame found
-        //             if (start === -1) {
-        //                 heightBuffer = Buffer.alloc(0);
-        //                 return;
-        //             }
-
-        //             // Frame incomplete
-        //             if (heightBuffer.length - start < 7) return;
-
-        //             const frame = heightBuffer.slice(start, start + 7);
-        //             heightBuffer = heightBuffer.slice(start + 7);
-
-        //             // ══════════════════════════════════════════════════════
-        //             // CHECKSUM VERIFICATION
-        //             // ══════════════════════════════════════════════════════
-
-        //             if (!verifyChecksum(frame)) {
-        //                 console.log('❌ Checksum verification failed');
-        //                 const err = handleHeightStatus(0x09); // INVALID_RESPONSE
-        //                 continue;
-        //             }
-
-        //             // ══════════════════════════════════════════════════════
-        //             // PARSE DISTANCE & CALCULATE HEIGHT
-        //             // ══════════════════════════════════════════════════════
-
-        //             try {
-        //                 const distance = parseDistance(frame);
-
-        //                 // Validate distance
-        //                 if (distance < 0 || distance > 3000) {
-        //                     handleHeightStatus(0x09);  // INVALID_RESPONSE
-        //                     console.log(`❌ Invalid distance: ${distance} mm`);
-        //                     continue;
-        //                 }
-
-        //                 const distanceCm = distance / 10;
-        //                 const calculatedHeight = 194 - distanceCm;
-
-        //                 // ════════════════════════════════════════════════════
-        //                 // VALIDATE HEIGHT RANGE
-        //                 // ════════════════════════════════════════════════════
-
-        //                 let statusCode = 0x04;  // Default STABLE
-
-        //                 if (calculatedHeight < 80) {
-        //                     statusCode = 0x01;  // OUT_OF_RANGE_LOW
-        //                 } else if (calculatedHeight > 250) {
-        //                     statusCode = 0x02;  // OUT_OF_RANGE_HIGH
-        //                 }
-
-        //                 // Show error if out of range
-        //                 if (statusCode !== 0x04) {
-        //                     emitHeightStatus(0x04, calculatedHeight);
-        //                     isMeasurementStopped = true;
-        //                     heightPort.close();
-        //                     console.log('\n❌ Height measurement stopped (out of range)');
-        //                     stableReadings = [];
-        //                    if(!IS_ELECTRON) showMenu();
-        //                     return;
-        //                 }
-
-        //                 finalheight = calculatedHeight;
-
-        //                 console.log(`\n${'='.repeat(60)}`);
-        //                 console.log('📏 HEIGHT MEASUREMENT');
-        //                 console.log(`${'='.repeat(60)}`);
-        //                 console.log(`Distance: ${distance} mm (${distanceCm.toFixed(1)} cm)`);
-        //                 console.log(`Calculated Height: ${calculatedHeight.toFixed(1)} cm`);
-
-        //                 // ════════════════════════════════════════════════════
-        //                 // CHECK STABILITY
-        //                 // ════════════════════════════════════════════════════
-
-        //                 if (checkStability(distance)) {
-        //                     if (stableReadings.length >= STABILITY_COUNT) {
-        //                         emitHeightStatus(0x04, calculatedHeight);  // STABLE success
-        //                         console.log(`\n${'='.repeat(60)}`);
-        //                         console.log(`✅ STABLE HEIGHT FOUND: ${calculatedHeight.toFixed(1)} cm`);
-        //                         console.log(`${'='.repeat(60)}\n`);
-
-        //                         isMeasurementStopped = true;
-        //                         heightPort.close();
-        //                         console.log('🛑 Height measurement stopped.\n');
-        //                         stableReadings = [];
-        //                         showMenu();
-        //                         return;
-        //                     }
-        //                 } else {
-        //                    emitHeightStatus(0x03);   // UNSTABLE
-        //                     console.log(`   Readings: ${stableReadings.length}/${STABILITY_COUNT}`);
-        //                     console.log(`${'='.repeat(60)}\n`);
-        //                 }
-
-        //             } catch (parseError) {
-        //                emitHeightStatus(0x09);  // INVALID_RESPONSE
-        //                 console.error(`❌ Parse error: ${parseError.message}`);
-        //                 continue;
-        //             }
-        //         }
-
-        //     } catch (error) {
-        //         console.error(`❌ Data handler error: ${error.message}`);
-        //        emitHeightStatus(0x05);  // SENSOR_ERROR
-        //         isMeasurementStopped = true;
-        //         heightPort.close();
-        //         return {success:false}
-        //     }
-        // });
+        
         heightPort.on("data", (data) => {
             if (isMeasurementStopped || heightCompleted) return
 
@@ -2164,7 +2132,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
                     }
 
                     const distanceCm = distance / 10
-                    const calculatedHeight = 192.7 - distanceCm
+                    const calculatedHeight = heightCalibration.calibrationFactor - distanceCm
 
                     /* ---------- RANGE CHECK ---------- */
                     if (calculatedHeight < 80) {
@@ -3069,118 +3037,6 @@ export async function case39_100kHzImpedanceQuery() {
     }
 }
 
-// Helper function to parse 100 kHz impedance response
-
-// export async function case39_100kHzImpedanceQuery() {
-//   try {
-//     // Step 1: Stop current test
-//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
-//     await new Promise((resolve) => setTimeout(resolve, 500))
-
-//     // Step 2: Set impedance mode for 8-electrode 100 kHz
-//     await sendBiaCommand([0x55, 0x06, 0xb0, 0x01, 0x06, 0xee])
-//     await new Promise((resolve) => setTimeout(resolve, 500))
-
-//     // Query command for 100 kHz
-//     const query100kHzCommand = [0x55, 0x05, 0xb1, 0x61, 0x94]
-
-//     // Track results
-//     const results = {
-//       totalAttempts: 50,
-//       meaningfulResponses: [],
-//       zeroResponses: [],
-//       errorResponses: []
-//     }
-
-//     // Function to check if responses are stable
-//     const isStableResponse = (responses) => {
-//       if (responses.length < 5) return false
-
-//       // Get the last 5 responses
-//       const lastFive = responses.slice(-5)
-
-//       // Check if all last 5 responses are meaningful and similar
-//       const allMeaningful = lastFive.every(isMeaningful100kHzResult)
-
-//       if (!allMeaningful) return false
-
-//       // Compare segments across last 5 responses
-//       const segments = ['rightHand', 'leftHand', 'trunk', 'rightFoot', 'leftFoot']
-
-//       return segments.every((segment) => {
-//         const values = lastFive.map((r) => r.segments[segment])
-//         const max = Math.max(...values)
-//         const min = Math.min(...values)
-//         return (max - min) / max < 0.1 // Within 10% variation
-//       })
-//     }
-
-//     // 50 attempts
-//     for (let attempt = 1; attempt <= 50; attempt++) {
-//       try {
-//         console.log(`\n📡 Attempt ${attempt}: Querying 100 kHz Impedance`)
-
-//         const responseData = await sendBiaCommand(query100kHzCommand, {
-//           timeout: 5000,
-//           verbose: true
-//         })
-
-//         // Parse response
-//         const parsedResult = parse100kHzImpedanceResponse(responseData)
-
-//         // Check if result is meaningful
-//         if (isMeaningful100kHzResult(parsedResult)) {
-//           results.meaningfulResponses.push(parsedResult)
-//         } else {
-//           results.zeroResponses.push({
-//             attempt,
-//             rawResponse: responseData
-//           })
-//         }
-
-//         // Check for stable responses
-//         if (isStableResponse(results.meaningfulResponses)) {
-//           console.log('✅ Stable impedance values detected!')
-//           break
-//         }
-
-//         // Delay between attempts
-//         await new Promise((resolve) => setTimeout(resolve, 500))
-//       } catch (queryError) {
-//         console.error(`Attempt ${attempt} failed:`, queryError)
-//         results.errorResponses.push({
-//           attempt,
-//           error: queryError.message
-//         })
-//       }
-//     }
-
-//     // Display comprehensive results
-//     console.log('\n📊 100 kHz Impedance Query Results:')
-//     console.log(`Total Attempts: ${results.totalAttempts}`)
-//     console.log(`Meaningful Responses: ${results.meaningfulResponses.length}`)
-//     console.log(`Zero Responses: ${results.zeroResponses.length}`)
-//     console.log(`Error Responses: ${results.errorResponses.length}`)
-
-//     // Detailed meaningful responses
-//     if (results.meaningfulResponses.length > 0) {
-//       console.log('\n✅ Final Meaningful Data:')
-//       const finalResponse = results.meaningfulResponses[results.meaningfulResponses.length - 1]
-//       console.log(JSON.stringify(finalResponse, null, 2))
-//     }
-//     const finalResult =
-//       results.meaningfulResponses.length > 0
-//         ? results.meaningfulResponses[results.meaningfulResponses.length - 1]
-//         : null
-
-//     impedance100kHzResults = finalResult
-
-//     return finalResult
-//   } catch (error) {
-//     console.error('Overall 100 kHz impedance query failed:', error)
-//     throw error
-//   }
-// }
 
 function parse100kHzImpedanceResponse(data) {
     // Validate response

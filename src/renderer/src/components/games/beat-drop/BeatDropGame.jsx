@@ -82,7 +82,8 @@ export default function BeatDropGame() {
     }, [])
 
     const handleNext = () => {
-        const nextStage = screening?.nextStage
+        // const nextStage = screening?.nextStage
+        const nextStage = "/bia/result"
         const route = getNextRoute(nextStage, "/bia/result")
         navigate(route)
     }

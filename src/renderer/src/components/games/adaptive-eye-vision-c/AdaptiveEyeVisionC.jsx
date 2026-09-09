@@ -151,7 +151,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   };
 
   const handleModalNext = () => {
-    const nextStage = completeResult?.screening?.next_stage ?? screening?.nextStage
+    const nextStage = completeResult?.screening?.next_stage ;
     const route = getNextRoute(nextStage, "/beat-drop")
     navigate(route)
   };
