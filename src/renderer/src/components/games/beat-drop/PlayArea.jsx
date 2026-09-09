@@ -14,6 +14,7 @@ import Piano from "../../Piano"
 import { PIANO_SPEC } from "../../pianoSpec"
 import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, oswald, pct } from "./frame"
 import { createBeatDropEngine } from "./beatDropEngine"
+import { getFirstNodePerLevel } from "./sessionChart"
 
 const LANE_COUNT = 5
 const NOTE_BY_LANE = [yellow, green, pink, blue, purple]
@@ -105,9 +106,10 @@ function NeonDivider({ x }) {
     )
 }
 
-function NeonHitLine() {
+function NeonHitLine({ lineRef }) {
     return (
         <div
+            ref={lineRef}
             style={{
                 position: "absolute",
                 left: 0,
@@ -125,6 +127,67 @@ function NeonHitLine() {
 }
 
 /**
+ * Live probe: first note of each level, appear → box center crosses hit-line mid.
+ * Uses getBoundingClientRect so it tracks real on-screen size/height.
+ */
+function probeFirstNodeFallTimes({
+    sessionT,
+    hitLineEl,
+    fieldEl,
+    firstByLevel,
+    stateRef
+}) {
+    if (!hitLineEl || !fieldEl || !firstByLevel) return
+    const line = hitLineEl.getBoundingClientRect()
+    if (line.height < 1) return
+    const lineMidY = line.top + line.height / 2
+
+    for (const [level, event] of firstByLevel) {
+        if (stateRef.done.has(level)) continue
+        if (sessionT < event.t_spawn) continue
+
+        if (!stateRef.appeared.has(level)) {
+            stateRef.appeared.set(level, sessionT)
+        }
+
+        const el = fieldEl.querySelector(`[data-fall-probe="${level}"]`)
+        if (!el) continue
+        const rect = el.getBoundingClientRect()
+        if (rect.height < 1) continue
+
+        const headRatio = Number(el.dataset.headRatio) || 0.25
+        // PNG = trail above + box at bottom; box center from image bottom
+        const boxCenterY = rect.bottom - (rect.height * headRatio) / 2
+
+        if (boxCenterY < lineMidY) continue
+
+        const appearT = stateRef.appeared.get(level)
+        const measuredMs = Math.round(sessionT - appearT)
+        const chartedMs = event.t_expected - event.t_spawn
+
+        console.log("[BeatDrop] LIVE first-node fall (appear → hit-line mid)", {
+            level,
+            row_num: event.row_num,
+            event_type: event.event_type,
+            lane_intended: event.lane_intended,
+            measured_ms: measuredMs,
+            charted_ms: chartedMs,
+            delta_ms: measuredMs - chartedMs,
+            session_t: Math.round(sessionT),
+            t_spawn: event.t_spawn,
+            t_expected: event.t_expected,
+            screen: {
+                boxCenterY: Math.round(boxCenterY),
+                hitLineMidY: Math.round(lineMidY),
+                noteH: Math.round(rect.height),
+                hitLineH: Math.round(line.height)
+            }
+        })
+        stateRef.done.add(level)
+    }
+}
+
+/**
  * Play field driven by Beat Drop chart + engine.
  */
 export default function PlayArea({
@@ -135,15 +198,25 @@ export default function PlayArea({
     onScore,
     onSessionEnd,
     onSpeedPopup,
+    onChordPopup,
     onAvoidPopup,
     speedAtMs = 20000,
+    chordAtMs = 37918,
     avoidAtMs = 53000,
     engineRef
 }) {
     const [notes, setNotes] = useState([])
     const engine = useRef(null)
     const raf = useRef(0)
+    const fieldRef = useRef(null)
+    const hitLineRef = useRef(null)
+    const fallProbeRef = useRef({
+        firstByLevel: null,
+        appeared: new Map(),
+        done: new Set()
+    })
     const speedPopupSent = useRef(false)
+    const chordPopupSent = useRef(false)
     const avoidPopupSent = useRef(false)
     const startedRef = useRef(false)
     const endedGuard = useRef(false)
@@ -181,8 +254,14 @@ export default function PlayArea({
 
         if (!startedRef.current) {
             speedPopupSent.current = false
+            chordPopupSent.current = false
             avoidPopupSent.current = false
             endedGuard.current = false
+            fallProbeRef.current = {
+                firstByLevel: getFirstNodePerLevel(),
+                appeared: new Map(),
+                done: new Set()
+            }
             engine.current.start()
             startedRef.current = true
         }
@@ -196,6 +275,10 @@ export default function PlayArea({
             if (!speedPopupSent.current && snap.t >= speedAtMs) {
                 speedPopupSent.current = true
                 onSpeedPopup?.()
+            }
+            if (!chordPopupSent.current && snap.t >= chordAtMs) {
+                chordPopupSent.current = true
+                onChordPopup?.()
             }
             if (!avoidPopupSent.current && snap.t >= avoidAtMs) {
                 avoidPopupSent.current = true
@@ -216,7 +299,32 @@ export default function PlayArea({
         }
         raf.current = requestAnimationFrame(tick)
         return () => cancelAnimationFrame(raf.current)
-    }, [active, onScore, onSessionEnd, onSpeedPopup, onAvoidPopup, speedAtMs, avoidAtMs])
+    }, [
+        active,
+        onScore,
+        onSessionEnd,
+        onSpeedPopup,
+        onChordPopup,
+        onAvoidPopup,
+        speedAtMs,
+        chordAtMs,
+        avoidAtMs
+    ])
+
+    // After notes paint: measure real on-screen box-center vs hit-line mid
+    useEffect(() => {
+        if (!active || !engine.current || paused) return undefined
+        const id = requestAnimationFrame(() => {
+            probeFirstNodeFallTimes({
+                sessionT: engine.current.sessionNow(),
+                hitLineEl: hitLineRef.current,
+                fieldEl: fieldRef.current,
+                firstByLevel: fallProbeRef.current.firstByLevel,
+                stateRef: fallProbeRef.current
+            })
+        })
+        return () => cancelAnimationFrame(id)
+    }, [active, paused, notes])
 
     const handleNoteOn = useCallback(
         (_note, info) => {
@@ -231,7 +339,7 @@ export default function PlayArea({
     )
 
     return (
-        <div style={{ position: "absolute", inset: 0 }}>
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0 }}>
             <img
                 src={bg}
                 alt=""
@@ -371,19 +479,24 @@ export default function PlayArea({
             {BLACK_CENTERS.map((x, i) => (
                 <NeonDivider key={i} x={x} />
             ))}
-            <NeonHitLine />
+            <NeonHitLine lineRef={hitLineRef} />
 
             {notes.map((n) => {
                 const img = imgForEvent(n.event)
                 const native = NOTE_NATIVE.get(img) ?? { w: 1, h: 1 }
                 const width = noteDisplayWidth(img, HEAD_TARGET)
+                const fullH = noteDisplayFullH(img, HEAD_TARGET)
                 const left = WHITE_CENTERS[n.laneIndex] - width / 2
+                const probe = fallProbeRef.current.firstByLevel?.get(n.event.block_id)
+                const isFallProbe = probe && probe.row_num === n.event.row_num
                 return (
                     <img
                         key={n.key}
                         src={img}
                         alt=""
                         draggable={false}
+                        data-fall-probe={isFallProbe ? n.event.block_id : undefined}
+                        data-head-ratio={isFallProbe ? HEAD_TARGET / fullH : undefined}
                         style={{
                             position: "absolute",
                             left: pct(left, "x"),

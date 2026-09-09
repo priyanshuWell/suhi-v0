@@ -12,8 +12,39 @@ export const SESSION_DURATION_MS = 101468
 export const DEVICE_LATENCY_MS = 35
 export const LANE_CENTER = { 1: { x: 100, y: 500 }, 2: { x: 200, y: 500 }, 3: { x: 300, y: 500 }, 4: { x: 400, y: 500 }, 5: { x: 500, y: 500 } }
 export const SPEED_POPUP_AT_MS = 20379 // before Block B
+export const CHORD_POPUP_AT_MS = 37918 // before Block C
 export const AVOID_POPUP_AT_MS = 52918 // before Block D
 export const POPUP_AUTO_CLOSE_MS = 5000
+
+/**
+ * First chart event for each level A–E (by row order).
+ */
+export function getFirstNodePerLevel(chart = SESSION_CHART) {
+    const firstByLevel = new Map()
+    for (const e of chart) {
+        if (!firstByLevel.has(e.block_id)) firstByLevel.set(e.block_id, e)
+    }
+    return firstByLevel
+}
+
+/**
+ * Charted fall times (not screen-measured). Prefer live DOM probe in PlayArea.
+ */
+export function logFirstNodeFallTimesPerLevel(chart = SESSION_CHART) {
+    const rows = [...getFirstNodePerLevel(chart).entries()].map(([level, e]) => ({
+        level,
+        row_num: e.row_num,
+        event_type: e.event_type,
+        lane_intended: e.lane_intended,
+        t_spawn: e.t_spawn,
+        t_expected: e.t_expected,
+        charted_appear_to_center_ms: e.t_expected - e.t_spawn,
+        expected_hit_time_ms: e.expected_hit_time_ms,
+        tempo_bpm: e.tempo_bpm
+    }))
+    console.log("[BeatDrop] charted first-node fall times (per level)", rows)
+    return rows
+}
 
 export const SESSION_CHART = [
   { row_num: 1, block_id: "A", trial_index: 1, event_type: "target_note", similarity_level: null, chord_pair_id: null, lane_intended: 1, hand_zone: "Left", t_spawn: 0, t_expected: 2200, expected_hit_time_ms: 2200, tempo_bpm: 80, x_center: 100, y_center: 500 },

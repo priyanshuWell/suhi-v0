@@ -15,7 +15,8 @@ import {
     LANE_CENTER,
     SESSION_CHART,
     SESSION_DURATION_MS,
-    SPEED_POPUP_AT_MS
+    SPEED_POPUP_AT_MS,
+    logFirstNodeFallTimesPerLevel
 } from "./sessionChart"
 import { FRAME_H } from "./frame"
 
@@ -91,6 +92,8 @@ export function createBeatDropEngine({
             e.closed = false
             e.log = null
         }
+        logFirstNodeFallTimesPerLevel(chart)
+        // Live screen-measured fall times are probed in PlayArea each frame.
     }
 
     function pause() {
