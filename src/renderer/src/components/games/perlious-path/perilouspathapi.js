@@ -16,7 +16,7 @@
 
 import { API_BASE_URL } from "../../../utils/config"
 
-export const DUMMY_FLAG = true
+export const DUMMY_FLAG = false
 
 const BASE_URL = "/perilous-path"
 
