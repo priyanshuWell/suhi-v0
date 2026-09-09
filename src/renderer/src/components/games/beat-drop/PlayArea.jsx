@@ -36,6 +36,13 @@ function noteDisplayWidth(img, headTarget) {
     return headTarget * (native.w / native.headW)
 }
 
+/** Full on-screen height of PNG (box + trail). */
+function noteDisplayFullH(img, headTarget) {
+    const native = NOTE_NATIVE.get(img)
+    if (!native) return headTarget
+    return headTarget * (native.h / native.headW)
+}
+
 function imgForEvent(event) {
     if (event.event_type === "decoy_note") {
         return DECOY_BY_SIM[event.similarity_level] || decoySquare
@@ -144,7 +151,10 @@ export default function PlayArea({
     useEffect(() => {
         engine.current = createBeatDropEngine({
             hitLineTop: HIT_LINE_TOP,
-            headH: HEAD_TARGET
+            hitLineThickness: HIT_LINE_THICKNESS,
+            headH: HEAD_TARGET,
+            getSpriteFullH: (event) =>
+                noteDisplayFullH(imgForEvent(event), HEAD_TARGET)
         })
         if (engineRef) engineRef.current = engine.current
         return () => {
@@ -211,8 +221,8 @@ export default function PlayArea({
     const handleNoteOn = useCallback(
         (_note, info) => {
             if (paused || info.lane == null || !engine.current) return
-            const x = WHITE_CENTERS[info.lane]
-            engine.current.handleLaneTap(info.lane, x, HIT_LINE_TOP)
+            // Engine logs x_tap/y_tap in chart space (x: 100..500, y: 500)
+            engine.current.handleLaneTap(info.lane)
             const snap = engine.current.getSnapshot()
             onScore?.(snap.score)
             setNotes(snap.notes)

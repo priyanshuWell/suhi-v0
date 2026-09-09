@@ -1,5 +1,14 @@
 /**
  * Beat Drop session engine — chart clock, visual hit windows, raw event log.
+ *
+ * Geometry (PNG = trail above + box at bottom):
+ *  - t_expected = BOX center on hit line (ignore trail)
+ *  - Hit accepted while box OR trail overlaps the hit-line band
+ *    (from box leading edge until trail tip clears the bottom of the line)
+ *
+ * Scoring (HUD):
+ *  - +5 per successful note hit
+ *  - +10 bonus at 5x streak, +20 at 10x, +30 at 20x
  */
 import {
     DEVICE_LATENCY_MS,
@@ -12,29 +21,44 @@ import { FRAME_H } from "./frame"
 
 export { SESSION_DURATION_MS, SPEED_POPUP_AT_MS, DEVICE_LATENCY_MS }
 
+const POINTS_PER_HIT = 5
+/** Awarded once when combo first reaches each threshold. */
+const STREAK_BONUS = {
+    5: 10,
+    10: 20,
+    20: 30
+}
+
 /**
  * @param {object} opts
- * @param {number} opts.hitLineTop — design-px Y of hit line
- * @param {number} opts.headH — design-px height of note head (square)
+ * @param {number} opts.hitLineTop — design-px Y of hit line (top edge)
+ * @param {number} [opts.hitLineThickness=15] — hit line band height
+ * @param {number} opts.headH — design-px height of the BOX only (no trail)
+ * @param {(event: object) => number} [opts.getSpriteFullH] — full PNG H (box + trail)
  */
-export function createBeatDropEngine({ hitLineTop, headH }) {
+export function createBeatDropEngine({
+    hitLineTop,
+    hitLineThickness = 15,
+    headH,
+    getSpriteFullH
+}) {
     const halfHead = headH / 2
-    /** image bottom Y when center is on the hit line (= t_expected) */
+    const lineBottom = hitLineTop + hitLineThickness
+    /** image bottom Y when BOX center is on the hit line (= t_expected) */
     const yAtExpected = hitLineTop + halfHead
-    /** image bottom Y at spawn (head fully above top) */
+    /** image bottom Y at spawn */
     const yAtSpawn = -headH
-    /** window open: leading (bottom) edge on line */
+    /** window open: leading edge of BOX touches top of line */
     const yWindowOpen = hitLineTop
-    /** window close: trailing (top of head) on line */
-    const yWindowClose = hitLineTop + headH
 
     const chart = SESSION_CHART.map((e) => ({
         ...e,
-        /** piano / UI lane index 0–4 */
         laneIndex: e.lane_intended - 1,
         tapped: false,
         closed: false,
-        log: null
+        log: null,
+        /** Full sprite height so trail still counts as valid click zone */
+        spriteFullH: getSpriteFullH ? getSpriteFullH(e) : headH * 3
     }))
 
     const log = []
@@ -49,8 +73,7 @@ export function createBeatDropEngine({ hitLineTop, headH }) {
 
     function sessionNow() {
         if (!running) return 0
-        const base = (paused ? pausedAt : performance.now()) - startedAt - pausedTotal
-        return base
+        return (paused ? pausedAt : performance.now()) - startedAt - pausedTotal
     }
 
     function start() {
@@ -102,18 +125,32 @@ export function createBeatDropEngine({ hitLineTop, headH }) {
         return FRAME_H - yBottom
     }
 
+    /**
+     * Window closes when trail tip leaves the BOTTOM of the hit line band
+     * (yTop = lineBottom → yBottom = lineBottom + spriteFullH).
+     */
+    function yWindowCloseFor(event) {
+        return lineBottom + (event.spriteFullH || headH)
+    }
+
     function windowOpenAt(event) {
         const span = Math.max(1, event.t_expected - event.t_spawn)
-        const dist = yWindowOpen - yAtSpawn
         const total = yAtExpected - yAtSpawn
-        return event.t_spawn + (dist / total) * span
+        return event.t_spawn + ((yWindowOpen - yAtSpawn) / total) * span
     }
 
     function windowCloseAt(event) {
         const span = Math.max(1, event.t_expected - event.t_spawn)
-        const dist = yWindowClose - yAtSpawn
         const total = yAtExpected - yAtSpawn
-        return event.t_spawn + (dist / total) * span
+        return event.t_spawn + ((yWindowCloseFor(event) - yAtSpawn) / total) * span
+    }
+
+    /** True while box or trail still overlaps the hit-line band. */
+    function overlapsHitLine(event, t) {
+        const yb = yBottomAt(event, t)
+        const fullH = event.spriteFullH || headH
+        const yTop = yb - fullH
+        return yb >= hitLineTop && yTop <= lineBottom
     }
 
     function emptyTapFields() {
@@ -125,63 +162,108 @@ export function createBeatDropEngine({ hitLineTop, headH }) {
         }
     }
 
-    function finalizeEvent(event, t) {
+    function chordPartner(event) {
+        // Chart pairing id (always set for chord_L / chord_R). Logged only when both hit.
+        if (!event.chord_pair_id) return null
+        return chart.find(
+            (e) => e.chord_pair_id === event.chord_pair_id && e.row_num !== event.row_num
+        )
+    }
+
+    /**
+     * Logged chord_pair_id is null until BOTH halves of the pair are hits.
+     * Chart still uses chord_pair_id internally to find partners.
+     */
+    function resolveChordPair(event) {
+        if (!event.chord_pair_id || !event.log) return
+        const partner = chordPartner(event)
+        if (!partner?.closed || !partner.log) return
+
+        const bothHit =
+            event.log.hit_classification === "hit" &&
+            partner.log.hit_classification === "hit"
+
+        if (bothHit) {
+            event.log.chord_pair_id = event.chord_pair_id
+            partner.log.chord_pair_id = event.chord_pair_id
+            event.log.chord_complete = 1
+            partner.log.chord_complete = 1
+        } else {
+            event.log.chord_pair_id = null
+            partner.log.chord_pair_id = null
+            event.log.chord_complete = 0
+            partner.log.chord_complete = 0
+        }
+    }
+
+    function applyHitScore() {
+        combo += 1
+        bestStreak = Math.max(bestStreak, combo)
+        score += POINTS_PER_HIT
+        const bonus = STREAK_BONUS[combo]
+        if (bonus) score += bonus
+    }
+
+    function finalizeEvent(event) {
         if (event.closed) return
         event.closed = true
         if (event.log) return
-        // Omission / correct_rejection (no tap)
+
         const row = {
             row_num: event.row_num,
             block_id: event.block_id,
             trial_index: event.trial_index,
             event_type: event.event_type,
             similarity_level: event.similarity_level,
-            chord_pair_id: event.chord_pair_id,
+            // Only filled later if both L+R of this pair were hit
+            chord_pair_id: null,
             lane_intended: event.lane_intended,
             hand_zone: event.hand_zone,
             t_spawn: event.t_spawn,
             t_expected: event.t_expected,
+            expected_hit_time_ms: event.expected_hit_time_ms,
             ...emptyTapFields(),
             x_center: event.x_center,
             y_center: event.y_center,
             device_latency_offset: DEVICE_LATENCY_MS,
             tempo_bpm: event.tempo_bpm,
             hit_classification:
-                event.event_type === "decoy_note" ? "correct_rejection" : "omission"
+                event.event_type === "decoy_note" ? "correct_rejection" : "omission",
+            chord_complete: null
         }
         event.log = row
         log.push(row)
-        if (event.event_type !== "decoy_note") {
-            combo = 0
-        }
+
+        resolveChordPair(event)
+
+        if (event.event_type !== "decoy_note") combo = 0
     }
 
     function tryCloseExpired(t) {
         for (const e of chart) {
             if (e.closed) continue
-            if (t >= windowCloseAt(e)) finalizeEvent(e, t)
+            // Strict > so a tap exactly at trail tip still counts
+            if (t > windowCloseAt(e)) finalizeEvent(e)
         }
     }
 
     /**
      * White-key press. laneIndex 0–4.
-     * @returns {{ accepted: boolean, event?: object, score: number }}
+     * Logs x_tap/y_tap in chart space: x ∈ {100,200,300,400,500}, y = 500.
      */
-    function handleLaneTap(laneIndex, xTap, yTap) {
+    function handleLaneTap(laneIndex) {
         if (!running || paused) return { accepted: false, score }
         const t = sessionNow()
-        tryCloseExpired(t)
         const lane = laneIndex + 1
 
-        // Find best open event for this lane inside its visual window
+        // Match against live geometry BEFORE closing expired notes,
+        // so the trail tip on the line is still hittable.
         let best = null
         let bestDist = Infinity
         for (const e of chart) {
             if (e.closed || e.tapped) continue
             if (e.lane_intended !== lane) continue
-            const open = windowOpenAt(e)
-            const close = windowCloseAt(e)
-            if (t < open || t > close) continue
+            if (!overlapsHitLine(e, t)) continue
             const dist = Math.abs(t - e.t_expected)
             if (dist < bestDist) {
                 bestDist = dist
@@ -189,52 +271,32 @@ export function createBeatDropEngine({ hitLineTop, headH }) {
             }
         }
 
-        // Decoy false-alarm: any decoy in window on this lane
         if (!best) {
             for (const e of chart) {
                 if (e.closed || e.tapped) continue
                 if (e.event_type !== "decoy_note") continue
                 if (e.lane_intended !== lane) continue
-                const open = windowOpenAt(e)
-                const close = windowCloseAt(e)
-                if (t < open || t > close) continue
+                if (!overlapsHitLine(e, t)) continue
                 best = e
                 break
             }
         }
 
-        if (!best) return { accepted: false, score }
+        if (!best) {
+            tryCloseExpired(t)
+            return { accepted: false, score }
+        }
 
         best.tapped = true
         best.closed = true
-        const te = t - best.t_expected
-        const laneErr = Math.abs(lane - best.lane_intended)
+
         let classification = "hit"
         if (best.event_type === "decoy_note") {
             classification = "false_alarm"
             combo = 0
-        } else if (laneErr >= 2) {
-            classification = "mis-hit-far"
-            combo = 0
-        } else if (laneErr === 1) {
-            classification = "mis-hit-adjacent"
-            combo = 0
-        } else if (Math.abs(te) > (windowCloseAt(best) - windowOpenAt(best)) / 2) {
-            // Within visual window but far from center — still a hit for HUD;
-            // backend may label timing_miss. Keep as hit if correct lane.
-            classification = "hit"
-            combo += 1
-            score += 100
         } else {
             classification = "hit"
-            combo += 1
-            score += 120
-        }
-
-        if (classification === "hit") {
-            bestStreak = Math.max(bestStreak, combo)
-        } else if (classification === "false_alarm") {
-            score = Math.max(0, score - 50)
+            applyHitScore()
         }
 
         const row = {
@@ -243,41 +305,68 @@ export function createBeatDropEngine({ hitLineTop, headH }) {
             trial_index: best.trial_index,
             event_type: best.event_type,
             similarity_level: best.similarity_level,
-            chord_pair_id: best.chord_pair_id,
+            // Only filled later if both L+R of this pair were hit
+            chord_pair_id: null,
             lane_intended: best.lane_intended,
             hand_zone: best.hand_zone,
             t_spawn: best.t_spawn,
             t_expected: best.t_expected,
+            expected_hit_time_ms: best.expected_hit_time_ms,
             t_tap: Math.round(t),
             lane_tapped: lane,
-            x_tap: xTap ?? LANE_CENTER[lane].x,
-            y_tap: yTap ?? LANE_CENTER[lane].y,
+            x_tap: LANE_CENTER[lane].x,
+            y_tap: LANE_CENTER[lane].y,
             x_center: best.x_center,
             y_center: best.y_center,
             device_latency_offset: DEVICE_LATENCY_MS,
             tempo_bpm: best.tempo_bpm,
-            hit_classification: classification
+            hit_classification: classification,
+            chord_complete: null,
+            combo,
+            score
         }
         best.log = row
         log.push(row)
+
+        resolveChordPair(best)
+        tryCloseExpired(t)
+
+        // Temporary: log tap coordinates whenever x_tap / y_tap are set
+        if (row.x_tap != null || row.y_tap != null) {
+            console.log("[BeatDrop] tap", {
+                x_tap: row.x_tap,
+                y_tap: row.y_tap,
+                lane_tapped: row.lane_tapped,
+                lane_intended: row.lane_intended,
+                t_tap: row.t_tap,
+                t_expected: row.t_expected,
+                event_type: row.event_type,
+                chord_pair_id: row.chord_pair_id,
+                chord_complete: row.chord_complete,
+                hit_classification: row.hit_classification,
+                combo: row.combo,
+                score: row.score
+            })
+        }
+
         return { accepted: true, event: best, score, classification }
     }
 
-    /** Active notes for rendering at session time t */
     function getVisibleNotes(t) {
         tryCloseExpired(t)
         const visible = []
         for (const e of chart) {
-            if (e.closed && t > windowCloseAt(e) + 200) continue
             if (t < e.t_spawn) continue
-            if (t > windowCloseAt(e) + 400) continue
+            if (t > windowCloseAt(e) + 500) continue
             const yb = yBottomAt(e, t)
             visible.push({
-                key: e.row_num,
+                key: e.chord_pair_id
+                    ? `${e.chord_pair_id}-${e.event_type}`
+                    : `row-${e.row_num}`,
                 event: e,
                 laneIndex: e.laneIndex,
                 cssBottom: cssBottom(yb),
-                inWindow: t >= windowOpenAt(e) && t <= windowCloseAt(e) && !e.closed
+                inWindow: overlapsHitLine(e, t) && !e.tapped
             })
         }
         return visible
