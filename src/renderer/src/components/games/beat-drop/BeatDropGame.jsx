@@ -27,6 +27,7 @@ import {
 import { getKioskId } from "../../../utils/config"
 import { getNextRoute } from "../../../utils/stageRouter"
 import backingTrack from "../../../assets/beat-drop/audio/beatdrop_backing_44k1_16bit.wav"
+import { useNavigate } from "react-router"
 
 const SCREENS = {
     INTRO: "intro",
@@ -62,7 +63,8 @@ export default function BeatDropGame() {
     const [coins, setCoins] = useState(500)
     const [streak, setStreak] = useState(0)
     const [completing, setCompleting] = useState(false)
-
+    const navigate = useNavigate()
+    const [results, setResults] = useState(null)
     const audioRef = useRef(null)
     const engineRef = useRef(null)
     const sessionIdRef = useRef(null)
@@ -252,6 +254,7 @@ export default function BeatDropGame() {
                 })
                 console.info("[BeatDrop] session complete:", data)
                 const next = resultsFromComplete(data, local)
+                setResults(data)
                 setScore(next.score)
                 setCoins(next.coins)
                 setStreak(next.streak)
@@ -281,10 +284,12 @@ export default function BeatDropGame() {
 
     const handleNext = useCallback(() => {
         clearPopupTimer()
-        const route =
-            nextRouteRef.current ??
-            getNextRoute(storeScreening?.nextStage, "/bia/result")
-        console.info("[BeatDrop] handleNext — navigating to:", route)
+        setScreen(SCREENS.INTRO)
+        setShowAvoid(false)
+        setShowSpeed(false)
+        const nextStage = results?.next_stage
+        // const nextStage = "/bia/result"
+        const route = getNextRoute(nextStage, "/bia/result")
         navigate(route)
     }, [navigate, storeScreening?.nextStage])
 
