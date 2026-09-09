@@ -438,9 +438,12 @@ export default function VoiceAnalysis() {
                         file: new Blob([wavArrayBuffer], { type: "audio/wav" }),
                         fileName: `${userId || "voice"}_${Date.now()}.wav`
                     }
+                    console.log("[VoiceAnalysis] Calling runVoice with:", runPayload)
                     const runResult = await runVoice(runPayload)
+                    console.log("[VoiceAnalysis] runVoice result:", runResult)
+                    console.log("[VoiceAnalysis] Calling voiceBufferApi with userId:", userId, "sessionId:", sessionId)
                     const bufferResult = await voiceBufferApi(bufferPayload)
-                    console.log("[Voice] bufferResult:", bufferResult)
+                    console.log("[VoiceAnalysis] voiceBufferApi result:", bufferResult)
 
                     if (runResult.success) {
                         if (runResult.screening) {
@@ -499,6 +502,7 @@ export default function VoiceAnalysis() {
     }, [startRecording])
 
     const onTimerEnd = useCallback(() => {
+        console.log("[VoiceAnalysis] onTimerEnd fired — calling stopRecordingAndSubmit")
         setIsComplete(true)
         stopRecordingAndSubmit()
     }, [stopRecordingAndSubmit])

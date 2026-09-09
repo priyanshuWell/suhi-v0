@@ -669,7 +669,7 @@ export default function BIACalculate({ user, onComplete }) {
         console.log("[BIA DEBUG] whComplete Next button clicked")
 
         const screeningOrder = screeningState?.screeningOrder ?? 1
-        console.log("[BIA DEBUG] Current screening order:", screeningState,screeningOrder)
+        console.log("[BIA DEBUG] Current screening order:", screeningState, screeningOrder)
 
         if (screeningOrder === 2) {
             // ── Screening 2: height_weight stage ends here (no impedance needed) ──
@@ -932,12 +932,23 @@ export default function BIACalculate({ user, onComplete }) {
                 storeUser?.data?.user_id
             )
             await Promise.allSettled([window.api.disconnectHeightPort()])
+            if (screeningState?.screeningOrder !== 1) {
+                await heightWeightSubmit({
+                    session_id: storeUser?.data?.buffer_id,
+                    screening_id: screeningState?.sessionId,
+                    user_id: storeUser?.data?.user_id,
+                    height: 0,
+                    weight: 0
+                })
+                return;
+            }
             const skipComplete = await BIAComplete({
                 session_id: storeUser?.data?.buffer_id,
                 screening_session_id: screeningState?.sessionId
             })
             if (skipComplete?.screening) dispatch(setScreening(skipComplete.screening))
-            const skipRoute = getNextRoute(skipComplete?.screening?.next_stage, "/smoothie-slash")
+            const skipFallback = (screeningState?.screeningOrder ?? 1) === 2 ? "/adaptive-eye" : "/smoothie-slash"
+            const skipRoute = getNextRoute(skipComplete?.screening?.next_stage, skipFallback)
             console.log("[BIA] Phase 1 skip — navigating to:", skipRoute)
             navigate(skipRoute)
         }
