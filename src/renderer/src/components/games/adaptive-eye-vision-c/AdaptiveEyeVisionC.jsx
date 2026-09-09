@@ -1,11 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect, useRef, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router';
 import bg1 from "../../../assets/lightbg.png"
 import { visualAcuityStart, visualAcuitySubmit, visualAcuityComplete } from '../../../utils/api'
 import { pickRandomDirection, computeEyeResult, SIZE_LEVELS } from './constants';
 import InstructionScreen from './InstructionScreen';
 import GameScreen from './GameScreen';
 import CompletedModal from './CompletedModal';
+import { setScreening } from '../../../features/common/commonSlice';
+import { getNextRoute } from '../../../utils/stageRouter';
 
 /* ------------------------------------------------------------------ */
 /*  Main component                                                     */
@@ -22,11 +25,13 @@ import CompletedModal from './CompletedModal';
 /*      mounted/frozen, disabled, rather than being unmounted).        */
 /* ------------------------------------------------------------------ */
 export default function AdaptiveEyeVisionC({ onComplete } = {}) {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((state) => state.common.user)
   const screening = useSelector((state) => state.common.screening)
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
-  const sessionId = screening?.sessionId
-
+  const screeningId = screening?.screeningId
+  const sessionId = screening?.sessionId ;
   const [phase, setPhase] = useState('instruction'); // 'instruction' | 'testing' | 'modal'
   const [eye, setEye] = useState('right');
   const [level, setLevel] = useState(1);
@@ -40,6 +45,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   // IS SCORED FOR EACH EYE" is computed from once the eye's test ends.
   const [lastPassedLevel, setLastPassedLevel] = useState(0);
   const [results, setResults] = useState({ right: null, left: null });
+  const [completeResult, setCompleteResult] = useState(null);
 
   // One game session covers both eyes — created once up front (mirrors
   // colorBlindessStart in ColorBlindPlate.jsx) and reused for every
@@ -52,12 +58,12 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     try {
       const res = await visualAcuityStart(userId, sessionId);
       if (res.success) {
-        setGameSessionId(res.game_session_id ?? null);
+        setGameSessionId(res?.data?.game_session_id ?? null);
       } else {
         console.warn('[AdaptiveEyeVisionC] Failed to start session:', res.error);
       }
-    } finally {
-      setStarting(false);
+    } catch (err) {
+      console.warn('[AdaptiveEyeVisionC] Failed to start session:', err.message);
     }
   };
 
@@ -83,11 +89,16 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       setPhase('instruction');   // <-- left eye's InstructionScreen, not straight into testing
     } else {
       setPhase('modal');
-      // Both eyes done — mark the game session complete. Fire-and-forget so
-      // a slow/failed network call never blocks the completed modal.
-      visualAcuityComplete(gameSessionId, sessionId).catch((err) => {
-        console.warn('[AdaptiveEyeVisionC] Failed to complete session:', err.message)
-      })
+      visualAcuityComplete(gameSessionId, screeningId)
+        .then((res) => {
+          if (res?.screening) {
+            dispatch(setScreening(res.screening))
+          }
+          setCompleteResult(res)
+        })
+        .catch((err) => {
+          console.warn('[AdaptiveEyeVisionC] Failed to complete session:', err.message)
+        })
     }
   };
 
@@ -134,6 +145,12 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     }, 700);
   };
 
+  const handleModalNext = () => {
+    const nextStage = completeResult?.screening?.next_stage ;
+    const route = getNextRoute(nextStage, "/beat-drop")
+    navigate(route)
+  };
+
   const restart = () => {
     setEye('right');
     setLevel(1);
@@ -162,8 +179,6 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
           <InstructionScreen
             eye={eye}
             onStart={handleStart}
-            disabled={eye === 'right' && !gameSessionId}
-            loading={eye === 'right' && starting}
           />
         )}
         {/* GameScreen now also renders during 'modal' (frozen + disabled)
@@ -182,7 +197,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
         )}
       </div>
 
-      {phase === 'modal' && <CompletedModal results={results} onNext={restart} />}
+      {phase === 'modal' && <CompletedModal results={results} onNext={handleModalNext} />}
     </div>
   );
 }

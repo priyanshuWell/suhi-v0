@@ -8,7 +8,7 @@ import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../utils/audioUtils"
-import { getNextRoute } from "../utils/stageRouter"
+import { getNextRoute, resolvePostStageRoute } from "../utils/stageRouter"
 
 const buildProfileImage = (imagePath) => {
     if (!imagePath) return profilepic
@@ -32,7 +32,9 @@ export default function RegisterCard() {
     const user = useSelector((state) => state.common.user)
     const screening = useSelector((state) => state.common.screening)
     const nextStage = screening?.nextStage || null
-    console.log("nextStage:", nextStage)
+    const pendingStages = screening?.pendingStages || []
+    const isPendingTransition = screening?.isPendingTransition || false
+    console.log("screening:", screening, "nextStage:", nextStage, "isPendingTransition:", isPendingTransition)
     // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
     const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
 
@@ -89,6 +91,15 @@ export default function RegisterCard() {
     const handleLetsGo = () => {
         stopAudio()
         // Use the next_stage from the backend (stored in Redux during login)
+        // 1. Screening 1 fully done (is_pending_transition) OR
+        //    Screening 2 fully done (next_stage null + no pending stages)
+        //    → always go to the result page
+        if (isPendingTransition || (nextStage === null && pendingStages.length === 0)) {
+            console.log("[RegisterCard] screening complete — navigating to result page")
+            navigate("/bia/result")
+            return
+        }
+        // 2. Normal next-stage routing
         const nextRoute = getNextRoute(nextStage, "/bia/leg50")
         console.log("[RegisterCard] navigating to next stage:", nextRoute)
         navigate(nextRoute)

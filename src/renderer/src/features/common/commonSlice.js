@@ -7,11 +7,20 @@ const initialState = {
     lang: "en",
     sessionId: null, // BIA session identifier
     screening: {
-        sessionId: null,
-        isResumed: false,
-        resumeCount: 0,
-        nextStage: null,
-        completedStages: []
+      sessionId: null,
+      screeningId: null,
+      screeningName: null,
+      screeningOrder: null,
+      isResumed: false,
+      isComplete: false,
+      isPendingTransition: false,
+      resumeCount: 0,
+      nextStage: null,
+      lastStage: null,
+      pendingStages: [],
+      completedStages: [],
+      startsInSeconds: null,
+      nextScreening: null,
     },
     candidates: [],
 
@@ -58,11 +67,20 @@ const commonSlice = createSlice({
         setLoginScreening: (state, action) => {
             if (action.payload) {
                 state.screening = {
-                    sessionId: action.payload.session_id || null,
-                    isResumed: action.payload.is_resumed || false,
-                    resumeCount: action.payload.resume_count || 0,
-                    nextStage: action.payload.next_stage || null,
-                    completedStages: action.payload.completed_stages || []
+                  sessionId: action.payload.session_id || null,
+                  screeningId: action.payload.screening_id || null,
+                  screeningName: action.payload.screening_name || null,
+                  screeningOrder: action.payload.screening_order || null,
+                  isResumed: action.payload.is_resumed || false,
+                  isComplete: action.payload.is_complete || false,
+                  isPendingTransition: action.payload.is_pending_transition || false,
+                  resumeCount: action.payload.resume_count || 0,
+                  nextStage: action.payload.next_stage || null,
+                  lastStage: action.payload.last_stage || null,
+                  completedStages: action.payload.completed_stages || [],
+                  pendingStages: action.payload.pending_stages || [],
+                  startsInSeconds: action.payload.starts_in_seconds ?? null,
+                  nextScreening: action.payload.next_screening || null,
                 }
             } else {
                 state.screening = initialState.screening
@@ -170,11 +188,17 @@ const commonSlice = createSlice({
                 state.screening = {
                     ...state.screening,
                     // sessionId intentionally NOT updated here — see setLoginScreening
+                    screeningOrder: action.payload.screening_order ?? state.screening.screeningOrder,
                     isResumed: action.payload.is_resumed ?? state.screening.isResumed,
+                    isComplete: action.payload.is_complete ?? state.screening.isComplete,
+                    isPendingTransition: action.payload.is_pending_transition ?? state.screening.isPendingTransition,
                     resumeCount: action.payload.resume_count ?? state.screening.resumeCount,
                     nextStage: action.payload.next_stage ?? state.screening.nextStage,
-                    completedStages:
-                        action.payload.completed_stages ?? state.screening.completedStages
+                    lastStage: action.payload.last_stage ?? state.screening.lastStage,
+                    completedStages: action.payload.completed_stages ?? state.screening.completedStages,
+                    pendingStages: action.payload.pending_stages ?? state.screening.pendingStages,
+                    startsInSeconds: action.payload.starts_in_seconds ?? state.screening.startsInSeconds,
+                    nextScreening: action.payload.next_screening ?? state.screening.nextScreening,
                 }
             }
             // Note: removed the "else → reset to initialState" branch that existed

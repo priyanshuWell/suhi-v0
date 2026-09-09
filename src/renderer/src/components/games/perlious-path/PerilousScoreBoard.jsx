@@ -1,7 +1,11 @@
+import { motion } from "framer-motion"
 import { COLORS } from "./theme"
 
 import statsPanelFrame from "../../../assets/perilous_path/perilous_result_board.png"
 import titleBarFrame from "../../../assets/perilous_path/perilous_result_title.png"
+import trophy from "../../../assets/perilous_path/trophy.png"
+import direction from "../../../assets/perilous_path/direction.png"
+import coin from "../../../assets/perilous_path/coin.png"
 import PerilousButton from "./PerilousButton"
 
 const LAYOUT = {
@@ -9,56 +13,34 @@ const LAYOUT = {
     panel: { left: 13, top: 29, width: 74, height: 42 },
 }
 
-// The original design's 3-row panel used centers at 24/51/78 (top pad 24%,
-// bottom pad 22%, evenly spaced in between). Generalized here so the same
-// panel art can host any row count — still lands exactly on 24/51/78 when
-// count === 3.
-function rowCenters(count) {
-    if (count <= 1) return [51]
-    const top = 24
-    const bottom = 78
-    return Array.from({ length: count }, (_, i) => top + ((bottom - top) * i) / (count - 1))
-}
+// Three evenly-spaced row centers inside the panel (top 24%, mid 51%, bot 78%)
+const ROW_CENTERS = [24, 51, 78]
 
 const ICON_BOX = { left: 13, width: 20 }
 const LABEL_BOX = { left: 39, width: 54 }
 
-// Shown only if `result` hasn't arrived yet — shouldn't normally happen,
-// since the parent only renders this screen once /game/complete resolves.
-const FALLBACK_STATS = [{ key: "loading", icon: "⏳", label: "Results", value: "Calculating…" }]
-
-const CONSTRUCT_ORDER = ["recall", "working_memory", "spatial_sequencing", "processing_speed", "sustained_attention"]
-
-const CONSTRUCT_DISPLAY = {
-    recall: { icon: "🧠", label: "Recall" },
-    working_memory: { icon: "🧩", label: "Working Memory" },
-    spatial_sequencing: { icon: "🧭", label: "Spatial Sequencing" },
-    processing_speed: { icon: "⚡", label: "Processing Speed" },
-    sustained_attention: { icon: "🎯", label: "Sustained Attention" },
-}
-
-function buildStatsFromResult(result) {
-    return CONSTRUCT_ORDER.map((key) => {
-        const construct = result[key]
-        const display = CONSTRUCT_DISPLAY[key]
-        return {
-            key,
-            icon: display.icon,
-            label: display.label,
-            value: construct ? `${Math.round(construct.score_0_1 * 100)}% · ${construct.band}` : "—",
-        }
-    })
-}
-
-function StatRow({ icon, label, value, centerPercent }) {
+function StatRow({ icon, label, value, centerPercent, delay = 0 }) {
     return (
-        <div className="absolute left-0 w-full -translate-y-1/2 text-white" style={{ top: `${centerPercent}%` }}>
+        <motion.div
+            className="absolute left-0 w-full -translate-y-1/2 text-white"
+            style={{ top: `${centerPercent}%` }}
+            initial={{ opacity: 0, x: -25, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 350, damping: 22, delay }}
+        >
             <div className="relative flex items-center">
                 <div
                     className="relative aspect-square shrink-0"
                     style={{ marginLeft: `${ICON_BOX.left}%`, width: `${ICON_BOX.width}%` }}
                 >
-                    <span className="absolute inset-0 flex items-center justify-center text-2xl">{icon}</span>
+                    <motion.img
+                        src={icon}
+                        alt=""
+                        className="absolute inset-0 m-auto max-h-[85%] max-w-[85%] object-contain"
+                        draggable={false}
+                        animate={{ scale: [1, 1.08, 1], rotate: [0, 2, -2, 0] }}
+                        transition={{ repeat: Infinity, duration: 2.8, ease: "easeInOut", delay }}
+                    />
                 </div>
 
                 <div
@@ -67,64 +49,82 @@ function StatRow({ icon, label, value, centerPercent }) {
                         width: `${LABEL_BOX.width}%`,
                     }}
                 >
-                    <div className="font-bold text-[#FFB703] text-xs line-clamp-1" style={{ lineHeight: 1.2 }}>
+                    <div className="font-anton font-bold text-[#FFB703] text-[2.4cqw] line-clamp-1" style={{ lineHeight: 1.2 }}>
                         {label}
                     </div>
-                    <div className="font-extrabold text-white" style={{ fontSize: "3.6cqw", lineHeight: 1.2 }}>
+                    <motion.div
+                        className="font-anton font-extrabold text-white text-[3.8cqw]"
+                        style={{ lineHeight: 1.2 }}
+                        initial={{ scale: 0.8 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: delay + 0.1, type: "spring", stiffness: 400 }}
+                    >
                         {value}
-                    </div>
+                    </motion.div>
                 </div>
             </div>
-        </div>
+        </motion.div>
     )
 }
 
 /**
  * PerilousScoreBoard
- * Final results screen — shown once, after POST /game/complete resolves
- * (NOT between individual levels). `result` is that endpoint's response:
- * the 5 cognitive construct scores plus run totals.
- *
- * NOTE: statsPanelFrame's art was originally designed for a 3-row layout.
- * Rendering all 5 constructs here stretches the same frame over 5 evenly
- * spaced rows — it will likely want a taller/redesigned panel asset from
- * design; flagging this rather than guessing at new artwork.
- *
- * Also renamed the CTA from "Next" to "Play Again", since it calls
- * `onNext` -> the parent's restart handler, which goes all the way back to
- * the intro screen (there's no "next level" concept here anymore — that's
- * driven entirely by the /next-grid loop before this screen is ever
- * shown). Confirm this is the intended end-of-run behavior.
- *
- * Props:
- *  - result: the POST /game/complete response.
- *  - onNext: called when the button is tapped (restarts the run).
+ * Final results screen — shown once after POST /game/complete resolves.
+ * Displays total_points, total_neuro_arcs (NeuroCoins), and best_streak
+ * from the game/complete response.
  */
 export default function PerilousScoreBoard({ result, onNext }) {
-    const stats = result ? buildStatsFromResult(result) : FALLBACK_STATS
-    const centers = rowCenters(stats.length)
-    const handleNext = onNext ?? (() => console.log("Play Again tapped — no onNext handler wired up"))
+    const handleNext = onNext ?? (() => console.log("Next tapped — no onNext handler wired up"))
+
+    const stats = [
+        {
+            key: "points",
+            icon: trophy,
+            label: "Total Points",
+            value: result ? result.total_points : "—",
+        },
+        {
+            key: "neurocoins",
+            icon: coin,
+            label: "NeuroCoins",
+            value: result ? result.total_neuro_arcs : "—",
+        },
+        {
+            key: "streak",
+            icon: direction,
+            label: "Best Consecutive Run",
+            value: result ? result.best_streak : "—",
+        },
+    ]
 
     return (
-        <div className="absolute inset-0">
-            {/* Title */}
-            <div
+        <motion.div
+            className="absolute inset-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+        >
+            {/* Title with spring entrance */}
+            <motion.div
                 className="absolute"
                 style={{ left: `${LAYOUT.title.left}%`, top: `${LAYOUT.title.top}%`, width: `${LAYOUT.title.width}%` }}
+                initial={{ y: -35, opacity: 0, scale: 0.9 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 350, damping: 20 }}
             >
                 <img src={titleBarFrame} alt="" className="w-full" draggable={false} />
                 <div className="absolute inset-0 flex items-center justify-center">
                     <span
-                        className="font-extrabold uppercase tracking-wide text-white"
-                        style={{ fontSize: "5cqw", textShadow: `0 0 18px ${COLORS.danger}, 0 0 36px ${COLORS.magenta}` }}
+                        className="font-anton font-extrabold uppercase tracking-wide text-white text-[5cqw]"
+                        style={{ textShadow: `0 0 18px ${COLORS.danger}, 0 0 36px ${COLORS.magenta}` }}
                     >
                         Results
                     </span>
                 </div>
-            </div>
+            </motion.div>
 
-            {/* Stats panel */}
-            <div
+            {/* Stats panel with smooth pop-in */}
+            <motion.div
                 className="absolute"
                 style={{
                     left: `${LAYOUT.panel.left}%`,
@@ -132,6 +132,9 @@ export default function PerilousScoreBoard({ result, onNext }) {
                     width: `${LAYOUT.panel.width}%`,
                     height: `${LAYOUT.panel.height}%`,
                 }}
+                initial={{ scale: 0.92, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.1 }}
             >
                 <img
                     src={statsPanelFrame}
@@ -141,21 +144,28 @@ export default function PerilousScoreBoard({ result, onNext }) {
                     draggable={false}
                 />
                 {stats.map((stat, i) => (
-                    <StatRow key={stat.key} {...stat} centerPercent={centers[i]} />
+                    <StatRow
+                        key={stat.key}
+                        {...stat}
+                        centerPercent={ROW_CENTERS[i]}
+                        delay={0.25 + i * 0.15}
+                    />
                 ))}
-            </div>
+            </motion.div>
 
-            {result && (
-                <p className="absolute left-0 top-[74%] w-full text-center text-xs text-white/80">
-                    {result.total_points} pts · {result.total_neuro_arcs} NeuroArcs · best streak {result.best_streak}
-                </p>
-            )}
-
-            <PerilousButton
-                title="Play Again"
-                className="absolute left-[23%] top-[80%] w-[54%] text-white"
-                onClick={handleNext}
-            />
-        </div>
+            {/* Next Button with fade-up entrance */}
+            <motion.div
+                className="absolute left-[23%] top-[80%] w-[54%]"
+                initial={{ y: 25, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.65, duration: 0.35 }}
+            >
+                <PerilousButton
+                    title="Next"
+                    className="w-full text-white"
+                    onClick={handleNext}
+                />
+            </motion.div>
+        </motion.div>
     )
 }

@@ -416,7 +416,7 @@ export async function visualAcuitySubmit({
             outcome
         }
 
-        const response = await fetch(`${API_BASE_URL}/visual-acuity/response`, {
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/user-details`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -520,6 +520,34 @@ export async function runFPT(shmPath, kioskId) {
         return {
             success: false,
             error: { message: error.message }
+        }
+    }
+}
+
+export async function heightWeightSubmit(payload) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/height-weight`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error submitting height and weight:", error)
+        return {
+            success: false,
+            error: error.message
         }
     }
 }

@@ -82,7 +82,7 @@ const PATH_GLOW_COLOR = COLORS.cyan
 // ── Path-beam geometry ───────────────────────────────────────────────────
 // Must stay in sync with the grid's `gap-[3%]` class below — this lets us
 // compute exact tile-center percentages without measuring the DOM.
-const GRID_GAP_PCT = 3
+const GRID_GAP_PCT = 0.1
 const BEAM_THICKNESS_RATIO = 0.45 // fraction of a cell's own span used as beam thickness
 
 // Percentage (0-100) span of a single cell along an axis with `count` cells.
@@ -186,8 +186,8 @@ function PathSegment({ orientation, flip, style }) {
             ? "right center"
             : "left center"
         : flip
-          ? "center bottom"
-          : "center top"
+            ? "center bottom"
+            : "center top"
 
     return (
         <motion.div className="absolute" style={style} exit={{ opacity: 0 }} transition={{ duration: 0.14, ease: "easeIn" }}>
@@ -228,9 +228,8 @@ function PathSegment({ orientation, flip, style }) {
                 />
                 {/* Hot white filament through the center */}
                 <div
-                    className={`absolute rounded-full bg-white/90 ${
-                        isHorizontal ? "left-0 right-0 top-1/2 h-[22%] -translate-y-1/2" : "top-0 bottom-0 left-1/2 w-[22%] -translate-x-1/2"
-                    }`}
+                    className={`absolute rounded-full bg-white/90 ${isHorizontal ? "left-0 right-0 top-1/2 h-[22%] -translate-y-1/2" : "top-0 bottom-0 left-1/2 w-[22%] -translate-x-1/2"
+                        }`}
                     style={{ filter: "blur(1.5px)" }}
                 />
             </motion.div>
@@ -238,18 +237,8 @@ function PathSegment({ orientation, flip, style }) {
     )
 }
 
-/** A single grid cell: base tile art plus whatever sits on top of it. */
-function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, onClick }) {
-    // One-shot "you stepped on a hazard" flash — isHazardTapped only ever
-    // flips false -> true once per trial, so this effect fires exactly once.
-    const [justHit, setJustHit] = useState(false)
-    useEffect(() => {
-        if (!isHazardTapped) return undefined
-        setJustHit(true)
-        const t = setTimeout(() => setJustHit(false), 450)
-        return () => clearTimeout(t)
-    }, [isHazardTapped])
-
+/** Base interactive tile button — sits at Layer 1 (behind the path line). */
+function TileButton({ row, col, isHazardTapped, onClick }) {
     return (
         <motion.button
             type="button"
@@ -259,21 +248,41 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
             className={`relative aspect-square w-full select-none ${isHazardTapped ? "ring-2 ring-red-500 rounded-full" : ""}`}
         >
             <img src={tile} alt="" className="h-full w-full" draggable={false} />
+        </motion.button>
+    )
+}
 
+/** Overlay icons/badges (Start, End, hazards, connector nodes) — sits at Layer 3 (on top of the path line). */
+function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped }) {
+    // One-shot "you stepped on a hazard" flash
+    const [justHit, setJustHit] = useState(false)
+    useEffect(() => {
+        if (!isHazardTapped) return undefined
+        setJustHit(true)
+        const t = setTimeout(() => setJustHit(false), 450)
+        return () => clearTimeout(t)
+    }, [isHazardTapped])
+
+    return (
+        <div className="pointer-events-none relative aspect-square w-full select-none">
             {isStart && (
-                <img
+                <motion.img
                     src={startBadge}
                     alt="Start"
                     className="absolute left-1/2 top-1/2 w-[85%] -translate-x-1/2 -translate-y-1/2"
                     draggable={false}
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
                 />
             )}
             {isEnd && (
-                <img
+                <motion.img
                     src={endBadge}
                     alt="End"
                     className="absolute left-1/2 top-1/2 w-[85%] -translate-x-1/2 -translate-y-1/2"
                     draggable={false}
+                    animate={{ scale: [1, 1.06, 1] }}
+                    transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut", delay: 0.5 }}
                 />
             )}
             <AnimatePresence>
@@ -283,10 +292,20 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
                         src={monsterIcon}
                         alt="Danger"
                         className="absolute left-1/2 top-1/2 w-[78%] -translate-x-1/2 -translate-y-1/2"
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        transition={{ duration: 0.25 }}
+                        initial={{ opacity: 0, scale: 0.3, rotate: -10 }}
+                        animate={{
+                            opacity: 1,
+                            scale: [0.95, 1.06, 0.95],
+                            y: [-2, 2, -2],
+                            rotate: [0, 3, -3, 0],
+                        }}
+                        exit={{ opacity: 0, scale: 0.4 }}
+                        transition={{
+                            scale: { repeat: Infinity, duration: 1.8, ease: "easeInOut" },
+                            y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" },
+                            rotate: { repeat: Infinity, duration: 2.4, ease: "easeInOut" },
+                            opacity: { duration: 0.3 },
+                        }}
                         draggable={false}
                     />
                 )}
@@ -295,9 +314,7 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
                 {isOnPath &&
                     !isStart &&
                     !isEnd && [
-                        // Glow halo — sits strictly behind the node art (z-index 0,
-                        // rendered first) and kept smaller/dimmer than the dot itself
-                        // so it reads as ambient light, not a shape competing with it.
+                        // Glow halo
                         <motion.div
                             key="connector-glow"
                             className="pointer-events-none absolute left-1/2 top-1/2 w-[50%] -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -310,9 +327,7 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
                                 opacity: { duration: 1.4, repeat: Infinity, ease: "easeInOut" },
                             }}
                         />,
-                        // Node art — sits strictly in front (z-index 1, rendered
-                        // last) with its own tight drop-shadow so it stays crisp and
-                        // legible instead of washing out into the aura behind it.
+                        // Node art
                         <motion.img
                             key="connector"
                             src={connectorNode}
@@ -341,7 +356,7 @@ function Tile({ row, col, isStart, isEnd, isDanger, isOnPath, isHazardTapped, on
                     />
                 )}
             </AnimatePresence>
-        </motion.button>
+        </div>
     )
 }
 
@@ -456,29 +471,29 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             }
 
             try {
-              const result = timedOut
-                  ? await perilousPathApi.trialTimeout(payload)
-                  : await perilousPathApi.trialComplete(payload)
-              console.log("TRIAL RESULT", result)
+                const result = timedOut
+                    ? await perilousPathApi.trialTimeout(payload)
+                    : await perilousPathApi.trialComplete(payload)
+                console.log("TRIAL RESULT", result)
 
-              // Mirror RoundManager.Succeed/Fail: show what happened and bump the
-              // score badge for a beat before the parent swaps in the next board.
-              const earned = result?.scoring?.points_awarded ?? 0
-              const routeValid = result?.route_is_valid ?? false
-              setResultBanner(
-                  routeValid
-                      ? { tone: "success", text: earned > 0 ? `+${earned} Safe crossing` : "Crossed — no points" }
-                      : { tone: "fail", text: timedOut ? "Time ran out" : "Path not completed" }
-              )
-              if (result?.game_totals?.total_points != null) {
-                  setDisplayedScore(result.game_totals.total_points)
-              }
-              setRevealHazards(true)
-              await new Promise((resolve) => setTimeout(resolve, RESULT_HOLD_MS))
+                // Mirror RoundManager.Succeed/Fail: show what happened and bump the
+                // score badge for a beat before the parent swaps in the next board.
+                const earned = result?.scoring?.points_awarded ?? 0
+                const routeValid = result?.route_is_valid ?? false
+                setResultBanner(
+                    routeValid
+                        ? { tone: "success", text: earned > 0 ? `+${earned} Safe crossing` : "Crossed — no points" }
+                        : { tone: "fail", text: timedOut ? "Time ran out" : "Path not completed" }
+                )
+                if (result?.game_totals?.total_points != null) {
+                    setDisplayedScore(result.game_totals.total_points)
+                }
+                setRevealHazards(true)
+                await new Promise((resolve) => setTimeout(resolve, RESULT_HOLD_MS))
 
-              console.log("CALLING PARENT onFinish")
-              await onFinish?.(result)
-              console.log("PARENT onFinish COMPLETE")
+                console.log("CALLING PARENT onFinish")
+                await onFinish?.(result)
+                console.log("PARENT onFinish COMPLETE")
             } catch (err) {
                 hasSubmittedRef.current = false
                 setResultBanner(null)
@@ -654,9 +669,9 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     const dangerSet = new Set(
         showHazards
             ? board.hazard_tiles.map((t) => {
-                  const { row, col } = tileToRowCol(t)
-                  return cellKey(row, col)
-              })
+                const { row, col } = tileToRowCol(t)
+                return cellKey(row, col)
+            })
             : []
     )
     const pathSet = new Set(
@@ -768,8 +783,9 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             >
                 <img src={boardFrame} alt="" className="w-full" draggable={false} />
 
+                {/* Layer 1: Base tile buttons */}
                 <div
-                    className="absolute grid grid-cols-4 gap-[3%] touch-none select-none"
+                    className="absolute grid grid-cols-4 touch-none select-none z-0"
                     style={{
                         left: `${LAYOUT.boardInset.left}%`,
                         top: `${LAYOUT.boardInset.top}%`,
@@ -783,18 +799,12 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                     {Array.from({ length: grid.rows * grid.cols }).map((_, i) => {
                         const row = Math.floor(i / grid.cols)
                         const col = i % grid.cols
-                        const isStart = row === board.start.row && col === board.start.col
-                        const isEnd = row === board.destination.row && col === board.destination.col
                         const key = cellKey(row, col)
                         return (
-                            <Tile
+                            <TileButton
                                 key={key}
                                 row={row}
                                 col={col}
-                                isStart={isStart}
-                                isEnd={isEnd}
-                                isDanger={dangerSet.has(key)}
-                                isOnPath={pathSet.has(key)}
                                 isHazardTapped={revealHazards && hazardTapSet.has(key)}
                                 onClick={handleTileClick}
                             />
@@ -802,9 +812,9 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                     })}
                 </div>
 
-                {/* Glowing beams tracing the player's path, laid over the tile grid */}
+                {/* Layer 2: Glowing beams tracing the player's path (behind Start/End badges) */}
                 <div
-                    className="pointer-events-none absolute"
+                    className="pointer-events-none absolute z-10"
                     style={{
                         left: `${LAYOUT.boardInset.left}%`,
                         top: `${LAYOUT.boardInset.top}%`,
@@ -817,6 +827,36 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                             <PathSegment key={segment.key} {...segment} />
                         ))}
                     </AnimatePresence>
+                </div>
+
+                {/* Layer 3: Start/End badges, hazards, and connector nodes (on top of path line) */}
+                <div
+                    className="pointer-events-none absolute grid grid-cols-4 touch-none select-none z-20"
+                    style={{
+                        left: `${LAYOUT.boardInset.left}%`,
+                        top: `${LAYOUT.boardInset.top}%`,
+                        right: `${LAYOUT.boardInset.right}%`,
+                        bottom: `${LAYOUT.boardInset.bottom}%`,
+                        gridTemplateColumns: `repeat(${grid.cols}, 1fr)`,
+                    }}
+                >
+                    {Array.from({ length: grid.rows * grid.cols }).map((_, i) => {
+                        const row = Math.floor(i / grid.cols)
+                        const col = i % grid.cols
+                        const isStart = row === board.start.row && col === board.start.col
+                        const isEnd = row === board.destination.row && col === board.destination.col
+                        const key = cellKey(row, col)
+                        return (
+                            <TileOverlay
+                                key={key}
+                                isStart={isStart}
+                                isEnd={isEnd}
+                                isDanger={dangerSet.has(key)}
+                                isOnPath={pathSet.has(key)}
+                                isHazardTapped={revealHazards && hazardTapSet.has(key)}
+                            />
+                        )
+                    })}
                 </div>
             </div>
 

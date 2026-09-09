@@ -1,12 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  8 gap directions — rot = clockwise degrees from "gap left" (0)     */
-/*  angle = clockwise compass degrees from "up" (0), used to place     */
-/*  each button on a circle around the center Landolt C — this         */
-/*  replaces the old 3x3 CSS-grid row/col placement. A plain grid      */
-/*  puts the diagonal (corner) buttons ~40% farther from center than   */
-/*  the cardinal (edge) buttons; the reference design keeps all 8      */
-/*  buttons on the same radius, so positioning has to be trig-based.   */
-/* ------------------------------------------------------------------ */
+
 export const DIRECTIONS = [
   {
     id: 'up',

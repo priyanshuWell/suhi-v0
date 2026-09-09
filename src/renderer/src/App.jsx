@@ -56,12 +56,9 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<BeatDropGame />} />
-                <Route path="/beat-drop" element={<BeatDropGame />} />
-                <Route path="/perilous-path" element={<PerilousPath />} />
+                <Route path="/" element={<StartScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
-                {/* <Route path="/" element={<SmoothieSlashGame />} /> */}
                 <Route path="/capture" element={<VideoCaptureScreen />} />
                 <Route path="/login-suhi" element={<LoginSuhi />} />
                 <Route path="/divide-attention" element={<DivideAttentionGame />} />
@@ -77,10 +74,10 @@ function App() {
                     <Route path="/voice" element={<VoiceAnalysis />} />
                     <Route path="/fingerprint" element={<FingerPrintScreen />} />
                     <Route path="/colorblindness" element={<ColorBlindPlate />} />
-                    {/* <Route path="/smoothie-slash" element={<SmoothieSlashGame />} /> */}
+                    <Route path="/perilous-path" element={<PerilousPath />} />
+                    <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
+                    <Route path="/beat-drop" element={<BeatDropGame />} />
 
-                    {/* <Route path="/space-convoy-main" element={<SpaceConvoyMain />} />
-          <Route path='/space-convoy-complete' element={<SpaceConvoyComplete />} /> */}
                     <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
                 </Route>
