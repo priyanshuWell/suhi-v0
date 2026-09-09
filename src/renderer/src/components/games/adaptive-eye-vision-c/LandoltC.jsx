@@ -9,7 +9,6 @@ export default function LandoltC({ rotationDeg = 0, size = 64, className = '' })
         width: size,
         height: size,
         transform: `rotate(${rotationDeg}deg)`,
-        transition: 'transform 200ms ease',
       }}
     >
       <svg viewBox="0 0 205 196" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">

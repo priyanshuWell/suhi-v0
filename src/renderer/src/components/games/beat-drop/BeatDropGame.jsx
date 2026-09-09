@@ -9,6 +9,7 @@ import SpeedIncreasePopup from "./SpeedIncreasePopup"
 import PlayArea from "./PlayArea"
 import ResultsScreen from "./ResultsScreen"
 import { getNextRoute } from "../../../utils/stageRouter"
+import { useSetProgressStage } from "../../ProgressStageContext"
 
 const SCREENS = {
     INTRO: "intro",
@@ -32,6 +33,7 @@ const SPEED_POPUP_AT_SEC = 22
 export default function BeatDropGame() {
     const navigate = useNavigate()
     const screening = useSelector((state) => state.common.screening)
+    const setProgressStage = useSetProgressStage()
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [showAvoid, setShowAvoid] = useState(false)
     const [showSpeed, setShowSpeed] = useState(false)
@@ -41,6 +43,11 @@ export default function BeatDropGame() {
     const [score, setScore] = useState(0)
     const [speedMul, setSpeedMul] = useState(1)
     const [streak] = useState(10)
+
+    // Show progress bar only on the intro screen
+    useEffect(() => {
+        setProgressStage(screen === SCREENS.INTRO)
+    }, [screen, setProgressStage])
 
     const playing = screen === SCREENS.PLAY && !showAvoid && !showSpeed
 

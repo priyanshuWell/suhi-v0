@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
+import { AnimatePresence, motion } from 'framer-motion';
 import bg1 from "../../../assets/lightbg.png"
 import { visualAcuityStart, visualAcuitySubmit, visualAcuityComplete } from '../../../utils/api'
 import { pickRandomDirection, computeEyeResult, SIZE_LEVELS } from './constants';
@@ -9,6 +10,7 @@ import GameScreen from './GameScreen';
 import CompletedModal from './CompletedModal';
 import { setScreening } from '../../../features/common/commonSlice';
 import { getNextRoute } from '../../../utils/stageRouter';
+import { useSetProgressStage } from '../../ProgressStageContext';
 
 /* ------------------------------------------------------------------ */
 /*  Main component                                                     */
@@ -31,7 +33,8 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   const screening = useSelector((state) => state.common.screening)
   const userId = user?.data?.user_id || "bdabcfad-558f-4d36-9cfd-5deaedfdd629"
   const screeningId = screening?.screeningId
-  const sessionId = screening?.sessionId ;
+  const sessionId = screening?.sessionId;
+  const setProgressStage = useSetProgressStage();
   const [phase, setPhase] = useState('instruction'); // 'instruction' | 'testing' | 'modal'
   const [eye, setEye] = useState('right');
   const [level, setLevel] = useState(1);
@@ -52,6 +55,11 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   // per-attempt submit + the final complete call.
   const [gameSessionId, setGameSessionId] = useState(null);
   const [starting, setStarting] = useState(false);
+
+  // Show progress bar only on the instruction screen (right & left eye)
+  useEffect(() => {
+    setProgressStage(phase === 'instruction');
+  }, [phase, setProgressStage]);
 
   const startSession = async () => {
     setStarting(true);
@@ -106,7 +114,9 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
     if (locked) return;
     const correct = chosenId === direction;
     setLocked(true);
-    setFeedback({ dirId: chosenId, correct });
+    setTimeout(() => {
+      setLocked(false);
+    }, 150);
 
     visualAcuitySubmit({
       userId,
@@ -120,29 +130,24 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       response: chosenId,
       outcome: correct,
     }).catch((err) => {
-      console.warn('[AdaptiveEyeVisionC] Failed to submit response:', err.message)
-    })
+      console.warn('[AdaptiveEyeVisionC] Failed to submit response:', err.message);
+    });
 
-    setTimeout(() => {
-      setFeedback(null);
-      setLocked(false);
-
-      if (correct) {
-        setLastPassedLevel(level); // this level is now the last one passed
-        if (level >= 9) {
-          finishEye(level); // passed the smallest line — chart complete for this eye
-        } else {
-          setLevel((l) => l + 1);
-          setAttempt(1);
-          setDirection((prev) => pickRandomDirection(prev));
-        }
-      } else if (attempt === 1) {
-        setAttempt(2);
-        setDirection((prev) => pickRandomDirection(prev)); // retry, same level, new gap
+    if (correct) {
+      setLastPassedLevel(level); // this level is now the last one passed
+      if (level >= 9) {
+        finishEye(level); // passed the smallest line — chart complete for this eye
       } else {
-        finishEye(lastPassedLevel); // 2 consecutive misses at this level — eye test ends
+        setLevel((l) => l + 1);
+        setAttempt(1);
+        setDirection((prev) => pickRandomDirection(prev));
       }
-    }, 700);
+    } else if (attempt === 1) {
+      setAttempt(2);
+      setDirection((prev) => pickRandomDirection(prev)); // retry, same level, new gap
+    } else {
+      finishEye(lastPassedLevel); // 2 consecutive misses at this level — eye test ends
+    }
   };
 
   const handleModalNext = () => {
@@ -166,7 +171,7 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black">
+    <div className="relative w-screen h-screen overflow-hidden bg-black font-anta">
       {/* Background */}
       <div
         className="absolute inset-0 bg-center bg-cover z-0 opacity-50"
@@ -174,30 +179,53 @@ export default function AdaptiveEyeVisionC({ onComplete } = {}) {
       />
 
       {/* Content */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center overflow-y-auto pt-20 gap-10">
-        {phase === 'instruction' && (
-          <InstructionScreen
-            eye={eye}
-            onStart={handleStart}
-          />
-        )}
-        {/* GameScreen now also renders during 'modal' (frozen + disabled)
-            so CompletedModal overlays on top of the last question instead
-            of the screen going blank behind it. */}
-        {(phase === 'testing' || phase === 'modal') && (
-          <GameScreen
-            eye={eye}
-            level={level}
-            attempt={attempt}
-            direction={direction}
-            feedback={feedback}
-            locked={locked || phase === 'modal'}
-            onAnswer={handleAnswer}
-          />
-        )}
+      <div className="absolute inset-0 z-10 flex flex-col items-center  pt-20">
+        <AnimatePresence mode="wait">
+          {phase === 'instruction' ? (
+            <motion.div
+              key={`instruction-${eye}`}
+              className="w-full flex flex-col items-center gap-10"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+            >
+              <InstructionScreen
+                eye={eye}
+                onStart={handleStart}
+              />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="game-screen"
+              className="w-full flex flex-col items-center gap-10"
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.02 }}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+            >
+              {/* GameScreen now also renders during 'modal' (frozen + disabled)
+                  so CompletedModal overlays on top of the last question instead
+                  of the screen going blank behind it. */}
+              <GameScreen
+                eye={eye}
+                level={level}
+                attempt={attempt}
+                direction={direction}
+                feedback={feedback}
+                locked={locked || phase === 'modal'}
+                onAnswer={handleAnswer}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {phase === 'modal' && <CompletedModal results={results} onNext={handleModalNext} />}
+      <AnimatePresence>
+        {phase === 'modal' && (
+          <CompletedModal key="completed-modal" results={results} onNext={handleModalNext} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
