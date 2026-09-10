@@ -758,6 +758,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Short Term Recall",
                         value: formatLabel(
+                            apiReport?.mind?.short_term_recall?.level ??
                             apiReport?.mind?.short_term_recall,
                             "Developing"
                         )
@@ -765,6 +766,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Fine Motor Skills",
                         value: formatLabel(
+                            apiReport?.mind?.fine_motor_skills?.level ??
                             apiReport?.mind?.fine_motor_skills,
                             "Strong"
                         )
@@ -772,6 +774,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Visual Spatial Judgement",
                         value: formatLabel(
+                            apiReport?.mind?.visual_spatial_judgement?.level ??
                             apiReport?.mind?.visual_spatial_judgement,
                             "Strong"
                         )
@@ -782,6 +785,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Musical Preference",
                         value: formatLabel(
+                            apiReport?.brain?.musical_preference?.level ??
                             apiReport?.brain?.musical_preference,
                             "Strong"
                         )
@@ -813,6 +817,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Reaction Time",
                         value: formatLabel(
+                            apiReport?.body?.reaction_time?.level ??
                             apiReport?.body?.reaction_time,
                             "Strong"
                         )
@@ -820,6 +825,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {
                         label: "Motor Coordination",
                         value: formatLabel(
+                            apiReport?.body?.motor_coordination?.level ??
                             apiReport?.body?.motor_coordination,
                             "Developing"
                         )
