@@ -1052,21 +1052,23 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                     {/* Color Blindness + Emotion pills */}
                     <div className="flex flex-col w-full" style={{ gap: "24px" }}>
-                        <InfoPill
-                            icon={
-                                <img
-                                    src={Eye_Icon}
-                                    alt=""
-                                    className="w-full h-full object-contain"
-                                />
-                            }
-                            label="Color Blindness"
-                            value={formatColorBlindness(
-                                apiReport?.color_blindness?.result,
-                                apiReport?.color_blindness?.deficiency_type
-                            )}
-                            color="#FFE15C"
-                        />
+                        {screeningOrder !== 2 && screeningOrder !== "2" && (
+                            <InfoPill
+                                icon={
+                                    <img
+                                        src={Eye_Icon}
+                                        alt=""
+                                        className="w-full h-full object-contain"
+                                    />
+                                }
+                                label="Color Blindness"
+                                value={formatColorBlindness(
+                                    apiReport?.color_blindness?.result,
+                                    apiReport?.color_blindness?.deficiency_type
+                                )}
+                                color="#FFE15C"
+                            />
+                        )}
                         <InfoPill
                             icon={<p className="text-4xl">😌</p>}
                             label="Emotion"
