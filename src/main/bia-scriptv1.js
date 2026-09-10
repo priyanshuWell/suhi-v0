@@ -333,7 +333,6 @@ export const WEIGHT_ERROR_CODES = {
         ]
     }
 }
-
 export const HEIGHT_ERROR_CODES = {
     0x00: {
         code: "NULL",
@@ -909,6 +908,8 @@ const IMPEDANCE_MODES = {
 const STABILITY_COUNT = 10
 const STABILITY_THRESHOLD = 2
 const STABILITY_SD_THRESHOLD = 1.0
+const WEIGHT_DEADBAND_KG = 0.02
+const WEIGHT_MIN_SANE_KG = -5.0
 export let stableReadings = []
 export let isMeasurementStopped = false
 let heightBuffer = Buffer.alloc(0)
@@ -929,6 +930,21 @@ const DEVICE_CONFIG_PATH = "/etc/wellwiz-mdm/device-config.json"
 const DEFAULT_WEIGHT_ZERO_OFFSET = 0.0 // rawWeight subtracted before applying factor
 const DEFAULT_WEIGHT_CALIBRATION_FACTOR = 1.53138 // multiply (rawWeight - zeroOffset) to get kg
 const DEFAULT_HEIGHT_CALIBRATION_FACTOR = 192.7 // cm; sensor-to-floor reference distance
+
+function readInt32LE(d, o) {
+
+    return (d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) | 0
+
+}
+function frameChecksum(bytes) {
+
+    let sum = 0
+
+    for (const b of bytes) sum += b
+
+    return (~sum + 1) & 0xff
+
+}
 
 function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
     const calibration = {
@@ -1005,7 +1021,8 @@ const deviceCalibration = loadDeviceCalibration()
 // preserved if no config file exists yet.
 export let weightCalibration = {
     zeroOffset: deviceCalibration.weightZeroOffset, // from device-config.json: weight.zeroOffset (default 0.0)
-    factor: deviceCalibration.weightCalibrationFactor, // from device-config.json: weight.calibrationFactor (default 1.53138)
+    zeroAdc: -2431.81757066827,
+    factor: -0.0018237348624755882, // from device-config.json: weight.calibrationFactor (default 1.53138)
     calibratedAt: null, // ISO timestamp of last full calibration
     isCalibrated: true // false until a real calibration has been performed
 }
@@ -1014,7 +1031,7 @@ export let weightCalibration = {
 // calibrationFactor is the sensor-to-floor reference distance (cm) used as
 // `calibrationFactor - distanceCm` to compute height.
 export let heightCalibration = {
-    calibrationFactor: deviceCalibration.heightCalibrationFactor // from device-config.json: height.calibrationFactor (default 192.7)
+    calibrationFactor: 215.8 // from device-config.json: height.calibrationFactor (default 192.7)
 }
 
 const READ_CMD = Buffer.from([0x55, 0xaa, 0x01, 0x01, 0x01])
@@ -2133,7 +2150,7 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
 
                     const distanceCm = distance / 10
                     const calculatedHeight = heightCalibration.calibrationFactor - distanceCm
-
+                    console.log("neetu distance", distance, "calculatedHeight", calculatedHeight)
                     /* ---------- RANGE CHECK ---------- */
                     if (calculatedHeight < 80) {
                         emitHeightStatus(0x01, calculatedHeight) // TOO LOW
@@ -4113,394 +4130,735 @@ const WEIGHT_CV_THRESHOLD = 0.01 // 1% coefficient of variation
 const WEIGHT_SD_CEILING = 0.15 // kg — absolute guard
 const WEIGHT_MIN_VALID = 1.0 // kg — aligned with UNDERLOAD
 export async function case41_WeightMeasurement() {
+
     try {
+
         // ====================================================================
+
         // PORT CHECK
-        // ====================================================================
 
+        // ====================================================================
+ 
         if (!biaPort || !biaPort.isOpen) {
+
             emitWeightStatus(0x09) // PORT_ERROR
+
             console.log("❌ BIA port not connected")
+
             if (!IS_ELECTRON) showMenu()
+
             return
+
         }
+ 
+        // ====================================================================
+
+        // CALIBRATION FORMAT GUARD
 
         // ====================================================================
+
+        // The pipeline now works on raw ADC counts, not the module's kg field.
+
+        // An old calibration.json (kg-based, factor ~1.53) would silently
+
+        // produce nonsense, so refuse to run against it.
+ 
+        if (
+
+            !Number.isFinite(weightCalibration?.zeroAdc) ||
+
+            !Number.isFinite(weightCalibration?.factor)
+
+        ) {
+
+            emitWeightStatus(0x06) // CALIBRATION_ERROR
+
+            console.log("❌ calibration.json missing zeroAdc / factor — run ADC calibration first")
+
+            if (!IS_ELECTRON) showMenu()
+
+            return
+
+        }
+ 
+        if (Math.abs(weightCalibration.factor) > 0.1) {
+
+            emitWeightStatus(0x06) // CALIBRATION_ERROR
+
+            console.log("❌ calibration.json looks like the OLD kg-based format")
+
+            console.log(`   factor = ${weightCalibration.factor} (expected ~0.0018 kg/count)`)
+
+            console.log("   The factor is now kg PER ADC COUNT and must keep its sign.")
+
+            if (!IS_ELECTRON) showMenu()
+
+            return
+
+        }
+ 
+        const ZERO_ADC = weightCalibration.zeroAdc // ADC counts at no load (any sign)
+
+        const CALIBRATION_FACTOR = weightCalibration.factor // kg per count, SIGNED
+ 
+        console.log(
+
+            `⚖️  zero=${ZERO_ADC.toFixed(1)} factor=${CALIBRATION_FACTOR.toExponential(6)} kg/count ` +
+
+                `(ADC ${CALIBRATION_FACTOR > 0 ? "rises" : "falls"} with load)`
+
+        )
+ 
+        // ====================================================================
+
         // RESULTS STORAGE
+
         // ====================================================================
-        // emitWeightStatus(0x00) // INFO / START
+ 
         const weightResults = {
+
             attempts: 0,
+
             measurements: [],
+
             stabilityChecks: [],
+
             errors: []
+
         }
+
         let finalweight = 0
-
+ 
         // ====================================================================
+
         // STABILITY CHECK FUNCTION
-        // ====================================================================
 
+        // ====================================================================
+ 
         const isStableWeight = (measurements) => {
+
             if (measurements.length < WEIGHT_STABILITY_COUNT) return false
-
+ 
             const window = measurements
+
                 .slice(-WEIGHT_STABILITY_COUNT)
+
                 .map((m) => m.calibratedWeight)
-
+ 
             // every sample in the window must be a real load
+
             if (window.some((w) => w < WEIGHT_MIN_VALID)) return false
-
+ 
             const n = window.length
+
             const mean = window.reduce((a, b) => a + b, 0) / n
+
             const variance = window.reduce((a, w) => a + (w - mean) ** 2, 0) / n
+
             const sd = Math.sqrt(variance)
+
             const cv = sd / mean
-
+ 
             console.log("Weight Stability Check:")
+
             console.log(`   Window: [${window.map((w) => w.toFixed(2)).join(", ")}] kg`)
+
             console.log(
+
                 `   Mean: ${mean.toFixed(3)} kg | SD: ${sd.toFixed(4)} kg | CV: ${(cv * 100).toFixed(3)}%`
+
             )
-
+ 
             return cv <= WEIGHT_CV_THRESHOLD && sd <= WEIGHT_SD_CEILING
+
         }
-        // ====================================================================
-        // SETUP COMMANDS
+ 
         // ====================================================================
 
-        // const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
-        // const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
+        // SETUP COMMANDS
+
+        // ====================================================================
+ 
         const setWeightModeCommand = [0x55, 0x05, 0xa0, 0x01, 0x05]
 
-        // Weight query command
         const weightQueryCommand = [0x55, 0x05, 0xa1, 0x00, 0x05]
-
+ 
         // Stop current test
+
         try {
-            // await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+
             await sendBiaCommand([0x55, 0x06, 0xb0, 0x00, 0x00, 0xf5])
+
             await new Promise((resolve) => setTimeout(resolve, 500))
+
         } catch (error) {
+
             console.log("⚠️ Warning: Could not stop current test")
-        }
 
+        }
+ 
         // Set weight mode
+
         try {
+
             await sendBiaCommand(setWeightModeCommand)
+
             await new Promise((resolve) => setTimeout(resolve, 500))
+
         } catch (error) {
+
             emitWeightStatus(0x08) // TIMEOUT
+
             console.log("❌ Failed to set weight mode")
+
             if (!IS_ELECTRON) showMenu()
+
             return
-        }
 
+        }
+ 
         // Maximum attempts
+
         const MAX_ATTEMPTS = 20
-
+ 
         // ====================================================================
+
         // MEASUREMENT LOOP
-        // ====================================================================
 
+        // ====================================================================
+ 
         while (weightResults.attempts < MAX_ATTEMPTS) {
+
             try {
+
                 weightResults.attempts++
+
                 console.log(`\n Weight Measurement Attempt ${weightResults.attempts}`)
-
+ 
                 // ══════════════════════════════════════════════════════════
+
                 // SEND QUERY COMMAND
-                // ══════════════════════════════════════════════════════════
 
+                // ══════════════════════════════════════════════════════════
+ 
                 let responseData
+
                 try {
+
                     responseData = await sendBiaCommand(weightQueryCommand, {
+
                         timeout: 5000,
+
                         verbose: false
+
                     })
+
                 } catch (error) {
+
                     emitWeightStatus(0x08) // TIMEOUT
+
                     console.log(` Attempt ${weightResults.attempts}: No response`)
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         error: "Timeout"
-                    })
 
+                    })
+ 
                     if (weightResults.attempts >= MAX_ATTEMPTS) {
+
                         console.log(" Max attempts reached with no response")
+
                         break
+
                     }
-
+ 
                     await new Promise((resolve) => setTimeout(resolve, 500))
-                    continue
-                }
 
+                    continue
+
+                }
+ 
                 // ══════════════════════════════════════════════════════════
+
                 // VALIDATE RESPONSE FORMAT
-                // ══════════════════════════════════════════════════════════
 
+                // ══════════════════════════════════════════════════════════
+ 
                 if (!responseData || responseData.length < 14) {
+
                     emitWeightStatus(0x0a) // INVALID_RESPONSE
+
                     console.log(` Attempt ${weightResults.attempts}: Invalid response format`)
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         error: "Invalid response format"
-                    })
-                    await new Promise((resolve) => setTimeout(resolve, 500))
-                    continue
-                }
 
+                    })
+
+                    await new Promise((resolve) => setTimeout(resolve, 500))
+
+                    continue
+
+                }
+ 
                 if (responseData[0] !== 0xaa || responseData[2] !== 0xa1) {
+
                     emitWeightStatus(0x0a) // INVALID_RESPONSE
+
                     console.log(` Attempt ${weightResults.attempts}: Invalid response header`)
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         error: "Invalid response header"
+
                     })
+
                     await new Promise((resolve) => setTimeout(resolve, 500))
+
                     continue
+
                 }
+ 
+                // Checksum — we are trusting raw ADC now, so verify the frame
 
-                // ══════════════════════════════════════════════════════════
-                // PARSE WEIGHT
-                // ══════════════════════════════════════════════════════════
+                const expectedChecksum = frameChecksum(Array.from(responseData).slice(0, 13))
 
-                const statusByte = responseData[3]
-                const rawWeight = ((responseData[6] << 8) | responseData[5]) / 10.0
+                if (expectedChecksum !== responseData[13]) {
 
-                // Validate raw weight
-                if (isNaN(rawWeight) || rawWeight < 0) {
                     emitWeightStatus(0x0a) // INVALID_RESPONSE
-                    console.log(`Attempt ${weightResults.attempts}: Invalid weight value`)
+
+                    console.log(
+
+                        ` Attempt ${weightResults.attempts}: Checksum mismatch ` +
+
+                            `(got 0x${responseData[13].toString(16)}, expected 0x${expectedChecksum.toString(16)})`
+
+                    )
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
-                        error: "Invalid weight value"
+
+                        error: "Checksum mismatch"
+
                     })
+
                     await new Promise((resolve) => setTimeout(resolve, 500))
+
                     continue
+
                 }
-
-                // ══════════════════════════════════════════════════════════
-                // APPLY CALIBRATION (dynamic — loaded from calibration.json)
+ 
                 // ══════════════════════════════════════════════════════════
 
-                const WEIGHT_ZERO_OFFSET = weightCalibration.zeroOffset // loaded from disk (default 0.0)
-                const CALIBRATION_FACTOR = weightCalibration.factor // loaded from disk (default 1.53138)
-                const calibratedWeightCatty = (rawWeight - WEIGHT_ZERO_OFFSET) * CALIBRATION_FACTOR
-                const calibratedWeight = calibratedWeightCatty
-                // Validate calibrated weight
-                if (isNaN(calibratedWeight) || calibratedWeight < 0) {
+                // PARSE RAW ADC (bytes 9-12, int32 little-endian, SIGNED)
+
+                // ══════════════════════════════════════════════════════════
+
+                // Bytes 5-8 (the module's own stable / real-time weight) are
+
+                // NOT used: they come from the module's internal calibration,
+
+                // which is invalid on this harness. Byte 3 status is kept for
+
+                // diagnostics only, for the same reason.
+ 
+                const statusByte = responseData[3]
+
+                const adc = readInt32LE(responseData, 9)
+ 
+                if (!Number.isFinite(adc)) {
+
+                    emitWeightStatus(0x0a) // INVALID_RESPONSE
+
+                    console.log(` Attempt ${weightResults.attempts}: Invalid ADC value`)
+
+                    weightResults.errors.push({
+
+                        attempt: weightResults.attempts,
+
+                        error: "Invalid ADC value"
+
+                    })
+
+                    await new Promise((resolve) => setTimeout(resolve, 500))
+
+                    continue
+
+                }
+ 
+                // ══════════════════════════════════════════════════════════
+
+                // APPLY CALIBRATION
+
+                // ══════════════════════════════════════════════════════════
+
+                // Both terms carry their sign, so a falling ADC (negative net)
+
+                // times a negative factor yields a positive weight. No polarity
+
+                // flag, no conditional, no abs().
+ 
+                const netAdc = adc - ZERO_ADC
+
+                let calibratedWeight = netAdc * CALIBRATION_FACTOR
+ 
+                // Inside the zero-noise band, report exactly 0
+
+                if (Math.abs(calibratedWeight) < WEIGHT_DEADBAND_KG) {
+
+                    calibratedWeight = 0
+
+                }
+ 
+                if (!Number.isFinite(calibratedWeight) || calibratedWeight < WEIGHT_MIN_SANE_KG) {
+
                     emitWeightStatus(0x06) // CALIBRATION_ERROR
-                    console.log(` Attempt ${weightResults.attempts}: Calibration error`)
+
+                    console.log(
+
+                        ` Attempt ${weightResults.attempts}: Calibration error ` +
+
+                            `(adc=${adc}, net=${netAdc.toFixed(0)}, kg=${calibratedWeight})`
+
+                    )
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         error: "Calibration error"
-                    })
 
+                    })
+ 
                     if (weightResults.attempts >= MAX_ATTEMPTS) {
+
                         break
+
                     }
+
                     await new Promise((resolve) => setTimeout(resolve, 500))
+
                     continue
+
                 }
-                // ══════════════════════════════════════════════════════════
-                // PARSE STATUS BITS
+ 
                 // ══════════════════════════════════════════════════════════
 
-                let isStable = false
-                let isZero = false
-                let isOverload = false
-                let isUnderload = false
-
-                // ══════════════════════════════════════════════════════════
                 // DETERMINE ERROR CODE & CHECK VALIDITY
-                // ══════════════════════════════════════════════════════════
 
+                // ══════════════════════════════════════════════════════════
+ 
+                let isStable = false
+
+                let isZero = false
+
+                let isOverload = false
+
+                let isUnderload = false
+ 
                 let statusCode = 0x03 // Default STABLE
-
+ 
                 // Check for zero weight
+
                 if (calibratedWeight === 0) {
+
                     isZero = true
+
                     statusCode = 0x01 // ZERO_POINT
-                    // emitWeightStatus(statusCode, calibratedWeight);
+
                 }
-                // Check for overload
+
+                // Check for overload — our own limit; the module's OVERLOAD
+
+                // status is unusable while its calibration is invalid
+
                 else if (calibratedWeight > 150) {
+
                     isOverload = true
+
                     statusCode = 0x04 // OVERLOAD
+
                     emitWeightStatus(statusCode, calibratedWeight)
+
                     console.log(" Scale overloaded - measurement aborted")
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         statusCode: statusCode,
+
                         weight: calibratedWeight,
+
                         error: "Scale overloaded"
+
                     })
+
                     break // Stop on overload
+
                 }
+
                 // Check for underload - user standing but weight very low
+
                 else if (calibratedWeight < 1.0) {
+
                     isUnderload = true
+
                     statusCode = 0x05 // UNDERLOAD
+
                     emitWeightStatus(statusCode, calibratedWeight)
+
                     console.log(`  Weight too low: ${calibratedWeight.toFixed(2)} kg`)
+
                     weightResults.errors.push({
+
                         attempt: weightResults.attempts,
+
                         statusCode: statusCode,
+
                         weight: calibratedWeight,
+
                         error: "Weight too low"
+
                     })
-                    // Continue trying for valid weight
+
                     await new Promise((resolve) => setTimeout(resolve, 500))
+
                     continue
+
                 }
-                // Check for unstable
-                // else if (!isStable) {
-                //     statusCode = 0x02;  // UNSTABLE
-                // }
+
                 // Valid stable weight
+
                 else if (calibratedWeight > 20 && calibratedWeight <= 150) {
+
                     isStable = true
+
                     statusCode = 0x03 // STABLE
-                }
 
+                }
+ 
                 // ══════════════════════════════════════════════════════════
+
                 // HANDLE STATUS
-                // ══════════════════════════════════════════════════════════
 
+                // ══════════════════════════════════════════════════════════
+ 
                 emitWeightStatus(statusCode, calibratedWeight)
+ 
+                console.log(`   ADC: ${adc}  |  Net: ${netAdc.toFixed(0)} counts`)
 
-                console.log(`   Raw Weight: ${rawWeight.toFixed(2)} kg`)
                 console.log(`   Calibrated Weight: ${calibratedWeight.toFixed(2)} kg`)
+
                 console.log(`   Status: ${statusCode === 0x03 ? "✅ Stable" : "⏳ Unstable"}`)
-
+ 
                 // ══════════════════════════════════════════════════════════
+
                 // STORE MEASUREMENT
-                // ══════════════════════════════════════════════════════════
 
+                // ══════════════════════════════════════════════════════════
+ 
                 const measurementDetails = {
+
                     attempt: weightResults.attempts,
-                    rawWeight: rawWeight,
+
+                    adc: adc,
+
+                    netAdc: netAdc,
+
                     calibratedWeight: calibratedWeight,
-                    statusByte: statusByte,
+
+                    statusByte: statusByte, // diagnostics only
+
                     statusCode: statusCode,
+
                     isStable: isStable,
+
                     isOverload: isOverload,
+
                     isUnderload: isUnderload,
+
                     isZero: isZero
-                }
 
+                }
+ 
                 weightResults.measurements.push(measurementDetails)
-
+ 
                 // ══════════════════════════════════════════════════════════
+
                 // CHECK FOR STABILITY
+
                 // ══════════════════════════════════════════════════════════
-
+ 
                 if (calibratedWeight >= WEIGHT_MIN_VALID) {
+
                     if (isStableWeight(weightResults.measurements)) {
+
                         console.log("\n Stable weight measurement detected!")
+
                         break
+
                     }
-                }
 
+                }
+ 
                 // Delay between attempts
+
                 await new Promise((resolve) => setTimeout(resolve, 500))
+
             } catch (queryError) {
+
                 emitWeightStatus(0x07) // SENSOR_ERROR
+
                 console.error(` Attempt ${weightResults.attempts} error: ${queryError.message}`)
+
                 weightResults.errors.push({
+
                     attempt: weightResults.attempts,
+
                     error: queryError.message
+
                 })
-
+ 
                 if (weightResults.attempts >= MAX_ATTEMPTS) {
+
                     break
+
                 }
-            }
-        }
 
+            }
+
+        }
+ 
         // ====================================================================
+
         // DISPLAY RESULTS
+
         // ====================================================================
-
+ 
         console.log("\n" + "=".repeat(70))
+
         console.log("⚖️  WEIGHT MEASUREMENT RESULTS")
+
         console.log("=".repeat(70))
-
+ 
         console.log(`\nTotal Attempts: ${weightResults.attempts}`)
+
         console.log(`Valid Measurements: ${weightResults.measurements.length}`)
+
         console.log(`Errors: ${weightResults.errors.length}`)
-
-        // ════════════════════════════════════════════════════════════════
-        // SHOW MEASUREMENTS
-        // ════════════════════════════════════════════════════════════════
-
+ 
         if (weightResults.measurements.length > 0) {
+
             console.log("\nWEIGHT MEASUREMENTS:")
-
+ 
             weightResults.measurements.forEach((m) => {
+
                 const statusName =
+
                     {
+
                         0x01: "ZERO",
+
                         0x02: "UNSTABLE",
+
                         0x03: "STABLE",
+
                         0x04: "OVERLOAD",
+
                         0x05: "UNDERLOAD"
+
                     }[m.statusCode] || "UNKNOWN"
-
+ 
                 console.log(
-                    `   Attempt ${m.attempt}: ${m.calibratedWeight.toFixed(2)} kg (${statusName})`
+
+                    `   Attempt ${m.attempt}: ${m.calibratedWeight.toFixed(2)} kg ` +
+
+                        `(${statusName})  [adc ${m.adc}]`
+
                 )
-            })
 
-            // Calculate statistics
+            })
+ 
             const validMeasurements = weightResults.measurements.filter(
+
                 (m) => m.statusCode === 0x03
+
             )
-
+ 
             if (validMeasurements.length >= WEIGHT_STABILITY_COUNT) {
+
                 const stableWindow = validMeasurements
+
                     .slice(-WEIGHT_STABILITY_COUNT)
+
                     .map((m) => m.calibratedWeight)
-
+ 
                 finalweight = stableWindow.reduce((a, b) => a + b, 0) / stableWindow.length
-
+ 
                 console.log(`\n FINAL WEIGHT: ${finalweight.toFixed(2)} kg`)
+
             } else {
+
                 console.log("\n No valid stable measurements collected")
+
             }
+
         } else {
+
             console.log("\n No measurements collected")
+
         }
-
-        // ════════════════════════════════════════════════════════════════
-        // SHOW ERRORS
-        // ════════════════════════════════════════════════════════════════
-
+ 
         if (weightResults.errors.length > 0) {
+
             console.log("\n ERRORS ENCOUNTERED:")
+
             weightResults.errors.forEach((e) => {
+
                 console.log(`   Attempt ${e.attempt}: ${e.error || e.statusCode}`)
+
             })
-        }
 
+        }
+ 
         console.log("=".repeat(70) + "\n")
-
+ 
         if (!IS_ELECTRON) showMenu()
-
+ 
         const finalResult = {
-            success: finalweight > 0,
-            weight: finalweight
-        }
-        console.log(`\n📤 Sending Final Result to UI:`, finalResult)
 
+            success: finalweight > 0,
+
+            weight: finalweight
+
+        }
+
+        console.log(`\n📤 Sending Final Result to UI:`, finalResult)
+ 
         return finalResult
+
     } catch (error) {
+
         emitWeightStatus(0x07) // SENSOR_ERROR
+
         console.error(" Weight measurement failed:", error.message)
+
         console.error(error)
+
         if (!IS_ELECTRON) showMenu()
+
     }
+
 }
 
 // ======================== CALIBRATION FUNCTIONS ========================

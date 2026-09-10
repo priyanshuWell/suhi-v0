@@ -609,11 +609,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
             return fallback
         }
 
-        if (typeof value === "number") {
-            return Number.isFinite(value)
-                ? value.toFixed(2)
-                : fallback
-        }
+      
 
         if (typeof value !== "object") {
             return String(value)
@@ -638,12 +634,12 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
         if ("systolic" in value || "diastolic" in value) {
             const systolic =
                 value.systolic != null
-                    ? Number(value.systolic).toFixed(2)
+                    ? Number(value.systolic)
                     : "—"
 
             const diastolic =
                 value.diastolic != null
-                    ? Number(value.diastolic).toFixed(2)
+                    ? Number(value.diastolic)
                     : "—"
 
             return `${systolic}/${diastolic}${value.unit ? ` ${value.unit}` : ""
