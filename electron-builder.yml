@@ -36,6 +36,7 @@ linux:
     icon: build/icons/512x512.png
     target:
         - deb
+        - AppImage
     maintainer: electronjs.org
     category: Utility
 appImage:

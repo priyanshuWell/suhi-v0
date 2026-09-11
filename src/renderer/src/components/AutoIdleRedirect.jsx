@@ -54,26 +54,27 @@ const AutoIdleRedirect = ({
 
     // Disable on home/splash routes — no point idling-out a page you'd
     // just get redirected back to anyway.
-    const isHomeRoute = location.pathname === "/" || location.pathname === redirectTo
+    // Keep the list tight: only the routes the user would be sent back to.
+    const isIdleExempt = location.pathname === "/" || location.pathname === redirectTo
 
     const handlePrompt = useCallback(() => {
-        if (!isHomeRoute) {
+        if (!isIdleExempt) {
             setStage("are-you-there")
             playErrorAudio("errors/are_you_still_there")
         }
-    }, [isHomeRoute, playErrorAudio])
+    }, [isIdleExempt, playErrorAudio])
 
     const handleIdle = useCallback(() => {
         // When the idle timer fully expires, escalate from stage 1 → stage 2.
         // The actual redirect is fired by the continue-screening stage timeout.
-        if (!isHomeRoute) {
+        if (!isIdleExempt) {
             console.log(
                 "[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage."
             )
             setStage("continue-screening")
             playErrorAudio("errors/unable_to_detect_any_activity")
         }
-    }, [isHomeRoute, playErrorAudio])
+    }, [isIdleExempt, playErrorAudio])
 
     const handleActive = useCallback(() => {
         stopErrorAudio() // stop any playing error audio when user resumes
@@ -103,7 +104,7 @@ const AutoIdleRedirect = ({
         // onAction: handleAction,
         events: ACTIVITY_EVENTS,
         debounce: 500,
-        disabled: isHomeRoute,
+        disabled: isIdleExempt,
         crossTab: true // keeps idle state in sync across multiple tabs of the same app
     })
 
@@ -113,28 +114,29 @@ const AutoIdleRedirect = ({
         setStage(null)
     }
 
-    if (stage === "are-you-there" && !isHomeRoute) {
-        return (
-            <NoActivityFrame
-                variant="are-you-there"
-                timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
-                onButtonClick={handleYes}
-                onTimeout={() => setStage("continue-screening")}
-            />
-        )
-    }
-
-    if (stage === "continue-screening" && !isHomeRoute) {
-        return (
-            <NoActivityFrame
-                variant="continue-screening"
-                onTimeout={handleFinalTimeout}
-                onButtonClick={handleYes}
-            />
-        )
-    }
-
-    return null
+    // Render overlays ALONGSIDE the current route (not instead of it).
+    // NoActivityFrame uses `position: fixed + z-50` so it covers the screen
+    // visually — but the route component stays mounted, keeping background
+    // work (buffer collection, timers, etc.) alive during the warning window.
+    return (
+        <>
+            {stage === "are-you-there" && !isIdleExempt && (
+                <NoActivityFrame
+                    variant="are-you-there"
+                    timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
+                    onButtonClick={handleYes}
+                    onTimeout={() => setStage("continue-screening")}
+                />
+            )}
+            {stage === "continue-screening" && !isIdleExempt && (
+                <NoActivityFrame
+                    variant="continue-screening"
+                    onTimeout={handleFinalTimeout}
+                    onButtonClick={handleYes}
+                />
+            )}
+        </>
+    )
 }
 
 export default AutoIdleRedirect

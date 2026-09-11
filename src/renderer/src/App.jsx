@@ -57,11 +57,11 @@ function App() {
     return (
         <>
             <BufferCollectionManager />
-            {/* <AutoIdleRedirect
-        timeoutMs={10000}
-        promptBeforeMs={5000}
-        redirectTo="/welcome"
-      /> */}
+            <AutoIdleRedirect
+                timeoutMs={120_000}
+                promptBeforeMs={15_000}
+                redirectTo="/welcome"
+            />
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
