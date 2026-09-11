@@ -1,15 +1,22 @@
-import React from 'react'
-import { Volume2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import ReplayAudio from '../ReplayAudio'
+import React from "react"
+import { Volume2 } from "lucide-react"
+import { useTranslation } from "react-i18next"
+import ReplayAudio from "../ReplayAudio"
 
-const VoiceTextScreen = ({ t, handleStart, audioRef, handleAudioEnd, isAudioPlaying, status, instructionAudio }) => {
+const VoiceTextScreen = ({
+    t,
+    handleStart,
+    audioRef,
+    handleAudioEnd,
+    isAudioPlaying,
+    status,
+    instructionAudio
+}) => {
     return (
         <div className="relative z-10 flex flex-col items-center justify-center mb-24 w-full max-w-4xl h-full gap-8 p-4">
-
             {/* Header Text */}
             <h1 className="text-white/90 text-center text-xl portrait:text-4xl font-mono leading-relaxed max-w-2xl mb-20">
-                {t('voice.instruction')}
+                {t("voice.instruction")}
 
                 {/* <ReplayAudio playAudio={() => {
                     if (audioRef.current) {
@@ -22,11 +29,8 @@ const VoiceTextScreen = ({ t, handleStart, audioRef, handleAudioEnd, isAudioPlay
 
             {/* Image Container */}
 
-
-
-
             {/* Buttons Section */}
-            {status !== 'recording' && status !== 'processing' && (
+            {status !== "recording" && status !== "processing" && (
                 <div className="flex flex-col items-center gap-2">
                     <button
                         onClick={handleStart}
@@ -46,16 +50,15 @@ const VoiceTextScreen = ({ t, handleStart, audioRef, handleAudioEnd, isAudioPlay
                         active:scale-[0.98]
                         transition-all duration-300 ease-in-out
                         hover:border-white
-                        ${isAudioPlaying ? 'opacity-50 cursor-not-allowed' : 'opacity-100 cursor-pointer'}
+                        ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : "opacity-100 cursor-pointer"}
                         `}
                     >
-                        {t('voice.start')}
+                        {t("voice.start")}
                     </button>
                 </div>
             )}
-
         </div>
     )
 }
 
-export default VoiceTextScreen  
+export default VoiceTextScreen

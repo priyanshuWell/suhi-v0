@@ -9,54 +9,68 @@
 export const ROUNDS = {
     round1: {
         name: "Round 1",
-        particles: 8, targets: 3, radius: 58,
+        particles: 8,
+        targets: 3,
+        radius: 58,
         velocity: { min: 0.8, max: 1.1 },
         time: { preparation: 2000, game: 4000, freeze: 9000 },
         // Feel hint used by SpaceConvoy to drive visual feedback intensity
-        difficultyTier: 1,
+        difficultyTier: 1
     },
     round2: {
         name: "Round 2",
-        particles: 10, targets: 4, radius: 56,
+        particles: 10,
+        targets: 4,
+        radius: 56,
         velocity: { min: 1.0, max: 1.4 },
         time: { preparation: 2000, game: 4500, freeze: 8500 },
-        difficultyTier: 1,
+        difficultyTier: 1
     },
     round3: {
         name: "Round 3",
-        particles: 12, targets: 5, radius: 54,
+        particles: 12,
+        targets: 5,
+        radius: 54,
         velocity: { min: 1.3, max: 1.7 },
         time: { preparation: 1800, game: 5000, freeze: 8500 },
-        difficultyTier: 2,
+        difficultyTier: 2
     },
     round4: {
         name: "Round 4",
-        particles: 13, targets: 6, radius: 52,
+        particles: 13,
+        targets: 6,
+        radius: 52,
         velocity: { min: 1.6, max: 2.0 },
         time: { preparation: 1800, game: 5000, freeze: 8000 },
-        difficultyTier: 2,
+        difficultyTier: 2
     },
     round5: {
         name: "Round 5",
-        particles: 15, targets: 7, radius: 50,
+        particles: 15,
+        targets: 7,
+        radius: 50,
         velocity: { min: 1.9, max: 2.4 },
         time: { preparation: 1800, game: 5500, freeze: 8000 },
-        difficultyTier: 2,
+        difficultyTier: 2
     },
     round6: {
         name: "Round 6",
-        particles: 17, targets: 8, radius: 46,
+        particles: 17,
+        targets: 8,
+        radius: 46,
         velocity: { min: 2.2, max: 2.7 },
         time: { preparation: 1600, game: 5500, freeze: 7500 },
-        difficultyTier: 3,
+        difficultyTier: 3
     },
     FINAL: {
         name: "Final Round",
-        particles: 19, targets: 9, radius: 42,
+        particles: 19,
+        targets: 9,
+        radius: 42,
         velocity: { min: 2.5, max: 3.1 },
         time: { preparation: 1600, game: 6000, freeze: 7500 },
-        difficultyTier: 3,
-    },
+        difficultyTier: 3
+    }
     // round8: {
     //     name: "Round 8",
     //     particles: 21, targets: 10, radius: 38,
@@ -78,4 +92,4 @@ export const ROUNDS = {
     //     time: { preparation: 1500, game: 7000, freeze: 6500 },
     //     difficultyTier: 4,
     // },
-};
+}

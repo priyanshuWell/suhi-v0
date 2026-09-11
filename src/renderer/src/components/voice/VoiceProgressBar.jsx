@@ -1,14 +1,14 @@
-import React from 'react'
+import React from "react"
 
 const VoiceProgressBar = ({ timeLeft, totalTime = 30, status }) => {
-    const progress = ((totalTime - timeLeft) / totalTime) * 100;
+    const progress = ((totalTime - timeLeft) / totalTime) * 100
 
     const getMessage = ({ timeLeft, status }) => {
-        if (status === "idle") return "";
-        if (status === "processing") return "Processing...";
-        if (timeLeft <= 0) return "Done!";
-        return `Speak for ${timeLeft} more second${timeLeft !== 1 ? 's' : ''}...`;
-    };
+        if (status === "idle") return ""
+        if (status === "processing") return "Processing..."
+        if (timeLeft <= 0) return "Done!"
+        return `Speak for ${timeLeft} more second${timeLeft !== 1 ? "s" : ""}...`
+    }
 
     // if (status === "idle") return null;
 
@@ -28,7 +28,7 @@ const VoiceProgressBar = ({ timeLeft, totalTime = 30, status }) => {
                 />
             </div>
         </div>
-    );
-};
+    )
+}
 
-export default VoiceProgressBar;
+export default VoiceProgressBar

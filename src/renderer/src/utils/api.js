@@ -1,441 +1,605 @@
-import axios from "axios";
-import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL } from "./config";
+import axios from "axios"
+import { API_BASE_URL, VOICE_API_BASE_URL, FPT_API_BASE_URL, AI_SERVER_URL } from "./config"
 /**
  * Send a video buffer to the backend
  * @param {Object} videoData - Object containing role, deviceId, and buffer
  * @returns {Promise<Object>} Response with success status and shm_path
  */
 export async function sendVideoToBackend(videoData) {
-  console.log(videoData);
-  try {
-    // Convert Uint8Array to Blob
-    const videoBlob = new Blob([videoData.buffer], { type: 'video/webm' });
+    console.log(videoData)
+    try {
+        // Convert Uint8Array to Blob
+        const videoBlob = new Blob([videoData.buffer], { type: "video/webm" })
 
-    console.log("Uploading file:", `${videoData.role}_${videoData.deviceId}.webm`);
-    console.log("Uploading mimeType:", videoBlob.type);
+        console.log("Uploading file:", `${videoData.role}_${videoData.deviceId}.webm`)
+        console.log("Uploading mimeType:", videoBlob.type)
 
-    
-    // Create FormData to send the video file
-    // const formData = new FormData();
-    // formData.append('video', videoBlob, `${videoData.role}_${videoData.deviceId}.webm`);
-    // formData.append('role', videoData.role);
-    // formData.append('deviceId', videoData.deviceId);
+        // Create FormData to send the video file
+        // const formData = new FormData();
+        // formData.append('video', videoBlob, `${videoData.role}_${videoData.deviceId}.webm`);
+        // formData.append('role', videoData.role);
+        // formData.append('deviceId', videoData.deviceId);
 
-    const formData = new FormData();
-formData.append('file', videoBlob, `${videoData.role}_${videoData.deviceId}.webm`);
+        const formData = new FormData()
+        formData.append("file", videoBlob, `${videoData.role}_${videoData.deviceId}.webm`)
 
+        const response = await fetch(`${API_BASE_URL}/video/store`, {
+            method: "POST",
+            body: formData
+        })
 
-    const response = await fetch(`${API_BASE_URL}/video/store`, {
-      method: 'POST',
-      body: formData,
-    });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json()
+        return {
+            success: true,
+            shm_path: data.shm_path,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending video to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    return {
-      success: true,
-      shm_path: data.shm_path,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending video to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 export async function sendVoiceToBackend(voiceData) {
-  console.log(voiceData);
-  try {
-    // Convert Uint8Array to Blob
-    const audioBlob = new Blob([voiceData.buffer], { type: 'audio/wav' });
+    console.log(voiceData)
+    try {
+        // Convert Uint8Array to Blob
+        const audioBlob = new Blob([voiceData.buffer], { type: "audio/wav" })
 
-    console.log("Uploading file:", `${voiceData.role}_${voiceData.timestamp}.wav`);
-    console.log("Uploading mimeType:", audioBlob.type);
+        console.log("Uploading file:", `${voiceData.role}_${voiceData.timestamp}.wav`)
+        console.log("Uploading mimeType:", audioBlob.type)
 
-    const formData = new FormData();
-    formData.append(
-      'file',
-      audioBlob,
-      `${voiceData.role}_${voiceData.timestamp}.wav`
-    );
+        const formData = new FormData()
+        formData.append("file", audioBlob, `${voiceData.role}_${voiceData.timestamp}.wav`)
 
-    const response = await fetch(`${API_BASE_URL}/voice/store`, {
-      method: 'POST',
-      body: formData,
-    });
+        const response = await fetch(`${API_BASE_URL}/voice/store`, {
+            method: "POST",
+            body: formData
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        return {
+            success: true,
+            shm_path: data.shm_path,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending voice to backend:", error)
+
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-
-    return {
-      success: true,
-      shm_path: data.shm_path,
-      ...data
-    };
-
-  } catch (error) {
-    console.error("Error sending voice to backend:", error);
-
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 export async function loginSuhi(suhi_id) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/kiosk_user/${suhi_id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/kiosk_user/${suhi_id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error logging in:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error logging in:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 export async function getStudentBySuhi(suhi_id) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/students/${suhi_id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/students/${suhi_id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error fetching student by suhi id:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error fetching student by suhi id:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 export async function runVoice(payload) {
- try {
+    try {
+        const response = await fetch(`${API_BASE_URL}/voice/run`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    const response = await fetch(`${API_BASE_URL}/voice/run`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: error.message
-    };
 }
-}
-
 
 export async function realtimeCapture(kiosk_id = null) {
-  try {
-    const payload = {
-      kiosk_id: kiosk_id,                                              // use the passed-in parameter
-      camera_index: parseInt(import.meta.env?.VITE_CAMERA_INDEX ?? 0, 10), // read from env, default 0
-      max_seconds: 5,
-      quality_threshold: 40
-    };
+    try {
+        const payload = {
+            kiosk_id: kiosk_id, // use the passed-in parameter
+            camera_index: parseInt(import.meta.env?.VITE_CAMERA_INDEX ?? 0, 10), // read from env, default 0
+            max_seconds: 5,
+            quality_threshold: 40
+        }
 
-    const response = await fetch(`${API_BASE_URL}/realtime/capture`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
+        const response = await fetch(`${API_BASE_URL}/realtime/capture`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    const data = await response.json();
+        const data = await response.json()
 
-    if (!response.ok) {
-      return {
-        success: false,
-        ...data,
-        error: data?.error || { message: data?.message || "Realtime capture failed" }
-      };
+        if (!response.ok) {
+            return {
+                success: false,
+                ...data,
+                error: data?.error || { message: data?.message || "Realtime capture failed" }
+            }
+        }
+
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Realtime capture error:", error)
+
+        return {
+            success: false,
+            error: { message: error.message }
+        }
     }
-
-    return {
-      success: true,
-      ...data
-    };
-
-  } catch (error) {
-    console.error("Realtime capture error:", error);
-
-    return {
-      success: false,
-      error: { message: error.message }
-    };
-  }
 }
 
-export async function colorBlindessStart(userId, kiosk_id, screeningSessionId = null){
-  try {
-    const payload ={
-      user_id:userId,
-      kiosk_id
+export async function colorBlindessStart(userId, kiosk_id, screeningSessionId = null) {
+    try {
+        const payload = {
+            user_id: userId,
+            kiosk_id
+        }
+
+        const response = await fetch(`${API_BASE_URL}/color-blindness/start`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const response = await fetch(`${API_BASE_URL}/color-blindness/start`,{
-       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    })
-
-     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
-export async function colorBlindessComplete(sessionId=null, screeningSessionId = null){
-  try {
-    const payload ={
-    screening_session_id: screeningSessionId,
-    session_id:sessionId,
+export async function colorBlindessComplete(sessionId = null, screeningSessionId = null) {
+    try {
+        const payload = {
+            screening_session_id: screeningSessionId,
+            session_id: sessionId
+        }
+
+        const response = await fetch(`${API_BASE_URL}/color-blindness/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const response = await fetch(`${API_BASE_URL}/color-blindness/complete`,{
-       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    })
-
-     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
-export async function colorBlindessSubmit(sessionId,plateId,selectedAnswer,noResponse,responseTimeMs){
-  console.log("colorBlindessSubmit",sessionId,plateId,selectedAnswer,noResponse,responseTimeMs)
-  try {
-    const payload ={
-      session_id:sessionId,
-      plate_id:plateId,
-      selected_answer:selectedAnswer,
-      no_response:noResponse,
-      response_time_ms:responseTimeMs,
+export async function colorBlindessSubmit(
+    sessionId,
+    plateId,
+    selectedAnswer,
+    noResponse,
+    responseTimeMs
+) {
+    console.log(
+        "colorBlindessSubmit",
+        sessionId,
+        plateId,
+        selectedAnswer,
+        noResponse,
+        responseTimeMs
+    )
+    try {
+        const payload = {
+            session_id: sessionId,
+            plate_id: plateId,
+            selected_answer: selectedAnswer,
+            no_response: noResponse,
+            response_time_ms: responseTimeMs
+        }
+
+        const response = await fetch(`${API_BASE_URL}/color-blindness/response`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const response = await fetch(`${API_BASE_URL}/color-blindness/response`,{
-       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    })
-
-     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
-
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
-export async function getColorBlindessPlates(){
-  try {
-    const response = await fetch(`${API_BASE_URL}/plates/seed`,{
-      method: 'POST', 
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+export async function getColorBlindessPlates() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/plates/seed`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
+}
 
-    const data = await response.json();
-    return {
-      success: true,
-      ...data
-    };
+// ─── Visual Acuity (Adaptive Landolt-C) ────────────────────────────────────
+export async function visualAcuityStart(userId, screeningSessionId) {
+    try {
+        const payload = {
+            user_id: userId,
+            screening_session_id: screeningSessionId
+        }
 
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/start`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            console.log('Failed to start visual acuity session:', response.status, response.statusText)
+            return {
+                success: false,
+                error: response.statusText
+            }
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error starting visual acuity session:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+
+export async function visualAcuitySubmit({
+    userId,
+    sessionId,
+    gameSessionId,
+    eyeType,
+    sizeLevel,
+    snellen,
+    attempt,
+    gapDirection,
+    response: userResponse,
+    outcome
+}) {
+    try {
+        const payload = {
+            user_id: userId,
+            session_id: sessionId,
+            game_session_id: gameSessionId,
+            eye_type: eyeType,
+            size_level: sizeLevel,
+            snellen,
+            attempt,
+            gap_direction: gapDirection,
+            response: userResponse,
+            outcome
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/user-details`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            console.log('Failed to submit visual acuity response:', response.status, response.statusText)
+            return {
+                success: false,
+                error: response.statusText
+            }
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error submitting visual acuity response:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+/**
+ * Marks a visual-acuity game session as complete.
+ * @param {string} gameSessionId - id returned by visualAcuityStart
+ * @param {string} screeningId - screening session id
+ * @param {string} sessionId - session id
+ */
+export async function visualAcuityComplete(gameSessionId, screeningId, sessionId) {
+    console.log("Completing visual acuity session:", { gameSessionId, screeningId, sessionId })
+    try {
+        const payload = {
+            game_session_id: gameSessionId,
+            screening_id: screeningId,
+            session_id: sessionId
+        }
+
+        const response = await fetch(`${API_BASE_URL}/visual-acuity/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error completing visual acuity session:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
 }
 
 export async function runFPT(shmPath, kioskId) {
-  try {
-    const payload = {
-      shm_path: shmPath,
-      kiosk_id: kioskId
-    };
+    try {
+        const payload = {
+            shm_path: shmPath,
+            kiosk_id: kioskId
+        }
 
-    const response = await fetch(`${API_BASE_URL}/video/run-fpt`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+        const response = await fetch(`${API_BASE_URL}/video/run-fpt`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    const data = await response.json();
+        const data = await response.json()
 
-    if (!response.ok) {
-      return {
-        success: false,
-        ...data,
-        error: data?.error || { message: data?.message || `HTTP error! status: ${response.status}` }
-      };
+        if (!response.ok) {
+            return {
+                success: false,
+                ...data,
+                error: data?.error || {
+                    message: data?.message || `HTTP error! status: ${response.status}`
+                }
+            }
+        }
+
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error running FPT:", error)
+        return {
+            success: false,
+            error: { message: error.message }
+        }
     }
+}
 
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error running FPT:", error);
-    return {
-      success: false,
-      error: { message: error.message }
-    };
-  }
+export async function heightWeightSubmit(payload) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/height-weight`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error submitting height and weight:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
 }
 
 export async function bufferCollection(shm_video_path, user_id, session_id, buffer_type, kiosk_id) {
-  try {
-    console.log('🔄 [BUFFER COLLECTION API] Starting buffer collection API call');
-    console.log('📤 [BUFFER COLLECTION API] Payload:', {
-      shm_video_path,
-      user_id,
-      session_id,
-      buffer_type,
-      kiosk_id
-    });
+    try {
+        console.log("🔄 [BUFFER COLLECTION API] Starting buffer collection API call")
+        console.log("📤 [BUFFER COLLECTION API] Payload:", {
+            shm_video_path,
+            user_id,
+            session_id,
+            buffer_type,
+            kiosk_id
+        })
 
-    const payload = {
-      shm_video_path,
-      user_id,
-      session_id,
-      buffer_type,
-      kiosk_id
-    };
+        const payload = {
+            shm_video_path,
+            user_id,
+            session_id,
+            buffer_type,
+            kiosk_id
+        }
 
-    const response = await fetch(`${API_BASE_URL}/buffer-collection`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+        const response = await fetch(`${API_BASE_URL}/buffer-collection`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("✅ [BUFFER COLLECTION API] Buffer collection API response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("❌ [BUFFER COLLECTION API] Error calling buffer collection:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    console.log('✅ [BUFFER COLLECTION API] Buffer collection API response:', data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("❌ [BUFFER COLLECTION API] Error calling buffer collection:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
-
 
 /**
  * Send all three videos to backend (for future use if needed)
@@ -443,67 +607,86 @@ export async function bufferCollection(shm_video_path, user_id, session_id, buff
  * @returns {Promise<Array>} Array of responses with shm_paths
  */
 export const BIAMeasurementStage = async (stage) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/bia/measurement/stage`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(stage), // ✅ FIXED
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/bia/measurement/stage`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(stage) // ✅ FIXED
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+
+        console.log("BIA measurement stage response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending BIA measurement stage to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-
-    console.log("BIA measurement stage response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending BIA measurement stage to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-};
-
-export const voiceSaveApi = async (payload) => {
-  try {
-    const response = await fetch(`${VOICE_API_BASE_URL}/voice/analyze`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Voice API tatus: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("Voice save response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending voice save to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
-export const DivideAttentionSession = async (userId, sessionId, sessionType) => {
+export const voiceBufferApi = async (data) => {
+    try {
+        const formData = new FormData()
+        const userId = data?.user_id || data?.userId
+        const sessionId = data?.session_id || data?.sessionId
+        const file = data?.file || data?.audioBlob || data?.blob || data?.buffer
+        const filename = data?.filename || data?.fileName || `${userId || "voice"}_${Date.now()}.wav`
 
-  /*
+        if (userId) formData.append("user_id", userId)
+        if (sessionId) formData.append("session_id", sessionId)
+
+        if (file) {
+            let blobFile = file
+            if (file instanceof ArrayBuffer || ArrayBuffer.isView(file)) {
+                blobFile = new Blob([file], { type: "audio/wav" })
+            }
+            formData.append("file", blobFile, filename)
+        }
+
+        const response = await fetch(`${API_BASE_URL}/buffer-voice`, {
+            method: "POST",
+            headers: {
+                Accept: "application/json"
+            },
+            body: formData
+        })
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => "")
+            throw new Error(`Voice API status: ${response.status} - ${errorText}`)
+        }
+
+        const resData = await response.json()
+        console.log("Voice save response:", resData)
+        return {
+            success: true,
+            ...resData
+        }
+    } catch (error) {
+        console.error("Error sending voice save to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
+}
+
+
+
+export const DivideAttentionSession = async (userId, sessionId, sessionType) => {
+    /*
 {
   "user_id": "bdabcfad-558f-4d36-9cfd-5deaedfdd629",
   session_id:"bdabcfad-558f-4d36-9cfd-5deaedfdd629",
@@ -511,41 +694,41 @@ export const DivideAttentionSession = async (userId, sessionId, sessionType) => 
 }
 
   */
-  const payload = {
-    user_id:userId,
-    session_id:sessionId,
-    session_type:sessionType
-  }
-  try {
-    const response = await fetch(`${API_BASE_URL}/sessions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    const payload = {
+        user_id: userId,
+        session_id: sessionId,
+        session_type: sessionType
     }
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    const data = await response.json();
-    console.log("Divide attention session response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending divide attention session to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Divide attention session response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending divide attention session to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
+    }
 }
 
 export const DivideAttentionTrialStart = async (payload) => {
-  /*
+    /*
 {
   "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c",
   "trial_number": 1,
@@ -555,65 +738,65 @@ export const DivideAttentionTrialStart = async (payload) => {
   "total_objects": 4
 }
   */
-  try {
-    const response = await fetch(`${API_BASE_URL}/trials/start`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/trials/start`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Divide attention trial start response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending divide attention trial start to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
+}
 
-    const data = await response.json();
-    console.log("Divide attention trial start response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending divide attention trial start to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-} 
+export const DivideAttentionTrialComplete = async (trial_id, payload) => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/trials/${trial_id}/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-export const DivideAttentionTrialComplete = async (trial_id,payload) => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/trials/${trial_id}/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json()
+        console.log("Divide attention trial complete response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending divide attention trial complete to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    console.log("Divide attention trial complete response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending divide attention trial complete to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-} 
+}
 
 export const DivideAttentionResponseBatch = async (payload) => {
-  /*
+    /*
   {
   "trial_id": "8c62e47b-aec8-4237-83de-994a8dc9bba6",
   "responses": [
@@ -631,124 +814,120 @@ export const DivideAttentionResponseBatch = async (payload) => {
   ]
 }
   */
-  try {
-    const response = await fetch(`${API_BASE_URL}/responses/batch`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/responses/batch`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Divide attention response batch response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending divide attention response batch to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    console.log("Divide attention response batch response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending divide attention response batch to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
 }
 
 export const DivideAttentionSessionComplete = async (session_id, screening_session_id) => {
-  /*
+    /*
   {
   "session_id": "75e8516d-c2f4-4286-b0ae-055c55232c9c"
 }
   */
-  try {
-    const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/${session_id}/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("Divide attention session complete response:", data)
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending divide attention session complete to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    console.log("Divide attention session complete response:", data);
-    return {
-      success: true,
-      ...data
-    };
-  } catch (error) {
-    console.error("Error sending divide attention session complete to backend:", error);
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-} 
+}
 
 export const DivideAttentionSessionStart = async (payload) => {
-  /*
+    /*
   {
     "user_id": "...",
     "session_id": "...",
     "session_type": "string"
   }
   */
-  try {
-    const response = await fetch(`${API_BASE_URL}/sessions/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    console.log("DA session start response:", data);
-    return { success: true, ...data };
-  } catch (error) {
-    console.error("Error starting DA session:", error);
-    return { success: false, error: error.message };
-  }
-};
-
+    try {
+        const response = await fetch(`${API_BASE_URL}/sessions/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+        const data = await response.json()
+        console.log("DA session start response:", data)
+        return { success: true, ...data }
+    } catch (error) {
+        console.error("Error starting DA session:", error)
+        return { success: false, error: error.message }
+    }
+}
 
 export const BIAComplete = async (result) => {
-  try {
-    const response = await fetch(
-      `${API_BASE_URL}/bia/session/complete`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(result),
-      }
-    );
+    try {
+        const response = await fetch(`${API_BASE_URL}/bia/session/complete`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(result)
+        })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const data = await response.json()
+        console.log("BIA complete response:", data)
+
+        return {
+            success: true,
+            ...data
+        }
+    } catch (error) {
+        console.error("Error sending BIA complete to backend:", error)
+        return {
+            success: false,
+            error: error.message
+        }
     }
-
-    const data = await response.json();
-    console.log("BIA complete response:", data);
-
-    return {
-      success: true,
-      ...data,
-    };
-  } catch (error) {
-    console.error("Error sending BIA complete to backend:", error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
-};
+}
 
 // /**
 //  * Send weight and height measurements to backend
@@ -791,18 +970,18 @@ export const BIAComplete = async (result) => {
  * Calls: GET /sync/cloud-to-local
  */
 export const cloudToLocalSync = async () => {
-  try {
-    const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, {
-      timeout: 60000, // sync may take time
-      headers: { "Content-Type": "application/json" },
-    });
-    return res.data;
-  } catch (error) {
-    console.error("❌ cloudToLocalSync API failed:", error?.message || error);
-    throw error;
-  }
-};
-export const SmoothieSession = async (userId, screeningSessionId) => { }
-export const SmoothieSlashBatch = async (gameSessionId, events) => { }
-export const SmoothieSessionComplete = async (gameSessionId, payload) => { }
-export const SmoothieSessionAbandon = async (gameSessionId) => { }
+    try {
+        const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, {
+            timeout: 60000, // sync may take time
+            headers: { "Content-Type": "application/json" }
+        })
+        return res.data
+    } catch (error) {
+        console.error("❌ cloudToLocalSync API failed:", error?.message || error)
+        throw error
+    }
+}
+export const SmoothieSession = async (userId, screeningSessionId) => {}
+export const SmoothieSlashBatch = async (gameSessionId, events) => {}
+export const SmoothieSessionComplete = async (gameSessionId, payload) => {}
+export const SmoothieSessionAbandon = async (gameSessionId) => {}

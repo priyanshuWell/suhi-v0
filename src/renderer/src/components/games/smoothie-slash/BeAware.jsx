@@ -1,14 +1,13 @@
-import beAwareBg from "../../../assets/smoothie/be_aware_with_text.png";
-import { useTranslation } from 'react-i18next';
+import beAwareBg from "../../../assets/smoothie/be_aware_with_text.png"
+import { useTranslation } from "react-i18next"
 
-
-const FRAME_W = 1167;
-const FRAME_H = 1588;
-const pctTop = (px) => `${(px / FRAME_H) * 100}%`;
-const cqw = (px) => `${(px / FRAME_W) * 100}cqw`;
+const FRAME_W = 1167
+const FRAME_H = 1588
+const pctTop = (px) => `${(px / FRAME_H) * 100}%`
+const cqw = (px) => `${(px / FRAME_W) * 100}cqw`
 
 export default function BeAware() {
-    const { t } = useTranslation();
+    const { t } = useTranslation()
     return (
         <div
             style={{
@@ -17,7 +16,7 @@ export default function BeAware() {
                 margin: "0 auto",
                 aspectRatio: `${FRAME_W} / ${FRAME_H}`,
                 containerType: "inline-size",
-                fontFamily: "'Anton', sans-serif",
+                fontFamily: "'Anton', sans-serif"
             }}
         >
             <link
@@ -35,7 +34,7 @@ export default function BeAware() {
                     width: "100%",
                     height: "100%",
                     objectFit: "cover",
-                    pointerEvents: "none",
+                    pointerEvents: "none"
                 }}
             />
 
@@ -78,10 +77,10 @@ export default function BeAware() {
                     color: "#F98FD1",
                     fontSize: cqw(100),
                     letterSpacing: "0.5px",
-                    textShadow: "0 0 18px rgba(249,143,209,0.65)",
+                    textShadow: "0 0 18px rgba(249,143,209,0.65)"
                 }}
             >
-                {t('smoothieSlash.beAware.timer')}
+                {t("smoothieSlash.beAware.timer")}
             </p>
 
             {/* Top-right block — left-aligned, right of the stopwatch:
@@ -93,14 +92,30 @@ export default function BeAware() {
                     top: pctTop(599),
                     margin: 0,
                     width: `${((1005 - 497) / FRAME_W) * 100}%`,
-                    textAlign: "left",
+                    textAlign: "left"
                 }}
             >
-                <p style={{ margin: 0, color: "#FFFFFF", fontSize: cqw(42), lineHeight: 1.35, letterSpacing: "0.35px" }}>
-                    {t('smoothieSlash.beAware.recipe_changes_every')}
+                <p
+                    style={{
+                        margin: 0,
+                        color: "#FFFFFF",
+                        fontSize: cqw(42),
+                        lineHeight: 1.35,
+                        letterSpacing: "0.35px"
+                    }}
+                >
+                    {t("smoothieSlash.beAware.recipe_changes_every")}
                 </p>
-                <p style={{ margin: 0, color: "#F5E600", fontSize: cqw(46), lineHeight: 1.35, letterSpacing: "0.35px" }}>
-                    {t('smoothieSlash.beAware.twenty_seconds')}
+                <p
+                    style={{
+                        margin: 0,
+                        color: "#F5E600",
+                        fontSize: cqw(46),
+                        lineHeight: 1.35,
+                        letterSpacing: "0.35px"
+                    }}
+                >
+                    {t("smoothieSlash.beAware.twenty_seconds")}
                 </p>
             </div>
 
@@ -113,16 +128,35 @@ export default function BeAware() {
                     top: pctTop(1086),
                     margin: 0,
                     width: `${((963 - 443) / FRAME_W) * 100}%`,
-                    textAlign: "left",
+                    textAlign: "left"
                 }}
             >
-                <p style={{ margin: 0, color: "#FFFFFF", fontSize: cqw(42), lineHeight: 1.35, letterSpacing: "0.35px" }}>
-                    {t('smoothieSlash.beAware.cutting_wrong')}
+                <p
+                    style={{
+                        margin: 0,
+                        color: "#FFFFFF",
+                        fontSize: cqw(42),
+                        lineHeight: 1.35,
+                        letterSpacing: "0.35px"
+                    }}
+                >
+                    {t("smoothieSlash.beAware.cutting_wrong")}
                 </p>
-                <p style={{ margin: 0, color: "#FFFFFF", fontSize: cqw(42), lineHeight: 1.35, letterSpacing: "0.35px" }}>
-                    {t('smoothieSlash.beAware.fruits_cost')} <span style={{ color: "#F98787" }}>{t('smoothieSlash.beAware.cost_points')}</span>
+                <p
+                    style={{
+                        margin: 0,
+                        color: "#FFFFFF",
+                        fontSize: cqw(42),
+                        lineHeight: 1.35,
+                        letterSpacing: "0.35px"
+                    }}
+                >
+                    {t("smoothieSlash.beAware.fruits_cost")}{" "}
+                    <span style={{ color: "#F98787" }}>
+                        {t("smoothieSlash.beAware.cost_points")}
+                    </span>
                 </p>
             </div>
         </div>
-    );
+    )
 }

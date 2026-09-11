@@ -18,40 +18,42 @@ import i18n from "i18next"
  */
 
 // Eagerly map all audio files under assets/audio
-const audioModules = import.meta.glob('../assets/audio/**/*.{mp3,wav,ogg}', {
-  eager: true,
-  import: 'default'
+const audioModules = import.meta.glob("../assets/audio/**/*.{mp3,wav,ogg}", {
+    eager: true,
+    import: "default"
 })
 
 /**
  * Helper to retrieve a resolved module URL from audioModules.
  */
 const getModule = (relPath) => {
-  const fullPath = `../assets/audio/${relPath}`
-  return audioModules[fullPath] || null
+    const fullPath = `../assets/audio/${relPath}`
+    return audioModules[fullPath] || null
 }
 
 /**
  * Attempt to match a baseName within a specific language folder.
  */
 const resolvePath = (baseName, langCode) => {
-  const cleanName = baseName.replace(/^\//, '')
+    const cleanName = baseName.replace(/^\//, "")
 
-  // 1. Try exact path (e.g. "bn/errors/remove_your_shoes_and_socks.mp3")
-  let mod = getModule(`${langCode}/${cleanName}.mp3`) || 
-            getModule(`${langCode}/${cleanName}.wav`) || 
-            getModule(`${langCode}/${cleanName}.ogg`)
-  if (mod) return mod
-
-  // 2. If no subfolder prefix given (e.g. "camera_scan"), try instructions/ subfolder
-  if (!cleanName.includes('/')) {
-    mod = getModule(`${langCode}/instructions/${cleanName}.mp3`) || 
-          getModule(`${langCode}/instructions/${cleanName}.wav`) || 
-          getModule(`${langCode}/instructions/${cleanName}.ogg`)
+    // 1. Try exact path (e.g. "bn/errors/remove_your_shoes_and_socks.mp3")
+    let mod =
+        getModule(`${langCode}/${cleanName}.mp3`) ||
+        getModule(`${langCode}/${cleanName}.wav`) ||
+        getModule(`${langCode}/${cleanName}.ogg`)
     if (mod) return mod
-  }
 
-  return null
+    // 2. If no subfolder prefix given (e.g. "camera_scan"), try instructions/ subfolder
+    if (!cleanName.includes("/")) {
+        mod =
+            getModule(`${langCode}/instructions/${cleanName}.mp3`) ||
+            getModule(`${langCode}/instructions/${cleanName}.wav`) ||
+            getModule(`${langCode}/instructions/${cleanName}.ogg`)
+        if (mod) return mod
+    }
+
+    return null
 }
 
 /**
@@ -62,30 +64,32 @@ const resolvePath = (baseName, langCode) => {
  * @returns {Promise<string|null>} Resolved URL string or null
  */
 export const getAudioForCurrentLanguage = async (baseName) => {
-  if (!baseName) return null
-  const currentLang = i18n.language || "en"
-  console.log("[audioUtils] lang:", currentLang, "key:", baseName)
+    if (!baseName) return null
+    const currentLang = i18n.language || "en"
+    console.log("[audioUtils] lang:", currentLang, "key:", baseName)
 
-  // Try target language
-  let audio = resolvePath(baseName, currentLang)
-  if (audio) return audio
-
-  // Language fallback -> en
-  if (currentLang !== "en") {
-    console.warn(`[audioUtils] "${baseName}" not found in "${currentLang}", falling back to "en"`)
-    audio = resolvePath(baseName, "en")
+    // Try target language
+    let audio = resolvePath(baseName, currentLang)
     if (audio) return audio
-  }
 
-  console.warn(`[audioUtils] No audio found for "${baseName}" in "${currentLang}" or "en"`)
-  return null
+    // Language fallback -> en
+    if (currentLang !== "en") {
+        console.warn(
+            `[audioUtils] "${baseName}" not found in "${currentLang}", falling back to "en"`
+        )
+        audio = resolvePath(baseName, "en")
+        if (audio) return audio
+    }
+
+    console.warn(`[audioUtils] No audio found for "${baseName}" in "${currentLang}" or "en"`)
+    return null
 }
 
 /**
  * Kept for backward compatibility.
  */
 export const clearAudioCache = () => {
-  console.log("[audioUtils] Audio map active")
+    console.log("[audioUtils] Audio map active")
 }
 
 /**
@@ -93,24 +97,23 @@ export const clearAudioCache = () => {
  * audio ref.
  */
 export const createLanguageAudioPlayer = (audioRef, onPlayingChange) => {
-  return async (baseName) => {
-    const audioPath = await getAudioForCurrentLanguage(baseName)
+    return async (baseName) => {
+        const audioPath = await getAudioForCurrentLanguage(baseName)
 
-    if (audioPath && audioRef.current) {
-      audioRef.current.src = audioPath
-      onPlayingChange?.(true)
-      audioRef.current.play().catch((err) => {
-        console.log("[audioUtils] Playback failed:", err)
+        if (audioPath && audioRef.current) {
+            audioRef.current.src = audioPath
+            onPlayingChange?.(true)
+            audioRef.current.play().catch((err) => {
+                console.log("[audioUtils] Playback failed:", err)
+                onPlayingChange?.(false)
+            })
+            return true
+        }
+
+        console.log(`[audioUtils] No audio found for "${baseName}"`)
         onPlayingChange?.(false)
-      })
-      return true
+        return false
     }
-
-    console.log(`[audioUtils] No audio found for "${baseName}"`)
-    onPlayingChange?.(false)
-    return false
-  }
 }
 
 export default getAudioForCurrentLanguage
-

@@ -7,4 +7,4 @@
  *   Step 3 Color Blindness: /colorblindness, /colorblindness/quiz
  *   Step 4 Space Convoy:   /space-convoy-main, /divide-attention, /space-convoy-complete
  */
-export { getStepForPath, BUFFER_COLLECTION_STEPS } from '../utils/bufferCollectionRoutes';
+export { getStepForPath, BUFFER_COLLECTION_STEPS } from "../utils/bufferCollectionRoutes"

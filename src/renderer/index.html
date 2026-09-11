@@ -1,16 +1,15 @@
 <!doctype html>
 <html>
-
-<head>
-  <meta charset="UTF-8" />
-  <title>Suhi</title>
-  <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
-  <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
+    <head>
+        <meta charset="UTF-8" />
+        <title>Suhi</title>
+        <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
+        <!-- <meta http-equiv="Content-Security-Policy" content="default-src 'self'; 
                    style-src 'self' 'unsafe-inline' fonts.googleapis.com; 
                    font-src 'self' fonts.gstatic.com; 
                    img-src 'self' data:;"> -->
 
-  <!-- <meta
+        <!-- <meta
   http-equiv="Content-Security-Policy"
   content="
     default-src 'self';
@@ -22,22 +21,24 @@
   "
 /> -->
 
-
-<meta http-equiv="Content-Security-Policy" content="
+        <meta
+            http-equiv="Content-Security-Policy"
+            content="
   default-src 'self';
   script-src 'self';
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   font-src 'self' https://fonts.gstatic.com;
   img-src 'self' data: blob: http://127.0.0.1:* http://localhost:*;
-  connect-src 'self' http://127.0.0.1:* http://localhost:* http://0.0.0.0:*;
-" />
+  connect-src 'self' http://127.0.0.1:* http://localhost:* http://0.0.0.0:* https://api-models-staging.suhi.ai;
+"
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link href="https://fonts.googleapis.com/css2?family=Anta&family=Anton&display=swap" rel="stylesheet" />
+    </head>
 
-
-</head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-
+    <body>
+        <div id="root"></div>
+        <script type="module" src="/src/main.jsx"></script>
+    </body>
 </html>

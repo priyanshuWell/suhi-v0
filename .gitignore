@@ -11,3 +11,4 @@ out
 build-v0
 .agents/
 skills-lock.json
+.zed

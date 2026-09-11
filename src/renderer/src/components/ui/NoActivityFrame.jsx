@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import frameBg from "../../assets/no_activity_frame.png";
+import React, { useEffect, useRef, useState } from "react"
+import frameBg from "../../assets/no_activity_frame.png"
 
 /**
  * NoActivityFrame
@@ -58,120 +58,121 @@ export default function NoActivityFrame({
     redirectSecs,
     autoRedirectDelay,
     timeoutSecs = 10,
-    continueScreeningSecs = 10,   // total countdown for continue-screening stage
-    continueButtonDelaySecs = 5,  // seconds before the button appears
+    continueScreeningSecs = 10, // total countdown for continue-screening stage
+    continueButtonDelaySecs = 5, // seconds before the button appears
     onButtonClick,
     onRedirect,
     onTimeout,
     showRetry = false,
     onRetry,
-    retryLabel = "Retry",
+    retryLabel = "Retry"
 }) {
     // ── prop aliasing — supports both the original prop names and the
     // FullscreenError-style names so callers don't need to change both ──
-    const resolvedSubtitleRaw = description ?? subtitle;
-    const resolvedButtonLabel = redirectLabel ?? buttonText;
+    const resolvedSubtitleRaw = description ?? subtitle
+    const resolvedButtonLabel = redirectLabel ?? buttonText
     const resolvedRedirectSecs =
-        autoRedirectDelay != null ? autoRedirectDelay / 1000 : redirectSecs ?? 5;
-    const resolvedOnRedirect = onRedirect ?? onButtonClick;
+        autoRedirectDelay != null ? autoRedirectDelay / 1000 : (redirectSecs ?? 5)
+    const resolvedOnRedirect = onRedirect ?? onButtonClick
 
     // ── defaults per variant ─────────────────────────────────────────
     const defaults = {
         "no-user": {
             title: "No user detected",
             subtitle: "Make sure user is standing on the kiosk and facing the camera",
-            buttonLabel: "Redirecting to home",
+            buttonLabel: "Redirecting to home"
         },
         "are-you-there": {
             title: "No activity detected",
-            subtitle: "Are you there?",
+            subtitle: "Are you there?"
         },
         "continue-screening": {
             title: "No activity detected",
             subtitle: "Redirecting to homepage in 5 seconds...",
-            buttonText: "Continue Screening",
-        },
-    };
+            buttonText: "Continue Screening"
+        }
+    }
 
-    const t = title ?? defaults[variant]?.title;
-    const s = resolvedSubtitleRaw ?? defaults[variant]?.subtitle;
-    const label = resolvedButtonLabel ?? defaults[variant]?.buttonLabel ?? defaults[variant]?.buttonText;
+    const t = title ?? defaults[variant]?.title
+    const s = resolvedSubtitleRaw ?? defaults[variant]?.subtitle
+    const label =
+        resolvedButtonLabel ?? defaults[variant]?.buttonLabel ?? defaults[variant]?.buttonText
 
     // ── countdown state (variant: "are-you-there") ────────────────────
-    const [remaining, setRemaining] = useState(timeoutSecs);
-    const intervalRef = useRef(null);
-    const firedRef = useRef(false);
+    const [remaining, setRemaining] = useState(timeoutSecs)
+    const intervalRef = useRef(null)
+    const firedRef = useRef(false)
 
     const fireTimeout = () => {
-        if (firedRef.current) return;
-        firedRef.current = true;
-        clearInterval(intervalRef.current);
-        onTimeout?.();
-    };
+        if (firedRef.current) return
+        firedRef.current = true
+        clearInterval(intervalRef.current)
+        onTimeout?.()
+    }
 
     useEffect(() => {
-        if (variant !== "are-you-there") return;
-        firedRef.current = false;
-        setRemaining(timeoutSecs);
+        if (variant !== "are-you-there") return
+        firedRef.current = false
+        setRemaining(timeoutSecs)
         intervalRef.current = setInterval(() => {
             setRemaining((prev) => {
                 if (prev <= 1) {
-                    clearInterval(intervalRef.current);
-                    setTimeout(fireTimeout, 0);
-                    return 0;
+                    clearInterval(intervalRef.current)
+                    setTimeout(fireTimeout, 0)
+                    return 0
                 }
-                return prev - 1;
-            });
-        }, 1000);
-        return () => clearInterval(intervalRef.current);
-    }, [variant, timeoutSecs]);
+                return prev - 1
+            })
+        }, 1000)
+        return () => clearInterval(intervalRef.current)
+    }, [variant, timeoutSecs])
 
     // ── auto-redirect timer for "no-user" / "continue-screening" ──────
     // Skipped entirely in retry mode (showRetry=true) — that mode waits
     // for a manual click, it never auto-fires.
-    const redirectTimerRef = useRef(null);
-    const redirectCountIntervalRef = useRef(null);
-    const redirectFiredRef = useRef(false);
-    const [filling, setFilling] = useState(false);
-    const [redirectRemaining, setRedirectRemaining] = useState(resolvedRedirectSecs);
+    const redirectTimerRef = useRef(null)
+    const redirectCountIntervalRef = useRef(null)
+    const redirectFiredRef = useRef(false)
+    const [filling, setFilling] = useState(false)
+    const [redirectRemaining, setRedirectRemaining] = useState(resolvedRedirectSecs)
 
     const fireRedirect = () => {
-        if (redirectFiredRef.current) return;
-        redirectFiredRef.current = true;
-        clearTimeout(redirectTimerRef.current);
-        clearInterval(redirectCountIntervalRef.current);
-        resolvedOnRedirect?.();
-    };
+        if (redirectFiredRef.current) return
+        redirectFiredRef.current = true
+        clearTimeout(redirectTimerRef.current)
+        clearInterval(redirectCountIntervalRef.current)
+        resolvedOnRedirect?.()
+    }
 
     useEffect(() => {
-        if (variant !== "no-user" && variant !== "continue-screening") return;
-        if (showRetry) return; // retry mode: no auto-timer
+        if (variant !== "no-user" && variant !== "continue-screening") return
+        if (showRetry) return // retry mode: no auto-timer
 
-        redirectFiredRef.current = false;
-        setFilling(false);
-        setRedirectRemaining(resolvedRedirectSecs);
+        redirectFiredRef.current = false
+        setFilling(false)
+        setRedirectRemaining(resolvedRedirectSecs)
 
         // Tick down each second; fire redirect the instant the counter hits 0 —
         // avoids any drift between the display and a separate setTimeout.
         redirectCountIntervalRef.current = setInterval(() => {
             setRedirectRemaining((prev) => {
                 if (prev <= 1) {
-                    clearInterval(redirectCountIntervalRef.current);
-                    setTimeout(fireRedirect, 0); // same pattern as are-you-there variant
-                    return 0;
+                    clearInterval(redirectCountIntervalRef.current)
+                    setTimeout(fireRedirect, 0) // same pattern as are-you-there variant
+                    return 0
                 }
-                return prev - 1;
-            });
-        }, 1000);
+                return prev - 1
+            })
+        }, 1000)
 
         // One-frame delay so CSS fill transition animates from 0 → 1
-        const raf = requestAnimationFrame(() => setFilling(true));
+        const raf = requestAnimationFrame(() => setFilling(true))
 
         return () => {
-            cancelAnimationFrame(raf);
-            clearInterval(redirectCountIntervalRef.current);
-        };
-    }, [variant, resolvedRedirectSecs, showRetry]);
+            cancelAnimationFrame(raf)
+            clearInterval(redirectCountIntervalRef.current)
+        }
+    }, [variant, resolvedRedirectSecs, showRetry])
 
     // ── continue-screening: own countdown + delayed button reveal ─────
     const csTimerRef = useRef(null)
@@ -187,7 +188,7 @@ export default function NoActivityFrame({
     }
 
     useEffect(() => {
-        if (variant !== 'continue-screening') return
+        if (variant !== "continue-screening") return
         csFiredRef.current = false
         setCsRemaining(continueScreeningSecs)
         setCsButtonVisible(false)
@@ -227,26 +228,21 @@ export default function NoActivityFrame({
     // Manual click on the no-user redirect button fires immediately.
     const handleManualClick = () => {
         fireRedirect()
-    };
+    }
 
     // ── countdown ring math (are-you-there) ────────────────────────────
-    const RADIUS = 28;
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
-    const progress = remaining / timeoutSecs;
-    const strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+    const RADIUS = 28
+    const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+    const progress = remaining / timeoutSecs
+    const strokeDashoffset = CIRCUMFERENCE * (1 - progress)
 
-    const textGold = "text-[#E5B96C]";
+    const textGold = "text-[#E5B96C]"
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
             <div className="relative w-full ">
                 {/* PNG background frame */}
-                <img
-                    src={frameBg}
-                    alt=""
-                    className="w-full h-auto block"
-                    draggable={false}
-                />
+                <img src={frameBg} alt="" className="w-full h-auto block" draggable={false} />
 
                 {/* Content overlay */}
                 <div className="absolute inset-[14px] flex flex-col items-center justify-center gap-5 px-8">
@@ -273,8 +269,9 @@ export default function NoActivityFrame({
                     {/* Variant-specific footer */}
                     <div className="mt-1">
                         {/* ═══ VARIANT 1: Full-Color Sliding Fill Redirect Button, or Retry Button ═══ */}
-                        {variant === "no-user" && showButton && (
-                            showRetry ? (
+                        {variant === "no-user" &&
+                            showButton &&
+                            (showRetry ? (
                                 // ── Retry mode: manual button, no auto-timer ──
                                 <button
                                     onClick={onRetry}
@@ -290,7 +287,7 @@ export default function NoActivityFrame({
                                         background:
                                             "radial-gradient(43.11% 181.04% at 50% 50%, rgba(0, 46, 185, 0.50) 0%, rgba(0, 151, 214, 0.50) 100%)",
                                         boxShadow:
-                                            "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset",
+                                            "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset"
                                     }}
                                 >
                                     {retryLabel}
@@ -308,8 +305,10 @@ export default function NoActivityFrame({
                                     style={{
                                         borderRadius: "10px",
                                         border: "2.996px solid #FFF",
-                                        background: "radial-gradient(43.11% 181.04% at 50% 50%, #002EB9 0%, #0097D6 100%)",
-                                        boxShadow: "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset",
+                                        background:
+                                            "radial-gradient(43.11% 181.04% at 50% 50%, #002EB9 0%, #0097D6 100%)",
+                                        boxShadow:
+                                            "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset"
                                     }}
                                 >
                                     {/* Fill layer — slides the whole button from empty to full color
@@ -322,7 +321,7 @@ export default function NoActivityFrame({
                                             transform: filling ? "scaleX(1)" : "scaleX(0)",
                                             transition: filling
                                                 ? `transform ${resolvedRedirectSecs}s linear`
-                                                : "none",
+                                                : "none"
                                         }}
                                     />
 
@@ -337,8 +336,7 @@ export default function NoActivityFrame({
                                         </span>
                                     </div>
                                 </div>
-                            )
-                        )}
+                            ))}
 
                         {/* ═══ VARIANT 2: Countdown Ring ═══ */}
                         {variant === "are-you-there" && (
@@ -379,9 +377,8 @@ export default function NoActivityFrame({
                                 <p
                                     className={`${textGold} text-[22px] font-semibold text-center tracking-wide`}
                                 >
-                                    We are redirecting you in{' '}
-                                    <span className="text-white font-bold">{csRemaining}</span>
-                                    {' '}sec
+                                    We are redirecting you in{" "}
+                                    <span className="text-white font-bold">{csRemaining}</span> sec
                                 </p>
 
                                 {/* Button appears after continueButtonDelaySecs */}
@@ -398,9 +395,11 @@ export default function NoActivityFrame({
                                         boxShadow:
                                             "0 0 24px rgba(100,180,220,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
                                         opacity: csButtonVisible ? 1 : 0,
-                                        transform: csButtonVisible ? 'translateY(0)' : 'translateY(8px)',
-                                        pointerEvents: csButtonVisible ? 'auto' : 'none',
-                                        transition: 'opacity 0.4s ease, transform 0.4s ease',
+                                        transform: csButtonVisible
+                                            ? "translateY(0)"
+                                            : "translateY(8px)",
+                                        pointerEvents: csButtonVisible ? "auto" : "none",
+                                        transition: "opacity 0.4s ease, transform 0.4s ease"
                                     }}
                                 >
                                     Continue Screening
@@ -411,5 +410,5 @@ export default function NoActivityFrame({
                 </div>
             </div>
         </div>
-    );
+    )
 }

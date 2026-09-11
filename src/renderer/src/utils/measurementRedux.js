@@ -1,9 +1,9 @@
-import { 
-  setFptHeight, 
-  setFptWeight, 
-  setPreliminaryHeight, 
-  setPreliminaryWeight 
-} from '../features/common/commonSlice';
+import {
+    setFptHeight,
+    setFptWeight,
+    setPreliminaryHeight,
+    setPreliminaryWeight
+} from "../features/common/commonSlice"
 
 /**
  * Store FPT measurements (from face recognition)
@@ -12,16 +12,16 @@ import {
  * @param {number} height - Height in cm
  */
 export const storeFptMeasurements = (dispatch, weight, height) => {
-  console.log('[REDUX] Storing FPT measurements:', { weight, height });
-  
-  if (weight !== null && weight !== undefined) {
-    dispatch(setFptWeight(weight));
-  }
-  
-  if (height !== null && height !== undefined) {
-    dispatch(setFptHeight(height));
-  }
-};
+    console.log("[REDUX] Storing FPT measurements:", { weight, height })
+
+    if (weight !== null && weight !== undefined) {
+        dispatch(setFptWeight(weight))
+    }
+
+    if (height !== null && height !== undefined) {
+        dispatch(setFptHeight(height))
+    }
+}
 
 /**
  * Store preliminary measurements (from BIA)
@@ -30,13 +30,13 @@ export const storeFptMeasurements = (dispatch, weight, height) => {
  * @param {number} height - Height in cm
  */
 export const storePreliminaryMeasurements = (dispatch, weight, height) => {
-  console.log('[REDUX] Storing preliminary measurements:', { weight, height });
-  
-  if (weight !== null && weight !== undefined) {
-    dispatch(setPreliminaryWeight(weight));
-  }
-  
-  if (height !== null && height !== undefined) {
-    dispatch(setPreliminaryHeight(height));
-  }
-};
+    console.log("[REDUX] Storing preliminary measurements:", { weight, height })
+
+    if (weight !== null && weight !== undefined) {
+        dispatch(setPreliminaryWeight(weight))
+    }
+
+    if (height !== null && height !== undefined) {
+        dispatch(setPreliminaryHeight(height))
+    }
+}

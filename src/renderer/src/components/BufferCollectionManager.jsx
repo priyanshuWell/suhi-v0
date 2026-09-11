@@ -1,10 +1,7 @@
-import { useEffect } from 'react';
-import { useLocation } from 'react-router';
-import { useSelector } from 'react-redux';
-import {
-  handleStepBufferRouteChange,
-  teardownStepBufferSession,
-} from '../utils/stepBufferSession';
+import { useEffect } from "react"
+import { useLocation } from "react-router"
+import { useSelector } from "react-redux"
+import { handleStepBufferRouteChange, teardownStepBufferSession } from "../utils/stepBufferSession"
 
 /**
  * App-level manager for the four screening steps.
@@ -12,22 +9,25 @@ import {
  * Recording continues when navigating between routes within the same step.
  */
 export default function BufferCollectionManager() {
-  const location = useLocation();
-  const storeUser = useSelector((state) => state.common.user);
-  const screening = useSelector((state) => state.common.screening);
+    const location = useLocation()
+    const storeUser = useSelector((state) => state.common.user)
+    const screening = useSelector((state) => state.common.screening)
 
-  const screeningSessionId = screening?.sessionId;
-  const userId = storeUser?.data?.user_id;
-  useEffect(() => {
-    void handleStepBufferRouteChange(location.pathname, {
-      screeningSessionId,
-      userId,
-    });
-  }, [location.pathname, screeningSessionId, userId]);
+    const screeningSessionId = screening?.sessionId
+    const userId = storeUser?.data?.user_id
+    useEffect(() => {
+        void handleStepBufferRouteChange(location.pathname, {
+            screeningSessionId,
+            userId
+        })
+    }, [location.pathname, screeningSessionId, userId])
 
-  useEffect(() => () => {
-    void teardownStepBufferSession();
-  }, []);
+    useEffect(
+        () => () => {
+            void teardownStepBufferSession()
+        },
+        []
+    )
 
-  return null;
+    return null
 }

@@ -32,4 +32,5 @@ $ npm run build:mac
 # For Linux
 $ npm run build:linux
 ```
+
 5057178a0ee112af7cfef830a8151c8b9f00eb97

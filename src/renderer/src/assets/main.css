@@ -1,11 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Anta&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Anta&display=swap");
+@import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap');
 @import "tailwindcss";
-
 
 @theme {
     --font-anta: "Anta", sans-serif;
     --breakpoint-xl: 1080px;
-
+    --font-anton: "Anton", sans-serif;
+    --font-oswald: "Oswald", sans-serif;
 }
 
 @layer base {

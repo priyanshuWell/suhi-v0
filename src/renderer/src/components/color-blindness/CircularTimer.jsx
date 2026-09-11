@@ -1,48 +1,48 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react"
 
 // const RADIUS = 100;
 // const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-const SIZE = 139;
-const CENTER = 69.5;
-const RADIUS = 58.38; // (69.5 - 11.12 from your SVG path)
-const STROKE = 18; // approx visual thickness
-const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+const SIZE = 139
+const CENTER = 69.5
+const RADIUS = 58.38 // (69.5 - 11.12 from your SVG path)
+const STROKE = 18 // approx visual thickness
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
 export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => {
-    const [progress, setProgress] = useState(1000);
-    const requestRef = useRef();
-    const startTimeRef = useRef();
+    const [progress, setProgress] = useState(1000)
+    const requestRef = useRef()
+    const startTimeRef = useRef()
 
     useEffect(() => {
-        startTimeRef.current = null;
-        setProgress(0);
-    }, [currentPlate, timerSeconds]);
+        startTimeRef.current = null
+        setProgress(0)
+    }, [currentPlate, timerSeconds])
 
     useEffect(() => {
-        const duration = timerSeconds * 1000;
+        const duration = timerSeconds * 1000
 
         const animate = (timestamp) => {
-            if (!startTimeRef.current) startTimeRef.current = timestamp;
-            const elapsed = timestamp - startTimeRef.current;
-            const progressValue = Math.min(elapsed / duration, 1);
-            setProgress(progressValue);
+            if (!startTimeRef.current) startTimeRef.current = timestamp
+            const elapsed = timestamp - startTimeRef.current
+            const progressValue = Math.min(elapsed / duration, 1)
+            setProgress(progressValue)
 
             if (progressValue < 1) {
-                requestRef.current = requestAnimationFrame(animate);
+                requestRef.current = requestAnimationFrame(animate)
             } else {
-                onExpire?.();
+                onExpire?.()
             }
-        };
+        }
 
-        requestRef.current = requestAnimationFrame(animate);
-        return () => cancelAnimationFrame(requestRef.current);
-    }, [timerSeconds, currentPlate, onExpire]);
+        requestRef.current = requestAnimationFrame(animate)
+        return () => cancelAnimationFrame(requestRef.current)
+    }, [timerSeconds, currentPlate, onExpire])
 
-    const dashOffset = CIRCUMFERENCE * (1 - progress);
-    const knobAngle = progress * 360;
-    const timeLeft = Math.ceil(timerSeconds * (1 - progress));
-    const formatTime = (s) => String(s).padStart(2, "0");
+    const dashOffset = CIRCUMFERENCE * (1 - progress)
+    const knobAngle = progress * 360
+    const timeLeft = Math.ceil(timerSeconds * (1 - progress))
+    const formatTime = (s) => String(s).padStart(2, "0")
 
     return (
         <div className="relative flex flex-col items-center justify-center gap-6">
@@ -79,7 +79,6 @@ export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => 
 
                 </svg> */}
                 <svg width="139" height="139" viewBox="0 0 139 139">
-
                     {/* Track */}
                     <circle
                         cx={CENTER}
@@ -110,7 +109,6 @@ export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => 
                             <circle cx={CENTER} cy={CENTER - RADIUS} r="6" fill="#094EC6" />
                         </g>
                     )}
-
                 </svg>
 
                 {/* Countdown number */}
@@ -119,7 +117,7 @@ export const CircularTimer = ({ timerSeconds = 10, onExpire, currentPlate }) => 
                 </span>
             </div>
         </div>
-    );
-};
+    )
+}
 
-export default CircularTimer;
+export default CircularTimer

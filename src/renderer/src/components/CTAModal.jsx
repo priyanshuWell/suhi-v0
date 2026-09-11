@@ -1,5 +1,5 @@
 const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
-    const [step, setStep] = useState("choose"); // "choose" | "barefoot"
+    const [step, setStep] = useState("choose") // "choose" | "barefoot"
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -8,12 +8,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 style={{ filter: "drop-shadow(0px 0px 40px rgba(139, 195, 229, 0.4))" }}
             >
                 {/* ── textbgframe background ── */}
-                <img
-                    src={textbgframe}
-                    alt=""
-                    className="w-full h-full block"
-                    draggable={false}
-                />
+                <img src={textbgframe} alt="" className="w-full h-full block" draggable={false} />
 
                 {/* ── Content ── */}
                 <div
@@ -22,18 +17,15 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                         top: "18%",
                         bottom: "20%",
                         left: "6%",
-                        right: "6%",
+                        right: "6%"
                     }}
                 >
                     {step === "choose" ? (
                         <>
                             {/* Title */}
                             <div className="flex items-center justify-center mb-10">
-                                <h2
-                                    className="text-[#8BC3E5] text-[35px]  m-0 font-anta w-2/3 text-center"
-                                >
-                                    Choose how you'd like
-                                    to continue.
+                                <h2 className="text-[#8BC3E5] text-[35px]  m-0 font-anta w-2/3 text-center">
+                                    Choose how you'd like to continue.
                                 </h2>
                             </div>
 
@@ -93,11 +85,8 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                         <>
                             {/* Instruction screen */}
                             <div className="flex items-center gap-2.5 mb-[6%]">
-                                <p
-                                    className="text-[#8BC3E5] text-3xl font-anta text-center"
-                                >
-                                    Remove your socks and shoes
-                                    and click on start.
+                                <p className="text-[#8BC3E5] text-3xl font-anta text-center">
+                                    Remove your socks and shoes and click on start.
                                 </p>
                             </div>
 
@@ -130,5 +119,5 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 </div>
             </div>
         </div>
-    );
-};
+    )
+}

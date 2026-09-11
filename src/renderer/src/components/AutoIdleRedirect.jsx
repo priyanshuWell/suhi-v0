@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from 'react'
-import { useIdleTimer } from 'react-idle-timer'
-import { useNavigate, useLocation } from 'react-router'
-import { useDispatch } from 'react-redux'
-import { resetCommonState } from '../features/common/commonSlice'
-import AreYouThereModal from './ui/AreYouThereModal'
-import NoActivityFrame from './ui/NoActivityFrame'
-import { useKioskAudio } from '../hooks/useKioskAudio'
+import React, { useState, useCallback } from "react"
+import { useIdleTimer } from "react-idle-timer"
+import { useNavigate, useLocation } from "react-router"
+import { useDispatch } from "react-redux"
+import { resetCommonState } from "../features/common/commonSlice"
+import AreYouThereModal from "./ui/AreYouThereModal"
+import NoActivityFrame from "./ui/NoActivityFrame"
+import { useKioskAudio } from "../hooks/useKioskAudio"
 
 /**
  * AutoIdleRedirect
@@ -25,25 +25,25 @@ import { useKioskAudio } from '../hooks/useKioskAudio'
 // the library's defaults miss those devices entirely and touching the
 // screen never resets the idle timer.
 const ACTIVITY_EVENTS = [
-    'mousemove',
-    'mousedown',
-    'keydown',
-    'wheel',
-    'DOMMouseScroll',
-    'mousewheel',
-    'touchstart',
-    'touchmove',
-    'pointerdown',
-    'pointermove',
-    'MSPointerDown',
-    'MSPointerMove',
-    'visibilitychange'
+    "mousemove",
+    "mousedown",
+    "keydown",
+    "wheel",
+    "DOMMouseScroll",
+    "mousewheel",
+    "touchstart",
+    "touchmove",
+    "pointerdown",
+    "pointermove",
+    "MSPointerDown",
+    "MSPointerMove",
+    "visibilitychange"
 ]
 
 const AutoIdleRedirect = ({
     timeoutMs = 120000,
     promptBeforeMs = 10000,
-    redirectTo = '/welcome'
+    redirectTo = "/welcome"
 }) => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -54,12 +54,12 @@ const AutoIdleRedirect = ({
 
     // Disable on home/splash routes — no point idling-out a page you'd
     // just get redirected back to anyway.
-    const isHomeRoute = location.pathname === '/' || location.pathname === redirectTo
+    const isHomeRoute = location.pathname === "/" || location.pathname === redirectTo
 
     const handlePrompt = useCallback(() => {
         if (!isHomeRoute) {
-            setStage('are-you-there')
-            playErrorAudio('errors/are_you_still_there')
+            setStage("are-you-there")
+            playErrorAudio("errors/are_you_still_there")
         }
     }, [isHomeRoute, playErrorAudio])
 
@@ -67,9 +67,11 @@ const AutoIdleRedirect = ({
         // When the idle timer fully expires, escalate from stage 1 → stage 2.
         // The actual redirect is fired by the continue-screening stage timeout.
         if (!isHomeRoute) {
-            console.log('[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage.')
-            setStage('continue-screening')
-            playErrorAudio('errors/unable_to_detect_any_activity')
+            console.log(
+                "[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage."
+            )
+            setStage("continue-screening")
+            playErrorAudio("errors/unable_to_detect_any_activity")
         }
     }, [isHomeRoute, playErrorAudio])
 
@@ -80,7 +82,9 @@ const AutoIdleRedirect = ({
 
     // Fired when the "continue-screening" countdown ends with no response.
     const handleFinalTimeout = useCallback(() => {
-        console.log(`[AutoIdleRedirect] Final timeout — resetting state & redirecting to ${redirectTo}...`)
+        console.log(
+            `[AutoIdleRedirect] Final timeout — resetting state & redirecting to ${redirectTo}...`
+        )
         setStage(null)
         dispatch(resetCommonState())
         navigate(redirectTo)
@@ -109,18 +113,18 @@ const AutoIdleRedirect = ({
         setStage(null)
     }
 
-    if (stage === 'are-you-there' && !isHomeRoute) {
+    if (stage === "are-you-there" && !isHomeRoute) {
         return (
             <NoActivityFrame
                 variant="are-you-there"
                 timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
                 onButtonClick={handleYes}
-                onTimeout={() => setStage('continue-screening')}
+                onTimeout={() => setStage("continue-screening")}
             />
         )
     }
 
-    if (stage === 'continue-screening' && !isHomeRoute) {
+    if (stage === "continue-screening" && !isHomeRoute) {
         return (
             <NoActivityFrame
                 variant="continue-screening"
