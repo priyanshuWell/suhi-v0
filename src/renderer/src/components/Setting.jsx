@@ -123,7 +123,7 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
 }
 
 export default GlowSlider
-export const Setting = ({ setIsActive, isActive, onCalibrate, isCalibrated }) => {
+export const Setting = ({ setIsActive, isActive }) => {
     const { i18n } = useTranslation()
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || "en")
     const [isSoundActive, setIsSoundActive] = useState(false)
@@ -173,27 +173,7 @@ export const Setting = ({ setIsActive, isActive, onCalibrate, isCalibrated }) =>
                     <img src={langIcon} alt="lang-btn" className="w-30" />
                 </button>
                 {/* Calibration button — same style as sound & language */}
-                {onCalibrate && (
-                    <button className="max-w-full relative" onClick={onCalibrate}>
-                        <img src={calibrateIcon} alt="calibrate-btn" className="w-30" />
-                        {/* Orange dot indicator when scale is not calibrated */}
-                        {!isCalibrated && (
-                            <span
-                                style={{
-                                    position: "absolute",
-                                    top: "6px",
-                                    right: "6px",
-                                    width: "12px",
-                                    height: "12px",
-                                    borderRadius: "50%",
-                                    background: "#ff8c00",
-                                    border: "2px solid rgba(0,0,0,0.6)",
-                                    boxShadow: "0 0 6px rgba(255,140,0,0.8)"
-                                }}
-                            />
-                        )}
-                    </button>
-                )}
+
             </div>
 
             {/* Language Overlay */}
