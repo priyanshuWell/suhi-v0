@@ -57,23 +57,24 @@ export default function Piano({
     }, [width])
 
     const meta = useCallback(
-        (index, source) => ({
+        (index, source, pointer = null) => ({
             type: "white",
             index,
             /** Beat Drop lanes map 1:1 onto the white keys. */
             lane: index,
-            source
+            source,
+            pointer
         }),
         []
     )
 
     const press = useCallback(
-        (index, source) => {
+        (index, source, pointer = null) => {
             const note = WHITE_NOTES[index]
             if (note == null || heldRef.current.has(note)) return
             heldRef.current.add(note)
             keysRef.current?.querySelector(`[data-index="${index}"]`)?.classList.add("is-on")
-            onNoteOn?.(note, meta(index, source))
+            onNoteOn?.(note, meta(index, source, pointer))
         },
         [meta, onNoteOn]
     )
@@ -119,7 +120,16 @@ export default function Piano({
         "data-index": index,
         onPointerDown: (e) => {
             e.currentTarget.setPointerCapture?.(e.pointerId)
-            press(index, "pointer")
+            const rect = e.currentTarget.getBoundingClientRect()
+            const pointer = {
+                clientX: e.clientX,
+                clientY: e.clientY,
+                offsetX: e.clientX - rect.left,
+                offsetY: e.clientY - rect.top,
+                keyWidth: rect.width,
+                keyHeight: rect.height
+            }
+            press(index, "pointer", pointer)
         },
         onPointerUp: () => release(index, "pointer"),
         onPointerCancel: () => release(index, "pointer"),

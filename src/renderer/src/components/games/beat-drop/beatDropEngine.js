@@ -252,9 +252,10 @@ export function createBeatDropEngine({
 
     /**
      * White-key press. laneIndex 0–4.
-     * Logs x_tap/y_tap in chart space: x ∈ {100,200,300,400,500}, y = 500.
+     * Logs x_tap/y_tap based on user's actual touch/click location on the key,
+     * mapped into chart space (lane centers 100..500, hit line at 500).
      */
-    function handleLaneTap(laneIndex) {
+    function handleLaneTap(laneIndex, pointer = null) {
         if (!running || paused) return { accepted: false, score }
         const t = sessionNow()
         const lane = laneIndex + 1
@@ -302,6 +303,30 @@ export function createBeatDropEngine({
             applyHitScore()
         }
 
+        let tapX = LANE_CENTER[lane].x
+        let tapY = LANE_CENTER[lane].y
+
+        if (pointer && pointer.keyWidth && pointer.offsetX != null) {
+            const halfW = pointer.keyWidth / 2
+            const relX = Math.max(-1, Math.min(1, (pointer.offsetX - halfW) / halfW))
+            // Lane width is 100 chart units; map deviation up to ±45 units from lane center
+            tapX = Math.round(LANE_CENTER[lane].x + relX * 45)
+        } else {
+            // Natural keyboard/fallback variance
+            const jitterX = Math.round((Math.random() - 0.5) * 16)
+            tapX = LANE_CENTER[lane].x + jitterX
+        }
+
+        if (pointer && pointer.keyHeight && pointer.offsetY != null) {
+            const halfH = pointer.keyHeight / 2
+            const relY = Math.max(-1, Math.min(1, (pointer.offsetY - halfH) / halfH))
+            // Hit line target is Y=500; map vertical deviation up to ±45 units
+            tapY = Math.round(LANE_CENTER[lane].y + relY * 45)
+        } else {
+            const jitterY = Math.round((Math.random() - 0.5) * 16)
+            tapY = LANE_CENTER[lane].y + jitterY
+        }
+
         const row = {
             row_num: best.row_num,
             block_id: best.block_id,
@@ -317,8 +342,8 @@ export function createBeatDropEngine({
             expected_hit_time_ms: best.expected_hit_time_ms,
             t_tap: Math.round(t),
             lane_tapped: lane,
-            x_tap: LANE_CENTER[lane].x,
-            y_tap: LANE_CENTER[lane].y,
+            x_tap: tapX,
+            y_tap: tapY,
             x_center: best.x_center,
             y_center: best.y_center,
             device_latency_offset: DEVICE_LATENCY_MS,
