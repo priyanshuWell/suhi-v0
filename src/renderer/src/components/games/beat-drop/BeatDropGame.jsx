@@ -27,6 +27,7 @@ import {
 import { getKioskId } from "../../../utils/config"
 import { getNextRoute } from "../../../utils/stageRouter"
 import backingTrack from "../../../assets/beat-drop/audio/beatdrop_backing_44k1_16bit.wav"
+import { useSetProgressStage } from "../../ProgressStageContext"
 
 const SCREENS = {
     INTRO: "intro",
@@ -50,6 +51,7 @@ export default function BeatDropGame() {
     const navigate = useNavigate()
     const storeUser = useSelector((s) => s.common.user)
     const storeScreening = useSelector((s) => s.common.screening)
+    const setProgressStage = useSetProgressStage()
 
     const [screen, setScreen] = useState(SCREENS.INTRO)
     const [showFollow, setShowFollow] = useState(false)
@@ -77,6 +79,16 @@ export default function BeatDropGame() {
     const onPlayScreen = screen === SCREENS.PLAY
     const playing = onPlayScreen && !popupOpen
     const paused = popupOpen
+
+    // Show progress bar only on the intro screen
+    useEffect(() => {
+        setProgressStage(screen === SCREENS.INTRO)
+    }, [screen, setProgressStage])
+
+    // Reset progress bar visibility when unmounting Beat Drop
+    useEffect(() => {
+        return () => setProgressStage(true)
+    }, [setProgressStage])
 
     useEffect(() => {
         const audio = new Audio(backingTrack)

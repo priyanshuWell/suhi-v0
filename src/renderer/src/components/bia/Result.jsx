@@ -28,6 +28,15 @@ import { API_BASE_URL } from "../../utils/config"
 const DESIGN_W = 1402
 const FONT = "'Anta', sans-serif"
 
+const capitalizeFirstLetter = (val) => {
+    if (val === null || val === undefined || val === "") return ""
+    const str = String(val).trim()
+    if (!str) return ""
+    return str
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 /* ── Liquid-glass pill shared styling ── */
 const pill = {
     position: "relative",
@@ -70,12 +79,13 @@ const pillRow = {
 ───────────────────────────────────────────── */
 const StatCard = ({ title, icon, color, rows }) => (
     <div
-        className="flex flex-col items-center rounded-[28px]"
+        className="flex flex-col items-center rounded-[28px] font-anta"
         style={{
             ...pill,
             flex: 1,
             padding: "28px 16px",
-            gap: "16px"
+            gap: "16px",
+            fontFamily: FONT
         }}
     >
         <div className="flex items-center justify-center" style={{ gap: "16px" }}>
@@ -86,28 +96,28 @@ const StatCard = ({ title, icon, color, rows }) => (
                 {icon}
             </span>
             <h3
-                className="leading-none tracking-[0.04em]"
+                className="leading-none tracking-[0.04em] font-anta"
                 style={{ fontFamily: FONT, fontSize: "48px", color }}
             >
                 {title}
             </h3>
         </div>
 
-        <div className="flex flex-col w-full" style={{ gap: "12px" }}>
+        <div className="flex flex-col w-full font-anta" style={{ gap: "12px" }}>
             {rows.map((row) => (
                 <div
                     key={row.label}
-                    className="flex items-center justify-center w-full"
+                    className="flex items-center justify-center w-full font-anta"
                     style={{ ...pillRow, gap: "12px" }}
                 >
                     <p
-                        className="text-white text-center whitespace-nowrap"
+                        className="text-white text-center whitespace-nowrap font-anta"
                         style={{ fontFamily: FONT, fontSize: "28px" }}
                     >
                         {row.label}:
                     </p>
                     <p
-                        className="text-center whitespace-nowrap"
+                        className="text-center whitespace-nowrap font-anta"
                         style={{ fontFamily: FONT, fontSize: "36px", color }}
                     >
                         {row.value}
@@ -119,24 +129,41 @@ const StatCard = ({ title, icon, color, rows }) => (
 )
 
 const formatColorBlindness = (val, type) => {
+    const formattedType = type ? `[${capitalizeFirstLetter(type)}]` : ""
     switch (val) {
         case "color_vision_deficit_not_present":
-            return `Color Vision Deficit Not Present ${type !== null ? `[${type}]` : ""} `
+            return `Color Vision Deficit Not Present ${formattedType}`.trim()
         case "color_vision_deficit_present":
-            return `color Vision Deficit Present ${type !== null ? `[${type}]` : ""}`
+            return `Color Vision Deficit Present ${formattedType}`.trim()
         case "rescan_recommended":
-            return `Rescan Recommended ${type !== null ? `[${type}]` : ""}`
+            return `Rescan Recommended ${formattedType}`.trim()
         default:
-            return `Rescan Recommended `
+            return `Rescan Recommended`
     }
 }
 
+const formatStress = (type) => {
+    switch (type) {
+        case "very_low":
+            return "Very Low"
+        case "low":
+            return "Low"
+        case "moderate":
+            return "Moderate"
+        case "high":
+            return "High"
+        case "very_high":
+            return "Very High"
+        default:
+            return "Unknown"
+    }
+}
 
 /* Full-width single-row pill (Color Blindness / Emotion) */
 const InfoPill = ({ icon, label, value, color }) => (
     <div
-        className="flex items-center justify-center w-full"
-        style={{ ...pill, gap: "16px", padding: "24px" }}
+        className="flex items-center justify-center w-full font-anta"
+        style={{ ...pill, gap: "16px", padding: "24px", fontFamily: FONT }}
     >
         <span
             className="flex items-center justify-center shrink-0"
@@ -144,10 +171,10 @@ const InfoPill = ({ icon, label, value, color }) => (
         >
             {icon}
         </span>
-        <p className="text-white whitespace-nowrap" style={{ fontFamily: FONT, fontSize: "36px" }}>
+        <p className="text-white whitespace-nowrap font-anta" style={{ fontFamily: FONT, fontSize: "36px" }}>
             {label}:
         </p>
-        <p className="whitespace-nowrap" style={{ fontFamily: FONT, fontSize: "38px", color }}>
+        <p className="whitespace-nowrap font-anta" style={{ fontFamily: FONT, fontSize: "38px", color }}>
             {value}
         </p>
     </div>
@@ -185,9 +212,10 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
         //  (apiReport?.vitals?.blood_pressure?.systolic != null && apiReport?.vitals?.blood_pressure?.diastolic != null) &&
         // {
         //     label: 'Blood Pressure',
-        //     value: `${apiReport.vitals.blood_pressure.systolic}/${apiReport.vitals.blood_pressure.diastolic} mmHg`,
-        // },
-        { label: "Stress", value: apiReport?.vitals?.stress }
+        apiReport?.vitals?.stress != null && {
+            label: "Stress",
+            value: formatStress(apiReport.vitals.stress)
+        }
     ].filter(Boolean)
 
     const recomputeScale = useCallback(() => {
@@ -602,17 +630,16 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     /* ── derived values ── */
     const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
     const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
-    const userName = storeUser?.data?.name || t("bia_result.default_name", "there")
+    const rawUserName = storeUser?.data?.name || t("bia_result.default_name", "there")
+    const userName = capitalizeFirstLetter(rawUserName)
 
     const formatLabel = (value, fallback = "—") => {
         if (value === null || value === undefined || value === "") {
             return fallback
         }
 
-      
-
         if (typeof value !== "object") {
-            return String(value)
+            return capitalizeFirstLetter(value)
         }
 
         // score + level object
@@ -624,7 +651,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
             }
 
             if (value.level) {
-                parts.push(value.level)
+                parts.push(capitalizeFirstLetter(value.level))
             }
 
             return parts.length ? parts.join(" • ") : fallback
@@ -642,8 +669,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     ? Number(value.diastolic)
                     : "—"
 
-            return `${systolic}/${diastolic}${value.unit ? ` ${value.unit}` : ""
-                }`
+            return `${systolic}/${diastolic}${value.unit ? ` ${value.unit}` : ""}`
         }
 
         // Generic nested object
@@ -661,7 +687,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
     const learnerType = apiReport?.learner_type?.type
     const learnerStyleLabel = learnerType
-        ? learnerType.charAt(0).toUpperCase() + learnerType.slice(1)
+        ? capitalizeFirstLetter(learnerType)
         : "Visual"
 
     const getBoxContent = (screeningOrder, apiReport) => {
@@ -879,6 +905,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     ──────────────────────────────────────────── */
     return (
         <div
+            className="font-anta"
             style={{
                 position: "fixed",
                 inset: 0,
@@ -886,16 +913,19 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                 background: "#000",
                 display: "flex",
                 alignItems: "flex-start",
-                justifyContent: "center"
+                justifyContent: "center",
+                fontFamily: FONT
             }}
         >
             <div
                 ref={innerRef}
+                className="font-anta"
                 style={{
                     width: `${DESIGN_W}px`,
                     transformOrigin: "top center",
                     transform: `scale(${scale})`,
-                    flexShrink: 0
+                    flexShrink: 0,
+                    fontFamily: FONT
                 }}
             >
                 {/* Background layer — Figma "image 1190", 50% opacity, oversized/cropped */}
@@ -923,6 +953,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                 {/* Page content */}
                 <div
+                    className="font-anta"
                     style={{
                         position: "relative",
                         zIndex: 1,
@@ -930,11 +961,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                         flexDirection: "column",
                         alignItems: "center",
                         padding: "60px 40px 40px",
-                        gap: "48px"
+                        gap: "48px",
+                        fontFamily: FONT
                     }}
                 >
                     {/* Title */}
                     <h1
+                        className="font-anta"
                         style={{
                             fontFamily: FONT,
                             fontSize: "60px",
@@ -962,7 +995,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     </div>
 
                     {/* Height / Weight row */}
-                    <div className="flex w-full" style={{ gap: "24px" }}>
+                    <div className="flex w-full font-anta" style={{ gap: "24px" }}>
                         {[
                             {
                                 label: t("bia_result.height"),
@@ -981,8 +1014,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                         ].map((item) => (
                             <div
                                 key={item.label}
-                                className="flex flex-1 items-center justify-center"
-                                style={{ ...pill, gap: "16px", padding: "28px" }}
+                                className="flex flex-1 items-center justify-center font-anta"
+                                style={{ ...pill, gap: "16px", padding: "28px", fontFamily: FONT }}
                             >
                                 <img
                                     src={item.icon}
@@ -991,13 +1024,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                                     className="object-contain shrink-0"
                                 />
                                 <p
-                                    className="text-white whitespace-nowrap"
+                                    className="text-white whitespace-nowrap font-anta"
                                     style={{ fontFamily: FONT, fontSize: "40px" }}
                                 >
                                     {item.label}:
                                 </p>
                                 <p
-                                    className="whitespace-nowrap"
+                                    className="whitespace-nowrap font-anta"
                                     style={{ fontFamily: FONT, fontSize: "42px", color: "#FF9D5C" }}
                                 >
                                     {item.value} {item.unit}
@@ -1086,24 +1119,25 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                             releaseAllResources()
                             navigate("/welcome")
                         }}
-                        className="flex items-center justify-center cursor-pointer"
+                        className="flex items-center justify-center cursor-pointer font-anta"
                         style={{
                             ...pill,
                             padding: "28px 86px",
-                            borderRadius: "28px"
+                            borderRadius: "28px",
+                            fontFamily: FONT
                         }}
                     >
                         <span
-                            className="text-white whitespace-nowrap"
+                            className="text-white whitespace-nowrap font-anta"
                             style={{ fontFamily: FONT, fontSize: "60px" }}
                         >
                             {t("bia_result.go_to_homepage")}
                         </span>
                     </button>
                     {/* QR + download report */}
-                    <div className="flex items-center justify-center" style={{ gap: "28px" }}>
+                    <div className="flex items-center justify-center font-anta" style={{ gap: "28px", fontFamily: FONT }}>
                         <p
-                            className="text-white"
+                            className="text-white font-anta"
                             style={{ fontFamily: FONT, fontSize: "35px", maxWidth: "716px" }}
                         >
                             {t(
