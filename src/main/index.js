@@ -13,124 +13,9 @@ const loudness = require("loudness")
 
 let mainWindow = null
 
-// ─── Calibration persistence ───────────────────────────────────────────────────
-// Path is resolved lazily after app is ready so app.getPath('userData') works.
-let CALIBRATION_FILE = null
 
-function getCalibrationPath() {
-    if (!CALIBRATION_FILE) {
-        CALIBRATION_FILE = join(app.getPath("userData"), "calibration.json")
-    }
-    return CALIBRATION_FILE
-}
 
-/** Read calibration.json → push values into biaa.weightCalibration */
-function loadCalibration() {
-    const filePath = getCalibrationPath()
-    try {
-        if (fs.existsSync(filePath)) {
-            const raw = fs.readFileSync(filePath, "utf-8")
-            const saved = JSON.parse(raw)
-            biaa.weightCalibration.zeroOffset =
-                saved.zeroOffset ?? biaa.weightCalibration.zeroOffset
-            biaa.weightCalibration.factor = saved.factor ?? biaa.weightCalibration.factor
-            biaa.weightCalibration.calibratedAt = saved.calibratedAt ?? null
-            biaa.weightCalibration.isCalibrated = saved.isCalibrated ?? false
-            console.log("[CAL] Calibration loaded from", filePath, biaa.weightCalibration)
-            return { loaded: true, calibration: { ...biaa.weightCalibration } }
-        } else {
-            console.log("[CAL] No calibration file found — using defaults (not calibrated)")
-            return { loaded: false, calibration: { ...biaa.weightCalibration } }
-        }
-    } catch (err) {
-        console.error("[CAL] Failed to load calibration:", err.message)
-        return { loaded: false, calibration: { ...biaa.weightCalibration } }
-    }
-}
 
-/** Write current biaa.weightCalibration → calibration.json */
-function saveCalibration() {
-    const filePath = getCalibrationPath()
-    try {
-        fs.writeFileSync(filePath, JSON.stringify(biaa.weightCalibration, null, 2), "utf-8")
-        console.log("[CAL] Calibration saved to", filePath)
-    } catch (err) {
-        console.error("[CAL] Failed to save calibration:", err.message)
-    }
-}
-
-// ─── Unity Game process handle ───────────────────────────────────────────────
-let unityProcess = null
-
-/**
- * Resolve path to the Unity binary.
- * In development the binary lives at src/Divided_Attention/Divided_Attention.x86_64
- * relative to the project root.  In production it is bundled under resources/.
- */
-function getUnityBinaryPath() {
-    if (is.dev) {
-        // __dirname is src/main, so go up two levels to the project root
-        return join(__dirname, "../../src/Divided_Attention/Divided_Attention.x86_64")
-    }
-    // Packaged: app.getAppPath() points inside the asar, use process.resourcesPath
-    return join(process.resourcesPath, "Divided_Attention", "Divided_Attention.x86_64")
-}
-
-ipcMain.handle("launch-unity-game", async () => {
-    // Kill any stale instance
-    if (unityProcess && !unityProcess.killed) {
-        unityProcess.kill()
-        unityProcess = null
-    }
-
-    const binaryPath = getUnityBinaryPath()
-    console.log("[MAIN] Launching Unity game:", binaryPath)
-
-    try {
-        // Make sure the binary is executable
-        fs.chmodSync(binaryPath, 0o755)
-    } catch (e) {
-        console.warn("[MAIN] chmod failed (may already be executable):", e.message)
-    }
-
-    try {
-        unityProcess = spawn(binaryPath, [], {
-            detached: false,
-            stdio: "ignore"
-        })
-
-        unityProcess.on("error", (err) => {
-            console.error("[MAIN] Unity process error:", err)
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send("unity:game-exit", -1)
-            }
-            unityProcess = null
-        })
-
-        unityProcess.on("exit", (code) => {
-            console.log("[MAIN] Unity process exited with code:", code)
-            if (mainWindow && !mainWindow.isDestroyed()) {
-                mainWindow.webContents.send("unity:game-exit", code ?? 0)
-            }
-            unityProcess = null
-        })
-
-        return { success: true }
-    } catch (err) {
-        console.error("[MAIN] Failed to spawn Unity game:", err)
-        return { success: false, error: err.message }
-    }
-})
-
-ipcMain.handle("stop-unity-game", async () => {
-    if (unityProcess && !unityProcess.killed) {
-        console.log("[MAIN] Stopping Unity game process")
-        unityProcess.kill()
-        unityProcess = null
-    }
-    return { success: true }
-})
-// ─────────────────────────────────────────────────────────────────────────────
 
 ipcMain.handle("set-volume", async (_event, volume) => {
     try {
@@ -289,7 +174,6 @@ ipcMain.handle("run-tare", async (_event, portPath) => {
             }
         }
         const cal = await biaa.performTare()
-        saveCalibration()
         return { success: true, calibration: cal }
     } catch (err) {
         console.error("[CAL] run-tare error:", err.message)
@@ -297,7 +181,7 @@ ipcMain.handle("run-tare", async (_event, portPath) => {
     }
 })
 
-/** Full calibration — computes calibration factor using a known reference weight and persists */
+/** Full calibration — computes calibration factor using a known reference weight */
 ipcMain.handle("run-full-calibration", async (_event, { knownWeightKg, portPath }) => {
     try {
         if (!biaa.biaPort || !biaa.biaPort.isOpen) {
@@ -309,7 +193,6 @@ ipcMain.handle("run-full-calibration", async (_event, { knownWeightKg, portPath 
             }
         }
         const cal = await biaa.performFullCalibration(knownWeightKg)
-        saveCalibration()
         return { success: true, calibration: cal }
     } catch (err) {
         console.error("[CAL] run-full-calibration error:", err.message)
@@ -320,7 +203,7 @@ ipcMain.handle("run-full-calibration", async (_event, { knownWeightKg, portPath 
 /**
  * Multi-point calibration — reads stable raw at ONE reference weight and returns per-point factor.
  * Call for 50 kg and 100 kg separately; average the two factors in the renderer,
- * then call apply-averaged-factor to persist.
+ * then call apply-averaged-factor.
  */
 ipcMain.handle("run-multipoint-calibration", async (_event, { knownWeightKg, portPath }) => {
     try {
@@ -341,7 +224,7 @@ ipcMain.handle("run-multipoint-calibration", async (_event, { knownWeightKg, por
 })
 
 /**
- * Apply averaged factor — stores the pre-computed avg factor into weightCalibration and persists to disk.
+ * Apply averaged factor — stores the pre-computed avg factor into weightCalibration.
  */
 ipcMain.handle("apply-averaged-factor", async (_event, { avgFactor }) => {
     try {
@@ -349,7 +232,6 @@ ipcMain.handle("apply-averaged-factor", async (_event, { avgFactor }) => {
             return { success: false, error: "Invalid averaged factor" }
         }
         const cal = biaa.applyAveragedFactor(avgFactor)
-        saveCalibration()
         return { success: true, calibration: cal }
     } catch (err) {
         console.error("[CAL] apply-averaged-factor error:", err.message)
@@ -804,10 +686,9 @@ app.whenReady().then(() => {
 
     createWindow()
 
-    // ── Load calibration from disk ─────────────────────────────────────────────
-    // Must be called after app.getPath('userData') is available (i.e. after app ready).
-    loadCalibration()
-    console.log("[MAIN] Calibration state on startup:", biaa.weightCalibration)
+    // ── Calibration state ───────────────────────────────────────────────────────
+    // Loaded directly from /etc/wellwiz-mdm/device-config.json by bia-scriptv1.js
+    console.log("[MAIN] Calibration state on startup (from device-config):", biaa.weightCalibration)
 
     eventBus.on("height:error", (payload) => {
         console.log("[MAIN] Forwarding height error to renderer:", payload)

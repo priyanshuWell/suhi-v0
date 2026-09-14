@@ -927,28 +927,24 @@ export let finalheight = null
 // never be blocked by a bad or absent config file.
 const DEVICE_CONFIG_PATH = "/etc/wellwiz-mdm/device-config.json"
 
-const DEFAULT_WEIGHT_ZERO_OFFSET = 0.0 // rawWeight subtracted before applying factor
-const DEFAULT_WEIGHT_CALIBRATION_FACTOR = 1.53138 // multiply (rawWeight - zeroOffset) to get kg
-const DEFAULT_HEIGHT_CALIBRATION_FACTOR = 192.7 // cm; sensor-to-floor reference distance
+const DEFAULT_WEIGHT_ZERO_OFFSET = -2326.60
+const DEFAULT_WEIGHT_ZERO_ADC = -2326.60
+const DEFAULT_WEIGHT_CALIBRATION_FACTOR = -0.0018304703
+const DEFAULT_HEIGHT_CALIBRATION_FACTOR = 215.8
 
 function readInt32LE(d, o) {
-
     return (d[o] | (d[o + 1] << 8) | (d[o + 2] << 16) | (d[o + 3] << 24)) | 0
-
 }
 function frameChecksum(bytes) {
-
     let sum = 0
-
     for (const b of bytes) sum += b
-
     return (~sum + 1) & 0xff
-
 }
 
 function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
     const calibration = {
         weightZeroOffset: DEFAULT_WEIGHT_ZERO_OFFSET,
+        weightZeroAdc: DEFAULT_WEIGHT_ZERO_ADC,
         weightCalibrationFactor: DEFAULT_WEIGHT_CALIBRATION_FACTOR,
         heightCalibrationFactor: DEFAULT_HEIGHT_CALIBRATION_FACTOR
     }
@@ -977,13 +973,20 @@ function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
     if (weight && typeof weight === "object") {
         if (typeof weight.zeroOffset === "number") {
             calibration.weightZeroOffset = weight.zeroOffset
+            calibration.weightZeroAdc = weight.zeroOffset // zeroOffset in device-config is the ADC zero offset
         } else if (weight.zeroOffset !== undefined) {
             console.warn(`[CAL] device-config weight.zeroOffset is not a number; using default`)
         }
 
+        if (typeof weight.zeroAdc === "number") {
+            calibration.weightZeroAdc = weight.zeroAdc
+        }
+
         if (typeof weight.calibrationFactor === "number") {
             calibration.weightCalibrationFactor = weight.calibrationFactor
-        } else if (weight.calibrationFactor !== undefined) {
+        } else if (typeof weight.factor === "number") {
+            calibration.weightCalibrationFactor = weight.factor
+        } else if (weight.calibrationFactor !== undefined || weight.factor !== undefined) {
             console.warn(
                 `[CAL] device-config weight.calibrationFactor is not a number; using default`
             )
@@ -1003,6 +1006,7 @@ function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
 
     console.log(
         `[CAL] Loaded from device-config: weight.zeroOffset=${calibration.weightZeroOffset}, ` +
+            `weight.zeroAdc=${calibration.weightZeroAdc}, ` +
             `weight.calibrationFactor=${calibration.weightCalibrationFactor}, ` +
             `height.calibrationFactor=${calibration.heightCalibrationFactor}`
     )
@@ -1013,25 +1017,18 @@ function loadDeviceCalibration(configPath = DEVICE_CONFIG_PATH) {
 const deviceCalibration = loadDeviceCalibration()
 
 // ======================== DYNAMIC CALIBRATION ========================
-// Module-level calibration state. Initial values come from device-config.json
-// (read above); calibratedAt/isCalibrated below still get updated at runtime
-// by performTare()/performFullCalibration() (and, as before, may also be
-// overwritten by index.js on startup from its own calibration flow).
-// Falls back to the original hardcoded values so existing behaviour is
-// preserved if no config file exists yet.
+// Module-level calibration state loaded from device-config.json.
 export let weightCalibration = {
-    zeroOffset: deviceCalibration.weightZeroOffset, // from device-config.json: weight.zeroOffset (default 0.0)
-    zeroAdc: -2431.81757066827,
-    factor: -0.0018237348624755882, // from device-config.json: weight.calibrationFactor (default 1.53138)
-    calibratedAt: null, // ISO timestamp of last full calibration
-    isCalibrated: true // false until a real calibration has been performed
+    zeroOffset: deviceCalibration.weightZeroOffset,
+    zeroAdc: deviceCalibration.weightZeroAdc,
+    factor: deviceCalibration.weightCalibrationFactor,
+    calibratedAt: null,
+    isCalibrated: true
 }
 
-// Height calibration — same idea as weightCalibration above.
-// calibrationFactor is the sensor-to-floor reference distance (cm) used as
-// `calibrationFactor - distanceCm` to compute height.
+// Height calibration — loaded from device-config.json.
 export let heightCalibration = {
-    calibrationFactor: 215.8 // from device-config.json: height.calibrationFactor (default 192.7)
+    calibrationFactor: deviceCalibration.heightCalibrationFactor
 }
 
 const READ_CMD = Buffer.from([0x55, 0xaa, 0x01, 0x01, 0x01])
@@ -4158,43 +4155,26 @@ export async function case41_WeightMeasurement() {
         // ====================================================================
 
         // The pipeline now works on raw ADC counts, not the module's kg field.
-
-        // An old calibration.json (kg-based, factor ~1.53) would silently
-
+        // An old config (kg-based, factor ~1.53) would silently
         // produce nonsense, so refuse to run against it.
  
         if (
-
             !Number.isFinite(weightCalibration?.zeroAdc) ||
-
             !Number.isFinite(weightCalibration?.factor)
-
         ) {
-
             emitWeightStatus(0x06) // CALIBRATION_ERROR
-
-            console.log("❌ calibration.json missing zeroAdc / factor — run ADC calibration first")
-
+            console.log("❌ device-config.json missing zeroAdc / factor")
             if (!IS_ELECTRON) showMenu()
-
             return
-
         }
  
         if (Math.abs(weightCalibration.factor) > 0.1) {
-
             emitWeightStatus(0x06) // CALIBRATION_ERROR
-
-            console.log("❌ calibration.json looks like the OLD kg-based format")
-
+            console.log("❌ device-config.json looks like the OLD kg-based format")
             console.log(`   factor = ${weightCalibration.factor} (expected ~0.0018 kg/count)`)
-
             console.log("   The factor is now kg PER ADC COUNT and must keep its sign.")
-
             if (!IS_ELECTRON) showMenu()
-
             return
-
         }
  
         const ZERO_ADC = weightCalibration.zeroAdc // ADC counts at no load (any sign)
