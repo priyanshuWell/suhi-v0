@@ -1,17 +1,67 @@
-import { app, shell, BrowserWindow, ipcMain, nativeImage, session } from "electron"
+import { app, shell, BrowserWindow, ipcMain, nativeImage, session, Menu } from "electron"
 import { join } from "path"
 import { electronApp, optimizer, is } from "@electron-toolkit/utils"
 // import * as biaa from './bia-script'
 import * as biaa from "./bia-scriptv1"
 import { eventBus } from "./eventbus"
+import { ensureX11Session } from "./displayPlatform"
+import {
+    allowWindowClose,
+    attachSelfHealing,
+    enterKioskMode,
+    exitKioskMode,
+    isKioskActive,
+    isKioskEnabled,
+    pauseKioskChrome,
+    registerKioskHotkey,
+    restoreGsettingsSync,
+    resumeKioskChrome,
+    setManagedWindow,
+    unregisterKioskHotkey,
+    verifyAdminPassword
+} from "./kiosk"
 import fs from "fs"
 import crypto from "crypto"
 import axios from "axios"
 import express from "express"
 import { spawn } from "child_process"
+import { setupFileLogging } from "./fileLog"
 const loudness = require("loudness")
 
+setupFileLogging()
+
+// Must be the first thing after logging is available and before anything
+// else in this file has run: on a Wayland session this re-execs Suhi on
+// XWayland and never returns. Appending the ozone switch to
+// app.commandLine here instead (what this used to do) is too late to move
+// the browser process, but still poisons the GPU process — see
+// displayPlatform.js for the full failure mode.
+ensureX11Session()
+
 let mainWindow = null
+
+// Kiosk lockdown only makes sense for a real deployment — in dev, a
+// developer needs DevTools, a resizable window, and the app menu, and
+// grabbing the exit hotkey globally would fight normal desktop use.
+// VITE_DISABLE_KIOSK is an explicit escape hatch for testing a production
+// build without kiosk lockdown getting in the way. VITE_FORCE_KIOSK=true
+// turns it on even for an unpackaged run.
+const KIOSK_ENABLED = isKioskEnabled()
+
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+    app.quit()
+}
+
+app.on("second-instance", () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+    if (KIOSK_ENABLED && isKioskActive()) {
+        enterKioskMode()
+    }
+})
 
 // ─── Calibration persistence ───────────────────────────────────────────────────
 // Path is resolved lazily after app is ready so app.getPath('userData') works.
@@ -94,6 +144,8 @@ ipcMain.handle("launch-unity-game", async () => {
     }
 
     try {
+        if (KIOSK_ENABLED) pauseKioskChrome()
+
         unityProcess = spawn(binaryPath, [], {
             detached: false,
             stdio: "ignore"
@@ -101,6 +153,7 @@ ipcMain.handle("launch-unity-game", async () => {
 
         unityProcess.on("error", (err) => {
             console.error("[MAIN] Unity process error:", err)
+            if (KIOSK_ENABLED) resumeKioskChrome()
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send("unity:game-exit", -1)
             }
@@ -109,6 +162,7 @@ ipcMain.handle("launch-unity-game", async () => {
 
         unityProcess.on("exit", (code) => {
             console.log("[MAIN] Unity process exited with code:", code)
+            if (KIOSK_ENABLED) resumeKioskChrome()
             if (mainWindow && !mainWindow.isDestroyed()) {
                 mainWindow.webContents.send("unity:game-exit", code ?? 0)
             }
@@ -118,6 +172,7 @@ ipcMain.handle("launch-unity-game", async () => {
         return { success: true }
     } catch (err) {
         console.error("[MAIN] Failed to spawn Unity game:", err)
+        if (KIOSK_ENABLED) resumeKioskChrome()
         return { success: false, error: err.message }
     }
 })
@@ -128,6 +183,7 @@ ipcMain.handle("stop-unity-game", async () => {
         unityProcess.kill()
         unityProcess = null
     }
+    if (KIOSK_ENABLED) resumeKioskChrome()
     return { success: true }
 })
 // ─────────────────────────────────────────────────────────────────────────────
@@ -753,8 +809,9 @@ function createWindow() {
         width: 1080,
         height: 1920,
         show: false,
-        autoHideMenuBar: false,
-        fullscreen: false,
+        backgroundColor: "#000000",
+        fullscreenable: true,
+        autoHideMenuBar: KIOSK_ENABLED,
         icon,
         webPreferences: {
             preload: join(__dirname, "../preload/index.js"),
@@ -763,13 +820,51 @@ function createWindow() {
         }
     })
 
-    mainWindow.on("ready-to-show", () => {
+    if (KIOSK_ENABLED) {
+        // Removes the default app menu entirely — including whatever quit
+        // accelerator (Ctrl+Q etc.) it carries, which would otherwise be a
+        // plain-sight way out of a "locked" kiosk.
+        Menu.setApplicationMenu(null)
+        setManagedWindow(mainWindow)
+        attachSelfHealing(mainWindow)
+    }
+
+    mainWindow.once("ready-to-show", () => {
         mainWindow.show()
+
+        // Kiosk/fullscreen are applied after the first painted frame.
+        // Forcing the window manager to fullscreen before Chromium's
+        // compositor has anything to paint left a permanently blank white
+        // window on the kiosk hardware.
+        if (KIOSK_ENABLED) {
+            setTimeout(() => {
+                enterKioskMode().catch((error) => {
+                    console.error("[KIOSK] Failed to enter kiosk mode:", error)
+                })
+            }, 300)
+        }
     })
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
         shell.openExternal(details.url)
         return { action: "deny" }
+    })
+
+    // The packaged app has no DevTools access on a kiosk (F12 is disabled
+    // in production by optimizer.watchWindowShortcuts below), so this is
+    // the only way to see a renderer-side failure - it lands in the same
+    // log the main process already writes to.
+    mainWindow.webContents.on("console-message", (_event, _level, message, line, sourceId) => {
+        console.log(`[RENDERER] ${message} (${sourceId}:${line})`)
+    })
+    mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+        console.error(`[RENDERER] did-fail-load: ${errorCode} ${errorDescription} (${validatedURL})`)
+    })
+    mainWindow.webContents.on("render-process-gone", (_event, details) => {
+        console.error("[RENDERER] render-process-gone:", details)
+    })
+    mainWindow.webContents.on("unresponsive", () => {
+        console.error("[RENDERER] window became unresponsive")
     })
 
     // HMR for renderer base on electron-vite cli.
@@ -785,6 +880,12 @@ function createWindow() {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+    if (!gotTheLock) return
+
+    console.info(
+        `[KIOSK] enabled=${KIOSK_ENABLED} packaged=${app.isPackaged} platform=${process.platform} nodeEnv=${process.env.NODE_ENV || ""}`
+    )
+
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
         if (permission === "media") {
             callback(true)
@@ -803,6 +904,47 @@ app.whenReady().then(() => {
     })
 
     createWindow()
+
+    if (KIOSK_ENABLED) {
+        // enterKioskMode() itself is triggered from the "ready-to-show"
+        // handler in createWindow(), not here - see the comment there.
+
+        // Global (works regardless of window focus) so it still reaches us
+        // while the kiosk window is fullscreen and above everything else —
+        // this hotkey is the only way out of kiosk mode without a reboot.
+        // Deliberately not surfaced in any menu or on-screen hint.
+        registerKioskHotkey(() => {
+            if (!mainWindow || mainWindow.isDestroyed()) return
+
+            if (isKioskActive()) {
+                mainWindow.webContents.send("kiosk:request-exit")
+            } else {
+                // Kiosk was already exited — the same hotkey re-locks it
+                // without a password, since re-entering kiosk isn't
+                // security sensitive the way leaving it is.
+                enterKioskMode()
+            }
+        })
+    }
+
+    ipcMain.handle("kiosk:get-state", () => ({
+        active: isKioskActive(),
+        enabled: KIOSK_ENABLED
+    }))
+
+    ipcMain.handle("kiosk:verify-and-exit", async (_event, password) => {
+        const valid = await verifyAdminPassword(password)
+        if (!valid) {
+            return { success: false, error: "Incorrect administrator password." }
+        }
+
+        await exitKioskMode()
+        return { success: true }
+    })
+
+    ipcMain.handle("kiosk:cancel-exit", () => {
+        return { success: true }
+    })
 
     // ── Load calibration from disk ─────────────────────────────────────────────
     // Must be called after app.getPath('userData') is available (i.e. after app ready).
@@ -895,6 +1037,36 @@ app.on("window-all-closed", () => {
         app.quit()
     }
 })
+
+// Kiosk vetoes the window's own close event; this is what tells it that
+// *this* close is the app shutting down (MDM update, reboot, SIGTERM) and
+// must be allowed through.
+app.on("before-quit", () => {
+    allowWindowClose()
+})
+
+app.on("will-quit", () => {
+    unregisterKioskHotkey()
+    // GNOME lockdown is desktop state and survives this process, so it has
+    // to be undone here too — not only on the technician exit path.
+    if (KIOSK_ENABLED) restoreGsettingsSync()
+})
+
+// Electron does not route a SIGTERM to before-quit/will-quit for this app —
+// verified on the target device: the process dies with neither event
+// firing, which left every kiosk gsetting (Alt+Tab, the overview, the
+// terminal shortcut, the lock screen) disabled on a desktop nobody was
+// using as a kiosk any more. Installing real handlers is what makes
+// shutdown deterministic: GNOME's session manager, `systemctl reboot` and
+// the MDM stopping Suhi to install an update all arrive as one of these.
+for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+    process.on(signal, () => {
+        console.info(`[MAIN] Received ${signal} — shutting down.`)
+        if (KIOSK_ENABLED) restoreGsettingsSync()
+        unregisterKioskHotkey()
+        app.exit(0)
+    })
+}
 
 function convertBIADataToAPIPayload(
     bodyComposition = {},

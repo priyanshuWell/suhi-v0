@@ -34,10 +34,13 @@ dmg:
     artifactName: ${name}-${version}.${ext}
 linux:
     icon: build/icons/512x512.png
+    executableName: suhi
     target:
         - deb
     maintainer: electronjs.org
     category: Utility
+deb:
+    packageName: suhi
 appImage:
     artifactName: ${name}-${version}.${ext}
 npmRebuild: false

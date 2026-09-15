@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router"
+import { Navigate, Route, Routes } from "react-router"
 import BIACalcuate from "./components/bia/BIACalcuate"
 import BiaReportRouter from "./components/bia/BiaReportRouter"
 import BufferCollectionManager from "./components/BufferCollectionManager"
@@ -23,6 +23,7 @@ import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
 import SplashScreen from "./components/SplashScreen"
+import KioskExitOverlay from "./components/ui/KioskExitOverlay"
 function App() {
     // Play looping background music on all routes except voice & game sections
     useBackgroundAudio()
@@ -48,6 +49,7 @@ function App() {
     return (
         <>
             <BufferCollectionManager />
+            <KioskExitOverlay />
             {/* <AutoIdleRedirect
         timeoutMs={10000}
         promptBeforeMs={5000}
@@ -81,6 +83,7 @@ function App() {
                     <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
                 </Route>
+                <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </>
     )

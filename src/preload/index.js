@@ -17,6 +17,7 @@ const armStatusChannel = new IpcEventChannel("arm:status")
 const legCalcResultChannel = new IpcEventChannel("leg:calc:result")
 const armCalcResultChannel = new IpcEventChannel("arm:calc:result")
 const unityGameExitChannel = new IpcEventChannel("unity:game-exit")
+const kioskRequestExitChannel = new IpcEventChannel("kiosk:request-exit")
 const api = {
     getPorts: (ports) => ipcRenderer.invoke("get-ports", ports),
     connectHeightPort: (portPath) => ipcRenderer.invoke("connect-heightPort", portPath),
@@ -67,7 +68,14 @@ const api = {
     runMultipointCalibration: (knownWeightKg, portPath) =>
         ipcRenderer.invoke("run-multipoint-calibration", { knownWeightKg, portPath }),
     /** Persist the pre-computed averaged factor to disk */
-    applyAveragedFactor: (avgFactor) => ipcRenderer.invoke("apply-averaged-factor", { avgFactor })
+    applyAveragedFactor: (avgFactor) => ipcRenderer.invoke("apply-averaged-factor", { avgFactor }),
+    // ── Kiosk mode ──────────────────────────────────────────────────────────────
+    kiosk: {
+        getState: () => ipcRenderer.invoke("kiosk:get-state"),
+        verifyAndExit: (password) => ipcRenderer.invoke("kiosk:verify-and-exit", password),
+        cancelExit: () => ipcRenderer.invoke("kiosk:cancel-exit"),
+        onRequestExit: (callback) => kioskRequestExitChannel.subscribe(callback)
+    }
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
