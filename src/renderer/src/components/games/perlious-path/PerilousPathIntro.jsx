@@ -1,6 +1,8 @@
 import PropTypes from "prop-types"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import { useKioskAudio } from "../../../constants/audio"
+import { INSTRUCTION_AUDIO } from "../../../constants/audioConstants"
 import { COLORS } from "./theme"
 
 import howToPlayFrame from "../../../assets/perilous_path/how_to_Play_frame.png"
@@ -58,11 +60,45 @@ const STEPS = [
     },
 ]
 
+// Delay (ms) before each clip starts, roughly matching the step animation delays
+const AUDIO_SEQUENCE = [
+    { key: INSTRUCTION_AUDIO.PERILOUS_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
+    { key: INSTRUCTION_AUDIO.PERILOUS_COMPLETE_THE_PATH,      delay: 1400 },
+    { key: INSTRUCTION_AUDIO.PERILOUS_REMEMBER_DANGER,        delay: 0 },
+    { key: INSTRUCTION_AUDIO.PERILOUS_AVOID_AND_COMPLETE,     delay: 0 },
+    { key: INSTRUCTION_AUDIO.PERILOUS_PRESS_START_WHEN_READY, delay: 0 },
+]
+
 export default function PerilousPathIntro({ onStart }) {
     const [starting, setStarting] = useState(false)
+    const { play, stop } = useKioskAudio()
+
+    // Play narration clips sequentially when the intro mounts.
+    useEffect(() => {
+        let cancelled = false
+
+        const runSequence = async () => {
+            for (const { key, delay } of AUDIO_SEQUENCE) {
+                if (cancelled) break
+                if (delay > 0) {
+                    await new Promise((res) => setTimeout(res, delay))
+                }
+                if (cancelled) break
+                await play(key)
+            }
+        }
+
+        runSequence()
+
+        return () => {
+            cancelled = true
+            stop()
+        }
+    }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleStart = () => {
         if (starting) return
+        stop()
         setStarting(true)
         onStart?.()
     }

@@ -1,13 +1,56 @@
+import { useEffect } from 'react';
 import { Eye, Hand } from 'lucide-react';
 import BlueGradientButton from '../../ui/BlueGradientButton';
 import adaptive from '../../../assets/adaptive-c/AdaptiveEyeVisionC.png';
 import { EYE_INFO } from './constants';
+import { useKioskAudio } from '../../../constants/audio';
+import { INSTRUCTION_AUDIO } from '../../../constants/audioConstants';
 
 /* ------------------------------------------------------------------ */
 /*  Instruction screen — shown before each eye's test                  */
 /* ------------------------------------------------------------------ */
 export default function InstructionScreen({ eye, onStart, disabled = false, loading = false }) {
   const info = EYE_INFO[eye];
+  const { play, stop } = useKioskAudio();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const sequence = eye === 'right'
+      ? [
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_LEFT_EYE, delay: 250 },
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LOOK_CAREFULLY_AT_THE_C_SHAPE, delay: 250 },
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
+        ]
+      : [
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_RIGHT_EYE, delay: 0 },
+          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
+        ];
+
+    const runSequence = async () => {
+      for (const { key, delay } of sequence) {
+        if (cancelled) break;
+        if (delay > 0) {
+          await new Promise((res) => setTimeout(res, delay));
+        }
+        if (cancelled) break;
+        await play(key);
+      }
+    };
+
+    runSequence();
+
+    return () => {
+      cancelled = true;
+      stop();
+    };
+  }, [eye, play, stop]);
+
+  const handleStart = () => {
+    stop();
+    onStart?.();
+  };
   return (
     <>
       {/* Title */}
@@ -51,7 +94,7 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
 
       {/* Start button */}
       <div className="flex flex-col items-center gap-2 pb-16">
-        <BlueGradientButton onClick={onStart}>
+        <BlueGradientButton onClick={handleStart} disabled={disabled || loading}>
           Start
         </BlueGradientButton>
       </div>

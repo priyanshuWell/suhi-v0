@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { motion } from "framer-motion"
 import bg from "../../../assets/beat-drop/intro/Intro_beat_bg_card.png"
 import logo from "../../../assets/beat-drop/intro/beat_drop_logo.png"
@@ -7,11 +8,22 @@ import htp2 from "../../../assets/beat-drop/intro/HTP_illustration_2.png"
 import htp3 from "../../../assets/beat-drop/intro/HTP_illustration_3.png"
 import PillButton, { absBox } from "./PillButton"
 import { anton, cqw, pct } from "./frame"
+import { useKioskAudio } from "../../../constants/audio"
+import { INSTRUCTION_AUDIO } from "../../../constants/audioConstants"
 
 /** Equal inset / gutter — left = between = right */
 const CARD_GUTTER = 39
 
 const HIGHLIGHT = "#FFB703"
+
+// Sequential audio narration matching cards and buttons
+const AUDIO_SEQUENCE = [
+    { key: INSTRUCTION_AUDIO.BEAT_DROP_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
+    { key: INSTRUCTION_AUDIO.BEAT_DROP_PRESS_THE_PIANO_KEY, delay: 300 },
+    { key: INSTRUCTION_AUDIO.BEAT_DROP_HIT_EACH_NOTE, delay: 300 },
+    { key: INSTRUCTION_AUDIO.BEAT_DROP_KEEP_ACCURATE_TIMING, delay: 300 },
+    { key: INSTRUCTION_AUDIO.BEAT_DROP_PRESS_START_WHEN_READY, delay: 300 }
+]
 
 /** Exact Figma line breaks + colors (line 1 white, rest #FFB703). */
 const CARDS = [
@@ -171,6 +183,35 @@ function IntroCard({ card, index }) {
 }
 
 export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
+    const { play, stop } = useKioskAudio()
+
+    useEffect(() => {
+        let cancelled = false
+
+        const runSequence = async () => {
+            for (const { key, delay } of AUDIO_SEQUENCE) {
+                if (cancelled) break
+                if (delay > 0) {
+                    await new Promise((res) => setTimeout(res, delay))
+                }
+                if (cancelled) break
+                await play(key)
+            }
+        }
+
+        runSequence()
+
+        return () => {
+            cancelled = true
+            stop()
+        }
+    }, [play, stop])
+
+    const handleStart = () => {
+        stop()
+        onStart?.()
+    }
+
     return (
         <div style={{ position: "absolute", inset: 0 }}>
             <motion.img
@@ -253,7 +294,7 @@ export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
                     label="Start Game"
                     textColor="#390500"
                     fontSize={64}
-                    onClick={onStart}
+                    onClick={handleStart}
                     left={362}
                     top={2050}
                     width={750}
