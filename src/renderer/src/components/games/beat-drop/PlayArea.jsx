@@ -329,8 +329,7 @@ export default function PlayArea({
     const handleNoteOn = useCallback(
         (_note, info) => {
             if (paused || info.lane == null || !engine.current) return
-            // Engine logs x_tap/y_tap in chart space (x: 100..500, y: 500)
-            engine.current.handleLaneTap(info.lane)
+            engine.current.handleLaneTap(info.lane, info.pointer)
             const snap = engine.current.getSnapshot()
             onScore?.(snap.score)
             setNotes(snap.notes)

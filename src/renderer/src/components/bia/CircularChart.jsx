@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react"
 import { KaphaIcon, PittaIcon, VataIcon } from "../../assets/index"
 
@@ -117,7 +118,7 @@ export const CircularChart = ({ data }) => {
 
                 {/* Center Text */}
                 <g transform={`translate(${cx},${cy})`} textAnchor="middle">
-                    <text y="0" fill="#38BDF8" fontSize="28" fontWeight="600">
+                    <text y="0" fill="#38BDF8" fontSize="28" fontWeight="600" className="font-anta" style={{ fontFamily: "'Anta', sans-serif" }}>
                         Prakriti
                     </text>
                     {/* <text y="20" fill="#38BDF8" fontSize="22" fontWeight="600">
@@ -170,6 +171,7 @@ export const CircularChart = ({ data }) => {
                             >
                                 <div
                                     xmlns="http://www.w3.org/1999/xhtml"
+                                    className="font-anta"
                                     style={{
                                         display: "flex",
                                         alignItems: "center",
@@ -177,7 +179,8 @@ export const CircularChart = ({ data }) => {
                                         gap: "6px",
                                         width: "100%",
                                         height: "100%",
-                                        whiteSpace: "nowrap"
+                                        whiteSpace: "nowrap",
+                                        fontFamily: "'Anta', sans-serif"
                                     }}
                                 >
                                     <span
@@ -194,19 +197,22 @@ export const CircularChart = ({ data }) => {
                                         {lbl === "kapha" && <KaphaIcon />}
                                     </span>
                                     <span
+                                        className="font-anta"
                                         style={{
                                             color: "white",
                                             fontSize: "18px",
-                                            fontFamily: "var(--font-tech-mono), monospace",
+                                            fontFamily: "'Anta', sans-serif",
                                             lineHeight: 1
                                         }}
                                     >
                                         {seg.label}
                                     </span>
                                     <span
+                                        className="font-anta"
                                         style={{
                                             color: "white",
                                             fontSize: "16px",
+                                            fontFamily: "'Anta', sans-serif",
                                             lineHeight: 1
                                         }}
                                     >

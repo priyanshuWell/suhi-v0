@@ -254,7 +254,7 @@ function TileButton({ row, col, isHazardTapped, onClick }) {
 }
 
 /** Overlay icons/badges (Start, End, hazards, connector nodes) — sits at Layer 3 (on top of the path line). */
-function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped }) {
+function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, showStartEnd }) {
     // One-shot "you stepped on a hazard" flash
     const [justHit, setJustHit] = useState(false)
     useEffect(() => {
@@ -266,7 +266,7 @@ function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped }) {
 
     return (
         <div className="pointer-events-none relative aspect-square w-full select-none">
-            {isStart && (
+            {showStartEnd && isStart && (
                 <motion.img
                     src={startBadge}
                     alt="Start"
@@ -276,7 +276,7 @@ function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped }) {
                     transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
                 />
             )}
-            {isEnd && (
+            {showStartEnd && isEnd && (
                 <motion.img
                     src={endBadge}
                     alt="End"
@@ -859,6 +859,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                                 isDanger={dangerSet.has(key)}
                                 isOnPath={pathSet.has(key)}
                                 isHazardTapped={revealHazards && hazardTapSet.has(key)}
+                                showStartEnd={phase === PHASE.RESPONSE || phase === PHASE.SUBMITTING}
                             />
                         )
                     })}
