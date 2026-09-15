@@ -66,11 +66,11 @@ export const INSTRUCTION_AUDIO = {
     WH_MEASURING: "instructions/wh_measuring",
 
     // Perilous Path intro instructions
-    PERILOUS_LETS_LEARN_HOW_TO_PLAY: "instructions/perilous_lets_learn_how_to_play",
-    PERILOUS_COMPLETE_THE_PATH: "instructions/perilous_complete_the_path",
-    PERILOUS_REMEMBER_DANGER: "instructions/perilous_remember_danger",
-    PERILOUS_AVOID_AND_COMPLETE: "instructions/perilous_avoid_and_complete",
-    PERILOUS_PRESS_START_WHEN_READY: "instructions/perilous_press_start_when_ready",
+    PERILOUS_LETS_LEARN_HOW_TO_PLAY: "instructions/perilous_path_lets_learn_how_to_play",
+    PERILOUS_COMPLETE_THE_PATH: "instructions/perilous_path_complete_the_path",
+    PERILOUS_REMEMBER_DANGER: "instructions/perilous_path_remember_danger",
+    PERILOUS_AVOID_AND_COMPLETE: "instructions/perilous_path_avoid_and_complete",
+    PERILOUS_PRESS_START_WHEN_READY: "instructions/perilous_path_press_start_when_ready",
 
     // Visual Acuity intro instructions
     VISUAL_ACUITY_LETS_LEARN_HOW_TO_PLAY: "instructions/visual_acuity_lets_learn_how_to_play",
@@ -99,11 +99,11 @@ export const INSTRUCTION_AUDIO = {
     welcome_screen: "instructions/welcome_screen",
     wh_complete: "instructions/wh_complete",
     wh_measuring: "instructions/wh_measuring",
-    perilous_lets_learn_how_to_play: "instructions/perilous_lets_learn_how_to_play",
-    perilous_complete_the_path: "instructions/perilous_complete_the_path",
-    perilous_remember_danger: "instructions/perilous_remember_danger",
-    perilous_avoid_and_complete: "instructions/perilous_avoid_and_complete",
-    perilous_press_start_when_ready: "instructions/perilous_press_start_when_ready",
+    perilous_lets_learn_how_to_play: "instructions/perilous_path_lets_learn_how_to_play",
+    perilous_complete_the_path: "instructions/perilous_path_complete_the_path",
+    perilous_remember_danger: "instructions/perilous_path_remember_danger",
+    perilous_avoid_and_complete: "instructions/perilous_path_avoid_and_complete",
+    perilous_press_start_when_ready: "instructions/perilous_path_press_start_when_ready",
     visual_acuity_lets_learn_how_to_play: "instructions/visual_acuity_lets_learn_how_to_play",
     visual_acuity_cover_your_left_eye: "instructions/visual_acuity_cover_your_left_eye",
     visual_acuity_cover_your_right_eye: "instructions/visual_acuity_cover_your_right_eye",
