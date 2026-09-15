@@ -130,7 +130,7 @@ import rightBack from "../../assets/hands/left-back.svg"
 
 import leftFront from "../../assets/hands/right-front.svg"
 import leftBack from "../../assets/hands/right-back.svg"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../../constants/audio"
 import { API_BASE_URL, getKioskId } from "../../utils/config"
 
 // ✅ You can change this mapping any time

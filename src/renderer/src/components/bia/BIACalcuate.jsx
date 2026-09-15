@@ -44,7 +44,7 @@ import BlueGradientButton from "../ui/BlueGradientButton"
 import BlackGradientButton from "../ui/BlackGradientButton"
 import AreYouThereModal from "./AreYouThereModal"
 import NoActivityFrame from "../ui/NoActivityFrame"
-import { useKioskAudio } from "../../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO } from "../../constants/audio"
 export default function BIACalculate({ user, onComplete }) {
     const { t } = useTranslation()
     const navigate = useNavigate()
@@ -474,38 +474,38 @@ export default function BIACalculate({ user, onComplete }) {
     // i18n key → audio file key (used when showError receives an ERROR_MESSAGES key).
     // No regex fragility — lookup is a direct object property access.
     const ERROR_AUDIO_KEY_MAP = {
-        "errors.leg_impedance_missing": "errors/remove_your_shoes_and_socks",
-        "errors.barefoot_required": "errors/remove_your_shoes_and_socks",
-        "errors.height_not_detected": "errors/stay_still_i_am_measuring_height",
-        "errors.weight_not_detected": "errors/stand_fully_on_the_platform",
-        "errors.hw_not_detected": "errors/stand_on_the_kiosk",
-        "errors.bia_retry": "errors/tring_again_keep_holding",
-        "errors.bia_rods_incorrect": "errors/hold_both_handles_firmly_to_continue",
-        "errors.bia_max_retries": "errors/couldnt_get_stable_reading"
+        "errors.leg_impedance_missing": ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS,
+        "errors.barefoot_required": ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS,
+        "errors.height_not_detected": ERROR_AUDIO.STAY_STILL_I_AM_MEASURING_HEIGHT,
+        "errors.weight_not_detected": ERROR_AUDIO.STAND_FULLY_ON_THE_PLATFORM,
+        "errors.hw_not_detected": ERROR_AUDIO.stand_on_the_kiosk,
+        "errors.bia_retry": ERROR_AUDIO.TRING_AGAIN_KEEP_HOLDING,
+        "errors.bia_rods_incorrect": ERROR_AUDIO.HOLD_BOTH_HANDLES_FIRMLY_TO_CONTINUE,
+        "errors.bia_max_retries": ERROR_AUDIO.COULDNT_GET_STABLE_READING
     }
 
     // Regex fallback — used only for raw strings arriving from the main process
     // via IPC (payload.userMessage). Order matters: more specific first. (For hardware-related errors)
     const ERROR_AUDIO_REGEX_MAP = [
-        { match: /barefoot|shoes|socks/i, key: "errors/remove_your_shoes_and_socks" },
-        { match: /height|measuring.*height/i, key: "errors/stay_still_i_am_measuring_height" },
-        { match: /platform|weight|stand fully/i, key: "errors/stand_fully_on_the_platform" },
-        { match: /stand.*kiosk|check device/i, key: "errors/stand_on_the_kiosk" },
+        { match: /barefoot|shoes|socks/i, key: ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS },
+        { match: /height|measuring.*height/i, key: ERROR_AUDIO.STAY_STILL_I_AM_MEASURING_HEIGHT },
+        { match: /platform|weight|stand fully/i, key: ERROR_AUDIO.STAND_FULLY_ON_THE_PLATFORM },
+        { match: /stand.*kiosk|check device/i, key: ERROR_AUDIO.stand_on_the_kiosk },
         {
             match: /trying again|keep holding|we.?re trying/i,
-            key: "errors/tring_again_keep_holding"
+            key: ERROR_AUDIO.TRING_AGAIN_KEEP_HOLDING
         },
         {
             match: /handles firmly.*palm|hold.*handles firmly/i,
-            key: "errors/hold_both_handles_firmly_with_your_palm"
+            key: ERROR_AUDIO.HOLD_BOTH_HANDLES_FIRMLY_WITH_YOUR_PALM
         },
         {
             match: /both hands.*handles|both hands.*still|handles.*still|keep still/i,
-            key: "errors/hold_both_handles_firmly_to_continue"
+            key: ERROR_AUDIO.HOLD_BOTH_HANDLES_FIRMLY_TO_CONTINUE
         },
         {
             match: /stable readings|next scan|couldn.?t get/i,
-            key: "errors/couldnt_get_stable_reading"
+            key: ERROR_AUDIO.COULDNT_GET_STABLE_READING
         }
     ]
 
@@ -587,7 +587,7 @@ export default function BIACalculate({ user, onComplete }) {
      */
     const showHeightErrorModal = () => {
         console.log("[BIA DEBUG] Showing StandProperly modal for 10s")
-        playErrorAudio("errors/stay_still_i_am_measuring_height")
+        playErrorAudio(ERROR_AUDIO.STAY_STILL_I_AM_MEASURING_HEIGHT)
         setHeightErrorCountdown(10)
         setShowHeightError(true)
         return new Promise((resolve) => {
@@ -641,7 +641,7 @@ export default function BIACalculate({ user, onComplete }) {
     const showBiaMaxRetryError = () => {
         console.log("[BIA DEBUG] Showing BIA max-retry error CTA")
         // Play the matching audio (non-blocking — the 5 s timer acts as minimum display)
-        playErrorAudio("errors/couldnt_get_stable_reading")
+        playErrorAudio(ERROR_AUDIO.COULDNT_GET_STABLE_READING)
         setShowBiaErrorCta(true)
         return new Promise((resolve) => {
             biaErrorCtaResolverRef.current = resolve
@@ -738,7 +738,7 @@ export default function BIACalculate({ user, onComplete }) {
      */
     const showStandOnKioskPrompt = () => {
         console.log("[BIA DEBUG] Showing StandOnKiosk modal — waiting for user")
-        playErrorAudio("errors/stand_on_the_kiosk")
+        playErrorAudio(ERROR_AUDIO.stand_on_the_kiosk)
         setShowStandOnKioskModal(true)
         return new Promise((resolve) => {
             standOnKioskResolverRef.current = resolve
@@ -975,7 +975,7 @@ export default function BIACalculate({ user, onComplete }) {
                 !isPresentInCandidateList
             ) {
                 console.warn("[BIA DEBUG] Different user detected — showing DifferentUserModal")
-                playErrorAudio("errors/different_user_found")
+                playErrorAudio(ERROR_AUDIO.DIFFERENT_USER_FOUND)
                 setShowDifferentUserModal(true)
                 await sleep(5000)
                 setShowDifferentUserModal(false)
@@ -2272,7 +2272,7 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
 
     React.useEffect(() => {
         // Play the shoes/barefoot prompt audio on mount
-        playAudio?.("errors/remove_your_shoes_and_socks")?.then?.(() => {
+        playAudio?.(ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS)?.then?.(() => {
             setIsAudioPlaying(false)
         })
 
@@ -2343,7 +2343,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
 
     React.useEffect(() => {
         // Play the "press start when ready" audio on mount
-        playAudio?.("errors/press_start_once_you_are_ready")?.then?.(() => {
+        playAudio?.(ERROR_AUDIO.PRESS_START_ONCE_YOU_ARE_READY)?.then?.(() => {
             setIsAudioPlaying(false)
         })
 
@@ -2658,7 +2658,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio, t }) => {
     const [isAudioPlaying, setIsAudioPlaying] = React.useState(true)
 
     React.useEffect(() => {
-        playAudio?.("errors/stand_on_the_kiosk")?.then?.(() => {
+        playAudio?.(ERROR_AUDIO.stand_on_the_kiosk)?.then?.(() => {
             setIsAudioPlaying(false)
         })
     }, [])

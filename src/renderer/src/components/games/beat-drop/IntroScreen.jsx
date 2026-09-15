@@ -37,9 +37,8 @@ const CARDS = [
         img: htp3,
         lines: [
             { t: "Keep accurate timing", c: "#FFFFFF" },
-            { t: "to build combos, score", c: HIGHLIGHT },
-            { t: "multipliers", c: HIGHLIGHT },
-            { t: "and crowd energy", c: HIGHLIGHT }
+            { t: "to build combos", c: HIGHLIGHT },
+            { t: "", c: HIGHLIGHT }
         ]
     }
 ]

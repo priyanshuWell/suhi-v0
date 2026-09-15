@@ -6,7 +6,7 @@ import gu from "./locales/gu.json"
 import mr from "./locales/mr.json"
 import bn from "./locales/bn.json"
 import ar from "./locales/ar.json"
-import { clearAudioCache } from "../../utils/audioUtils"
+import { clearAudioCache } from "../../constants/audio"
 
 i18n.use(initReactI18next).init({
     lng: "en",

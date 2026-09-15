@@ -10,7 +10,7 @@ import HeightWeightDisplay from "./HeightWeightDisplay"
 // Audio files are resolved dynamically via getAudioForCurrentLanguage (see audioUtils.js)
 // to support multiple languages (en, br, etc.) without hardcoding en/ paths.
 import ReplayAudio from "../ReplayAudio"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage, INSTRUCTION_AUDIO } from "../../constants/audio"
 import biaHydrationIcon from "../../assets/icons/bia-hydration.svg"
 import biaSkeletonIcon from "../../assets/icons/bia-skeleton.svg"
 import biaFatMassIcon from "../../assets/icons/bia-fat-mass.svg"
@@ -512,12 +512,12 @@ export const BIAComponent = ({
     // correct subfolder for each language (en, br, etc.).
     const getAudioBaseName = (type) => {
         const audioMap = {
-            wh: "instructions/wh_measuring",
-            whcomplete: "instructions/wh_complete",
-            im: "instructions/impedance",
-            imcomplete: "instructions/im_complete",
-            leg50: "instructions/standstraight",
-            hold: "instructions/impedance"
+            wh: INSTRUCTION_AUDIO.WH_MEASURING,
+            whcomplete: INSTRUCTION_AUDIO.WH_COMPLETE,
+            im: INSTRUCTION_AUDIO.IMPEDANCE,
+            imcomplete: INSTRUCTION_AUDIO.IM_COMPLETE,
+            leg50: INSTRUCTION_AUDIO.STANDSTRAIGHT,
+            hold: INSTRUCTION_AUDIO.IMPEDANCE
         }
         return audioMap[type] || null
     }

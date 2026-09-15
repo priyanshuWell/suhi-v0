@@ -12,7 +12,7 @@ import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
 import { useSetProgressStage } from "../../ProgressStageContext"
-import { perilousPathSfx } from "../../../utils/soundManager"
+import { perilousPathSfx } from "../../../constants/audio"
 
 const SCREENS = {
     INTRO: "intro",

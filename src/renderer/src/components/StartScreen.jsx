@@ -7,7 +7,7 @@ import { useNavigate } from "react-router"
 import { Setting } from "./Setting"
 import { useTranslation } from "react-i18next"
 import StartButton from "./ui/BlueGradientButton"
-import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../constants/audio"
 import CalibrationModal from "./bia/CalibrationModal"
 
 

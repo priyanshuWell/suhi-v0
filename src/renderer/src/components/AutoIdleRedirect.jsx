@@ -5,7 +5,7 @@ import { useDispatch } from "react-redux"
 import { resetCommonState } from "../features/common/commonSlice"
 import AreYouThereModal from "./ui/AreYouThereModal"
 import NoActivityFrame from "./ui/NoActivityFrame"
-import { useKioskAudio } from "../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
 
 /**
  * AutoIdleRedirect
@@ -59,7 +59,7 @@ const AutoIdleRedirect = ({
     const handlePrompt = useCallback(() => {
         if (!isHomeRoute) {
             setStage("are-you-there")
-            playErrorAudio("errors/are_you_still_there")
+            playErrorAudio(ERROR_AUDIO.ARE_YOU_STILL_THERE)
         }
     }, [isHomeRoute, playErrorAudio])
 
@@ -71,7 +71,7 @@ const AutoIdleRedirect = ({
                 "[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage."
             )
             setStage("continue-screening")
-            playErrorAudio("errors/unable_to_detect_any_activity")
+            playErrorAudio(ERROR_AUDIO.UNABLE_TO_DETECT_ANY_ACTIVITY)
         }
     }, [isHomeRoute, playErrorAudio])
 

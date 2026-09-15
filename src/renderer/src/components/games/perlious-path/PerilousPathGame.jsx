@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { COLORS } from "./theme"
 import { perilousPathApi, rowColToTile, tileToRowCol } from "./perilouspathapi"
-import { perilousPathSfx } from "../../../utils/soundManager"
+import { perilousPathSfx } from "../../../constants/audio"
 
 // ── Assets (exported straight from Figma) ──────────────────────────────────
 import boardFrame from "../../../assets/perilous_path/perilous_board.png"

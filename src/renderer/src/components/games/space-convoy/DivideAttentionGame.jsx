@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useNavigate, useLocation } from "react-router"
-import { sfx } from "../../../utils/soundManager"
+import { sfx } from "../../../constants/audio"
 import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav"
 // ── Stimulus sets (3 sets, one per stimulus image)
 import stimulus_1 from "../../../assets/games/stimulus_1.svg"
