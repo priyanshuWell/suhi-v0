@@ -66,9 +66,9 @@ export const StartScreen = () => {
     }
 
     const handleStartClick = () => {
-        // if (!isCalibrated) return
+        // if (!isCalibrated) returnre
         stopAudio()
-        navigate("/capture")
+        navigate("/height-weight")
     }
 
 
