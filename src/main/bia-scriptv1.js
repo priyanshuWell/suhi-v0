@@ -2132,7 +2132,12 @@ export async function connectHeightPort(portPath, baudRate = 9600) {
                     heightBuffer = heightBuffer.slice(start + 7)
 
                     /* ---------- CHECKSUM ---------- */
-                    if (!verifyChecksum(frame)) {
+                    const expectedHeightChecksum = (frame[0] + frame[1] + frame[2] + frame[3] + frame[4] + frame[5]) & 0xff
+                    const actualHeightChecksum = frame[6]
+                    const isHeightChecksumValid = expectedHeightChecksum === actualHeightChecksum
+                    console.log(`[HEIGHT CHECKSUM] Got: 0x${actualHeightChecksum.toString(16).padStart(2, '0')}, Expected: 0x${expectedHeightChecksum.toString(16).padStart(2, '0')} (${isHeightChecksumValid ? 'VALID' : 'INVALID'})`)
+
+                    if (!isHeightChecksumValid) {
                         emitHeightStatus(0x09) // INVALID_RESPONSE
                         continue
                     }
@@ -4408,11 +4413,12 @@ export async function case41_WeightMeasurement() {
                 }
  
                 // Checksum — we are trusting raw ADC now, so verify the frame
-
                 const expectedChecksum = frameChecksum(Array.from(responseData).slice(0, 13))
+                const actualWeightChecksum = responseData[13]
+                const isWeightChecksumValid = expectedChecksum === actualWeightChecksum
+                console.log(`[WEIGHT CHECKSUM] Got: 0x${actualWeightChecksum.toString(16).padStart(2, '0')}, Expected: 0x${expectedChecksum.toString(16).padStart(2, '0')} (${isWeightChecksumValid ? 'VALID' : 'MISMATCH'})`)
 
-                if (expectedChecksum !== responseData[13]) {
-
+                if (!isWeightChecksumValid) {
                     emitWeightStatus(0x0a) // INVALID_RESPONSE
 
                     console.log(
