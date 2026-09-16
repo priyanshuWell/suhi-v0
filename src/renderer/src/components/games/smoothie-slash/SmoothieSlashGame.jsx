@@ -8,6 +8,7 @@ import timeFrame from "../../../assets/smoothie/time-frame.png"
 import bg from "../../../assets/smoothie/bg2.png"
 import blenderImage from "../../../assets/smoothie/blenderImage.svg"
 import ProgressStage from "../../ProgessStage"
+import { useKioskAudio, INSTRUCTION_AUDIO } from "../../../constants/audio"
 import cutSlice1 from "../../../assets/audio/smoothie/cutSlice.wav"
 import cutSlice2 from "../../../assets/audio/smoothie/cutSlice2.wav"
 import BeAware from "./BeAware"
@@ -308,6 +309,7 @@ export default function SmoothieSlashGame() {
     const [report, setReport] = useState(null)
     const [, forceTick] = useState(0)
     const [introStep, setIntroStep] = useState(0)
+    const { play: playInstructionAudio, stop: stopInstructionAudio } = useKioskAudio()
     const playRef = useRef(null)
     const jarRef = useRef(null)
     const fruitsRef = useRef([])
@@ -506,6 +508,7 @@ export default function SmoothieSlashGame() {
 
     /* ── handleStart → POST /smoothie/start ────────────────────────── */
     const handleStart = async () => {
+        stopInstructionAudio()
         const userId = storeUser?.data?.user_id
         const screeningSessionId = storeScreening?.sessionId
         try {
@@ -524,6 +527,24 @@ export default function SmoothieSlashGame() {
         setScreen(SCREENS.COUNTDOWN)
         setCountdown(3)
     }
+
+    // Play instruction narration audio when instruction screen mounts
+    useEffect(() => {
+        if (screen !== SCREENS.INSTRUCTION) return
+        let cancelled = false
+
+        const playIntro = async () => {
+            if (cancelled) return
+            await playInstructionAudio(INSTRUCTION_AUDIO.SMOOTHIE_SLASH_INSTRUCTION)
+        }
+
+        playIntro()
+
+        return () => {
+            cancelled = true
+            stopInstructionAudio()
+        }
+    }, [screen, playInstructionAudio, stopInstructionAudio])
 
     const [introDirection, setIntroDirection] = useState(0)
 
@@ -649,16 +670,16 @@ export default function SmoothieSlashGame() {
         const normalised =
             rep?.divided_attention != null
                 ? {
-                      constructs: {
-                          divided_attention: rep.divided_attention,
-                          selective_attention: rep.selective_attention,
-                          cognitive_flexibility: rep.cognitive_flexibility,
-                          working_memory: rep.working_memory,
-                          processing_speed: rep.processing_speed,
-                          sustained_attention: rep.sustained_attention
-                      },
-                      blocks: [] // not returned by game/complete — per-stage bars will show 0
-                  }
+                    constructs: {
+                        divided_attention: rep.divided_attention,
+                        selective_attention: rep.selective_attention,
+                        cognitive_flexibility: rep.cognitive_flexibility,
+                        working_memory: rep.working_memory,
+                        processing_speed: rep.processing_speed,
+                        sustained_attention: rep.sustained_attention
+                    },
+                    blocks: [] // not returned by game/complete — per-stage bars will show 0
+                }
                 : rep
         setReport(normalised)
         setScreen(SCREENS.REPORT)
@@ -668,8 +689,8 @@ export default function SmoothieSlashGame() {
     useEffect(() => {
         const bgm = new Audio(bgMusic)
         bgm.loop = true
-        bgm.volume = 0.4
-        bgm.play().catch(() => {})
+        bgm.volume = 0.25
+        bgm.play().catch(() => { })
         bgMusicRef.current = bgm
         return () => {
             bgm.pause()
@@ -1052,7 +1073,7 @@ export default function SmoothieSlashGame() {
         const idx = poolIdx.current[bank]
         const audio = pool[idx]
         audio.currentTime = 0
-        audio.play().catch(() => {})
+        audio.play().catch(() => { })
         poolIdx.current[bank] = (idx + 1) % POOL_SIZE
     }, [])
 
@@ -1164,25 +1185,25 @@ export default function SmoothieSlashGame() {
     const bannerStyle =
         bannerAnim === "center"
             ? {
-                  position: "absolute",
-                  left: "50%",
-                  top: "45%",
-                  transform: "translate(-50%,-50%) scale(1)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 12,
-                  fontSize: "2.2vmax",
-                  padding: "18px 40px",
-                  background: "rgba(35,22,10,.88)",
-                  color: "#F7EFDF",
-                  borderRadius: 20,
-                  zIndex: 30,
-                  transition: "all 0.9s cubic-bezier(.4,0,.2,1)",
-                  pointerEvents: "none"
-              }
+                position: "absolute",
+                left: "50%",
+                top: "45%",
+                transform: "translate(-50%,-50%) scale(1)",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 12,
+                fontSize: "2.2vmax",
+                padding: "18px 40px",
+                background: "rgba(35,22,10,.88)",
+                color: "#F7EFDF",
+                borderRadius: 20,
+                zIndex: 30,
+                transition: "all 0.9s cubic-bezier(.4,0,.2,1)",
+                pointerEvents: "none"
+            }
             : bannerAnim === "settle"
-              ? {
+                ? {
                     position: "absolute",
                     left: "50%",
                     top: "22%",
@@ -1200,7 +1221,7 @@ export default function SmoothieSlashGame() {
                     transition: "all 0.9s cubic-bezier(.4,0,.2,1)",
                     pointerEvents: "none"
                 }
-              : { display: "none" }
+                : { display: "none" }
 
     const INTRO_SLIDES = [
         { type: "component", component: HowToPlay },
@@ -2092,7 +2113,7 @@ export default function SmoothieSlashGame() {
                         </defs>
                         {Object.values(
                             trailRef.current.reduce((acc, pt) => {
-                                ;(acc[pt.sid] ??= {
+                                ; (acc[pt.sid] ??= {
                                     sid: pt.sid,
                                     color: pt.color,
                                     pts: []
@@ -2141,8 +2162,8 @@ export default function SmoothieSlashGame() {
                                     pp.kind === "bad"
                                         ? "#E14B4B"
                                         : pp.kind === "combo"
-                                          ? "#C86BE0"
-                                          : "#FFD34D",
+                                            ? "#C86BE0"
+                                            : "#FFD34D",
                                 textShadow: "0 2px 3px rgba(0,0,0,.4)"
                             }}
                         >

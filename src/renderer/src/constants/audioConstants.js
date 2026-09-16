@@ -86,6 +86,9 @@ export const INSTRUCTION_AUDIO = {
     BEAT_DROP_KEEP_ACCURATE_TIMING: "instructions/beat_drop_keep_accurate_timing",
     BEAT_DROP_PRESS_START_WHEN_READY: "instructions/beat_drop_press_start_when_ready",
 
+    // Smoothie Slash intro instructions
+    SMOOTHIE_SLASH_INSTRUCTION: "instructions/smoothie_slash_instruction",
+
     // Raw key aliases for dynamic lookups
     camera_scan: "instructions/camera_scan",
     cognitive_game_instruction: "instructions/cognitive_game_instruction",
@@ -113,7 +116,8 @@ export const INSTRUCTION_AUDIO = {
     beat_drop_press_the_piano_key: "instructions/beat_drop_press_the_piano_key",
     beat_drop_hit_each_note: "instructions/beat_drop_hit_each_note",
     beat_drop_keep_accurate_timing: "instructions/beat_drop_keep_accurate_timing",
-    beat_drop_press_start_when_ready: "instructions/beat_drop_press_start_when_ready"
+    beat_drop_press_start_when_ready: "instructions/beat_drop_press_start_when_ready",
+    smoothie_slash_instruction: "instructions/smoothie_slash_instruction"
 }
 
 // Aliases for user-specified naming
