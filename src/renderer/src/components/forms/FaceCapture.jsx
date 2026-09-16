@@ -8,7 +8,7 @@ import cameraRing from "../../assets/camera-ring.png"
 
 import { getCameraSession, openCamerasInBackground } from "../../utils/cameraSession"
 import { realtimeCapture } from "../../utils/api"
-import { setUser, setLoginScreening } from "../../features/common/commonSlice"
+import { setUser, setLoginScreening, setCandidates } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
 
 import ErrorAlert from "../ErrorAlert"
@@ -80,6 +80,9 @@ function FaceCapture() {
             }
 
             if (response.student_status === "REGISTERED") {
+                if (response.candidates || response.data?.candidates) {
+                    dispatch(setCandidates(response.candidates || response.data?.candidates))
+                }
                 dispatch(setUser(response))
                 // FaceCapture calls realtime/capture — this IS the login step.
                 //    Was previously missing entirely, leaving Redux screening stale/null

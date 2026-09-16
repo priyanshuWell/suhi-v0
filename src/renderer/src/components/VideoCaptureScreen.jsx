@@ -457,7 +457,11 @@ const VideoCaptureScreen = () => {
 
         const data = fptResponse?.data ?? {}
         const { face_detected, confidence_band, matched_student, candidates, screening } = data
-        const multiple_matches = false
+        const multiple_matches = Boolean(
+            data.multiple_matches ||
+            data.multiface_detected ||
+            (candidates && candidates.length > 1)
+        )
 
         if (!face_detected) {
             const errorConfig = getFaceNotDetectedError(measurements, t)
@@ -514,7 +518,16 @@ const VideoCaptureScreen = () => {
         if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && multiple_matches) {
             dispatch(setCandidates(candidates ?? []))
             dispatch(
-                setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } })
+                setUser({
+                    success: true,
+                    data: {
+                        ...matched_student,
+                        buffer_id: data.buffer_id,
+                        multiple_matches: true,
+                        multiface_detected: true,
+                        candidates: candidates ?? []
+                    }
+                })
             )
             dispatch(setLoginScreening(screening))
             trackStage(
@@ -529,7 +542,7 @@ const VideoCaptureScreen = () => {
                 null
             )
             stopKioskAudio()
-            navigate("/identify-student")
+            navigate("/verified")
             return true
         }
 
