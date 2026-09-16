@@ -1,9 +1,9 @@
 import HeightWeightCalculate from "./components/bia/HeightWeightCalculate"
 import { StartScreen } from "./components/StartScreen"
 import SplashScreen from "./components/SplashScreen"
-import { useNavigate } from "react-router"
+import { Route, Routes, useNavigate } from "react-router"
 
-function App() {
+export default function App() {
     const navigate = useNavigate()
 
     return (

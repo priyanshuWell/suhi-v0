@@ -1,26 +1,60 @@
 import { useEffect, useRef, useState } from "react"
-import { useDispatch } from "react-redux"
+import { useDispatch, useSelector } from "react-redux"
+import { useTranslation } from "react-i18next"
 import { setHeight, setWeight } from "../../features/common/commonSlice"
 import { PORT_PATHS } from "../../utils/portConfig"
-import HeightWeightComplete from "./HeightWeightComplete"
+import { BIAComponent } from "./BIAComponents"
+import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
+import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 
 /**
  * HeightWeightCalculate
  *
- * Self-contained component that measures height and weight, then shows
- * the HeightWeightComplete screen once both values are available.
+ * Self-contained component that measures height and weight, rendering
+ * the BIAComponent UI (avatar video, measuring instructions, scanning animations)
+ * while measuring, and showing the final completed values with the Next button.
  *
  * Props:
  *   onComplete({ height, weight }) — called when user clicks "Next"
  *                                    after both measurements succeed.
- *                                    Each value has { value: number, unit: string }.
  */
 export default function HeightWeightCalculate({ onComplete }) {
+    const { t } = useTranslation()
     const dispatch = useDispatch()
+    const storeUser = useSelector((state) => state.common.user)
 
     // ── State ──────────────────────────────────────────────────────────────
+    const [screenType, setScreenType] = useState("wh") // "wh" during measurement, "whcomplete" when finished
     const [isComplete, setIsComplete] = useState(false)
     const [displayValues, setDisplayValues] = useState({ height: null, weight: null })
+
+    // ── Screen Config ──────────────────────────────────────────────────────
+    const screenConfig = {
+        leg50: {
+            title: t("measurement.basic_body_scan"),
+            description: t("measurement.let_measure"),
+            video: {
+                female: bmiWH_female,
+                male: bmiWH_male
+            }
+        },
+        wh: {
+            title: t("measurement.basic_body_scan"),
+            description: t("measurement.weight_height_measurement"),
+            video: {
+                female: bmiWH_female,
+                male: bmiWH_male
+            }
+        },
+        whcomplete: {
+            title: t("measurement.scan_done"),
+            description: t("measurement.weight_height_completed"),
+            video: {
+                female: bmiWH_female,
+                male: bmiWH_male
+            }
+        }
+    }
 
     // ── Refs ───────────────────────────────────────────────────────────────
     /** Raw measurement results — passed to onComplete */
@@ -32,10 +66,6 @@ export default function HeightWeightCalculate({ onComplete }) {
     const HEIGHT_SENSOR_TIMEOUT_MS = 10000
 
     // ── Utilities ──────────────────────────────────────────────────────────
-    /**
-     * Races `promise` against a hard deadline.
-     * Rejects with `errorMessage` if the timeout fires first.
-     */
     const withTimeout = (promise, timeoutMs, errorMessage) =>
         Promise.race([
             promise,
@@ -45,10 +75,6 @@ export default function HeightWeightCalculate({ onComplete }) {
         ])
 
     // ── Measurement helpers ────────────────────────────────────────────────
-    /**
-     * Calls the weight sensor API and stores the result.
-     * Throws if no weight data is returned.
-     */
     const measureWeight = async () => {
         console.log("[HW] Starting weight measurement...")
         const res = await window.api.startWeightMeasurement()
@@ -68,11 +94,6 @@ export default function HeightWeightCalculate({ onComplete }) {
         return res
     }
 
-    /**
-     * Connects the height port, races the sensor against a 10 s deadline,
-     * then stores the result. Disconnects the port on any error.
-     * Throws if no height data or timeout occurs.
-     */
     const measureHeight = async () => {
         console.log("[HW] Starting height measurement (10 s timeout)...")
         console.log("[HW] Connecting to height port:", PORT_PATHS.HEIGHT)
@@ -99,24 +120,25 @@ export default function HeightWeightCalculate({ onComplete }) {
             dispatch(setHeight(resultsRef.current.height.value))
             return res
         } catch (err) {
-            // Disconnect so a subsequent attempt can reconnect to a clean state
             console.warn("[HW] Height error/timeout — disconnecting port before retry:", err.message)
-            await window.api.disconnectHeightPort().catch(() => {})
+            await window.api.disconnectHeightPort().catch(() => { })
             throw err
         }
     }
 
     // ── Main measurement loop ──────────────────────────────────────────────
-    /**
-     * Runs weight and height in parallel.
-     * If either fails it is retried independently on the next iteration.
-     * The loop continues until BOTH values are successfully measured.
-     */
     const runMeasurement = async () => {
         if (isRunningRef.current) return
         isRunningRef.current = true
 
         console.log("[HW] ========== START Height + Weight measurement ==========")
+
+        try {
+            console.log("[HW] Connecting to BIA/weight port:", PORT_PATHS.BIA)
+            await window.api.connectBiaPort(PORT_PATHS.BIA)
+        } catch (err) {
+            console.warn("[HW] Error connecting to BIA port:", err.message)
+        }
 
         let weightOk = false
         let heightOk = false
@@ -154,18 +176,18 @@ export default function HeightWeightCalculate({ onComplete }) {
 
         // Both measurements succeeded
         console.log("[HW] ========== H+W both measured successfully ==========")
+        const finalHeight = resultsRef.current.height?.value ?? null
+        const finalWeight = resultsRef.current.weight?.value ?? null
+
         setDisplayValues({
-            height: resultsRef.current.height?.value ?? null,
-            weight: resultsRef.current.weight?.value ?? null
+            height: finalHeight,
+            weight: finalWeight
         })
+        setScreenType("whcomplete")
         setIsComplete(true)
     }
 
     // ── Handlers ───────────────────────────────────────────────────────────
-    /**
-     * Called when the user clicks "Next" on the HeightWeightComplete screen.
-     * Passes the measured values up to the parent via onComplete.
-     */
     const handleNextClick = () => {
         console.log("[HW] Next clicked — calling onComplete with results:", resultsRef.current)
         onComplete?.({
@@ -177,19 +199,25 @@ export default function HeightWeightCalculate({ onComplete }) {
     // ── Effects ────────────────────────────────────────────────────────────
     useEffect(() => {
         runMeasurement()
+
+        return () => {
+            console.log("[HW] Cleanup — disconnecting height & BIA ports")
+            window.api.disconnectHeightPort().catch(() => { })
+            window.api.disconnectBiaPort().catch(() => { })
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     // ── Render ─────────────────────────────────────────────────────────────
-    // Nothing is shown while measuring — only render once both values are ready
-    if (!isComplete) return null
-
     return (
-        <HeightWeightComplete
+        <BIAComponent
+            screenConfig={screenConfig}
+            screenType={screenType}
+            isComplete={isComplete}
             heightValue={displayValues.height}
             weightValue={displayValues.weight}
             onNextClick={handleNextClick}
-            isAudioPlaying={false}
+            user={storeUser}
         />
     )
 }

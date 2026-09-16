@@ -272,14 +272,16 @@ export const BIAComponent = ({
     arms50k,
     leg50k,
     bia20k_100khz,
-    user
+    user,
+    screenType: propScreenType
 }) => {
     const { t } = useTranslation()
     const navigate = useNavigate()
-    const { screenType } = useParams()
+    const { screenType: routeScreenType } = useParams()
+    const screenType = propScreenType || routeScreenType || "wh"
     const gender = user?.data?.gender?.toLowerCase() === "female" ? "female" : "male"
     console.log("gender bia component", gender)
-    const currentScreen = screenConfig[screenType]
+    const currentScreen = screenConfig?.[screenType]
     const title = currentScreen?.title
     const description = currentScreen?.description
     const videoSrc = currentScreen?.video?.[gender]
