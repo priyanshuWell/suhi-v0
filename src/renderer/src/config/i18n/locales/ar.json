@@ -11,7 +11,8 @@
         "audio_not_supported": "متصفحك لا يدعم عنصر الصوت.",
         "replay": "إعادة تشغيل الصوت",
         "let_go": "فلنبدأ",
-        "hi": "مرحباً"
+        "hi": "مرحباً",
+        "retry": "إعادة المحاولة"
     },
     "profile": {
         "welcome_suhi": "مرحباً بك في SUHI ",
@@ -244,6 +245,129 @@
             "desc_recipe_card": "الوصفة",
             "desc_line2_suffix": "في أعلى",
             "desc_line3": "الشاشة"
+        }
+    },
+    "auto_idle": {
+        "no_activity_detected": "لم يتم اكتشاف أي نشاط",
+        "redirecting_to_home": "إعادة التوجيه إلى الصفحة الرئيسية",
+        "are_you_there": "هل ما زلت هناك؟",
+        "continue_screening": "متابعة الفحص",
+        "no_user_detected": "لم يتم العثور على مستخدم"
+    },
+    "perilousPath": {
+        "loading_next": "جارٍ تحميل التحدي التالي…",
+        "error_finalize": "تعذر إنهاء نتائجك.",
+        "error_not_ready": "المسار الخطير غير جاهز بعد. يرجى المحاولة بعد قليل.",
+        "error_loading_level": "حدث خطأ أثناء تحميل المستوى التالي.",
+        "intro": {
+            "how_to_play": "كيف تلعب؟",
+            "step1_title": "أكمل المسار",
+            "step1_trace": "تتبع المسار من",
+            "step1_start": "البداية",
+            "step1_to": "إلى",
+            "step1_end": "النهاية",
+            "step2_title": "تذكر الخطر",
+            "step2_some": "بعض البلاطات",
+            "step2_danger": "خطيرة،",
+            "step2_memorize": "احفظ مواقعها",
+            "step3_title": "تجنب وأكمل",
+            "step3_avoid": "تجنب بلاطات الخطر",
+            "step3_complete": "وأكمل المسار",
+            "step3_to": "لتفوز",
+            "step3_win": "!",
+            "start_game": "ابدأ اللعبة",
+            "starting": "جارٍ البدء…"
+        },
+        "game": {
+            "time": "الوقت",
+            "score": "النقاط",
+            "memorize_danger": "احفظ بلاطات الخطر!",
+            "get_ready": "استعد…",
+            "trace_safe_path": "تتبع المسار الآمن!",
+            "submitting": "جارٍ الإرسال…",
+            "safe_crossing": "+{{count}} عبور آمن",
+            "crossed_no_points": "عبرت — بدون نقاط",
+            "time_ran_out": "انتهى الوقت",
+            "path_not_completed": "لم يكتمل المسار",
+            "error_submit": "تعذر إرسال جولتك."
+        },
+        "scoreboard": {
+            "results": "النتائج",
+            "total_points": "مجموع النقاط",
+            "neurocoins": "عملات نيرو",
+            "best_streak": "أفضل سلسلة متتالية"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "كيف تلعب؟",
+            "start_game": "ابدأ اللعبة",
+            "card1_line1": "اضغط على مفتاح البيانو الذي",
+            "card1_line2": "يطابق",
+            "card1_line3": "مسار النغمة",
+            "card1_line4": "الساقطة",
+            "card2_line1": "اضغط على كل نغمة عند",
+            "card2_line2": "وصولها",
+            "card2_line3": "إلى الخط في",
+            "card2_line4": "الأسفل",
+            "card3_line1": "حافظ على دقة التوقيت",
+            "card3_line2": "لبناء مجموعات، مضاعفة",
+            "card3_line3": "النقاط",
+            "card3_line4": "وزيادة الحماس"
+        },
+        "popups": {
+            "got_it": "فهمت!",
+            "follow_title": "اتبع الإيقاع!",
+            "follow_body": "اضغط على كل نغمة عند وصولها إلى الخط السفلي",
+            "speed_title": "ستزداد سرعة النغمات!",
+            "speed_get_ready": "استعد!",
+            "speed_notes_will": "ستأتي النغمات",
+            "speed_come_faster": "بشكل أسرع",
+            "speed_now": "الآن!",
+            "two_notes_title": "نغمتان معاً!",
+            "two_notes_line1": "الآن ستسقط نغمتان معاً.",
+            "two_notes_line2": "عليك الضغط على كلا المفتاحين!",
+            "avoid_title": "تجنب هذه النغمات!",
+            "avoid_line1_prefix": "هذه نغمات خادعة.",
+            "avoid_line1_highlight": "لا تضغط",
+            "avoid_line2": "على مفتاح البيانو عندما ترى",
+            "avoid_line3": "هذه النغمات."
+        },
+        "playArea": {
+            "time": "الوقت",
+            "score": "النقاط"
+        },
+        "results": {
+            "results": "النتائج",
+            "score": "النقاط",
+            "coins": "عملات نيرو آرك",
+            "streak": "أطول سلسلة"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "فحص النظر",
+            "cover_eye": "غطِّ عينك {{eye}} بيدك.",
+            "tap_gap": "انظر إلى شكل C واضغط على زر الفتحة المطابق"
+        },
+        "eyes": {
+            "right": "اليمنى",
+            "left": "اليسرى",
+            "right_eye": "العين اليمنى",
+            "left_eye": "العين اليسرى"
+        },
+        "game": {
+            "tap_gap": "انظر إلى شكل C واضغط على زر الفتحة المطابق",
+            "correct": "صحيح!",
+            "try_again": "غير صحيح — حاول مرة أخرى",
+            "incorrect": "غير صحيح"
+        },
+        "modal": {
+            "title": "اكتملت المهمة",
+            "responses_saved": "تم حفظ الإجابات."
+        },
+        "results": {
+            "below_6_60": "أقل من 6/60"
         }
     }
 }

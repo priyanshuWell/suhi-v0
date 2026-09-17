@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import BlueGradientButton from '../../ui/BlueGradientButton';
 import textbgframe from '../../../assets/textbgframe.svg';
 
@@ -6,6 +7,7 @@ import textbgframe from '../../../assets/textbgframe.svg';
 /*  "Task completed" modal — smooth top-down entrance animation        */
 /* ------------------------------------------------------------------ */
 export default function CompletedModal({ results, onNext }) {
+  const { t } = useTranslation();
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
@@ -50,17 +52,17 @@ export default function CompletedModal({ results, onNext }) {
         >
           {/* Title */}
           <h2 className="text-[#8BC3E5] text-[42px] font-anta text-center mb-4">
-            Task Completed
+            {t('adaptiveEye.modal.title')}
           </h2>
 
           {/* Subtitle */}
           <p className="text-white text-[28px] font-anta text-center mb-12">
-            Responses saved.
+            {t('adaptiveEye.modal.responses_saved')}
           </p>
 
           {/* Next button */}
           <BlueGradientButton onClick={onNext}>
-            Next
+            {t('common.next')}
           </BlueGradientButton>
         </div>
       </motion.div>

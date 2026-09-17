@@ -1,5 +1,6 @@
 import { useEffect } from "react"
 import { motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import bg from "../../../assets/beat-drop/intro/Intro_beat_bg_card.png"
 import logo from "../../../assets/beat-drop/intro/beat_drop_logo.png"
 import cardFrame from "../../../assets/beat-drop/intro/1st_intro_card.png"
@@ -183,6 +184,38 @@ function IntroCard({ card, index }) {
 }
 
 export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
+    const { t } = useTranslation()
+
+    const cards = [
+        {
+            img: htp1,
+            lines: [
+                { t: t("beatDrop.intro.card1_line1"), c: "#FFFFFF" },
+                { t: t("beatDrop.intro.card1_line2"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card1_line3"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card1_line4"), c: HIGHLIGHT }
+            ]
+        },
+        {
+            img: htp2,
+            lines: [
+                { t: t("beatDrop.intro.card2_line1"), c: "#FFFFFF" },
+                { t: t("beatDrop.intro.card2_line2"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card2_line3"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card2_line4"), c: HIGHLIGHT }
+            ]
+        },
+        {
+            img: htp3,
+            lines: [
+                { t: t("beatDrop.intro.card3_line1"), c: "#FFFFFF" },
+                { t: t("beatDrop.intro.card3_line2"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card3_line3"), c: HIGHLIGHT },
+                { t: t("beatDrop.intro.card3_line4"), c: HIGHLIGHT }
+            ]
+        }
+    ]
+
     const { play, stop } = useKioskAudio()
 
     useEffect(() => {
@@ -250,7 +283,7 @@ export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
 
             <PillButton
                 variant="howToPlay"
-                label="How to Play?"
+                label={t("beatDrop.intro.how_to_play")}
                 textColor="#FFFFFF"
                 fontSize={64}
                 onClick={highlightCards}
@@ -278,7 +311,7 @@ export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
                     zIndex: 2
                 }}
             >
-                {CARDS.map((card, i) => (
+                {cards.map((card, i) => (
                     <IntroCard key={i} card={card} index={i} />
                 ))}
             </motion.div>
@@ -291,7 +324,7 @@ export default function IntroScreen({ onStart, highlightCards, pulseKey = 0 }) {
             >
                 <PillButton
                     variant="start"
-                    label="Start Game"
+                    label={t("beatDrop.intro.start_game")}
                     textColor="#390500"
                     fontSize={64}
                     onClick={handleStart}

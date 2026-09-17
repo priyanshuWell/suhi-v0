@@ -1,12 +1,16 @@
+import { useTranslation } from 'react-i18next';
+
 /* ------------------------------------------------------------------ */
 /*  One eye's result row inside the completed modal                    */
 /* ------------------------------------------------------------------ */
 export default function EyeResultRow({ label, result }) {
+  const { t } = useTranslation();
   if (!result) return null;
+  const displayLabel = label ? t(label, { defaultValue: label }) : '';
   return (
     <div className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-5 py-4 text-left">
       <span className="text-[#8BC3E5] font-anta" style={{ fontSize: 'clamp(0.9rem, 2vw, 1.25rem)' }}>
-        {label}
+        {displayLabel}
       </span>
       <span className="text-right">
         <span

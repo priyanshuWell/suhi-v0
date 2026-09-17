@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import blankCard from "../../../assets/beat-drop/popup/popup_complete_blank.png"
 import PillButton from "./PillButton"
 import { anton, cqw, FRAME_W, pct } from "./frame"
@@ -22,6 +23,7 @@ export default function InstructionPopup({
     titleColor = "#FFFFFF",
     illustrationFit = "contain"
 }) {
+    const { t } = useTranslation()
     return (
         <div
             style={{
@@ -145,7 +147,7 @@ export default function InstructionPopup({
 
                 <PillButton
                     variant="gotIt"
-                    label="Got it!"
+                    label={t("beatDrop.popups.got_it")}
                     textColor="#390500"
                     fontSize={64}
                     onClick={onGotIt}

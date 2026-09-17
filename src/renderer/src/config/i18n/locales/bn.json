@@ -13,7 +13,8 @@
         "let_go": "চলুন শুরু করি",
         "hi": "হ্যালো",
         "yes": "হ্যাঁ",
-        "no": "না"
+        "no": "না",
+        "retry": "আবার চেষ্টা করুন"
     },
     "profile": {
         "welcome_suhi": "SUHI-তে স্বাগতম ",
@@ -255,6 +256,122 @@
             "desc_recipe_card": "রেসিপি কার্ডে",
             "desc_line2_suffix": "এ",
             "desc_line3": "স্ক্রিনের"
+        }
+    },
+    "perilousPath": {
+        "loading_next": "পরবর্তী চ্যালেঞ্জ লোড হচ্ছে…",
+        "error_finalize": "আপনার ফলাফল চূড়ান্ত করা যায়নি।",
+        "error_not_ready": "পেরিলাস পাথ এখনও প্রস্তুত নয়। দয়া করে কিছুক্ষণ পর আবার চেষ্টা করুন।",
+        "error_loading_level": "পরবর্তী স্তর লোড করার সময় কিছু সমস্যা হয়েছে।",
+        "intro": {
+            "how_to_play": "কীভাবে খেলবেন?",
+            "step1_title": "পথ সম্পূর্ণ করুন",
+            "step1_trace": "পথ অনুসরণ করুন",
+            "step1_start": "শুরু",
+            "step1_to": "থেকে",
+            "step1_end": "শেষ পর্যন্ত",
+            "step2_title": "বিপদ মনে রাখুন",
+            "step2_some": "কিছু টাইল",
+            "step2_danger": "বিপজ্জনক,",
+            "step2_memorize": "সেগুলির অবস্থান মনে রাখুন",
+            "step3_title": "এড়িয়ে চলুন ও সম্পূর্ণ করুন",
+            "step3_avoid": "বিপদের টাইল এড়িয়ে চলুন",
+            "step3_complete": "এবং পথ সম্পূর্ণ করুন",
+            "step3_to": "জিততে",
+            "step3_win": "হলে!",
+            "start_game": "খেলা শুরু করুন",
+            "starting": "শুরু হচ্ছে…"
+        },
+        "game": {
+            "time": "সময়",
+            "score": "স্কোর",
+            "memorize_danger": "বিপদের টাইল মনে রাখুন!",
+            "get_ready": "প্রস্তুত হোন…",
+            "trace_safe_path": "নিরাপদ পথ ধরে চলুন!",
+            "submitting": "জমা হচ্ছে…",
+            "safe_crossing": "+{{count}} নিরাপদ পারাপার",
+            "crossed_no_points": "পার হয়েছে — কোনো পয়েন্ট নেই",
+            "time_ran_out": "সময় শেষ",
+            "path_not_completed": "পথ সম্পূর্ণ হয়নি",
+            "error_submit": "আপনার স্কোর জমা দেওয়া যায়নি।"
+        },
+        "scoreboard": {
+            "results": "ফলাফল",
+            "total_points": "মোট পয়েন্ট",
+            "neurocoins": "নিউरोकয়েন",
+            "best_streak": "সেরা ধারাবাহিক রান"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "কীভাবে খেলবেন?",
+            "start_game": "খেলা শুরু করুন",
+            "card1_line1": "সেই পিয়ানো কি চাপুন যা",
+            "card1_line2": "পড়ন্ত নোটের",
+            "card1_line3": "লেনের সাথে",
+            "card1_line4": "মেলে",
+            "card2_line1": "প্রতিটি নোট ঠিক তখনই চাপুন যখন তা",
+            "card2_line2": "নিচের",
+            "card2_line3": "রেখায়",
+            "card2_line4": "পৌঁছায়",
+            "card3_line1": "সঠিক টাইমিং বজায় রাখুন",
+            "card3_line2": "কম্বো তৈরি, স্কোর",
+            "card3_line3": "মাল্টিপ্লায়ার",
+            "card3_line4": "এবং উত্তেজনা বাড়াতে"
+        },
+        "popups": {
+            "got_it": "বুঝেছি!",
+            "follow_title": "বিট অনুসরণ করুন!",
+            "follow_body": "প্রতিটি নোট নিচের রেখায় পৌঁছালে চাপুন",
+            "speed_title": "নোটের গতি বাড়বে!",
+            "speed_get_ready": "প্রস্তুত হোন!",
+            "speed_notes_will": "এখন নোটগুলি",
+            "speed_come_faster": "আরও দ্রুত আসবে",
+            "speed_now": "!",
+            "two_notes_title": "দুটি নোট একসাথে!",
+            "two_notes_line1": "এখন দুটি নোট একসাথে পড়বে।",
+            "two_notes_line2": "আপনাকে উভয় কি একসাথে চাপতে হবে!",
+            "avoid_title": "এই নোটগুলি এড়িয়ে চলুন!",
+            "avoid_line1_prefix": "এগুলি বিভ্রান্তিকর নোট।",
+            "avoid_line1_highlight": "চাপবেন না",
+            "avoid_line2": "যখন আপনি এই নোটগুলি দেখবেন তখন",
+            "avoid_line3": "পিয়ানো কি চাপবেন না।"
+        },
+        "playArea": {
+            "time": "সময়",
+            "score": "স্কোর"
+        },
+        "results": {
+            "results": "ফলাফল",
+            "score": "স্কোর",
+            "coins": "নিউরোআর্ক কয়েন",
+            "streak": "দীর্ঘতম স্ট্রিক"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "দৃষ্টি পরীক্ষা",
+            "cover_eye": "আপনার {{eye}} চোখ হাত দিয়ে ঢাকুন।",
+            "tap_gap": "C আকারটি দেখুন এবং মিল থাকা খোলা অংশের বাটনে চাপুন"
+        },
+        "eyes": {
+            "right": "ডান",
+            "left": "বাম",
+            "right_eye": "ডান চোখ",
+            "left_eye": "বাম চোখ"
+        },
+        "game": {
+            "tap_gap": "C আকারটি দেখুন এবং মিল থাকা খোলা অংশের বাটনে চাপুন",
+            "correct": "সঠিক!",
+            "try_again": "ভুল — আবার চেষ্টা করুন",
+            "incorrect": "ভুল"
+        },
+        "modal": {
+            "title": "কাজ সম্পন্ন হয়েছে",
+            "responses_saved": "প্রতিক্রিয়া সংরক্ষণ করা হয়েছে।"
+        },
+        "results": {
+            "below_6_60": "6/60 এর নিচে"
         }
     }
 }

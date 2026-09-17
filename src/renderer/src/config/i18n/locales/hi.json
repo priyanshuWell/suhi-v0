@@ -260,5 +260,128 @@
             "desc_line2_suffix": "पर",
             "desc_line3": "स्क्रीन"
         }
+    },
+    "auto_idle": {
+        "no_activity_detected": "कोई गतिविधि नहीं पाई गई",
+        "redirecting_to_home": "होम पर वापस भेजा जा रहा है",
+        "are_you_there": "क्या आप अभी भी कियोस्क पर हैं?",
+        "continue_screening": "जांच जारी रखें",
+        "no_user_detected": "कोई उपयोगकर्ता नहीं मिला"
+    },
+    "perilousPath": {
+        "loading_next": "अगली चुनौती लोड हो रही है…",
+        "error_finalize": "आपके परिणाम अंतिम रूप नहीं दिए जा सके।",
+        "error_not_ready": "पेरिलस पाथ अभी तैयार नहीं है। कृपया थोड़ी देर बाद पुनः प्रयास करें।",
+        "error_loading_level": "अगला स्तर लोड करने में कोई त्रुटि हुई।",
+        "intro": {
+            "how_to_play": "कैसे खेलें?",
+            "step1_title": "रास्ता पूरा करें",
+            "step1_trace": "रास्ते का अनुसरण करें",
+            "step1_start": "शुरुआत",
+            "step1_to": "से",
+            "step1_end": "अंत तक",
+            "step2_title": "खतरे को याद रखें",
+            "step2_some": "कुछ टाइलें",
+            "step2_danger": "खतरनाक हैं,",
+            "step2_memorize": "उनकी स्थिति याद रखें",
+            "step3_title": "बचें और पूरा करें",
+            "step3_avoid": "खतरे वाली टाइलों से बचें",
+            "step3_complete": "और रास्ता पूरा करें",
+            "step3_to": "जीतने",
+            "step3_win": "के लिए!",
+            "start_game": "गेम शुरू करें",
+            "starting": "शुरू हो रहा है…"
+        },
+        "game": {
+            "time": "समय",
+            "score": "स्कोर",
+            "memorize_danger": "खतरे वाली टाइलें याद रखें!",
+            "get_ready": "तैयार हो जाएं…",
+            "trace_safe_path": "सुरक्षित रास्ते पर चलें!",
+            "submitting": "जमा हो रहा है…",
+            "safe_crossing": "+{{count}} सुरक्षित पार",
+            "crossed_no_points": "पार किया — कोई अंक नहीं",
+            "time_ran_out": "समय समाप्त हो गया",
+            "path_not_completed": "रास्ता पूरा नहीं हुआ",
+            "error_submit": "आपका प्रयास जमा नहीं किया जा सका।"
+        },
+        "scoreboard": {
+            "results": "परिणाम",
+            "total_points": "कुल अंक",
+            "neurocoins": "न्यूरो कॉइन्स",
+            "best_streak": "सर्वश्रेष्ठ लगातार रन"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "कैसे खेलें?",
+            "start_game": "गेम शुरू करें",
+            "card1_line1": "उस पियानो की को दबाएं जो",
+            "card1_line2": "गिरते हुए नोट की",
+            "card1_line3": "लेन से",
+            "card1_line4": "मेल खाती है",
+            "card2_line1": "हर नोट को तब दबाएं जब वह",
+            "card2_line2": "नीचे की",
+            "card2_line3": "लाइन तक",
+            "card2_line4": "पहुंचे",
+            "card3_line1": "सही टाइमिंग बनाए रखें",
+            "card3_line2": "कॉम्बो बनाने, स्कोर",
+            "card3_line3": "मल्टीप्लायर",
+            "card3_line4": "और ऊर्जा बढ़ाने के लिए"
+        },
+        "popups": {
+            "got_it": "समझ गए!",
+            "follow_title": "बीट को फॉलो करें!",
+            "follow_body": "हर नोट को नीचे की लाइन पर पहुंचते ही दबाएं",
+            "speed_title": "नोट्स की गति बढ़ेगी!",
+            "speed_get_ready": "तैयार हो जाएं!",
+            "speed_notes_will": "अब नोट्स",
+            "speed_come_faster": "तेज़ी से आएंगे",
+            "speed_now": "!",
+            "two_notes_title": "दो नोट्स एक साथ!",
+            "two_notes_line1": "अब दो नोट्स एक साथ गिरेंगे।",
+            "two_notes_line2": "आपको दोनों कुंजियां एक साथ दबानी होंगी!",
+            "avoid_title": "इन नोट्स से बचें!",
+            "avoid_line1_prefix": "ये नकली नोट्स हैं।",
+            "avoid_line1_highlight": "मत दबाएं",
+            "avoid_line2": "जब आप इन नोट्स को देखें तो",
+            "avoid_line3": "पियानो कुंजी न दबाएं।"
+        },
+        "playArea": {
+            "time": "समय",
+            "score": "स्कोर"
+        },
+        "results": {
+            "results": "परिणाम",
+            "score": "स्कोर",
+            "coins": "न्यूरोआर्क कॉइन्स",
+            "streak": "सबसे लंबा स्ट्रीक"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "दृष्टि परीक्षण",
+            "cover_eye": "अपनी {{eye}} आंख को हाथ से ढकें।",
+            "tap_gap": "C आकार को देखें और खुले हिस्से (गैप) वाले बटन को दबाएं"
+        },
+        "eyes": {
+            "right": "दाहिनी",
+            "left": "बाईं",
+            "right_eye": "दाहिनी आंख",
+            "left_eye": "बाईं आंख"
+        },
+        "game": {
+            "tap_gap": "C आकार को देखें और खुले हिस्से (गैप) वाले बटन को दबाएं",
+            "correct": "सही!",
+            "try_again": "गलत — दोबारा प्रयास करें",
+            "incorrect": "गलत"
+        },
+        "modal": {
+            "title": "कार्य पूर्ण हुआ",
+            "responses_saved": "प्रतिक्रियाएं सहेज ली गईं।"
+        },
+        "results": {
+            "below_6_60": "6/60 से नीचे"
+        }
     }
 }

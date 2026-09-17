@@ -13,7 +13,8 @@
         "let_go": "ચાલો શરૂ કરીએ",
         "hi": "નમસ્તે",
         "yes": "હા",
-        "no": "ના"
+        "no": "ના",
+        "retry": "ફરી પ્રયાસ કરો"
     },
     "profile": {
         "welcome_suhi": "SUHI માં આપનું સ્વાગત છે ",
@@ -256,5 +257,121 @@
     "error": {
         "no_result": "પરિણામ ડેટા લોડ કરવામાં નિષ્ફળ",
         "redirecting": "હોમ પર રીડાયરેક્ટ થઈ રહ્યા છીએ..."
+    },
+    "perilousPath": {
+        "loading_next": "આગળનો પડકાર લોડ થઈ રહ્યો છે…",
+        "error_finalize": "તમારા પરિણામો અંતિમ કરી શકાયા નથી.",
+        "error_not_ready": "પેરિલસ પાથ હજી તૈયાર નથી. કૃપા કરીને થોડી વાર પછી ફરી પ્રયાસ કરો.",
+        "error_loading_level": "આગળનું સ્તર લોડ કરવામાં કંઈક ખોટું થયું.",
+        "intro": {
+            "how_to_play": "કેવી રીતે રમવું?",
+            "step1_title": "માર્ગ પૂર્ણ કરો",
+            "step1_trace": "માર્ગ અનુસરો",
+            "step1_start": "શરૂઆત",
+            "step1_to": "થી",
+            "step1_end": "અંત સુધી",
+            "step2_title": "જોખમ યાદ રાખો",
+            "step2_some": "કેટલીક ટાઇલ્સ",
+            "step2_danger": "જોખમી છે,",
+            "step2_memorize": "તેમની સ્થિતિ યાદ રાખો",
+            "step3_title": "બચો અને પૂર્ણ કરો",
+            "step3_avoid": "જોખમી ટાઇલ્સથી બચો",
+            "step3_complete": "અને માર્ગ પૂર્ણ કરો",
+            "step3_to": "જીતવા",
+            "step3_win": "માટે!",
+            "start_game": "રમત શરૂ કરો",
+            "starting": "શરૂ થઈ રહ્યું છે…"
+        },
+        "game": {
+            "time": "સમય",
+            "score": "સ્કોર",
+            "memorize_danger": "જોખમી ટાઇલ્સ યાદ રાખો!",
+            "get_ready": "તૈયાર થઈ જાઓ…",
+            "trace_safe_path": "સુરક્ષિત માર્ગ ટ્રેસ કરો!",
+            "submitting": "સબમિટ થઈ રહ્યું છે…",
+            "safe_crossing": "+{{count}} સુરક્ષિત ક્રોસિંગ",
+            "crossed_no_points": "પાર કર્યું — કોઈ પોઇન્ટ નહીં",
+            "time_ran_out": "સમય પૂરો થઈ ગયો",
+            "path_not_completed": "માર્ગ પૂર્ણ થયો નથી",
+            "error_submit": "તમારું રન સબમિટ થઈ શક્યું નથી."
+        },
+        "scoreboard": {
+            "results": "પરિણામો",
+            "total_points": "કુલ પોઇન્ટ",
+            "neurocoins": "ન્યુરોકોઇન્સ",
+            "best_streak": "શ્રેષ્ઠ સતત રન"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "કેવી રીતે રમવું?",
+            "start_game": "રમત શરૂ કરો",
+            "card1_line1": "તે પિયાનો કી દબાવો જે",
+            "card1_line2": "પડતા નોટની",
+            "card1_line3": "લેન સાથે",
+            "card1_line4": "મેળ ખાય છે",
+            "card2_line1": "દરેક નોટને ત્યારે હિટ કરો જ્યારે તે",
+            "card2_line2": "નીચેની",
+            "card2_line3": "લાઇન સુધી",
+            "card2_line4": "પહોંચે",
+            "card3_line1": "ચોક્કસ સમય જાળવો",
+            "card3_line2": "કોમ્બોઝ બનાવવા, સ્કોર",
+            "card3_line3": "મલ્ટિપ્લાયર્સ",
+            "card3_line4": "અને ઉર્જા વધારવા"
+        },
+        "popups": {
+            "got_it": "સમજાઈ ગયું!",
+            "follow_title": "બીટને અનુસરો!",
+            "follow_body": "દરેક નોટ નીચેની લાઇન સુધી પહોંચતાં જ દબાવો",
+            "speed_title": "નોટ્સની ઝડપ વધશે!",
+            "speed_get_ready": "તૈયાર થઈ જાઓ!",
+            "speed_notes_will": "હવે નોટ્સ",
+            "speed_come_faster": "ઝડપથી આવશે",
+            "speed_now": "!",
+            "two_notes_title": "બે નોટ્સ એકસાથે!",
+            "two_notes_line1": "હવે બે નોટ્સ એકસાથે પડશે.",
+            "two_notes_line2": "તમારે બંને કી દબાવવી પડશે!",
+            "avoid_title": "આ નોટ્સથી બચો!",
+            "avoid_line1_prefix": "આ નકલી નોટ્સ છે.",
+            "avoid_line1_highlight": "દબાવશો નહીં",
+            "avoid_line2": "જ્યારે તમે આ નોટ્સ જુઓ ત્યારે",
+            "avoid_line3": "પિયાનો કી ન દબાવો."
+        },
+        "playArea": {
+            "time": "સમય",
+            "score": "સ્કોર"
+        },
+        "results": {
+            "results": "પરિણામો",
+            "score": "સ્કોર",
+            "coins": "ન્યુરોઆર્ક કોઈન્સ",
+            "streak": "સૌથી લાંબી સ્ટ્રીક"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "દ્રષ્ટિ પરીક્ષણ",
+            "cover_eye": "તમારી {{eye}} આંખને હાથથી ઢાંકો.",
+            "tap_gap": "C આકાર જુઓ અને મેળ ખાતા ગેપ બટન પર ટેપ કરો"
+        },
+        "eyes": {
+            "right": "જમણી",
+            "left": "ડાબી",
+            "right_eye": "જમણી આંખ",
+            "left_eye": "ડાબી આંખ"
+        },
+        "game": {
+            "tap_gap": "C આકાર જુઓ અને મેળ ખાતા ગેપ બટન પર ટેપ કરો",
+            "correct": "સાચું!",
+            "try_again": "ખોટું — ફરી પ્રયાસ કરો",
+            "incorrect": "ખોટું"
+        },
+        "modal": {
+            "title": "કાર્ય પૂર્ણ થયું",
+            "responses_saved": "પ્રતિસાદો સાચવવામાં આવ્યા."
+        },
+        "results": {
+            "below_6_60": "6/60 થી નીચે"
+        }
     }
 }

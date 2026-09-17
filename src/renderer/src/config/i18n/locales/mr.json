@@ -11,7 +11,8 @@
         "audio_not_supported": "तुमचा ब्राउझर ऑडिओ घटकास सपोर्ट करत नाही.",
         "replay": "ऑडिओ पुन्हा ऐका",
         "let_go": "चला सुरू करूया",
-        "hi": "नमस्ते"
+        "hi": "नमस्ते",
+        "retry": "पुन्हा प्रयत्न करा"
     },
     "profile": {
         "welcome_suhi": "SUHI मध्ये तुमचे स्वागत आहे ",
@@ -244,6 +245,122 @@
             "desc_recipe_card": "रेसिपी कार्डवर",
             "desc_line2_suffix": "मध्ये",
             "desc_line3": "स्क्रीन"
+        }
+    },
+    "perilousPath": {
+        "loading_next": "पुढील आव्हान लोड होत आहे…",
+        "error_finalize": "तुमचे निकाल अंतिम करता आले नाहीत.",
+        "error_not_ready": "पेरिलस पाथ अजून तयार नाही. कृपया थोड्या वेळाने पुन्हा प्रयत्न करा.",
+        "error_loading_level": "पुढील स्तर लोड करताना काहीतरी चूक झाली.",
+        "intro": {
+            "how_to_play": "कसे खेळायचे?",
+            "step1_title": "मार्ग पूर्ण करा",
+            "step1_trace": "मार्गाचा मागोवा घ्या",
+            "step1_start": "सुरुवात",
+            "step1_to": "ते",
+            "step1_end": "शेवटपर्यंत",
+            "step2_title": "धोका लक्षात ठेवा",
+            "step2_some": "काही टाइल्स",
+            "step2_danger": "धोकादायक आहेत,",
+            "step2_memorize": "त्यांची जागा लक्षात ठेवा",
+            "step3_title": "टाळा आणि पूर्ण करा",
+            "step3_avoid": "धोकादायक टाइल्स टाळा",
+            "step3_complete": "आणि मार्ग पूर्ण करा",
+            "step3_to": "जिंकण्यासाठी",
+            "step3_win": "!",
+            "start_game": "खेळ सुरू करा",
+            "starting": "सुरू होत आहे…"
+        },
+        "game": {
+            "time": "वेळ",
+            "score": "गुण",
+            "memorize_danger": "धोकादायक टाइल्स लक्षात ठेवा!",
+            "get_ready": "तयार व्हा…",
+            "trace_safe_path": "सुरक्षित मार्गाचा मागोवा घ्या!",
+            "submitting": "सबमिट होत आहे…",
+            "safe_crossing": "+{{count}} सुरक्षित पार",
+            "crossed_no_points": "पार केले — गुण नाहीत",
+            "time_ran_out": "वेळ संपली",
+            "path_not_completed": "मार्ग पूर्ण झाला नाही",
+            "error_submit": "तुमचा खेळ सबमिट करता आला नाही."
+        },
+        "scoreboard": {
+            "results": "निकाल",
+            "total_points": "एकूण गुण",
+            "neurocoins": "न्यूरोकॉइन्स",
+            "best_streak": "सर्वोत्तम सलग रन"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "कसे खेळायचे?",
+            "start_game": "खेळ सुरू करा",
+            "card1_line1": "ती पियानो की दाबा जी",
+            "card1_line2": "पडणाऱ्या नोटच्या",
+            "card1_line3": "लेनशी",
+            "card1_line4": "जुळते",
+            "card2_line1": "प्रत्येक नोट जेव्हा",
+            "card2_line2": "तळाच्या",
+            "card2_line3": "रेषेवर पोहोचते",
+            "card2_line4": "तेव्हा दाबा",
+            "card3_line1": "अचूक वेळ ठेवा",
+            "card3_line2": "कॉम्बो बनवण्यासाठी, गुण",
+            "card3_line3": "मल्टिप्लायर्स",
+            "card3_line4": "आणि ऊर्जा वाढवण्यासाठी"
+        },
+        "popups": {
+            "got_it": "समजले!",
+            "follow_title": "बीट फॉलो करा!",
+            "follow_body": "प्रत्येक नोट तळाच्या रेषेवर पोहोचल्यावर दाबा",
+            "speed_title": "नोट्सचा वेग वाढेल!",
+            "speed_get_ready": "तयार व्हा!",
+            "speed_notes_will": "आता नोट्स",
+            "speed_come_faster": "वेगाने येतील",
+            "speed_now": "!",
+            "two_notes_title": "दोन नोट्स एकत्र!",
+            "two_notes_line1": "आता दोन नोट्स एकत्र पडतील.",
+            "two_notes_line2": "तुम्हाला दोन्ही की दाबाव्या लागतील!",
+            "avoid_title": "या नोट्स टाळा!",
+            "avoid_line1_prefix": "या फसव्या नोट्स आहेत.",
+            "avoid_line1_highlight": "दाबू नका",
+            "avoid_line2": "या नोट्स दिसल्यावर",
+            "avoid_line3": "पियानो की दाबू नका."
+        },
+        "playArea": {
+            "time": "वेळ",
+            "score": "गुण"
+        },
+        "results": {
+            "results": "निकाल",
+            "score": "गुण",
+            "coins": "न्यूरोआर्क कॉइन्स",
+            "streak": "सर्वात मोठी स्ट्रीक"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "दृष्टी चाचणी",
+            "cover_eye": "तुमचा {{eye}} डोळा हाताने झाका.",
+            "tap_gap": "C आकार पहा आणि जुळणाऱ्या गॅप बटणावर टॅप करा"
+        },
+        "eyes": {
+            "right": "उजवा",
+            "left": "डावा",
+            "right_eye": "उजवा डोळा",
+            "left_eye": "डावा डोळा"
+        },
+        "game": {
+            "tap_gap": "C आकार पहा आणि जुळणाऱ्या गॅप बटणावर टॅप करा",
+            "correct": "बरोबर!",
+            "try_again": "चूक — पुन्हा प्रयत्न करा",
+            "incorrect": "चूक"
+        },
+        "modal": {
+            "title": "कार्य पूर्ण झाले",
+            "responses_saved": "प्रतिसाद जतन केले गेले."
+        },
+        "results": {
+            "below_6_60": "6/60 पेक्षा कमी"
         }
     }
 }

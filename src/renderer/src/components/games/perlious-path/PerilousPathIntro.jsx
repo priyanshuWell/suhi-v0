@@ -1,6 +1,7 @@
 import PropTypes from "prop-types"
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import { useKioskAudio } from "../../../constants/audio"
 import { INSTRUCTION_AUDIO } from "../../../constants/audioConstants"
 import { COLORS } from "./theme"
@@ -14,87 +15,57 @@ import stepBadgeFrame from "../../../assets/perilous_path/perilous_start_button.
 import titleBarFrame from "../../../assets/perilous_path/perilous_background_frame.png"
 import PerilousButton from "./PerilousButton"
 
-const STEPS = [
-    {
-        number: 1,
-        title: "Complete the Path",
-        board: plainBoard,
-        top: 12,
-        description: (
-            <>
-                Trace the path from
-                <br />
-                <em>Start</em> to <strong>End</strong>
-            </>
-        ),
-    },
-    {
-        number: 2,
-        title: "Remember Danger",
-        board: dangerBoard,
-        top: 40.1,
-        description: (
-            <>
-                Some tiles are
-                <br />
-                <mark>dangerous,</mark>
-                <br />
-                Memorize their position
-            </>
-        ),
-    },
-    {
-        number: 3,
-        title: "Avoid & Complete",
-        board: pathBoard,
-        top: 70,
-        description: (
-            <>
-                Avoid the danger tiles
-                <br />
-                and complete the path
-                <br />
-                to <strong>win!</strong>
-            </>
-        ),
-    },
-]
-
-// Delay (ms) before each clip starts, roughly matching the step animation delays
-const AUDIO_SEQUENCE = [
-    { key: INSTRUCTION_AUDIO.PERILOUS_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
-    { key: INSTRUCTION_AUDIO.PERILOUS_COMPLETE_THE_PATH,      delay: 1400 },
-    { key: INSTRUCTION_AUDIO.PERILOUS_REMEMBER_DANGER,        delay: 0 },
-    { key: INSTRUCTION_AUDIO.PERILOUS_AVOID_AND_COMPLETE,     delay: 0 },
-    { key: INSTRUCTION_AUDIO.PERILOUS_PRESS_START_WHEN_READY, delay: 0 },
-]
-
 export default function PerilousPathIntro({ onStart }) {
+    const { t } = useTranslation()
     const [starting, setStarting] = useState(false)
-    const { play, stop } = useKioskAudio()
 
-    // Play narration clips sequentially when the intro mounts.
-    useEffect(() => {
-        let cancelled = false
-
-        const runSequence = async () => {
-            for (const { key, delay } of AUDIO_SEQUENCE) {
-                if (cancelled) break
-                if (delay > 0) {
-                    await new Promise((res) => setTimeout(res, delay))
-                }
-                if (cancelled) break
-                await play(key)
-            }
-        }
-
-        runSequence()
-
-        return () => {
-            cancelled = true
-            stop()
-        }
-    }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    const steps = [
+        {
+            number: 1,
+            title: t("perilousPath.intro.step1_title"),
+            board: plainBoard,
+            top: 12,
+            description: (
+                <>
+                    {t("perilousPath.intro.step1_trace")}
+                    <br />
+                    <em>{t("perilousPath.intro.step1_start")}</em> {t("perilousPath.intro.step1_to")}{" "}
+                    <strong>{t("perilousPath.intro.step1_end")}</strong>
+                </>
+            ),
+        },
+        {
+            number: 2,
+            title: t("perilousPath.intro.step2_title"),
+            board: dangerBoard,
+            top: 40.1,
+            description: (
+                <>
+                    {t("perilousPath.intro.step2_some")}
+                    <br />
+                    <mark>{t("perilousPath.intro.step2_danger")}</mark>
+                    <br />
+                    {t("perilousPath.intro.step2_memorize")}
+                </>
+            ),
+        },
+        {
+            number: 3,
+            title: t("perilousPath.intro.step3_title"),
+            board: pathBoard,
+            top: 70,
+            description: (
+                <>
+                    {t("perilousPath.intro.step3_avoid")}
+                    <br />
+                    {t("perilousPath.intro.step3_complete")}
+                    <br />
+                    {t("perilousPath.intro.step3_to")}{" "}
+                    <strong>{t("perilousPath.intro.step3_win")}</strong>
+                </>
+            ),
+        },
+    ]
 
     const handleStart = () => {
         if (starting) return
@@ -141,12 +112,12 @@ export default function PerilousPathIntro({ onStart }) {
                     <img src={howToPlayFrame} alt="" className="w-full" draggable={false} />
                     <div className="absolute inset-0 flex items-center justify-center">
                         <span className="font-anton text-[4.6cqw] leading-none text-white tracking-wide">
-                            How to Play?
+                            {t("perilousPath.intro.how_to_play")}
                         </span>
                     </div>
                 </div>
 
-                {STEPS.map((step, idx) => (
+                {steps.map((step, idx) => (
                     <motion.div
                         key={step.number}
                         className="absolute inset-x-0"
@@ -198,7 +169,7 @@ export default function PerilousPathIntro({ onStart }) {
                 transition={{ delay: 0.45, duration: 0.3 }}
             >
                 <PerilousButton
-                    title={starting ? "Starting…" : "Start Game"}
+                    title={starting ? t("perilousPath.intro.starting") : t("perilousPath.intro.start_game")}
                     onClick={handleStart}
                     disabled={starting}
                     titleColor={COLORS.cyan}

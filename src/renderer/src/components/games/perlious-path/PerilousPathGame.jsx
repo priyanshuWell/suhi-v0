@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import { COLORS } from "./theme"
 import { perilousPathApi, rowColToTile, tileToRowCol } from "./perilouspathapi"
 import { perilousPathSfx } from "../../../constants/audio"
@@ -32,13 +33,6 @@ const PHASE = {
     DELAY: "delay", // hazards hidden, response window not open yet
     RESPONSE: "response", // countdown running, taps accepted
     SUBMITTING: "submitting", // trial result in flight
-}
-
-const OBJECTIVE_TEXT = {
-    [PHASE.PROBE]: "Memorize the danger tiles!",
-    [PHASE.DELAY]: "Get ready…",
-    [PHASE.RESPONSE]: "Trace the safe path!",
-    [PHASE.SUBMITTING]: "Submitting…",
 }
 
 // How long the "+N Safe crossing" / fail banner stays up (in the objective
@@ -431,6 +425,7 @@ function StatBadge({ frame, label, value, labelColor, style, animateChanges = fa
  *  - dummyFlag: optional override for local-mode testing.
  */
 export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
+    const { t } = useTranslation()
     const { board, timing, grid, level: levelMeta, progress } = level
 
     const [phase, setPhase] = useState(PHASE.PROBE)
@@ -464,6 +459,8 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
             setRevealHazards(false)
             setPhase(PHASE.SUBMITTING)
 
+            // Build the taps payload using the captured response window
+            // start time.
             const payload = {
                 trial_id: level.trial_id,
                 response_started_at: responseStartedAtRef.current ?? new Date().toISOString(),
@@ -483,8 +480,8 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                 const routeValid = result?.route_is_valid ?? false
                 setResultBanner(
                     routeValid
-                        ? { tone: "success", text: earned > 0 ? `+${earned} Safe crossing` : "Crossed — no points" }
-                        : { tone: "fail", text: timedOut ? "Time ran out" : "Path not completed" }
+                        ? { tone: "success", text: earned > 0 ? t("perilousPath.game.safe_crossing", { count: earned }) : t("perilousPath.game.crossed_no_points") }
+                        : { tone: "fail", text: timedOut ? t("perilousPath.game.time_ran_out") : t("perilousPath.game.path_not_completed") }
                 )
                 if (routeValid) {
                     perilousPathSfx.clearRound()
@@ -502,10 +499,10 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                 hasSubmittedRef.current = false
                 setResultBanner(null)
                 setRevealHazards(false)
-                setSubmitError(err.message || "Couldn't submit your run.")
+                setSubmitError(err.message || t("perilousPath.game.error_submit"))
             }
         },
-        [level.trial_id, dummyFlag, onFinish]
+        [level.trial_id, dummyFlag, onFinish, t]
     )
 
     const advancePhase = useCallback(() => {
@@ -698,12 +695,19 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
         [board.start.tile, tappedTiles, grid.rows, grid.cols]
     )
 
+    const objectiveText = {
+        [PHASE.PROBE]: t("perilousPath.game.memorize_danger"),
+        [PHASE.DELAY]: t("perilousPath.game.get_ready"),
+        [PHASE.RESPONSE]: t("perilousPath.game.trace_safe_path"),
+        [PHASE.SUBMITTING]: t("perilousPath.game.submitting"),
+    }
+
     return (
         <div className="absolute inset-0 text-white">
             {/* Header: time · score */}
             <StatBadge
                 frame={timeFrame}
-                label="Time"
+                label={t("perilousPath.game.time")}
                 value={formatSeconds(secondsLeft)}
                 labelColor={COLORS.white}
                 style={{
@@ -715,7 +719,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
 
             <StatBadge
                 frame={scoreFrame}
-                label="Score"
+                label={t("perilousPath.game.score")}
                 value={displayedScore}
                 labelColor={COLORS.gold}
                 animateChanges
@@ -771,7 +775,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                                     : COLORS.cyan,
                             }}
                         >
-                            {resultBanner ? resultBanner.text : OBJECTIVE_TEXT[phase]}
+                            {resultBanner ? resultBanner.text : objectiveText[phase]}
                         </motion.span>
                     </AnimatePresence>
                 </div>
@@ -874,7 +878,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                         className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-bold text-black"
                         onClick={() => submitTrial(lastTimedOutRef.current)}
                     >
-                        Retry
+                        {t("common.retry")}
                     </button>
                 </div>
             )}

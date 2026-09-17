@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Eye, Hand } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import BlueGradientButton from '../../ui/BlueGradientButton';
 import adaptive from '../../../assets/adaptive-c/AdaptiveEyeVisionC.png';
 import { EYE_INFO } from './constants';
@@ -10,6 +11,7 @@ import { INSTRUCTION_AUDIO } from '../../../constants/audioConstants';
 /*  Instruction screen — shown before each eye's test                  */
 /* ------------------------------------------------------------------ */
 export default function InstructionScreen({ eye, onStart, disabled = false, loading = false }) {
+  const { t } = useTranslation();
   const info = EYE_INFO[eye];
   const { play, stop } = useKioskAudio();
 
@@ -18,15 +20,15 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
 
     const sequence = eye === 'right'
       ? [
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_LEFT_EYE, delay: 250 },
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LOOK_CAREFULLY_AT_THE_C_SHAPE, delay: 250 },
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
-        ]
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_LEFT_EYE, delay: 250 },
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_LOOK_CAREFULLY_AT_THE_C_SHAPE, delay: 250 },
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
+      ]
       : [
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_RIGHT_EYE, delay: 0 },
-          { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
-        ];
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_COVER_YOUR_RIGHT_EYE, delay: 0 },
+        { key: INSTRUCTION_AUDIO.VISUAL_ACUITY_PRESS_START_WHEN_READY, delay: 250 },
+      ];
 
     const runSequence = async () => {
       for (const { key, delay } of sequence) {
@@ -60,7 +62,7 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
             className="text-white text-center tracking-wider my-5 font-anta"
             style={{ fontSize: 'clamp(1rem, 4vw, 4rem)' }}
           >
-            Vision Test
+            {t('adaptiveEye.instruction.title')}
           </p>
         </div>
       </div>
@@ -70,7 +72,7 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
         className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[1149px]"
         style={{ fontSize: 'clamp(2rem, 4vw, 4rem)' }}
       >
-        Cover your {info.cover} eye with your hand.
+        {t('adaptiveEye.instruction.cover_eye', { eye: t(`adaptiveEye.eyes.${info.cover}`) })}
       </p>
 
       {/* Eye / Hand icons */}
@@ -84,7 +86,7 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
         className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[900px]"
         style={{ fontSize: 'clamp(2rem, 3vw, 4rem)' }}
       >
-        Look at the C shape and tap the matching gap button
+        {t('adaptiveEye.instruction.tap_gap')}
       </p>
 
       {/* Direction pad preview */}
@@ -94,8 +96,8 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
 
       {/* Start button */}
       <div className="flex flex-col items-center gap-2 pb-16">
-        <BlueGradientButton onClick={handleStart} disabled={disabled || loading}>
-          Start
+        <BlueGradientButton onClick={onStart}>
+          {t('common.start')}
         </BlueGradientButton>
       </div>
     </>

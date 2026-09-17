@@ -257,5 +257,121 @@
             "desc_line2_suffix": "at the top of the",
             "desc_line3": "screen"
         }
+    },
+    "perilousPath": {
+        "loading_next": "Loading next challenge…",
+        "error_finalize": "Couldn't finalize your results.",
+        "error_not_ready": "Perilous Path isn't ready yet. Please try again shortly.",
+        "error_loading_level": "Something went wrong loading the next level.",
+        "intro": {
+            "how_to_play": "How to Play?",
+            "step1_title": "Complete the Path",
+            "step1_trace": "Trace the path from",
+            "step1_start": "Start",
+            "step1_to": "to",
+            "step1_end": "End",
+            "step2_title": "Remember Danger",
+            "step2_some": "Some tiles are",
+            "step2_danger": "dangerous,",
+            "step2_memorize": "Memorize their position",
+            "step3_title": "Avoid & Complete",
+            "step3_avoid": "Avoid the danger tiles",
+            "step3_complete": "and complete the path",
+            "step3_to": "to",
+            "step3_win": "win!",
+            "start_game": "Start Game",
+            "starting": "Starting…"
+        },
+        "game": {
+            "time": "Time",
+            "score": "Score",
+            "memorize_danger": "Memorize the danger tiles!",
+            "get_ready": "Get ready…",
+            "trace_safe_path": "Trace the safe path!",
+            "submitting": "Submitting…",
+            "safe_crossing": "+{{count}} Safe crossing",
+            "crossed_no_points": "Crossed — no points",
+            "time_ran_out": "Time ran out",
+            "path_not_completed": "Path not completed",
+            "error_submit": "Couldn't submit your run."
+        },
+        "scoreboard": {
+            "results": "Results",
+            "total_points": "Total Points",
+            "neurocoins": "NeuroCoins",
+            "best_streak": "Best Consecutive Run"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "How to Play?",
+            "start_game": "Start Game",
+            "card1_line1": "Press the piano key that",
+            "card1_line2": "matches",
+            "card1_line3": "the falling note's",
+            "card1_line4": "lane",
+            "card2_line1": "Hit each note as it",
+            "card2_line2": "reaches",
+            "card2_line3": "the line at the",
+            "card2_line4": "bottom",
+            "card3_line1": "Keep accurate timing",
+            "card3_line2": "to build combos, score",
+            "card3_line3": "multipliers",
+            "card3_line4": "and crowd energy"
+        },
+        "popups": {
+            "got_it": "Got it!",
+            "follow_title": "Follow the Beat!",
+            "follow_body": "Hit each note as it reaches the line at bottom",
+            "speed_title": "Notes Speed will Increase!",
+            "speed_get_ready": "Get Ready!",
+            "speed_notes_will": "The notes will",
+            "speed_come_faster": "come faster",
+            "speed_now": "now!",
+            "two_notes_title": "Two Notes Together!",
+            "two_notes_line1": "Now two notes will fall together.",
+            "two_notes_line2": "You have to press both the keys!",
+            "avoid_title": "Avoid These Notes!",
+            "avoid_line1_prefix": "These are decoy notes.",
+            "avoid_line1_highlight": "Do not press",
+            "avoid_line2": "the piano key when you see these",
+            "avoid_line3": "notes."
+        },
+        "playArea": {
+            "time": "Time",
+            "score": "Score"
+        },
+        "results": {
+            "results": "Results",
+            "score": "Score",
+            "coins": "NeuroArc Coins",
+            "streak": "Longest Streak"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "Vision Test",
+            "cover_eye": "Cover your {{eye}} eye with your hand.",
+            "tap_gap": "Look at the C shape and tap the matching gap button"
+        },
+        "eyes": {
+            "right": "right",
+            "left": "left",
+            "right_eye": "Right Eye",
+            "left_eye": "Left Eye"
+        },
+        "game": {
+            "tap_gap": "Look at the C shape and tap the matching gap button",
+            "correct": "Correct!",
+            "try_again": "Incorrect — try again",
+            "incorrect": "Incorrect"
+        },
+        "modal": {
+            "title": "Task Completed",
+            "responses_saved": "Responses saved."
+        },
+        "results": {
+            "below_6_60": "Below 6/60"
+        }
     }
 }

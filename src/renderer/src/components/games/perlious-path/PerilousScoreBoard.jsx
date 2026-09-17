@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import { COLORS } from "./theme"
 
 import statsPanelFrame from "../../../assets/perilous_path/perilous_result_board.png"
@@ -74,25 +75,26 @@ function StatRow({ icon, label, value, centerPercent, delay = 0 }) {
  * from the game/complete response.
  */
 export default function PerilousScoreBoard({ result, onNext }) {
+    const { t } = useTranslation()
     const handleNext = onNext ?? (() => console.log("Next tapped — no onNext handler wired up"))
 
     const stats = [
         {
             key: "points",
             icon: trophy,
-            label: "Total Points",
+            label: t("perilousPath.scoreboard.total_points"),
             value: result ? result.total_points : "—",
         },
         {
             key: "neurocoins",
             icon: coin,
-            label: "NeuroCoins",
+            label: t("perilousPath.scoreboard.neurocoins"),
             value: result ? result.total_neuro_arcs : "—",
         },
         {
             key: "streak",
             icon: direction,
-            label: "Best Consecutive Run",
+            label: t("perilousPath.scoreboard.best_streak"),
             value: result ? result.best_streak : "—",
         },
     ]
@@ -118,7 +120,7 @@ export default function PerilousScoreBoard({ result, onNext }) {
                         className="font-anton font-extrabold uppercase tracking-wide text-white text-[5cqw]"
                         style={{ textShadow: `0 0 18px ${COLORS.danger}, 0 0 36px ${COLORS.magenta}` }}
                     >
-                        Results
+                        {t("perilousPath.scoreboard.results")}
                     </span>
                 </div>
             </motion.div>
@@ -161,7 +163,7 @@ export default function PerilousScoreBoard({ result, onNext }) {
                 transition={{ delay: 0.65, duration: 0.35 }}
             >
                 <PerilousButton
-                    title="Next"
+                    title={t("common.next")}
                     className="w-full text-white"
                     onClick={handleNext}
                 />
