@@ -9,7 +9,7 @@ import BlackGradientButton from "../ui/BlackGradientButton"
 import KeyboardContainer from "../ui/KeyboardContainer"
 import ErrorAlert from "../ErrorAlert"
 import { loginSuhi, getStudentBySuhi } from "../../utils/api"
-import { setUser, setLoginScreening } from "../../features/common/commonSlice"
+import { setUser, setLoginScreening, setCandidates } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
 import { useTranslation } from "react-i18next"
 import { getSessionId } from "../../utils/config"
@@ -85,6 +85,9 @@ const LoginSuhi = () => {
                     "Invalid SUHI Id. Please contact your SUHI Kiosk Coordinator for assistance."
                 )
             }
+
+            // Clear any stale multi-face candidates from Redux
+            dispatch(setCandidates([]))
 
             // Save student data
             dispatch(

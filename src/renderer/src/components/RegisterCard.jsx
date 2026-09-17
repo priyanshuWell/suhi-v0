@@ -40,22 +40,6 @@ export default function RegisterCard() {
     const pendingStages = screening?.pendingStages || []
     const isPendingTransition = screening?.isPendingTransition || false
 
-    // Check if multi-face / multiple matches detected
-    const isMultifaceDetected = Boolean(
-        user?.data?.multiface_detected ||
-        user?.data?.multiple_matches ||
-        user?.multiface_detected ||
-        user?.multiple_matches ||
-        (candidates && candidates.length > 1)
-    )
-
-    // Redirect to /identify-student if identity is ambiguous
-    useEffect(() => {
-        if (isMultifaceDetected) {
-            navigate("/identify-student", { replace: true })
-        }
-    }, [isMultifaceDetected, navigate])
-
     // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
     const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
 
@@ -65,10 +49,8 @@ export default function RegisterCard() {
     const profileImageSrc = buildProfileImage(imagePath)
 
     useEffect(() => {
-        if (!isMultifaceDetected) {
-            playAudio()
-        }
-    }, [isMultifaceDetected])
+        playAudio()
+    }, [])
 
     const playAudio = async () => {
         const audioPath = await getAudioForCurrentLanguage("confirm_user")
@@ -113,10 +95,6 @@ export default function RegisterCard() {
     const handleNotYou = () => {
         stopAudio()
         navigate("/login-suhi")
-    }
-
-    if (isMultifaceDetected) {
-        return null
     }
 
     return (

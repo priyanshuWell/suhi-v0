@@ -63,6 +63,7 @@ function App() {
                 <Route path="/divide-attention" element={<DivideAttentionGame />} />
                 <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
                 <Route path="/bia/result" element={<BiaReportRouter />} />
+                <Route path="/identify-student" element={<IdentifyStudent />} />
                 {/* All screening routes — get the top progress bar automatically */}
                 <Route element={<ScreeningLayout />}>
                     <Route path="/faceCapture" element={<FaceCapture />} />
@@ -76,8 +77,6 @@ function App() {
                     <Route path="/perilous-path" element={<PerilousPath />} />
                     <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
                     <Route path="/beat-drop" element={<BeatDropGame />} />
-
-                    <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
                 </Route>
             </Routes>

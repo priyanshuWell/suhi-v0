@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch, useSelector } from "react-redux"
-import { setUser } from "../features/common/commonSlice"
+import { setUser, setCandidates } from "../features/common/commonSlice"
 import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
@@ -52,6 +52,7 @@ const IdentifyStudent = () => {
     }
 
     const confirmStudent = (studentData) => {
+        dispatch(setCandidates([]))
         dispatch(
             setUser({
                 ...user,
