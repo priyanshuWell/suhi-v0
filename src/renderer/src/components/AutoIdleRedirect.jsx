@@ -6,14 +6,17 @@ import { resetCommonState } from "../features/common/commonSlice"
 import AreYouThereModal from "./ui/AreYouThereModal"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import { useKioskAudio } from "../hooks/useKioskAudio"
+import { useTranslation } from "react-i18next"
 
 /**
  * AutoIdleRedirect
  *
  * Watches for user inactivity across the whole app. If the user is idle
  * for `timeoutMs`, they get a "prompt" window of `promptBeforeMs` where
- * a confirmation modal shows up. If they don't respond, Redux state is
- * reset and they're redirected to `redirectTo`.
+ * a confirmation modal shows up. If they don't respond, they escalate to
+ * the "continue-screening" stage, which counts down `continueScreeningMs`
+ * (revealing a "Continue Screening" button after `continueButtonDelayMs`)
+ * before Redux state is reset and they're redirected to `redirectTo`.
  *
  * Disabled entirely on the home/redirect route itself, so it doesn't
  * try to redirect you away from the page you already got redirected to.
@@ -43,7 +46,14 @@ const ACTIVITY_EVENTS = [
 const AutoIdleRedirect = ({
     timeoutMs = 120000,
     promptBeforeMs = 10000,
-    redirectTo = "/welcome"
+    redirectTo = "/welcome",
+    // How long the "continue-screening" stage counts down before it gives
+    // up and redirects, and how long before the "Continue Screening"
+    // button appears. These now drive BOTH the actual redirect timing and
+    // the text NoActivityFrame displays, so the two can never drift apart
+    // the way the old hardcoded "...5 seconds..." copy could.
+    continueScreeningMs = 10000,
+    continueButtonDelayMs = 5000
 }) => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -51,6 +61,7 @@ const AutoIdleRedirect = ({
     const { play: playErrorAudio, stop: stopErrorAudio } = useKioskAudio()
     // stage: null | 'are-you-there' | 'continue-screening'
     const [stage, setStage] = useState(null)
+    const { t } = useTranslation()
 
     // Disable on home/splash routes — no point idling-out a page you'd
     // just get redirected back to anyway.
@@ -109,6 +120,9 @@ const AutoIdleRedirect = ({
     })
 
     // "Yes, I'm here" — reset the idle timer and dismiss the overlay.
+    // This is the SAME handler used by both stages' buttons: the
+    // "are-you-there" auto-redirect click and the "Continue Screening"
+    // button below both mean "the user is here, stand down."
     const handleYes = () => {
         activate()
         setStage(null)
@@ -131,6 +145,10 @@ const AutoIdleRedirect = ({
             {stage === "continue-screening" && !isIdleExempt && (
                 <NoActivityFrame
                     variant="continue-screening"
+                    title={t("auto_idle.title")}
+                    description={t("auto_idle.description")}
+                    continueScreeningSecs={Math.ceil(continueScreeningMs / 1000)}
+                    continueButtonDelaySecs={Math.ceil(continueButtonDelayMs / 1000)}
                     onTimeout={handleFinalTimeout}
                     onButtonClick={handleYes}
                 />

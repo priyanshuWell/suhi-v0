@@ -29,6 +29,12 @@ import frameBg from "../../assets/no_activity_frame.png"
  * button. No auto-timer runs in this mode — it waits for the user (or
  * caller) to act, same as FullscreenError's retry state did.
  *
+ * ── Are-you-there ring (variant="are-you-there") ───────────────────────
+ * Matches the Figma dial exactly: a light grey bezelled disc with a
+ * rotating blue dot marker that sweeps a full turn as `timeoutSecs`
+ * counts down, and the remaining seconds shown in dark navy in the
+ * center. This replaces the old hand-drawn SVG stroke-dashoffset ring.
+ *
  * @param {string}   variant            "no-user" | "are-you-there" | "continue-screening"
  * @param {string}   title
  * @param {string}   subtitle           Alias: description
@@ -88,7 +94,12 @@ export default function NoActivityFrame({
         },
         "continue-screening": {
             title: "No activity detected",
-            subtitle: "Redirecting to homepage in 5 seconds...",
+            // No hardcoded subtitle here on purpose — the live "We are
+            // redirecting you in {csRemaining} sec" text in the footer
+            // below already shows the real countdown driven by
+            // `continueScreeningSecs`. A static string here ("...5
+            // seconds...") would silently disagree with it the moment
+            // `continueScreeningSecs` is anything other than 5.
             buttonText: "Continue Screening"
         }
     }
@@ -179,6 +190,9 @@ export default function NoActivityFrame({
     const csFiredRef = useRef(false)
     const [csRemaining, setCsRemaining] = useState(continueScreeningSecs)
     const [csButtonVisible, setCsButtonVisible] = useState(false)
+    // Drives the gradient button's sliding fill (same mechanism as the
+    // no-user redirect button below), timed to continueScreeningSecs.
+    const [csFilling, setCsFilling] = useState(false)
 
     const fireCsTimeout = () => {
         if (csFiredRef.current) return
@@ -192,6 +206,7 @@ export default function NoActivityFrame({
         csFiredRef.current = false
         setCsRemaining(continueScreeningSecs)
         setCsButtonVisible(false)
+        setCsFilling(false)
 
         // Show the button after `continueButtonDelaySecs` seconds
         const buttonRevealTimeout = setTimeout(() => {
@@ -210,9 +225,14 @@ export default function NoActivityFrame({
             })
         }, 1000)
 
+        // One-frame delay so the CSS fill transition animates from 0 → 1,
+        // same trick used by the no-user redirect button.
+        const raf = requestAnimationFrame(() => setCsFilling(true))
+
         return () => {
             clearTimeout(buttonRevealTimeout)
             clearInterval(csTimerRef.current)
+            cancelAnimationFrame(raf)
         }
     }, [variant, continueScreeningSecs, continueButtonDelaySecs])
 
@@ -230,13 +250,117 @@ export default function NoActivityFrame({
         fireRedirect()
     }
 
-    // ── countdown ring math (are-you-there) ────────────────────────────
-    const RADIUS = 28
-    const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-    const progress = remaining / timeoutSecs
-    const strokeDashoffset = CIRCUMFERENCE * (1 - progress)
+    // ── are-you-there dial: smooth continuous progress ───────────────
+    // `remaining` only ticks once a second (it drives the displayed number
+    // and the onTimeout logic), so animating the ring off of it makes the
+    // fill jump once per second instead of flowing. This tracks elapsed
+    // wall-clock time via requestAnimationFrame and produces a 0→1 value
+    // that updates every frame, so the ring fills smoothly regardless of
+    // how often `remaining` itself updates.
+    const [dialProgress, setDialProgress] = useState(0)
+    const dialStartRef = useRef(null)
+    const dialRafRef = useRef(null)
+
+    useEffect(() => {
+        if (variant !== "are-you-there") return
+
+        dialStartRef.current = performance.now()
+        setDialProgress(0)
+
+        const tick = (now) => {
+            const elapsed = (now - dialStartRef.current) / 1000
+            const progress = Math.min(1, elapsed / timeoutSecs)
+            setDialProgress(progress)
+            if (progress < 1) {
+                dialRafRef.current = requestAnimationFrame(tick)
+            }
+        }
+        dialRafRef.current = requestAnimationFrame(tick)
+
+        return () => cancelAnimationFrame(dialRafRef.current)
+    }, [variant, timeoutSecs])
+
+    const dotAngle = dialProgress * 360
 
     const textGold = "text-[#E5B96C]"
+
+    // ── shared action button ──────────────────────────────────────────
+    // The same dark "Continue Screening"-style button is now used in two
+    // places: the continue-screening stage (delayed reveal) and below the
+    // are-you-there dial (always visible). Both call back through
+    // `onButtonClick`, same as before — clicking either one means "the
+    // user is here," which is what actually resets the idle timer /
+    // cancels the pending redirect in the parent.
+    const actionButtonLabel =
+        resolvedButtonLabel ?? defaults[variant]?.buttonText ?? "Continue Screening"
+
+    const renderActionButton = (onClick, visible = true) => (
+        <button
+            onClick={onClick}
+            className="
+                px-16 py-5 rounded-[16px]
+                text-white text-[20px] font-medium tracking-wide
+                active:scale-[0.98] transition-all duration-300
+            "
+            style={{
+                background: "#1a1a1a",
+                border: "1px solid rgba(255,255,255,0.15)",
+                boxShadow:
+                    "0 0 24px rgba(100,180,220,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(8px)",
+                pointerEvents: visible ? "auto" : "none",
+                transition: "opacity 0.4s ease, transform 0.4s ease"
+            }}
+        >
+            {actionButtonLabel}
+        </button>
+    )
+
+    // ── shared gradient "sliding fill" redirect button ──────────────────
+    // Same button used by the no-user variant, generalized so
+    // continue-screening can show its own redirect countdown ("Redirecting
+    // in {csRemaining} secs...") with the identical gradient + fill
+    // animation, instead of duplicating the markup.
+    const renderGradientButton = ({ label, remaining, totalSecs, filling, onClick }) => (
+        <div
+            onClick={onClick}
+            className="
+                relative overflow-hidden rounded-lg
+                w-[36rem]
+                h-24
+                cursor-pointer select-none
+            "
+            style={{
+                borderRadius: "10px",
+                border: "2.996px solid #FFF",
+                background:
+                    "radial-gradient(43.11% 181.04% at 50% 50%, #002EB9 0%, #0097D6 100%)",
+                boxShadow:
+                    "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset"
+            }}
+        >
+            {/* Fill layer — slides the whole button from empty to full color
+                over totalSecs, driven by `filling`, so it always matches
+                when the redirect actually fires. */}
+            <div
+                className="absolute inset-0 rounded-lg bg-white/25 origin-left pointer-events-none"
+                style={{
+                    borderRadius: "10px",
+                    transform: filling ? "scaleX(1)" : "scaleX(0)",
+                    transition: filling ? `transform ${totalSecs}s linear` : "none"
+                }}
+            />
+
+            {/* Label with live inline countdown */}
+            <div className="absolute inset-0 flex items-center justify-center px-4">
+                <span className="text-white text-[22px] font-medium tracking-wide relative z-10 text-center">
+                    {label} in{" "}
+                    <span style={{ fontWeight: 700, color: "#fff" }}>{remaining}</span> secs...
+                </span>
+            </div>
+        </div>
+    )
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
@@ -294,116 +418,135 @@ export default function NoActivityFrame({
                                 </button>
                             ) : (
                                 // ── Redirect mode: fill animates + auto-fires ──
-                                <div
-                                    onClick={handleManualClick}
-                                    className="
-                    relative overflow-hidden rounded-lg
-                    w-[34rem]
-                    h-20
-                    cursor-pointer select-none
-                  "
-                                    style={{
-                                        borderRadius: "10px",
-                                        border: "2.996px solid #FFF",
-                                        background:
-                                            "radial-gradient(43.11% 181.04% at 50% 50%, #002EB9 0%, #0097D6 100%)",
-                                        boxShadow:
-                                            "0 0 21.462px 0 #FFF inset, 0 -71.895px 95.861px 0 rgba(255, 255, 255, 0.24) inset, 0 23.965px 35.77px -47.93px rgba(255, 255, 255, 0.24) inset"
-                                    }}
-                                >
-                                    {/* Fill layer — slides the whole button from empty to full color
-                                        over resolvedRedirectSecs, driven by the real `filling` state
-                                        above, so it always matches when the auto-redirect actually fires. */}
-                                    <div
-                                        className="absolute inset-0 rounded-lg bg-white/25 origin-left pointer-events-none"
-                                        style={{
-                                            borderRadius: "10px",
-                                            transform: filling ? "scaleX(1)" : "scaleX(0)",
-                                            transition: filling
-                                                ? `transform ${resolvedRedirectSecs}s linear`
-                                                : "none"
-                                        }}
-                                    />
-
-                                    {/* Label with live inline countdown */}
-                                    <div className="absolute inset-0 flex items-center justify-center px-4">
-                                        <span className="text-white text-[20px] font-medium tracking-wide relative z-10 text-center">
-                                            {label} in{" "}
-                                            <span style={{ fontWeight: 700, color: "#fff" }}>
-                                                {redirectRemaining}
-                                            </span>{" "}
-                                            sec...
-                                        </span>
-                                    </div>
-                                </div>
+                                renderGradientButton({
+                                    label,
+                                    remaining: redirectRemaining,
+                                    totalSecs: resolvedRedirectSecs,
+                                    filling,
+                                    onClick: handleManualClick
+                                })
                             ))}
 
-                        {/* ═══ VARIANT 2: Countdown Ring ═══ */}
+                        {/* ═══ VARIANT 2: Countdown Dial (matches Figma "are-you-there" node) ═══
+                            Note: Figma's dial + dot are exported raster/vector assets that this
+                            environment couldn't fetch (figma.com isn't on the network allowlist
+                            for this container), so the disc, bezel and dot below are recreated
+                            with CSS gradients/shadows to match the screenshot rather than the
+                            original asset bytes. Swap in the real exported PNG/SVG if you have
+                            it locally for pixel-perfect fidelity. */}
                         {variant === "are-you-there" && (
-                            <div className="relative flex items-center justify-center w-[88px] h-[88px]">
-                                <svg width="88" height="88" className="absolute">
+                            <div
+                                className="relative flex items-center justify-center  ml-24"
+                                style={{ width: 150, height: 150 }}
+                            >
+                                {/* Track + fill ring — an SVG stroke instead of a CSS
+                                    conic-gradient. Browsers can't smoothly transition a
+                                    conic-gradient's angle (it just snaps), which is why the
+                                    fill used to jump once a second; stroke-dashoffset is a
+                                    plain number that updates every animation frame via
+                                    `dialProgress`, so the fill flows continuously. */}
+                                <svg
+                                    className="absolute inset-0"
+                                    width={150}
+                                    height={150}
+                                    viewBox="0 0 200 200"
+                                    style={{ transform: "rotate(-90deg)" }}
+                                >
                                     <circle
-                                        cx="44"
-                                        cy="44"
-                                        r={RADIUS}
+                                        cx={100}
+                                        cy={100}
+                                        r={93}
                                         fill="none"
-                                        stroke="rgba(255,255,255,0.12)"
-                                        strokeWidth="7"
+                                        stroke="#d7dbe0"
+                                        strokeWidth={14}
                                     />
                                     <circle
-                                        cx="44"
-                                        cy="44"
-                                        r={RADIUS}
+                                        cx={100}
+                                        cy={100}
+                                        r={93}
                                         fill="none"
-                                        stroke="#4AA8D8"
-                                        strokeWidth="7"
+                                        stroke="#2FA6E0"
+                                        strokeWidth={14}
                                         strokeLinecap="round"
-                                        strokeDasharray={CIRCUMFERENCE}
-                                        strokeDashoffset={strokeDashoffset}
-                                        transform="rotate(-90 44 44)"
-                                        style={{ transition: "stroke-dashoffset 0.9s linear" }}
+                                        strokeDasharray={2 * Math.PI * 93}
+                                        strokeDashoffset={2 * Math.PI * 93 * (1 - dialProgress)}
+                                        style={{ filter: "drop-shadow(0 0 4px rgba(47,166,224,0.6))" }}
                                     />
                                 </svg>
-                                <span className="absolute text-[#1a4a6e] text-[26px] font-bold font-anta">
+
+                                {/* Dial face — sits inside the ring, same bezel look as before */}
+                                <div
+                                    className="absolute rounded-full"
+                                    style={{
+                                        inset: 14,
+                                        background:
+                                            "radial-gradient(circle at 35% 30%, #f6f7f8 0%, #dde0e4 55%, #c6cad0 100%)",
+                                        boxShadow:
+                                            "inset 0 4px 10px rgba(255,255,255,0.9), inset 0 -8px 16px rgba(0,0,0,0.18), 0 4px 14px rgba(0,0,0,0.3)"
+                                    }}
+                                />
+
+                                {/* Rotating blue dot marker — leading edge of the fill ring,
+                                    sweeps one full turn over timeoutSecs */}
+                                <div
+                                    className="absolute inset-0"
+                                    style={{
+                                        transform: `rotate(${dotAngle}deg)`
+                                    }}
+                                >
+                                    <span
+                                        className="absolute rounded-full"
+                                        style={{
+                                            top: -1,
+                                            left: "50%",
+                                            width: 16,
+                                            height: 16,
+                                            marginLeft: -8,
+                                            background: "#2FA6E0",
+                                            boxShadow: "0 0 8px rgba(47,166,224,0.85)"
+                                        }}
+                                    />
+                                </div>
+
+                                {/* Remaining seconds, centered */}
+                                <span
+                                    className="relative font-anta"
+                                    style={{ color: "#03275a", fontSize: 46, fontWeight: 400 }}
+                                >
                                     {remaining}
                                 </span>
                             </div>
                         )}
 
+                        {/* Button below the are-you-there dial — same button used by
+                            continue-screening, always visible (no reveal delay), wired
+                            straight to onButtonClick so clicking it counts as "the user
+                            is here" and cancels the pending escalation to
+                            continue-screening, exactly like the auto-timeout NOT firing. */}
+                        {variant === "are-you-there" && (
+                            <div className="flex flex-col items-center mt-6">
+                                {renderActionButton(() => onButtonClick?.())}
+                            </div>
+                        )}
+
                         {/* ═══ VARIANT 3: Continue Screening ═══ */}
                         {variant === "continue-screening" && (
-                            <div className="flex flex-col items-center gap-4">
-                                {/* Countdown text */}
-                                <p
-                                    className={`${textGold} text-[22px] font-semibold text-center tracking-wide`}
-                                >
-                                    We are redirecting you in{" "}
-                                    <span className="text-white font-bold">{csRemaining}</span> sec
-                                </p>
+                            <div className="flex flex-col items-center gap-6">
+                                {/* Gradient redirect button — same sliding-fill button used
+                                    by the no-user variant, showing the live redirect
+                                    countdown instead of a plain text line. */}
+                                {renderGradientButton({
+                                    label: "Redirecting",
+                                    remaining: csRemaining,
+                                    totalSecs: continueScreeningSecs,
+                                    filling: csFilling,
+                                    onClick: handleContinueClick
+                                })}
 
-                                {/* Button appears after continueButtonDelaySecs */}
-                                <button
-                                    onClick={handleContinueClick}
-                                    className="
-                                        px-12 py-3.5 rounded-[14px]
-                                        text-white text-[17px] font-medium tracking-wide
-                                        active:scale-[0.98] transition-all duration-300
-                                    "
-                                    style={{
-                                        background: "#1a1a1a",
-                                        border: "1px solid rgba(255,255,255,0.15)",
-                                        boxShadow:
-                                            "0 0 24px rgba(100,180,220,0.25), inset 0 1px 0 rgba(255,255,255,0.08)",
-                                        opacity: csButtonVisible ? 1 : 0,
-                                        transform: csButtonVisible
-                                            ? "translateY(0)"
-                                            : "translateY(8px)",
-                                        pointerEvents: csButtonVisible ? "auto" : "none",
-                                        transition: "opacity 0.4s ease, transform 0.4s ease"
-                                    }}
-                                >
-                                    Continue Screening
-                                </button>
+                                {/* Button appears after continueButtonDelaySecs, centered */}
+                                <div className="flex justify-center w-full">
+                                    {renderActionButton(handleContinueClick, csButtonVisible)}
+                                </div>
                             </div>
                         )}
                     </div>

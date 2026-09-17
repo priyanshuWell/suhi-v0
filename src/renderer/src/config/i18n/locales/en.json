@@ -221,7 +221,14 @@
         "different_user_found_desc": "Looks like someone appeared in front of the kiosk!",
         "bia_error_title": "BIA Error",
         "moving_to_next_scan": "Moving to Next Scan",
-        "stand_straight_still": "Stand Straight &amp; Still"
+        "stand_straight_still": "Stand Straight; Still"
+    },
+    "auto_idle": {
+        "title": "No Activity Detected",
+        "confirm_button": "Yes, I'm here!",
+        "timeout_countdown": "I'll redirect to the main screen in {count} seconds if I don't hear from you.",
+        "timeout_redirect": "Redirecting to main screen in {count} seconds...",
+        "description": "Make sure user is standing on the kiosk and facing the camera"
     },
     "smoothieSlash": {
         "beAware": {
