@@ -7,6 +7,7 @@ import AreYouThereModal from "./ui/AreYouThereModal"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
 import { useTranslation } from "react-i18next"
+import { releaseAllResources } from "../utils/cleanup"
 
 
 const ACTIVITY_EVENTS = [
@@ -76,13 +77,22 @@ const AutoIdleRedirect = ({
 
     // Fired when the "continue-screening" countdown ends with no response.
     const handleFinalTimeout = useCallback(() => {
+        // Guard: if the route somehow became exempt (e.g. user manually navigated
+        // to /welcome) before the countdown fired, skip the redirect.
+        if (isIdleExempt) {
+            console.log("[AutoIdleRedirect] Final timeout suppressed — route is idle-exempt.")
+            setStage(null)
+            return
+        }
         console.log(
-            `[AutoIdleRedirect] Final timeout — resetting state & redirecting to ${redirectTo}...`
+            `[AutoIdleRedirect] Final timeout — cleaning up resources & redirecting to ${redirectTo}...`
         )
+        stopErrorAudio() // stop any audio playing before navigating
+        releaseAllResources() // release camera streams + port connections
         setStage(null)
         dispatch(resetCommonState())
         navigate(redirectTo)
-    }, [dispatch, navigate, redirectTo])
+    }, [dispatch, navigate, redirectTo, isIdleExempt, stopErrorAudio])
 
     // Uncomment while debugging to confirm which events are actually
     // being detected on your device:
