@@ -542,7 +542,7 @@ const VideoCaptureScreen = () => {
                 null
             )
             stopKioskAudio()
-            navigate("/verified")
+            navigate("/identify-student")
             return true
         }
 
