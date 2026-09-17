@@ -226,8 +226,8 @@ export const ColorBlindQuiz = () => {
 
             // Show right/wrong feedback for 1.5s
             setSelectedAnswer(selectedAnswer)
-            setShowFeedback(true)
-            await new Promise((resolve) => setTimeout(resolve, 1000))
+            // setShowFeedback(true)
+            await new Promise((resolve) => setTimeout(resolve, 700))
 
             // Reset feedback UI immediately so next plate starts clean
             setShowFeedback(false)
@@ -351,7 +351,7 @@ export const ColorBlindQuiz = () => {
                                 onClick={() => handleAnswer(label)}
                                 selectedAnswer={selectedAnswer}
                                 correctAnswer={currentPlate.correctAnswer}
-                                showFeedback={showFeedback}
+                                showFeedback={false}
                             />
                         ))}
                     </div>
@@ -364,7 +364,7 @@ export const ColorBlindQuiz = () => {
                         wide
                         selectedAnswer={selectedAnswer}
                         correctAnswer={currentPlate.correctAnswer}
-                        showFeedback={showFeedback}
+                        showFeedback={false}
                     />
                 </div>
             </div>

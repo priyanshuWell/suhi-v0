@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next"
 import { releaseAllResources } from "../../utils/cleanup"
 import { BrainIconS, MindIcon } from "../../assets"
 import { API_BASE_URL } from "../../utils/config"
-
+import { localToCloudSync } from "../../utils/api"
 /*
   ─────────────────────────────────────────────────────────────
   KIOSK SCALING STRATEGY
@@ -1116,6 +1116,9 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                     <button
                         onClick={() => {
+                            localToCloudSync().catch(err =>{
+                                console.log("background localtocloud",err)
+                            })
                             releaseAllResources()
                             navigate("/welcome")
                         }}

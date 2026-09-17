@@ -23,6 +23,7 @@ import { useBackgroundAudio } from "./constants/audio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
 import SplashScreen from "./components/SplashScreen"
+import AutoIdleRedirect from "./components/AutoIdleRedirect"
 function App() {
     // Play looping background music on all routes except voice & game sections
     useBackgroundAudio()
@@ -48,15 +49,13 @@ function App() {
     return (
         <>
             <BufferCollectionManager />
-            {/* <AutoIdleRedirect
-        timeoutMs={10000}
-        promptBeforeMs={5000}
-        redirectTo="/welcome"
-      /> */}
+            <AutoIdleRedirect
+                redirectTo="/welcome"
+            />
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<SmoothieSlashGame />} />
+                <Route path="/" element={<SplashScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />

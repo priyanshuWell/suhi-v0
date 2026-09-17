@@ -258,6 +258,13 @@
         "no_result": "પરિણામ ડેટા લોડ કરવામાં નિષ્ફળ",
         "redirecting": "હોમ પર રીડાયરેક્ટ થઈ રહ્યા છીએ..."
     },
+    "auto_idle": {
+        "no_activity_detected": "કોઈ પ્રવૃત્તિ મળી નથી",
+        "redirecting_to_home": "હોમ પર પાછા જઈ રહ્યા છીએ",
+        "are_you_there": "શું તમે હજી પણ ત્યાં છો?",
+        "continue_screening": "તપાસ ચાલુ રાખો",
+        "no_user_detected": "કોઈ વપરાશકર્તા મળ્યા નથી"
+    },
     "perilousPath": {
         "loading_next": "આગળનો પડકાર લોડ થઈ રહ્યો છે…",
         "error_finalize": "તમારા પરિણામો અંતિમ કરી શકાયા નથી.",

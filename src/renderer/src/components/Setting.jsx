@@ -4,6 +4,7 @@ import settingbg from "../assets/setting-bg.svg"
 import soundIcon from "../assets/sound-btn.png"
 import langIcon from "../assets/language-btn.png"
 import calibrateIcon from "../assets/calibrate-btn.png"
+import { cloudToLocalSync } from "../utils/api"
 
 const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
     const trackRef = useRef(null)
@@ -128,6 +129,50 @@ export const Setting = ({ setIsActive, isActive }) => {
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || "en")
     const [isSoundActive, setIsSoundActive] = useState(false)
     const [volume, setVolume] = useState(50)
+    const [syncStatus, setSyncStatus] = useState(null) // null | "syncing" | "success" | "error"
+    const [syncMessage, setSyncMessage] = useState("")
+    const tapCountRef = useRef(0)
+    const tapTimeoutRef = useRef(null)
+
+    const handleHiddenTap = useCallback(async () => {
+        tapCountRef.current += 1
+        console.log(`[Setting] Hidden sync button tapped (${tapCountRef.current}/3)`)
+
+        if (tapTimeoutRef.current) {
+            clearTimeout(tapTimeoutRef.current)
+        }
+
+        if (tapCountRef.current >= 3) {
+            tapCountRef.current = 0
+            if (syncStatus === "syncing") return
+
+            console.log(":arrows_counterclockwise: 3 taps detected! Triggering cloudToLocalSync...")
+            setSyncStatus("syncing")
+            setSyncMessage("Syncing cloud to local...")
+            try {
+                const res = await cloudToLocalSync()
+                console.log(":white_check_mark: cloudToLocalSync success:", res)
+                setSyncStatus("success")
+                setSyncMessage(res?.message || "Cloud to local sync successful!")
+                setTimeout(() => {
+                    setSyncStatus(null)
+                    setSyncMessage("")
+                }, 3000)
+            } catch (err) {
+                console.error(":x: cloudToLocalSync failed:", err)
+                setSyncStatus("error")
+                setSyncMessage(err?.response?.data?.message || err?.message || "Sync failed")
+                setTimeout(() => {
+                    setSyncStatus(null)
+                    setSyncMessage("")
+                }, 4000)
+            }
+        } else {
+            tapTimeoutRef.current = setTimeout(() => {
+                tapCountRef.current = 0
+            }, 1500)
+        }
+    }, [syncStatus])
 
     useEffect(() => {
         setSelectedLanguage(i18n.language || "en")
@@ -165,7 +210,16 @@ export const Setting = ({ setIsActive, isActive }) => {
 
     return (
         <>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center relative">
+                {/* Hidden button: tap 3 times to trigger cloudToLocalSync */}
+                <button
+                    type="button"
+                    onClick={handleHiddenTap}
+                    className="w-16 h-16 opacity-0 cursor-default select-none focus:outline-none"
+                    style={{ WebkitTapHighlightColor: "AccentColor", touchAction: "manipulation" }}
+                    aria-label="cloud-to-local-sync-hidden"
+                    tabIndex="-1"
+                />
                 <button className="max-w-full" onClick={() => setIsSoundActive(!isSoundActive)}>
                     <img src={soundIcon} alt="sound-btn" className="w-30" />
                 </button>
@@ -175,6 +229,25 @@ export const Setting = ({ setIsActive, isActive }) => {
                 {/* Calibration button — same style as sound & language */}
 
             </div>
+
+            {/* Sync Feedback Toast */}
+            {syncStatus && (
+                <div
+                    className={`fixed top-6 left-1/2 -translate-x-1/2 z-[200] px-6 py-3 rounded-2xl shadow-2xl backdrop-blur-md border text-lg font-medium transition-all duration-300 flex items-center gap-3 select-none pointer-events-none ${
+                        syncStatus === "syncing"
+                            ? "bg-black/85 border-blue-400/60 text-blue-300"
+                            : syncStatus === "success"
+                            ? "bg-black/85 border-green-500/60 text-green-300"
+                            : "bg-black/85 border-red-500/60 text-red-300"
+                    }`}
+                >
+                    {syncStatus === "syncing" && (
+                        <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                    )}
+                    {syncStatus === "error" && <span>:x:</span>}
+                    <span>{syncMessage}</span>
+                </div>
+            )}
 
             {/* Language Overlay */}
             {isActive && (

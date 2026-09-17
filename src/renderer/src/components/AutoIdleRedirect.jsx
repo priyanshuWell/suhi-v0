@@ -6,24 +6,9 @@ import { resetCommonState } from "../features/common/commonSlice"
 import AreYouThereModal from "./ui/AreYouThereModal"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
+import { useTranslation } from "react-i18next"
 
-/**
- * AutoIdleRedirect
- *
- * Watches for user inactivity across the whole app. If the user is idle
- * for `timeoutMs`, they get a "prompt" window of `promptBeforeMs` where
- * a confirmation modal shows up. If they don't respond, Redux state is
- * reset and they're redirected to `redirectTo`.
- *
- * Disabled entirely on the home/redirect route itself, so it doesn't
- * try to redirect you away from the page you already got redirected to.
- */
 
-// Explicit event list — this is the fix for touchscreens/tablets that
-// only emit Pointer Events (pointerdown/pointermove) instead of, or in
-// addition to, legacy touch events (touchstart/touchmove). Without this,
-// the library's defaults miss those devices entirely and touching the
-// screen never resets the idle timer.
 const ACTIVITY_EVENTS = [
     "mousemove",
     "mousedown",
@@ -42,8 +27,15 @@ const ACTIVITY_EVENTS = [
 
 const AutoIdleRedirect = ({
     timeoutMs = 120000,
-    promptBeforeMs = 10000,
-    redirectTo = "/welcome"
+    promptBeforeMs = 5000,
+    redirectTo = "/welcome",
+    // How long the "continue-screening" stage counts down before it gives
+    // up and redirects, and how long before the "Continue Screening"
+    // button appears. These now drive BOTH the actual redirect timing and
+    // the text NoActivityFrame displays, so the two can never drift apart
+    // the way the old hardcoded "...5 seconds..." copy could.
+    continueScreeningMs = 10000,
+    continueButtonDelayMs = 5000
 }) => {
     const dispatch = useDispatch()
     const navigate = useNavigate()
@@ -51,29 +43,31 @@ const AutoIdleRedirect = ({
     const { play: playErrorAudio, stop: stopErrorAudio } = useKioskAudio()
     // stage: null | 'are-you-there' | 'continue-screening'
     const [stage, setStage] = useState(null)
+    const { t } = useTranslation()
 
     // Disable on home/splash routes — no point idling-out a page you'd
     // just get redirected back to anyway.
-    const isHomeRoute = location.pathname === "/" || location.pathname === redirectTo
+    // Keep the list tight: only the routes the user would be sent back to.
+    const isIdleExempt = location.pathname === "/" || location.pathname === redirectTo
 
     const handlePrompt = useCallback(() => {
-        if (!isHomeRoute) {
+        if (!isIdleExempt) {
             setStage("are-you-there")
             playErrorAudio(ERROR_AUDIO.ARE_YOU_STILL_THERE)
         }
-    }, [isHomeRoute, playErrorAudio])
+    }, [isIdleExempt, playErrorAudio])
 
     const handleIdle = useCallback(() => {
         // When the idle timer fully expires, escalate from stage 1 → stage 2.
         // The actual redirect is fired by the continue-screening stage timeout.
-        if (!isHomeRoute) {
+        if (!isIdleExempt) {
             console.log(
                 "[AutoIdleRedirect] Idle timeout reached — moving to continue-screening stage."
             )
             setStage("continue-screening")
             playErrorAudio(ERROR_AUDIO.UNABLE_TO_DETECT_ANY_ACTIVITY)
         }
-    }, [isHomeRoute, playErrorAudio])
+    }, [isIdleExempt, playErrorAudio])
 
     const handleActive = useCallback(() => {
         stopErrorAudio() // stop any playing error audio when user resumes
@@ -103,38 +97,36 @@ const AutoIdleRedirect = ({
         // onAction: handleAction,
         events: ACTIVITY_EVENTS,
         debounce: 500,
-        disabled: isHomeRoute,
+        disabled: isIdleExempt,
         crossTab: true // keeps idle state in sync across multiple tabs of the same app
     })
 
-    // "Yes, I'm here" — reset the idle timer and dismiss the overlay.
     const handleYes = () => {
         activate()
         setStage(null)
     }
 
-    if (stage === "are-you-there" && !isHomeRoute) {
-        return (
-            <NoActivityFrame
-                variant="are-you-there"
-                timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
-                onButtonClick={handleYes}
-                onTimeout={() => setStage("continue-screening")}
-            />
-        )
-    }
-
-    if (stage === "continue-screening" && !isHomeRoute) {
-        return (
-            <NoActivityFrame
-                variant="continue-screening"
-                onTimeout={handleFinalTimeout}
-                onButtonClick={handleYes}
-            />
-        )
-    }
-
-    return null
+    return (
+        <>
+            {stage === "are-you-there" && !isIdleExempt && (
+                <NoActivityFrame
+                    variant="are-you-there"
+                    timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
+                    onButtonClick={handleYes}
+                    onTimeout={() => setStage("continue-screening")}
+                />
+            )}
+            {stage === "continue-screening" && !isIdleExempt && (
+                <NoActivityFrame
+                    variant="continue-screening"
+                    continueScreeningSecs={Math.ceil(continueScreeningMs / 1000)}
+                    continueButtonDelaySecs={Math.ceil(continueButtonDelayMs / 1000)}
+                    onTimeout={handleFinalTimeout}
+                    onButtonClick={handleYes}
+                />
+            )}
+        </>
+    )
 }
 
 export default AutoIdleRedirect

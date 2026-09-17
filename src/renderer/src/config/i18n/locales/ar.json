@@ -254,6 +254,13 @@
         "continue_screening": "متابعة الفحص",
         "no_user_detected": "لم يتم العثور على مستخدم"
     },
+    "auto_idle": {
+        "no_activity_detected": "لم يتم اكتشاف أي نشاط",
+        "redirecting_to_home": "إعادة التوجيه إلى الصفحة الرئيسية",
+        "are_you_there": "هل ما زلت هناك؟",
+        "continue_screening": "متابعة الفحص",
+        "no_user_detected": "لم يتم العثور على مستخدم"
+    },
     "perilousPath": {
         "loading_next": "جارٍ تحميل التحدي التالي…",
         "error_finalize": "تعذر إنهاء نتائجك.",
