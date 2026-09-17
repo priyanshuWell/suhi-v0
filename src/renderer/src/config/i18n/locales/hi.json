@@ -260,5 +260,12 @@
             "desc_line2_suffix": "पर",
             "desc_line3": "स्क्रीन"
         }
+    },
+    "auto_idle": {
+        "no_activity_detected": "कोई गतिविधि नहीं पाई गई",
+        "redirecting_to_home": "होम पर वापस भेजा जा रहा है",
+        "are_you_there": "क्या आप अभी भी कियोस्क पर हैं?",
+        "continue_screening": "जांच जारी रखें",
+        "no_user_detected": "कोई उपयोगकर्ता नहीं मिला"
     }
 }

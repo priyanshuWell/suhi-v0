@@ -223,6 +223,13 @@
         "moving_to_next_scan": "Moving to Next Scan",
         "stand_straight_still": "Stand Straight &amp; Still"
     },
+    "auto_idle": {
+        "no_activity_detected": "No Activity Detected",
+        "redirecting_to_home": "Redirecting to home",
+        "are_you_there": "Are you still there?",
+        "continue_screening": "Continue Screening",
+        "no_user_detected": "No User Detected"
+    },
     "smoothieSlash": {
         "beAware": {
             "timer": "20s",
