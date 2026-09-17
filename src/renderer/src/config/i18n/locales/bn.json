@@ -256,5 +256,12 @@
             "desc_line2_suffix": "এ",
             "desc_line3": "স্ক্রিনের"
         }
+    },
+    "auto_idle": {
+        "no_activity_detected": "কোন কার্যকলাপ শনাক্ত হয়নি",
+        "redirecting_to_home": "হোমে ফিরে যাওয়া হচ্ছে",
+        "are_you_there": "আপনি কি এখনও সেখানে আছেন?",
+        "continue_screening": "স্ক্রিনিং চালিয়ে যান",
+        "no_user_detected": "কোনো ব্যবহারকারী শনাক্ত হয়নি"
     }
 }

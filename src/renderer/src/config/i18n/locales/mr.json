@@ -245,5 +245,12 @@
             "desc_line2_suffix": "मध्ये",
             "desc_line3": "स्क्रीन"
         }
+    },
+    "auto_idle": {
+        "no_activity_detected": "कोणतीही हालचाल आढळली नाही",
+        "redirecting_to_home": "मुख्यपृष्ठावर परत जात आहे",
+        "are_you_there": "तुम्ही अजूनही तिथे आहात का?",
+        "continue_screening": "तपासणी सुरू ठेवा",
+        "no_user_detected": "वापरकर्ता आढळला नाही"
     }
 }
