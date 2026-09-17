@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch, useSelector } from "react-redux"
 import { setUser } from "../features/common/commonSlice"
 import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
-import ErrorAlert from "./ErrorAlert"
 import { useTranslation } from "react-i18next"
 import { useKioskAudio } from "../hooks/useKioskAudio"
-
-const MAX_RETRIES = 2
 
 const IdentifyStudent = () => {
     const navigate = useNavigate()
@@ -27,10 +24,6 @@ const IdentifyStudent = () => {
     const [keyboardVisible, setKeyboardVisible] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
-    const [showErrorAlert, setShowErrorAlert] = useState(false)
-
-    const retryRef = useRef(0)
-    const errorAlertTimerRef = useRef(null)
 
     // Guard: if neither candidates nor user exist, return to welcome
     useEffect(() => {
@@ -39,18 +32,24 @@ const IdentifyStudent = () => {
         }
     }, [candidates, user, navigate])
 
-    // Auto-dismiss ErrorAlert
-    useEffect(() => {
-        if (!showErrorAlert) return
-        clearTimeout(errorAlertTimerRef.current)
-        errorAlertTimerRef.current = setTimeout(() => {
-            setShowErrorAlert(false)
-        }, 4000)
-        return () => clearTimeout(errorAlertTimerRef.current)
-    }, [showErrorAlert])
-
     const currentValue = step === "NAME" ? nameInput : suhiIdInput
     const isButtonDisabled = !currentValue.trim() || loading
+
+    // Merge matched_student (user.data) and candidates array to form complete searchable candidate list
+    const getAllCandidates = () => {
+        const list = [...candidates]
+        if (user?.data) {
+            const exists = list.some(
+                (c) =>
+                    (c.user_id && c.user_id === user.data.user_id) ||
+                    (c.suhi_id && c.suhi_id === user.data.suhi_id)
+            )
+            if (!exists && (user.data.student_name || user.data.name || user.data.suhi_id)) {
+                list.unshift(user.data)
+            }
+        }
+        return list
+    }
 
     const confirmStudent = (studentData) => {
         dispatch(
@@ -68,7 +67,6 @@ const IdentifyStudent = () => {
         )
         setError("")
         setKeyboardVisible(false)
-        retryRef.current = 0
         navigate("/verified")
     }
 
@@ -83,23 +81,24 @@ const IdentifyStudent = () => {
         setError("")
 
         const normalizedQuery = query.toLowerCase()
+        const allCandidates = getAllCandidates()
 
-        // 1. Exact match on name or student_name
-        let matches = candidates.filter((c) => {
-            const cName = (c.name || c.student_name || "").trim().toLowerCase()
+        // 1. Exact match on student_name or name
+        let matches = allCandidates.filter((c) => {
+            const cName = (c.student_name || c.name || "").trim().toLowerCase()
             return cName === normalizedQuery
         })
 
         // 2. Fallback to partial / contains match
         if (matches.length === 0) {
-            matches = candidates.filter((c) => {
-                const cName = (c.name || c.student_name || "").trim().toLowerCase()
-                return cName.includes(normalizedQuery) || normalizedQuery.includes(cName)
+            matches = allCandidates.filter((c) => {
+                const cName = (c.student_name || c.name || "").trim().toLowerCase()
+                return cName && (cName.includes(normalizedQuery) || normalizedQuery.includes(cName))
             })
         }
 
         if (matches.length === 1) {
-            // Unique match found
+            // Exactly 1 match found in matched student or candidate array!
             confirmStudent(matches[0])
             setLoading(false)
             return
@@ -116,19 +115,12 @@ const IdentifyStudent = () => {
             return
         }
 
-        // 3. If candidates array had no match, check single student in store
-        const currentStoreName = (user?.data?.name || user?.data?.student_name || "").trim().toLowerCase()
-        if (
-            currentStoreName &&
-            (currentStoreName === normalizedQuery || currentStoreName.includes(normalizedQuery))
-        ) {
-            confirmStudent(user.data)
-            setLoading(false)
-            return
-        }
-
-        // No match found
-        handleFailure("No matching profile found. Please check spelling or try again.")
+        // Not present in candidate array or matched student -> check for SUHI ID
+        setDuplicateCandidates([])
+        setStep("SUHI_ID")
+        setSuhiIdInput("")
+        setKeyboardVisible(false)
+        setError("")
         setLoading(false)
     }
 
@@ -143,7 +135,7 @@ const IdentifyStudent = () => {
         setError("")
 
         const normalizedId = query.toLowerCase()
-        const pool = duplicateCandidates.length > 0 ? duplicateCandidates : candidates
+        const pool = duplicateCandidates.length > 0 ? duplicateCandidates : getAllCandidates()
 
         const matched = pool.find((c) => {
             const cId = (c.suhi_id || "").trim().toLowerCase()
@@ -151,31 +143,24 @@ const IdentifyStudent = () => {
         })
 
         if (matched) {
+            // Found in matched student or candidate array!
             confirmStudent(matched)
             setLoading(false)
             return
         }
 
-        // No match found for this SUHI ID
-        handleFailure(t("loginSuhi.student_not_found", "SUHI Id not found among matched profiles. Please try again."))
+        // Still not present in matched student or candidate array -> redirect to welcome page
+        playAudio("errors/let_try_suhi_id")
+        setError(
+            t(
+                "identifyStudent.student_not_found_redirect",
+                "Profile not found in detected faces. Redirecting to start..."
+            )
+        )
+        setTimeout(() => {
+            navigate("/welcome")
+        }, 1500)
         setLoading(false)
-    }
-
-    const handleFailure = (msg) => {
-        const attempt = retryRef.current + 1
-        if (attempt < MAX_RETRIES) {
-            retryRef.current = attempt
-            playAudio("errors/invalid_suhi_id_coordinate")
-            setError(msg)
-            setShowErrorAlert(true)
-        } else {
-            retryRef.current = 0
-            playAudio("errors/let_try_suhi_id")
-            setError(msg)
-            setTimeout(() => {
-                navigate("/login-suhi")
-            }, 1500)
-        }
     }
 
     const handleNext = () => {
@@ -185,16 +170,6 @@ const IdentifyStudent = () => {
         } else {
             handleSuhiIdSubmit()
         }
-    }
-
-    const handleBack = () => {
-        if (step === "SUHI_ID") {
-            setStep("NAME")
-            setSuhiIdInput("")
-            setError("")
-            return
-        }
-        navigate("/welcome")
     }
 
     // Physical keyboard listener
@@ -250,7 +225,7 @@ const IdentifyStudent = () => {
                 </div>
             </div>
 
-            <LoginComponent onBack={handleBack} />
+            <LoginComponent />
 
             {/* Form */}
             <div className="absolute top-[42%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px]">
@@ -293,13 +268,18 @@ const IdentifyStudent = () => {
                             </p>
                         )}
 
-                        {/* Disambiguation hint */}
-                        {step === "SUHI_ID" && duplicateCandidates.length > 0 && !error && (
+                        {/* Step 2 Hints */}
+                        {step === "SUHI_ID" && !error && (
                             <p className="text-white/60 text-sm mt-3 text-center">
-                                {t(
-                                    "identifyStudent.multiple_found",
-                                    `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`
-                                )}
+                                {duplicateCandidates.length > 0
+                                    ? t(
+                                          "identifyStudent.multiple_found",
+                                          `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`
+                                      )
+                                    : t(
+                                          "identifyStudent.not_found_hint",
+                                          "Name not found in detected students. Please enter your SUHI Id."
+                                      )}
                             </p>
                         )}
 
@@ -320,7 +300,11 @@ const IdentifyStudent = () => {
                             ) : (
                                 <button
                                     type="button"
-                                    onClick={() => navigate("/login-suhi")}
+                                    onClick={() => {
+                                        setStep("SUHI_ID")
+                                        setError("")
+                                        setDuplicateCandidates([])
+                                    }}
                                     className="text-white/60 text-sm underline hover:text-white transition-colors"
                                 >
                                     {t("identifyStudent.use_suhi_id", "Log in using SUHI Id instead")}
@@ -392,20 +376,6 @@ const IdentifyStudent = () => {
                     onClose={() => setKeyboardVisible(false)}
                 />
             )}
-
-            {/* Error Alert */}
-            <ErrorAlert
-                visible={showErrorAlert}
-                title={t("loginSuhi.login_failed", "Verification Failed")}
-                description={error}
-                onRetry={() => {
-                    setShowErrorAlert(false)
-                }}
-                onClose={() => {
-                    setShowErrorAlert(false)
-                    retryRef.current = 0
-                }}
-            />
         </>
     )
 }
