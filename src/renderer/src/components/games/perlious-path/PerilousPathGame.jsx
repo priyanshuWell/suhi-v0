@@ -13,6 +13,7 @@ import endBadge from "../../../assets/perilous_path/perilous_end.png"
 import startBadge from "../../../assets/perilous_path/perilous_start.png"
 import tile from "../../../assets/perilous_path/perilous_block.svg"
 import monsterIcon from "../../../assets/perilous_path/perilous_hazard.svg"
+import hazardExplosion from "../../../assets/perilous_path/hazard_explosion.gif"
 import connectorNode from "../../../assets/perilous_path/connector_node.png"
 import levelPillFrame from "../../../assets/perilous_path/level_bar.png"
 import objectiveBarFrame from "../../../assets/perilous_path/game_description.png"
@@ -41,7 +42,10 @@ const PHASE = {
 // DelayedNextRound/ShowLevelCompleteAfterDelay kicks in on the CS side —
 // without it, PerilousPath.jsx swaps this component out the instant the
 // fetch resolves and the player never sees what they scored.
-const RESULT_HOLD_MS = 900
+const RESULT_HOLD_MS = 1000
+// How long to wait after revealing hazard explosions before advancing to the next level.
+// Matches the GIF duration so the animation completes fully before unmount.
+const HAZARD_REVEAL_HOLD_MS = 1000
 
 function cellKey(row, col) {
     return `${row}-${col}`
@@ -102,11 +106,13 @@ function cellCenterPct(index, count) {
  * the hop (already-visited) and grows toward the newly-tapped tile, which is
  * what actually sells the "tracing a live path" feel.
  */
-function buildPathSegments(pathSequence, rows, cols) {
+function buildPathSegments(pathSequence, rows, cols, skipTiles = new Set()) {
     const segments = []
     for (let i = 1; i < pathSequence.length; i++) {
         const fromTile = pathSequence[i - 1]
         const toTile = pathSequence[i]
+        // Hide beam segments that touch an exploding hazard tile
+        if (skipTiles.has(fromTile) || skipTiles.has(toTile)) continue
         const from = tileToRowCol(fromTile)
         const to = tileToRowCol(toTile)
         const dRow = to.row - from.row
@@ -233,14 +239,14 @@ function PathSegment({ orientation, flip, style }) {
 }
 
 /** Base interactive tile button — sits at Layer 1 (behind the path line). */
-function TileButton({ row, col, isHazardTapped, onClick }) {
+function TileButton({ row, col, onClick }) {
     return (
         <motion.button
             type="button"
             data-tile={`${row}-${col}`}
             onClick={() => onClick?.(row, col)}
             whileTap={{ scale: 0.9 }}
-            className={`relative aspect-square w-full select-none ${isHazardTapped ? "ring-2 ring-red-500 rounded-full" : ""}`}
+            className="relative aspect-square w-full select-none"
         >
             <img src={tile} alt="" className="h-full w-full" draggable={false} />
         </motion.button>
@@ -248,19 +254,10 @@ function TileButton({ row, col, isHazardTapped, onClick }) {
 }
 
 /** Overlay icons/badges (Start, End, hazards, connector nodes) — sits at Layer 3 (on top of the path line). */
-function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, showStartEnd }) {
-    // One-shot "you stepped on a hazard" flash
-    const [justHit, setJustHit] = useState(false)
-    useEffect(() => {
-        if (!isHazardTapped) return undefined
-        setJustHit(true)
-        const t = setTimeout(() => setJustHit(false), 450)
-        return () => clearTimeout(t)
-    }, [isHazardTapped])
-
+function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, hideConnectors, showStartEnd }) {
     return (
         <div className="pointer-events-none relative aspect-square w-full select-none">
-            {showStartEnd && isStart && (
+            {showStartEnd && isStart && !hideConnectors && (
                 <motion.img
                     src={startBadge}
                     alt="Start"
@@ -270,7 +267,7 @@ function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, showS
                     transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
                 />
             )}
-            {showStartEnd && isEnd && (
+            {showStartEnd && isEnd && !hideConnectors && (
                 <motion.img
                     src={endBadge}
                     alt="End"
@@ -308,7 +305,8 @@ function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, showS
             <AnimatePresence>
                 {isOnPath &&
                     !isStart &&
-                    !isEnd && [
+                    !isEnd &&
+                    !hideConnectors && [
                         // Glow halo
                         <motion.div
                             key="connector-glow"
@@ -340,14 +338,23 @@ function TileOverlay({ isStart, isEnd, isDanger, isOnPath, isHazardTapped, showS
                         />,
                     ]}
             </AnimatePresence>
+            {/* Hazard explosion GIF — shown above the tile once the trial result is revealed.
+                Positioned above the tile center (translateY offset moves it up).
+                The GIF plays once automatically; the 1-second HAZARD_REVEAL_HOLD_MS in
+                submitTrial ensures the level doesn't advance before it finishes. */}
             <AnimatePresence>
-                {justHit && (
-                    <motion.span
-                        className="pointer-events-none absolute inset-0 rounded-full bg-red-500/50"
-                        initial={{ scale: 0.6, opacity: 0.9 }}
-                        animate={{ scale: 1.7, opacity: 0 }}
+                {isHazardTapped && (
+                    <motion.img
+                        key="explosion"
+                        src={hazardExplosion}
+                        alt="Explosion"
+                        className="pointer-events-none absolute left-1/2 top-1/2 w-[140%] -translate-x-1/2 -translate-y-1/2"
+                        style={{ zIndex: 30 }}
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={{ duration: 0.45, ease: "easeOut" }}
+                        transition={{ duration: 0.15, ease: "easeOut" }}
+                        draggable={false}
                     />
                 )}
             </AnimatePresence>
@@ -448,6 +455,10 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     const responseStartedAtRef = useRef(null)
     const hasSubmittedRef = useRef(false)
     const lastTimedOutRef = useRef(false)
+    // Ref mirror of hazardHitTiles so submitTrial (a memoized callback) always
+    // reads the *current* set without needing it in its dependency array.
+    const hazardHitTilesRef = useRef(hazardHitTiles)
+    useEffect(() => { hazardHitTilesRef.current = hazardHitTiles }, [hazardHitTiles])
 
     const submitTrial = useCallback(
         async (timedOut) => {
@@ -483,14 +494,21 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                         ? { tone: "success", text: earned > 0 ? t("perilousPath.game.safe_crossing", { count: earned }) : t("perilousPath.game.crossed_no_points") }
                         : { tone: "fail", text: timedOut ? t("perilousPath.game.time_ran_out") : t("perilousPath.game.path_not_completed") }
                 )
-                if (routeValid) {
+                if (hazardHitTilesRef.current.size > 0) {
+                    // Player crossed at least one hazard — play the explosion blast
+                    perilousPathSfx.blast()
+                } else if (routeValid) {
+                    // Clean path with no hazards — play the success fanfare
                     perilousPathSfx.clearRound()
                 }
                 if (result?.game_totals?.total_points != null) {
                     setDisplayedScore(result.game_totals.total_points)
                 }
                 setRevealHazards(true)
-                await new Promise((resolve) => setTimeout(resolve, RESULT_HOLD_MS))
+                // If the player crossed any hazard tiles, wait the full GIF duration so
+                // the explosion animation completes before the level unmounts.
+                const holdMs = hazardHitTiles.size > 0 ? HAZARD_REVEAL_HOLD_MS : RESULT_HOLD_MS
+                await new Promise((resolve) => setTimeout(resolve, holdMs))
 
                 console.log("CALLING PARENT onFinish")
                 await onFinish?.(result)
@@ -690,10 +708,12 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
     )
 
     // Beam path: start tile -> every tapped tile, in order.
-    const pathSegments = useMemo(
-        () => buildPathSegments([board.start.tile, ...tappedTiles], grid.rows, grid.cols),
-        [board.start.tile, tappedTiles, grid.rows, grid.cols]
-    )
+    // When the explosion fires (revealHazards + any hazard hit), wipe the whole
+    // line by treating every tapped tile as a skip tile.
+    const pathSegments = useMemo(() => {
+        if (revealHazards && hazardHitTiles.size > 0) return []
+        return buildPathSegments([board.start.tile, ...tappedTiles], grid.rows, grid.cols)
+    }, [board.start.tile, tappedTiles, grid.rows, grid.cols, revealHazards, hazardHitTiles])
 
     const objectiveText = {
         [PHASE.PROBE]: t("perilousPath.game.memorize_danger"),
@@ -814,7 +834,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                                 key={key}
                                 row={row}
                                 col={col}
-                                isHazardTapped={revealHazards && hazardTapSet.has(key)}
+                                isHazardTapped={false}
                                 onClick={handleTileClick}
                             />
                         )
@@ -863,6 +883,7 @@ export default function PerilousPathGame({ level, onFinish, dummyFlag }) {
                                 isDanger={dangerSet.has(key)}
                                 isOnPath={pathSet.has(key)}
                                 isHazardTapped={revealHazards && hazardTapSet.has(key)}
+                                hideConnectors={revealHazards && hazardHitTiles.size > 0}
                                 showStartEnd={phase === PHASE.RESPONSE || phase === PHASE.SUBMITTING}
                             />
                         )

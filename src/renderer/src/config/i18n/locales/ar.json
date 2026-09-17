@@ -95,7 +95,9 @@
         "bia_rods_incorrect": "امسك كلا المقبضين بقوة لمتابعة الفحص.",
         "bia_max_retries": "لم أتمكن من الحصول على قراءات مستقرة، جاري الانتقال إلى الفحص التالي.",
         "redirect_login_label": "جاري الانتقال إلى تسجيل الدخول عبر SUHI Id",
-        "redirect_home_label": "جاري الانتقال إلى الصفحة الرئيسية"
+        "redirect_home_label": "جاري الانتقال إلى الصفحة الرئيسية",
+        "stand_straight": "قف بشكل مستقيم",
+        "stand_straight_still": "نحن نقيس طولك ووزنك"
     },
     "colorBlindness": {
         "title": "فحص رؤية الألوان",

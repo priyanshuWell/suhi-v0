@@ -95,7 +95,9 @@
         "bia_rods_incorrect": "स्कॅन सुरू ठेवण्यासाठी दोन्ही हँडल्स घट्ट पकडा.",
         "bia_max_retries": "स्थिर रीडिंग मिळू शकले नाही, पुढील स्कॅनवर जात आहोत.",
         "redirect_login_label": "SUHI Id लॉगिनवर जात आहोत",
-        "redirect_home_label": "मुख्यपृष्ठावर जात आहोत"
+        "redirect_home_label": "मुख्यपृष्ठावर जात आहोत",
+        "stand_straight": "सीधे उभे रहा",
+        "stand_straight_still": "आम्ही तुमची उंची आणि वजन मोजत आहोत"
     },
     "colorBlindness": {
         "title": "रंग दृष्टी स्कॅन",

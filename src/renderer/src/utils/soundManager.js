@@ -30,6 +30,7 @@ import submitSfx from "../assets/audio/space_convoy/Submit_Button_Tap.wav"
 import ppBgSfx from "../assets/audio/space_convoy/bg_perilous.wav"
 import ppLaserSfx from "../assets/audio/space_convoy/laserSmall_000.ogg"
 import ppClearRoundSfx from "../assets/audio/space_convoy/clear_round.wav"
+import ppBlastSfx from "../assets/perilous_path/blast_sound.mp3"
 
 const SOUND_FILES = {
     // round_start:      roundStartSfx,
@@ -508,12 +509,14 @@ const PP_SOUND_FILES = {
     pp_bg: ppBgSfx,
     pp_laser: ppLaserSfx,
     pp_clear_round: ppClearRoundSfx,
+    pp_blast: ppBlastSfx,
 }
 
 const PP_SOUND_VOLUMES = {
     pp_bg: 0.7,
     pp_laser: 0.45,
     pp_clear_round: 0.7,
+    pp_blast: 0.9,
 }
 
 /**
@@ -684,6 +687,19 @@ export class PerilousPathSoundManager {
                 i * 70
             )
         )
+    }
+
+    /** Hazard explosion blast — plays when the player's path crossed a hazard tile. */
+    blast() {
+        if (!this._ready) return
+        if (this._play("pp_blast")) return
+        // Synth fallback — short low-frequency thud
+        playTone(this._ctx, this._master, {
+            freq: 80,
+            type: "sawtooth",
+            duration: 0.35,
+            volume: 0.5,
+        })
     }
 }
 

@@ -221,7 +221,8 @@
         "different_user_found_desc": "Looks like someone appeared in front of the kiosk!",
         "bia_error_title": "BIA Error",
         "moving_to_next_scan": "Moving to Next Scan",
-        "stand_straight_still": "Stand Straight &amp; Still"
+        "stand_straight": "Stand straight",
+        "stand_straight_still": "We are measuring your height & weight"
     },
     "auto_idle": {
         "no_activity_detected": "No Activity Detected",

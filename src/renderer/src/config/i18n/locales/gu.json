@@ -106,7 +106,9 @@
         "different_user_found": "અલગ વપરાશકર્તા મળ્૯ો",
         "different_user_found_desc": "લાગે છે કોઈ કિયોસ્કની સામે આવ્૯ા!",
         "bia_error_title": "BIA ભૂલ",
-        "moving_to_next_scan": "આગળાના સ્કેન પર જઈ રહ્૯ા છીએ"
+        "moving_to_next_scan": "આગળાના સ્કેન પર જઈ રહ્૯ા છીએ",
+        "stand_straight": "સીધા ઉભા રહો",
+        "stand_straight_still": "અમે તમારી ઊંચાઈ અને વજન માપી રહ্যા છીએ"
     },
     "smoothieSlash": {
         "beAware": {

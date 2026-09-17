@@ -224,7 +224,8 @@
         "different_user_found_desc": "लगता है कोई कियोस्क के सामने आया!",
         "bia_error_title": "BIA एरर",
         "moving_to_next_scan": "अगले स्कैन पर जा रहे हैं",
-        "stand_straight_still": "सीधे खड़े रहें और स्थिर रहें"
+        "stand_straight": "सीधे खड़े हो जाएं",
+        "stand_straight_still": "हम आपकी ऊंचाई और वजन माप रहे हैं"
     },
     "smoothieSlash": {
         "beAware": {
