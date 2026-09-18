@@ -15,6 +15,7 @@ export default function KioskExitOverlay() {
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
     const [submitting, setSubmitting] = useState(false)
+    const [keyboardOpen, setKeyboardOpen] = useState(true)
     const inputRef = useRef(null)
     const tapTimesRef = useRef([])
 
@@ -22,6 +23,7 @@ export default function KioskExitOverlay() {
         setPassword("")
         setError("")
         setSubmitting(false)
+        setKeyboardOpen(true)
         setVisible(true)
     }
 
@@ -34,7 +36,9 @@ export default function KioskExitOverlay() {
 
     const handleSecretCornerTap = async () => {
         const now = Date.now()
-        tapTimesRef.current = tapTimesRef.current.filter((time) => now - time < CORNER_TAP_WINDOW_MS)
+        tapTimesRef.current = tapTimesRef.current.filter(
+            (time) => now - time < CORNER_TAP_WINDOW_MS
+        )
         tapTimesRef.current.push(now)
         if (tapTimesRef.current.length < CORNER_TAPS_REQUIRED) return
 
@@ -43,20 +47,38 @@ export default function KioskExitOverlay() {
         if (state?.active) openExitDialog()
     }
 
+    // The field is visually hidden (the dots below are the real display), so
+    // nothing gives it focus on its own. Without this the dialog opened with
+    // focus on the document body and a physical keyboard typed into nothing
+    // until the technician pressed Tab to walk focus onto the field by hand.
+    // Retried a few times because the window itself may still be taking
+    // focus back from the WM when the dialog first mounts.
+    const focusPasswordField = () => {
+        const input = inputRef.current
+        if (!input) return
+        try {
+            input.focus({ preventScroll: true })
+        } catch {
+            input.focus()
+        }
+    }
+
     useEffect(() => {
         if (!visible) return
-        const focusTimer = setTimeout(() => inputRef.current?.focus(), 80)
-        return () => clearTimeout(focusTimer)
+        const timers = [0, 80, 250, 600].map((delay) => setTimeout(focusPasswordField, delay))
+        return () => timers.forEach(clearTimeout)
     }, [visible])
 
     const appendChar = (ch) => {
         setError("")
         setPassword((prev) => (prev.length < MAX_PASSWORD_LENGTH ? prev + ch : prev))
+        focusPasswordField()
     }
 
     const handleBackspace = () => {
         setError("")
         setPassword((prev) => prev.slice(0, -1))
+        focusPasswordField()
     }
 
     const handleSubmit = async () => {
@@ -75,7 +97,7 @@ export default function KioskExitOverlay() {
             setPassword("")
         } finally {
             setSubmitting(false)
-            setTimeout(() => inputRef.current?.focus(), 0)
+            setTimeout(focusPasswordField, 0)
         }
     }
 
@@ -102,13 +124,19 @@ export default function KioskExitOverlay() {
                 <>
                     <div className="fixed inset-0 z-40 bg-black/70" />
 
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center px-6 select-none">
+                    {/* pointer-events-none is load-bearing: this layer spans the
+                        whole screen and sits above the on-screen keyboard, so
+                        without it every tap on a key hits this div instead and
+                        the keyboard looks present but types nothing. Only the
+                        card itself takes pointer events. The bottom padding
+                        keeps the card clear of the keyboard rather than behind it. */}
+                    <div className="pointer-events-none fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto px-6 pt-[6vh] pb-[24rem] select-none">
                         <form
                             onSubmit={(event) => {
                                 event.preventDefault()
                                 handleSubmit()
                             }}
-                            className="w-[600px] max-w-full rounded-[24px] border border-white/10 bg-[#0d0d0d] px-10 py-10 shadow-[0_0_60px_rgba(70,168,203,0.25)]"
+                            className="pointer-events-auto my-auto w-[600px] max-w-full rounded-[24px] border border-white/10 bg-[#0d0d0d] px-10 py-10 shadow-[0_0_60px_rgba(70,168,203,0.25)]"
                         >
                             <p className="text-center text-sm font-semibold uppercase tracking-[0.2em] text-[#46a8cb]">
                                 Administrator access
@@ -147,7 +175,9 @@ export default function KioskExitOverlay() {
                             </div>
 
                             {error && (
-                                <p className="mt-4 text-center text-sm font-medium text-red-400">{error}</p>
+                                <p className="mt-4 text-center text-sm font-medium text-red-400">
+                                    {error}
+                                </p>
                             )}
 
                             <div className="mt-8 flex justify-center gap-4">
@@ -170,12 +200,26 @@ export default function KioskExitOverlay() {
                         </form>
                     </div>
 
-                    <KeyboardContainer
-                        onKeyPress={appendChar}
-                        onBackspace={handleBackspace}
-                        onSubmit={handleSubmit}
-                        onClose={handleCancel}
-                    />
+                    {keyboardOpen ? (
+                        <KeyboardContainer
+                            onKeyPress={appendChar}
+                            onBackspace={handleBackspace}
+                            onSubmit={handleSubmit}
+                            onClose={() => setKeyboardOpen(false)}
+                        />
+                    ) : (
+                        <button
+                            type="button"
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={() => {
+                                setKeyboardOpen(true)
+                                focusPasswordField()
+                            }}
+                            className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full border border-white/20 bg-[#0d0d0d] px-6 py-3 text-sm font-semibold text-[#46a8cb]"
+                        >
+                            Show keyboard
+                        </button>
+                    )}
                 </>
             )}
         </>

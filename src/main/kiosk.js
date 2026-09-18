@@ -3,6 +3,14 @@ import { promisify } from "util"
 import { app, globalShortcut, screen } from "electron"
 import fs from "fs"
 import { join } from "path"
+import {
+    disableGestureLockdown,
+    disableGestureLockdownSync,
+    disarmGestureLockdown,
+    enableGestureLockdown,
+    installGestureLockdown,
+    isGestureLockdownArmed
+} from "./gestureLockdown"
 
 const execFileAsync = promisify(execFile)
 
@@ -42,9 +50,226 @@ const KIOSK_GSETTINGS = [
     ["org.gnome.settings-daemon.plugins.media-keys", "terminal", "[]"],
     ["org.gnome.settings-daemon.plugins.media-keys", "screensaver", "[]"],
     ["org.gnome.settings-daemon.plugins.media-keys", "logout", "[]"],
-    ["org.gnome.shell.extensions.dash-to-dock", "autohide", "true"],
-    ["org.gnome.shell.extensions.dash-to-dock", "intellihide", "true"],
-    ["org.gnome.shell.extensions.dash-to-dock", "dock-fixed", "false"]
+    // Ubuntu's dock. `autohide` is not "hide the dock" — it is "hide it
+    // until the pointer or a finger pushes against the screen edge", which
+    // is precisely the swipe-from-the-edge flash this lockdown exists to
+    // remove. With all three off, dash-to-dock only ever shows the dock
+    // inside the overview, and the overview is gone.
+    ["org.gnome.shell.extensions.dash-to-dock", "autohide", "false"],
+    ["org.gnome.shell.extensions.dash-to-dock", "intellihide", "false"],
+    ["org.gnome.shell.extensions.dash-to-dock", "dock-fixed", "false"],
+    ["org.gnome.shell.extensions.dash-to-dock", "require-pressure-to-show", "true"],
+    ["org.gnome.shell.extensions.dash-to-dock", "pressure-threshold", "4096.0"],
+    ["org.gnome.shell.extensions.dash-to-dock", "show-mounts", "false"],
+    ["org.gnome.shell.extensions.dash-to-dock", "show-trash", "false"],
+
+    // ── Everything below closes the gaps the original list left open ──────
+    // Blanking switch-applications alone still left half a dozen other ways
+    // to reach another window or launch something: the window-cycling
+    // bindings Alt+Tab falls back to, the panel/run-dialog bindings behind
+    // Alt+F1 and Alt+F2, per-workspace and per-application jump keys, and
+    // the tiling/move/resize bindings. A kiosk has to blank all of them,
+    // not just the famous one.
+    ["org.gnome.desktop.wm.keybindings", "switch-group", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-group-backward", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-windows", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-windows-backward", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-group", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-group-backward", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-panels", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "cycle-panels-backward", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-panels", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-panels-backward", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "panel-main-menu", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "panel-run-dialog", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "begin-move", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "begin-resize", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "maximize", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "raise", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "lower", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "toggle-above", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "toggle-maximized", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "toggle-on-all-workspaces", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-to-workspace-up", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-to-workspace-down", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-to-workspace-last", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-input-source", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "switch-input-source-backward", "[]"],
+
+    ["org.gnome.shell.keybindings", "open-application-menu", "[]"],
+    ["org.gnome.shell.keybindings", "focus-active-notification", "[]"],
+    ["org.gnome.shell.keybindings", "toggle-quick-settings", "[]"],
+    ["org.gnome.shell.keybindings", "show-screen-recording-ui", "[]"],
+    ["org.gnome.shell.keybindings", "show-screenshot-ui", "[]"],
+
+    ["org.gnome.settings-daemon.plugins.media-keys", "control-center", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "home", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "www", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "email", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "search", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "help", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "calculator", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "on-screen-keyboard", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "magnifier", "[]"],
+    ["org.gnome.settings-daemon.plugins.media-keys", "screenreader", "[]"],
+
+    ["org.gnome.mutter.keybindings", "toggle-tiled-left", "[]"],
+    ["org.gnome.mutter.keybindings", "toggle-tiled-right", "[]"],
+
+    // Super+Shift+Escape on a Wayland session hands every grabbed shortcut
+    // straight back to the desktop — the one binding that can undo this
+    // whole table in a single keystroke.
+    ["org.gnome.mutter.wayland.keybindings", "restore-shortcuts", "[]"],
+
+    // Alt+F2 is not the only way to a command line; these turn off the
+    // shell's own launcher and the log-out/user-switch paths outright
+    // rather than merely unbinding their keys.
+    ["org.gnome.desktop.lockdown", "disable-command-line", "true"],
+    ["org.gnome.desktop.lockdown", "disable-log-out", "true"],
+    ["org.gnome.desktop.lockdown", "disable-user-switching", "true"],
+
+    ["org.gnome.mutter", "edge-tiling", "false"],
+
+    // The single most effective thing against a three- or four-finger swipe
+    // on the touchscreen: with exactly one static workspace there is nowhere
+    // for the gesture to swipe *to*, so Suhi cannot be slid off screen even
+    // on a desktop where the gesture itself survives. gestureLockdown.js
+    // removes the gesture as well; this holds on its own if that extension
+    // cannot be loaded.
+    ["org.gnome.mutter", "dynamic-workspaces", "false"],
+    ["org.gnome.desktop.wm.preferences", "num-workspaces", "1"],
+
+    // Super+1…9 raise a dock application. They live in
+    // org.gnome.shell.keybindings, not the wm ones above, and are the most
+    // reachable way off a kiosk on a device with a keyboard attached.
+    ...Array.from({ length: 9 }, (_, index) => [
+        "org.gnome.shell.keybindings",
+        `switch-to-application-${index + 1}`,
+        "[]"
+    ]),
+    ["org.gnome.shell.keybindings", "screenshot", "[]"],
+    ["org.gnome.shell.keybindings", "screenshot-window", "[]"],
+    ["org.gnome.shell.keybindings", "shift-overview-up", "[]"],
+    ["org.gnome.shell.keybindings", "shift-overview-down", "[]"],
+
+    // One static workspace is only a kiosk if nothing can reach a second
+    // one, so the numbered jumps and the move-window-to-workspace pair go
+    // as well.
+    ...Array.from({ length: 12 }, (_, index) => [
+        "org.gnome.desktop.wm.keybindings",
+        `switch-to-workspace-${index + 1}`,
+        "[]"
+    ]),
+    ...Array.from({ length: 12 }, (_, index) => [
+        "org.gnome.desktop.wm.keybindings",
+        `move-to-workspace-${index + 1}`,
+        "[]"
+    ]),
+    ["org.gnome.desktop.wm.keybindings", "move-to-workspace-left", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-workspace-right", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-workspace-up", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-workspace-down", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-workspace-last", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-monitor-left", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-monitor-right", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-monitor-up", "[]"],
+    ["org.gnome.desktop.wm.keybindings", "move-to-monitor-down", "[]"],
+
+    // GNOME's own on-screen keyboard is system UI: it slides up over the
+    // application, carries a settings button, and is reached by a drag from
+    // the bottom edge. Suhi ships its own in-window keyboard, so this one is
+    // pure exposure.
+    ["org.gnome.desktop.a11y.applications", "screen-keyboard-enabled", "false"],
+    ["org.gnome.desktop.a11y.applications", "screen-magnifier-enabled", "false"],
+
+    // Shell animations are the *visible* part of a gesture: the frames
+    // where the panel slides down or a workspace slides across. With them
+    // off, anything that does slip through has nothing to animate.
+    ["org.gnome.desktop.interface", "enable-animations", "false"],
+
+    // Mutter's "Application is not responding — Force Quit?" dialog is a
+    // system window and it appears over a fullscreen kiosk whenever the app
+    // is busy for a few seconds. Pushing the timeout out of reach is the
+    // only way to stop it.
+    ["org.gnome.mutter", "check-alive-timeout", "2147483647"],
+
+    ["org.gnome.desktop.notifications", "show-in-lock-screen", "false"],
+
+    // The desktop behind the kiosk should never be recognisable as Ubuntu,
+    // not even for the fraction of a second before the window is mapped.
+    ["org.gnome.desktop.background", "picture-uri", "''"],
+    ["org.gnome.desktop.background", "picture-uri-dark", "''"],
+    ["org.gnome.desktop.background", "primary-color", "'#000000'"],
+    ["org.gnome.desktop.background", "color-shading-type", "'solid'"],
+    ["org.gnome.desktop.screensaver", "picture-uri", "''"],
+    ["org.gnome.desktop.screensaver", "primary-color", "'#000000'"]
+]
+
+// Accelerators grabbed at the X server for as long as kiosk mode is active.
+// gsettings only unbinds GNOME's *own* handlers — it does nothing about a
+// non-GNOME desktop, a third-party shell extension, or any other client
+// that grabbed the same key. An XGrabKey through globalShortcut takes the
+// key away from all of them, and a no-op handler means pressing it does
+// nothing at all. Registered only after the gsettings lockdown has run, so
+// the keys GNOME held (Alt+Tab above all) are free to be grabbed by then.
+//
+// Ctrl+Alt+F1…F12 are deliberately absent: VT switching is handled by the
+// kernel and logind before any X client sees it, so no application can
+// grab it. Blocking that needs a system-level `DontVTSwitch` in
+// /etc/X11/xorg.conf.d/ — see README.
+const KIOSK_GRABBED_ACCELERATORS = [
+    "Alt+Tab",
+    "Shift+Alt+Tab",
+    "Super+Tab",
+    "Shift+Super+Tab",
+    "Alt+Escape",
+    "Alt+Space",
+    "Alt+F1",
+    "Alt+F2",
+    "Alt+F4",
+    "Alt+F5",
+    "Alt+F7",
+    "Alt+F8",
+    "Alt+F10",
+    "Control+Alt+T",
+    "Control+Alt+L",
+    "Control+Alt+Delete",
+    "Control+Alt+Left",
+    "Control+Alt+Right",
+    "Control+Alt+Up",
+    "Control+Alt+Down",
+    "Super+A",
+    "Super+D",
+    "Super+E",
+    "Super+H",
+    "Super+L",
+    "Super+M",
+    "Super+P",
+    "Super+S",
+    "Super+V",
+    "Super+Up",
+    "Super+Down",
+    "Super+Left",
+    "Super+Right",
+    "Super+1",
+    "Super+2",
+    "Super+3",
+    "Super+4",
+    "Super+5",
+    "Super+6",
+    "Super+7",
+    "Super+8",
+    "Super+9",
+    "Control+Q",
+    "Control+W",
+    "Control+N",
+    "Control+R",
+    "Control+Shift+R",
+    "Control+Shift+I",
+    "Control+Shift+J",
+    "Control+Shift+C",
+    "F11",
+    "F12"
 ]
 
 // Used only if we would otherwise snapshot an already-locked desktop
@@ -77,9 +302,17 @@ const UNLOCKED_FALLBACKS = {
     "org.gnome.settings-daemon.plugins.media-keys::terminal": "['<Primary><Alt>t']",
     "org.gnome.settings-daemon.plugins.media-keys::screensaver": "['<Super>l']",
     "org.gnome.settings-daemon.plugins.media-keys::logout": "['<Control><Alt>Delete']",
-    "org.gnome.shell.extensions.dash-to-dock::autohide": "false",
+    "org.gnome.shell.extensions.dash-to-dock::autohide": "true",
     "org.gnome.shell.extensions.dash-to-dock::intellihide": "true",
-    "org.gnome.shell.extensions.dash-to-dock::dock-fixed": "true"
+    "org.gnome.shell.extensions.dash-to-dock::dock-fixed": "true",
+    "org.gnome.mutter::dynamic-workspaces": "true",
+    "org.gnome.mutter::edge-tiling": "true",
+    "org.gnome.desktop.wm.preferences::num-workspaces": "4",
+    "org.gnome.desktop.interface::enable-animations": "true",
+    "org.gnome.mutter::check-alive-timeout": "uint32 5000",
+    "org.gnome.desktop.notifications::show-in-lock-screen": "true",
+    "org.gnome.desktop.a11y.applications::screen-keyboard-enabled": "false",
+    "org.gnome.desktop.a11y.applications::screen-magnifier-enabled": "false"
 }
 
 // Bumped whenever the capture logic changes in a way that makes previously
@@ -87,11 +320,25 @@ const UNLOCKED_FALLBACKS = {
 // "is this already locked down?" check (see normalizeGsettingsValue) and so
 // recorded the *locked* values as the originals — restoring one would leave
 // the desktop permanently crippled. Those are discarded and recaptured.
-const SNAPSHOT_VERSION = 2
+// v3 adds the much larger lockdown table above plus the RESET_TO_DEFAULT
+// sentinel; a v2 snapshot has no entry for any of the new keys, so it would
+// restore only a fraction of them.
+const SNAPSHOT_VERSION = 3
+
+// Recorded instead of a literal value when a key was already at its
+// lockdown value at capture time and UNLOCKED_FALLBACKS has no entry for
+// it. Restoring the captured (locked) value would leave that shortcut
+// disabled forever; `gsettings reset` hands the key back to whatever the
+// schema default is, which is the right answer whenever we genuinely do
+// not know what the user had. Keeping this sentinel is what let the
+// lockdown table grow without also hand-maintaining a fallback for every
+// new key.
+const RESET_TO_DEFAULT = "\u0000__reset__"
 
 let savedGsettings = null
 let kioskActive = false
 let hotkeyRegistered = false
+let grabbedAccelerators = []
 let managedWindow = null
 let hotkeyHandler = null
 let chromePaused = false
@@ -120,6 +367,23 @@ export function isKioskEnabled() {
     if (process.env.VITE_DISABLE_KIOSK === "true") return false
     if (process.env.VITE_FORCE_KIOSK === "true") return true
     return app.isPackaged
+}
+
+/**
+ * One-time provisioning of the GNOME Shell extension that takes the touch
+ * gestures away. Called at startup rather than on entering kiosk mode:
+ * gnome-shell only discovers new extensions when a session begins, so
+ * installing it any later would always leave it a reboot behind. The MDM
+ * installs the same extension; both doing it is deliberate, since either
+ * app has to be able to lock a device down on its own.
+ */
+export async function provisionKioskGestureExtension() {
+    try {
+        return await installGestureLockdown()
+    } catch (error) {
+        log(`Gesture extension provisioning failed: ${error?.message}`)
+        return { success: false, message: error?.message }
+    }
 }
 
 // True only when Chromium itself is a Wayland client. The session being
@@ -219,22 +483,37 @@ async function captureAndApplyLockdown() {
         })
     )
 
-    if (!existing) {
-        for (const result of reads) {
-            if (result.status !== "fulfilled") {
-                log(`Could not read gsettings key: ${result.reason?.message}`)
-                continue
-            }
-            const { schema, key, value } = result.value
-            const id = `${schema}::${key}`
-            const lockdownValue = lockdownValueFor(schema, key)
-            const alreadyLockedDown =
-                lockdownValue !== undefined &&
-                normalizeGsettingsValue(value) === normalizeGsettingsValue(lockdownValue)
-            captured[id] = alreadyLockedDown ? UNLOCKED_FALLBACKS[id] ?? value : value
+    // Keys already in the snapshot keep the value captured the first time —
+    // that is the user's real desktop, and re-reading one now would read our
+    // own lockdown back. Keys *not* in it are new to the table since the
+    // snapshot was written, and have to be captured now or they would never
+    // be restored on exit. That is what lets the lockdown table grow
+    // without invalidating every snapshot on every device.
+    let added = 0
+    for (const result of reads) {
+        if (result.status !== "fulfilled") {
+            log(`Could not read gsettings key: ${result.reason?.message}`)
+            continue
         }
+        const { schema, key, value } = result.value
+        const id = `${schema}::${key}`
+        if (captured[id] !== undefined) continue
+
+        const lockdownValue = lockdownValueFor(schema, key)
+        const alreadyLockedDown =
+            lockdownValue !== undefined &&
+            normalizeGsettingsValue(value) === normalizeGsettingsValue(lockdownValue)
+        captured[id] = alreadyLockedDown ? UNLOCKED_FALLBACKS[id] ?? RESET_TO_DEFAULT : value
+        added += 1
+    }
+
+    if (added) {
         writeSnapshotFile(captured)
-        log(`Saved original desktop settings snapshot (${Object.keys(captured).length} keys).`)
+        log(
+            existing
+                ? `Captured ${added} desktop setting(s) new to the lockdown table.`
+                : `Saved original desktop settings snapshot (${added} keys).`
+        )
     }
 
     savedGsettings = captured
@@ -258,6 +537,7 @@ async function restoreGsettings() {
         KIOSK_GSETTINGS.map(([schema, key]) => {
             const saved = snapshot[`${schema}::${key}`]
             if (saved === undefined) return Promise.resolve()
+            if (saved === RESET_TO_DEFAULT) return runGsettings(["reset", schema, key])
             return runGsettings(["set", schema, key, saved])
         })
     )
@@ -276,7 +556,28 @@ async function restoreGsettings() {
 // anything, so it is deliberately synchronous.
 export function restoreGsettingsSync() {
     if (desktopRestored) return
+
+    // SUHI-Pulse arms a deployed device as a kiosk appliance: it autologs
+    // in and boots straight back into the kiosk, and nobody has asked for
+    // the desktop back. Suhi is the app that device runs, so Suhi shutting
+    // down — for an update, at a reboot, or because it crashed — must not
+    // undo that. Handing the panel, the dock and Alt+Tab back here would
+    // mean every restart showed a working Ubuntu desktop for as long as it
+    // took the kiosk to come up again.
+    //
+    // A Suhi launched on an ordinary desktop is never armed, so it still
+    // restores everything exactly as before.
+    if (isGestureLockdownArmed()) {
+        log("Device is armed as a kiosk appliance — leaving the desktop lockdown in place.")
+        return
+    }
+
     desktopRestored = true
+
+    // The gesture extension is desktop state in exactly the same way the
+    // gsettings below are, so a Suhi that dies without exitKioskMode must
+    // hand the touch gestures back too.
+    disableGestureLockdownSync()
 
     const snapshot = savedGsettings || readSnapshotFile()
     if (!snapshot) return
@@ -295,7 +596,11 @@ export function restoreGsettingsSync() {
             continue
         }
         try {
-            execFileSync("gsettings", ["set", schema, key, saved], {
+            const args =
+                saved === RESET_TO_DEFAULT
+                    ? ["reset", schema, key]
+                    : ["set", schema, key, saved]
+            execFileSync("gsettings", args, {
                 timeout: 1500,
                 stdio: "ignore"
             })
@@ -370,6 +675,13 @@ function applyWindowLockState(win) {
         safeCall("setFullScreen", () => win.setFullScreen(true))
         safeCall("setKiosk", () => win.setKiosk(true))
         safeCall("setAlwaysOnTop", () => win.setAlwaysOnTop(true, "screen-saver"))
+        // Belt and braces for the workspace gestures: even on a desktop
+        // where one slipped through and switched workspace, the window is
+        // on the one that arrives too, so there is nothing behind it to
+        // reveal.
+        safeCall("setVisibleOnAllWorkspaces", () =>
+            win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+        )
         safeCall("focus", () => win.focus())
         safeCall("moveTop", () => win.moveTop())
     })
@@ -410,6 +722,7 @@ function releaseWindowLockState(win) {
     withSelfManagedChange(() => {
         safeCall("setKiosk(false)", () => win.setKiosk(false))
         safeCall("setAlwaysOnTop(false)", () => win.setAlwaysOnTop(false))
+        safeCall("setVisibleOnAllWorkspaces(false)", () => win.setVisibleOnAllWorkspaces(false))
         safeCall("setFullScreen(false)", () => win.setFullScreen(false))
         safeCall("setSkipTaskbar(false)", () => win.setSkipTaskbar(false))
         safeCall("setMinimizable(true)", () => win.setMinimizable(true))
@@ -468,6 +781,7 @@ export async function enterKioskMode() {
     log("Entering kiosk mode.")
     kioskActive = true
     chromePaused = false
+    desktopRestored = false
     applyWindowLockState(managedWindow)
     scheduleLockRetries()
     try {
@@ -475,14 +789,43 @@ export async function enterKioskMode() {
     } catch (error) {
         log(`GNOME lockdown failed (window lock still applied): ${error?.message}`)
     }
+    // Deliberately after the lockdown: GNOME holds Alt+Tab and friends until
+    // its gsettings are blanked, and an XGrabKey for a key another client
+    // already owns just fails.
+    grabKioskAccelerators()
+
+    // Keys are only half of a touchscreen kiosk. A three- or four-finger
+    // swipe and a drag from the screen edge never reach this application at
+    // all — gnome-shell handles them itself, with no gsettings key and no
+    // accelerator to grab — so on a touch device they were the one way left
+    // to slide Suhi off the screen. See gestureLockdown.js. Never fatal: a
+    // desktop that refuses the extension still gets everything above.
+    try {
+        await enableGestureLockdown()
+    } catch (error) {
+        log(`Touch gesture lockdown failed: ${error?.message}`)
+    }
 }
 
+// The authorised way out: an administrator has typed the device password.
+// This is the one path that also un-arms a kiosk appliance — everything
+// else (a crash, SIGTERM, a reboot) deliberately leaves it armed, so the
+// device comes back locked. The MDM does the same from its own exit path;
+// both do it because either app has to be able to hand a device back on its
+// own.
 export async function exitKioskMode() {
     log("Exiting kiosk mode.")
     kioskActive = false
     chromePaused = false
     clearLockRetries()
+    releaseKioskAccelerators()
     releaseWindowLockState(managedWindow)
+    disarmGestureLockdown()
+    try {
+        await disableGestureLockdown()
+    } catch (error) {
+        log(`Failed to release the touch gesture lockdown: ${error?.message}`)
+    }
     try {
         await restoreGsettings()
     } catch (error) {
@@ -510,46 +853,73 @@ export function resumeKioskChrome() {
     log("Resumed kiosk chrome after external overlay.")
 }
 
-// Validates a real system password via `sudo`, independent of any cached
-// credential — `-k` forces a fresh prompt so a stale sudo timestamp can't
-// accidentally approve an exit.
-export function verifyAdminPassword(password) {
+// A do-nothing root-owned command the MDM installs and deliberately exempts
+// from its passwordless-sudo rule, so that authenticating against it forces
+// a real PAM check. Kept in sync with ADMIN_VERIFY_HELPER in the MDM's
+// privilege.js.
+const ADMIN_VERIFY_HELPER = "/usr/local/lib/wellwiz-mdm/verify-admin"
+
+function runSudoCheck(args, password) {
     return new Promise((resolve) => {
-        if (typeof password !== "string" || !password) {
-            resolve(false)
-            return
-        }
-
         let settled = false
-        const child = spawn("sudo", ["-k", "-S", "-p", "", "true"], { env: process.env })
+        const child = spawn("sudo", args, { env: process.env })
 
-        const timer = setTimeout(() => {
+        const finish = (value) => {
             if (settled) return
             settled = true
+            clearTimeout(timer)
+            resolve(value)
+        }
+
+        const timer = setTimeout(() => {
             try {
                 child.kill("SIGKILL")
             } catch {
                 // ignore
             }
-            resolve(false)
+            finish(false)
         }, 10000)
 
-        child.on("exit", (code) => {
-            if (settled) return
-            settled = true
-            clearTimeout(timer)
-            resolve(code === 0)
-        })
-        child.on("error", () => {
-            if (settled) return
-            settled = true
-            clearTimeout(timer)
-            resolve(false)
-        })
+        child.on("exit", (code) => finish(code === 0))
+        child.on("error", () => finish(false))
 
-        child.stdin.write(`${password}\n`)
+        if (password !== undefined) child.stdin.write(`${password}\n`)
         child.stdin.end()
     })
+}
+
+// Validates a real system password, independent of any cached credential —
+// `-k` discards the sudo timestamp so a stale one can't approve an exit.
+//
+// The check cannot simply be `sudo -k -S true`. The MDM provisions this
+// device with passwordless sudo, and under that rule sudo never reads the
+// password at all: it exits 0 and every string typed at the exit prompt
+// looks correct. So the check runs against the one command the MDM's
+// sudoers drop-in exempts from NOPASSWD. Where that helper is absent, the
+// plain check is used — but only after confirming sudo genuinely wants a
+// password, and it refuses rather than guessing if it doesn't. Silently
+// accepting any password is the one outcome that must not happen.
+export async function verifyAdminPassword(password) {
+    if (typeof password !== "string" || !password) return false
+
+    let target
+    try {
+        target = fs.existsSync(ADMIN_VERIFY_HELPER) ? [ADMIN_VERIFY_HELPER] : ["true"]
+    } catch {
+        target = ["true"]
+    }
+
+    if (target[0] === "true") {
+        const passwordlessWorks = await runSudoCheck(["-k", "-n", "true"])
+        if (passwordlessWorks) {
+            log(
+                "Refusing kiosk exit: sudo runs without a password on this device and the MDM's verify helper is not installed, so the password cannot be checked."
+            )
+            return false
+        }
+    }
+
+    return runSudoCheck(["-k", "-S", "-p", "", ...target], password)
 }
 
 function isExitHotkeyEvent(input) {
@@ -564,18 +934,56 @@ function isExitHotkeyEvent(input) {
     )
 }
 
+// Text-editing shortcuts the kiosk UI genuinely needs — the kiosk-exit
+// password field and any other input have to stay usable. Everything else
+// carrying a modifier is refused.
+const ALLOWED_CONTROL_KEYS = new Set(["a", "c", "v", "x", "z", "y"])
+const ALLOWED_CONTROL_NAV_KEYS = new Set([
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "Backspace",
+    "Delete"
+])
+
+// Deny-by-default rather than the old allow-by-default list. Enumerating
+// the shortcuts to block could never be complete — Alt+F2, Super+A,
+// Ctrl+Shift+I and every other combination not named in the old list
+// reached the desktop untouched. Anything with a modifier is now refused
+// unless it is on the short text-editing allowlist above.
 function shouldBlockKioskShortcut(input) {
-    if (!input || input.type !== "keyDown") return false
+    if (!input || (input.type !== "keyDown" && input.type !== "keyUp")) return false
     const key = String(input.key || "")
     const lower = key.toLowerCase()
 
-    if (key === "F11" || key === "F12") return true
-    if (input.alt && (key === "F4" || key === "Tab" || key === "Escape" || key === " " || lower === "space")) {
+    // Super/Meta in any form — pressed alone it opens the overview, and in
+    // combination it drives GNOME's whole shortcut set.
+    if (input.meta) return true
+    if (key === "Meta" || key === "Super" || key === "OSLeft" || key === "OSRight") return true
+
+    // Alt is a modifier this app never uses: Alt+Tab, Alt+F2, Alt+F4,
+    // Alt+Space and the menu mnemonics all live here.
+    if (input.alt) return true
+
+    // F1–F12: F11 fullscreen, F12 devtools, and the Alt/Ctrl+Alt function
+    // bindings various desktops add.
+    if (/^F([1-9]|1[0-2])$/.test(key)) return true
+
+    if (input.control) {
+        if (ALLOWED_CONTROL_NAV_KEYS.has(key)) return false
+        if (!input.shift && ALLOWED_CONTROL_KEYS.has(lower)) return false
+        // Ctrl+Q/W/N/R quit-reload-new-window, Ctrl+Shift+I/J/C devtools,
+        // and anything else a future Chromium adds.
         return true
     }
-    if (input.control && ["q", "w", "r", "n"].includes(lower)) return true
-    if (input.control && input.alt && ["t", "delete", "l"].includes(lower)) return true
-    if (key === "Meta" || key === "OSLeft" || key === "OSRight" || key === "Super") return true
+
+    // Screenshot and the context-menu key: neither has a use here, and both
+    // are a way to reach the shell.
+    if (key === "PrintScreen" || key === "ContextMenu") return true
+
     return false
 }
 
@@ -598,6 +1006,43 @@ export function registerKioskHotkey(onTrigger) {
         log(`Failed to register kiosk hotkey: ${error?.message}`)
         return false
     }
+}
+
+// Swallow every desktop accelerator we can take at the X server. A grab
+// that fails is not an error worth surfacing: some are already held by
+// another client, and on a native-Wayland session globalShortcut is a
+// silent no-op for all of them — the before-input-event filter and the
+// gsettings lockdown are what cover those cases.
+export function grabKioskAccelerators() {
+    if (grabbedAccelerators.length) return
+
+    const taken = []
+    for (const accelerator of KIOSK_GRABBED_ACCELERATORS) {
+        try {
+            // A no-op handler is the point: the key reaches us instead of
+            // the desktop, and we do nothing with it.
+            if (globalShortcut.register(accelerator, () => {})) taken.push(accelerator)
+        } catch {
+            // Unparseable or unavailable on this platform — skip it.
+        }
+    }
+    grabbedAccelerators = taken
+    log(
+        `Grabbed ${taken.length}/${KIOSK_GRABBED_ACCELERATORS.length} desktop accelerators` +
+            `${isWaylandSession() ? " (native Wayland — most grabs are no-ops)" : ""}.`
+    )
+}
+
+export function releaseKioskAccelerators() {
+    for (const accelerator of grabbedAccelerators) {
+        try {
+            globalShortcut.unregister(accelerator)
+        } catch {
+            // ignore
+        }
+    }
+    if (grabbedAccelerators.length) log(`Released ${grabbedAccelerators.length} desktop accelerators.`)
+    grabbedAccelerators = []
 }
 
 export function unregisterKioskHotkey() {

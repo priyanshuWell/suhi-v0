@@ -152,6 +152,7 @@ function Key({ id, active, onPress, onRelease, children, style = {}, title }) {
     const isDown = active === id
     return (
         <button
+            type="button"
             title={title}
             style={{
                 display: "flex",
@@ -174,8 +175,19 @@ function Key({ id, active, onPress, onRelease, children, style = {}, title }) {
                 minWidth: 0,
                 ...style
             }}
-            onPointerDown={() => onPress(id)}
+            // The password field must keep DOM focus the whole time the
+            // on-screen keyboard is used — a physical keyboard has to stay
+            // usable, and losing focus to a key button would also blur the
+            // <input> the dots are rendered from. Suppressing mousedown's
+            // default is the only thing that stops a <button> taking focus
+            // without also suppressing the tap itself.
+            onMouseDown={(event) => event.preventDefault()}
+            onPointerDown={(event) => {
+                event.preventDefault()
+                onPress(id)
+            }}
             onPointerUp={onRelease}
+            onPointerCancel={onRelease}
             onPointerLeave={onRelease}
         >
             {children}
@@ -490,13 +502,21 @@ function FullKeyboard({ onKeyPress, onBackspace, onSubmit, onClose }) {
 export default function KeyboardContainer({ onKeyPress, onBackspace, onSubmit, onClose }) {
     return (
         <div
-            onTouchStart={(e) => e.preventDefault()}
+            // This used to preventDefault() every touchstart on the whole
+            // container. On a touchscreen that cancelled the gesture before
+            // any key saw it, so the keyboard rendered but typed nothing —
+            // focus suppression belongs on the individual keys (see Key),
+            // not on the surface they sit on.
+            onMouseDown={(event) => event.preventDefault()}
             style={{
                 position: "fixed",
                 bottom: 0,
                 left: 0,
                 right: 0,
-                zIndex: 50,
+                // Must outrank the kiosk-exit dialog layer (z-60). Below it,
+                // the dialog's full-screen flex wrapper covers the keyboard
+                // and every tap lands on the wrapper instead of a key.
+                zIndex: 70,
                 background: "linear-gradient(180deg, #0d0d0d 0%, #000 100%)",
                 borderTop: "1px solid #1c1c1c",
                 padding: "6px 10px 14px",

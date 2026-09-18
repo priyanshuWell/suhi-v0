@@ -13,13 +13,16 @@ import {
     isKioskActive,
     isKioskEnabled,
     pauseKioskChrome,
+    provisionKioskGestureExtension,
     registerKioskHotkey,
+    releaseKioskAccelerators,
     restoreGsettingsSync,
     resumeKioskChrome,
     setManagedWindow,
     unregisterKioskHotkey,
     verifyAdminPassword
 } from "./kiosk"
+import { showMdmWindow } from "./mdmBridge"
 import fs from "fs"
 import crypto from "crypto"
 import axios from "axios"
@@ -29,6 +32,13 @@ import { setupFileLogging } from "./fileLog"
 const loudness = require("loudness")
 
 setupFileLogging()
+
+// A kiosk that autologs in has no one to type a keyring password, but
+// Chromium asks for one anyway the first time anything touches its password
+// store — a GNOME dialog, over the kiosk, waiting for a password nobody at
+// the site has. The basic store keeps everything in-process and asks
+// nobody. Must be set before Electron initialises its own storage.
+app.commandLine.appendSwitch("password-store", "basic")
 
 // Must be the first thing after logging is available and before anything
 // else in this file has run: on a Wayland session this re-execs Suhi on
@@ -759,6 +769,20 @@ app.whenReady().then(() => {
         `[KIOSK] enabled=${KIOSK_ENABLED} packaged=${app.isPackaged} platform=${process.platform} nodeEnv=${process.env.NODE_ENV || ""}`
     )
 
+    if (KIOSK_ENABLED) {
+        provisionKioskGestureExtension()
+            .then((result) => {
+                if (result?.pendingSessionRestart) {
+                    console.info(
+                        "[KIOSK] Touch gesture lockdown installed — GNOME loads it at the next login, so it is active from the next reboot onwards."
+                    )
+                }
+            })
+            .catch((error) =>
+                console.error("[KIOSK] Gesture extension provisioning failed:", error)
+            )
+    }
+
     session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
         if (permission === "media") {
             callback(true)
@@ -812,6 +836,16 @@ app.whenReady().then(() => {
         }
 
         await exitKioskMode()
+
+        // The MDM is still running behind Suhi, but with its window hidden —
+        // which is why leaving kiosk used to land on a bare desktop with no
+        // sign of it. Whoever just unlocked this device did so to get at the
+        // management side, so it is put back on screen for them.
+        const mdm = showMdmWindow()
+        if (!mdm.success) {
+            console.info(`[MAIN] MDM was not brought to the front: ${mdm.message}`)
+        }
+
         return { success: true }
     })
 
@@ -919,6 +953,7 @@ app.on("before-quit", () => {
 
 app.on("will-quit", () => {
     unregisterKioskHotkey()
+    releaseKioskAccelerators()
     // GNOME lockdown is desktop state and survives this process, so it has
     // to be undone here too — not only on the technician exit path.
     if (KIOSK_ENABLED) restoreGsettingsSync()
@@ -936,6 +971,7 @@ for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"]) {
         console.info(`[MAIN] Received ${signal} — shutting down.`)
         if (KIOSK_ENABLED) restoreGsettingsSync()
         unregisterKioskHotkey()
+        releaseKioskAccelerators()
         app.exit(0)
     })
 }
