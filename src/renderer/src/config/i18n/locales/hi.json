@@ -26,6 +26,7 @@
     "profile": {
         "welcome_suhi": "सुही में आपका स्वागत है",
         "let_start_your_journey": "आपकी यात्रा शुरू करते हैं",
+        "wellness_agreement": "Start पर टैप करके, आप आज के वेलनेस चेक के लिए सहमत होते हैं। आप कभी भी दूर हटकर इसे रोक सकते हैं।",
         "name": "नाम",
         "class": "कक्षा",
         "age": "आयु",
@@ -150,15 +151,15 @@
         "hydration": "हाइड्रेशन",
         "hydration_low_message": "इसके बाद एक गिलास पानी पीने के बारे में क्या ख़याल है?",
         "study_tip_default": "अध्ययन करते समय आपके कान आपके हीरो होते हैं",
-        "go_to_homepage": "मुखपृष्ठ प्र जाएं",
+        "go_to_homepage": "होम पेज पर जाएँ!",
         "body_constitution": "शारीरिक गठन",
         "vata": "वात",
         "pitta": "पित्त",
         "kapha": "कफ",
         "head_desc": "प्राचीन भारतीय ज्ञान के अनुसार, हर किसी में तीन ऊर्जाओं का एक विशेष मिश्रण होता है, जिन्हें 'दोष' कहा जाता है। यह रहा आपका!",
         "default_name": "स्टूडेंट",
-        "congratulations_named": "कांग्रेचुलेशन, {{name}}!",
-        "download_report": "डाउनलोड रिपोर्ट",
+        "congratulations_named": "बधाई हो, {{name}}! यह रहे आपके परिणाम",
+        "download_report": "अधिक जानकारी के लिए Suhi होलिस्टिक वेलनेस रिपोर्ट डाउनलोड करें",
         "sections": {
             "mind": "माइंड",
             "brain": "ब्रेन",
@@ -211,6 +212,20 @@
     "error": {
         "no_result": "परिणाम डेटा लोड करने में विफल",
         "redirecting": "घर पर पुनः निर्देशित किया जा रहा है..."
+    },
+    "identifyStudent": {
+        "title_name": "हमने आपको पहचान लिया!",
+        "subtitle_name": "बस अपना पूरा नाम दर्ज करें ताकि हम पुष्टि कर सकें",
+        "title_id": "अपने SUHI Id का उपयोग करके लॉग इन करें",
+        "name_label": "पूरा नाम",
+        "name_placeholder": "अपना पूरा नाम दर्ज करें",
+        "enter_name": "कृपया अपना पूरा नाम दर्ज करें",
+        "enter_suhi_id": "कृपया अपनी SUHI Id दर्ज करें",
+        "student_not_found_redirect": "पहचाने गए चेहरों में प्रोफ़ाइल नहीं मिली। शुरू पर पुनः निर्देशित किया जा रहा है...",
+        "multiple_found": "इस नाम के {{count}} छात्र मिले। कृपया अपनी SUHI Id दर्ज करें।",
+        "not_found_hint": "पहचाने गए छात्रों में नाम नहीं मिला। कृपया अपनी SUHI Id दर्ज करें।",
+        "back_to_name": "← नाम पर वापस जाएं",
+        "use_suhi_id": "इसके बजाय SUHI Id का उपयोग करके लॉग इन करें"
     },
     "loginSuhi": {
         "title": "अपने आईडी का उपयोग करके लॉग इन करें",
@@ -275,7 +290,8 @@
         "bia_error_title": "BIA एरर",
         "moving_to_next_scan": "अगले स्कैन पर जा रहे हैं",
         "stand_straight": "सीधे खड़े हो जाएं",
-        "stand_straight_still": "हम आपकी ऊंचाई और वजन माप रहे हैं"
+        "stand_straight_still": "हम आपकी ऊंचाई और वजन माप रहे हैं",
+        "no_activity_session_desc": "हम कोई गतिविधि नहीं देख पा रहे हैं। आपको होम पेज पर वापस भेजा जा रहा है।"
     },
     "smoothieSlash": {
         "beAware": {
@@ -438,14 +454,14 @@
     "progress_stages": {
         "login": "फेस स्कैन",
         "bia": "बॉडी स्कैन",
-        "smoothie_slash": "माइंड स्कैन",
+        "smoothie_slash": "स्मूदी स्लैश",
         "voice_analysis": "वॉयस स्कैन",
         "color_blindness": "विजन स्कैन",
         "height_weight": "बीएमआई स्कैन",
-        "perilous_path": "माइंड स्कैन",
+        "perilous_path": "पेरिलस पाथ",
         "visual_acuity": "विजन टेस्ट",
         "beat_drop": "बीट ड्रॉप",
-        "result": "रिजल्ट"
+        "result": "परिणाम"
     },
     "stage_celebration": {
         "stage_cleared": "स्टेज {{stageNumber}} क्लियर्ड!",

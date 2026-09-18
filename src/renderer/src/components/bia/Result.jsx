@@ -630,7 +630,12 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     /* ── derived values ── */
     const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
     const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
-    const rawUserName = storeUser?.data?.name || t("bia_result.default_name", "there")
+    const rawUserName =
+        storeUser?.data?.name ||
+        storeUser?.data?.student_name ||
+        apiReport?.student_name ||
+        apiReport?.name ||
+        t("bia_result.default_name", "Student")
     const userName = capitalizeFirstLetter(rawUserName)
 
     const formatLabel = (value, fallback = "—") => {
@@ -988,7 +993,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     >
                         {t(
                             "bia_result.congratulations_named",
-                            `Congratulations ${userName}, Here are your results`
+                            `Congratulations ${userName}, Here are your results`,
+                            { name: userName }
                         )}
                     </h1>
 

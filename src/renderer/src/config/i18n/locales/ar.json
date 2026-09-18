@@ -26,6 +26,7 @@
     "profile": {
         "welcome_suhi": "مرحباً بك في SUHI ",
         "let_start_your_journey": "فلنبدأ رحلتك",
+        "wellness_agreement": "بالضغط على Start، فإنك توافق على الفحص الصحي لليوم. يمكنك التوقف في أي وقت بالابتعاد.",
         "name": "الاسم",
         "class": "الصف",
         "age": "العمر",
@@ -51,6 +52,20 @@
         "error_unrecognized_title": "عذراً، لم أتمكن من فحص وجهك",
         "error_unrecognized_retry_desc": "يرجى مواجهة الكاميرا، والتأكد من عدم وجود عائق، والمحاولة مرة أخرى.",
         "error_unrecognized_max_desc": "يرجى الوقوف مع محاذاة قدميك على آثار الأقدام، والنظر مباشرة إلى الكاميرا، والمحاولة مرة أخرى."
+    },
+    "identifyStudent": {
+        "title_name": "لقد تعرّفنا عليك!",
+        "subtitle_name": "أدخل اسمك الكامل لتأكيد هويتك",
+        "title_id": "تسجيل الدخول باستخدام SUHI Id الخاص بك",
+        "name_label": "الاسم الكامل",
+        "name_placeholder": "أدخل اسمك الكامل",
+        "enter_name": "يرجى إدخال اسمك الكامل",
+        "enter_suhi_id": "يرجى إدخال معرّف SUHI الخاص بك",
+        "student_not_found_redirect": "لم يتم العثور على الملف الشخصي في الوجوه المكتشفة. جاري إعادة التوجيه إلى البداية...",
+        "multiple_found": "تم العثور على {{count}} طلاب بهذا الاسم. يرجى إدخال معرّف SUHI الخاص بك.",
+        "not_found_hint": "الاسم غير موجود في قائمة الطلاب المكتشفين. يرجى إدخال معرّف SUHI الخاص بك.",
+        "back_to_name": "← العودة إلى الاسم",
+        "use_suhi_id": "تسجيل الدخول باستخدام SUHI Id بدلاً من ذلك"
     },
     "loginSuhi": {
         "title": "سجل الدخول باستخدام معرفك أو بصمتك",
@@ -116,7 +131,8 @@
         "last_retry_title": "أوبس! آي كانوت ديتكت يو",
         "suhi_coordinator_contact": "بليز كونتاكت يور سوهي كيوسك كوردينيتور فور أسيستانس.",
         "different_user_found_desc": "لوكس لايك سم وان أبيرد إن فرونت أوف ذا كيوسك!",
-        "moving_to_next_scan": "موفينغ تو نكست سكان"
+        "moving_to_next_scan": "موفينغ تو نكست سكان",
+        "no_activity_session_desc": "لا يمكننا اكتشاف أي نشاط. جاري إعادة التوجيه إلى الصفحة الرئيسية."
     },
     "colorBlindness": {
         "title": "فحص رؤية الألوان",
@@ -223,8 +239,8 @@
         "kapha": "كافا",
         "head_desc": "في الحكمة الهندية القديمة، يمتلك كل شخص مزيجاً خاصاً من 3 طاقات تسمى الدوشا. هذا هو مزيجك!",
         "default_name": "ستودنت",
-        "congratulations_named": "كونغراتشوليشنز, {{name}}!",
-        "download_report": "داونلود ريبورت",
+        "congratulations_named": "تهانينا، {{name}}! إليك نتائجك",
+        "download_report": "قم بتنزيل تقرير Suhi للعافية الشاملة لمزيد من التفاصيل",
         "sections": {
             "mind": "مايند",
             "brain": "برين",
@@ -439,11 +455,11 @@
     "progress_stages": {
         "login": "فيس سكان",
         "bia": "بودي سكان",
-        "smoothie_slash": "مايند سكان",
+        "smoothie_slash": "سموذي سلاش",
         "voice_analysis": "فويس سكان",
         "color_blindness": "فيجن سكان",
         "height_weight": "بي إم آي سكان",
-        "perilous_path": "مايند سكان",
+        "perilous_path": "بيريلوس باث",
         "visual_acuity": "فيجن تيست",
         "beat_drop": "بيت دروب",
         "result": "ريزلت"

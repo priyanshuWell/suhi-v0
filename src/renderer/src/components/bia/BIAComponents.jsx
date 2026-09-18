@@ -545,6 +545,16 @@ export const BIAComponent = ({
         }
     }
 
+    const handleNextClick = () => {
+        stopAudio()
+        onNextClick?.()
+    }
+
+    const handleNextVoiceClick = () => {
+        stopAudio()
+        onNextVoiceClick?.()
+    }
+
     const stopAudio = () => {
         if (audioRef.current) {
             audioRef.current.pause()
@@ -672,14 +682,13 @@ export const BIAComponent = ({
                 <HeightWeightComplete
                     heightValue={heightValue}
                     weightValue={weightValue}
-                    onNextClick={onNextClick}
-                    isAudioPlaying={isAudioPlaying}
+                    onNextClick={handleNextClick}
                 />
             )}
 
             {screenType === "imcomplete" && (
                 <div className="absolute bottom-20 left-[31%]">
-                    <BlueGradientButton onClick={onNextVoiceClick} disabled={isAudioPlaying}>
+                    <BlueGradientButton onClick={handleNextVoiceClick}>
                         {t("common.next")}
                     </BlueGradientButton>
                 </div>

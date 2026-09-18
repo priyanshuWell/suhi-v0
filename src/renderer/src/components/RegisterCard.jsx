@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react"
 import lightbg from "../assets/lightbg.png"
-import lightblub from "../assets/lightblub.png"
 import projector from "../assets/projector.png"
 import frame1 from "../assets/verfied-frame.svg"
 import profilepic from "../assets/profile-pic.png"
@@ -8,7 +7,7 @@ import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
 import { getAudioForCurrentLanguage } from "../constants/audio"
-import { getNextRoute, resolvePostStageRoute } from "../utils/stageRouter"
+import { getNextRoute } from "../utils/stageRouter"
 
 const buildProfileImage = (imagePath) => {
     if (!imagePath) return profilepic
@@ -28,30 +27,28 @@ const buildProfileImage = (imagePath) => {
 
     return profilepic
 }
+
 export default function RegisterCard() {
+    const navigate = useNavigate()
+    const { t } = useTranslation()
+
     const user = useSelector((state) => state.common.user)
     const screening = useSelector((state) => state.common.screening)
+    const candidates = useSelector((state) => state.common.candidates) || []
+
     const nextStage = screening?.nextStage || null
     const pendingStages = screening?.pendingStages || []
     const isPendingTransition = screening?.isPendingTransition || false
-    console.log("screening:", screening, "nextStage:", nextStage, "isPendingTransition:", isPendingTransition)
+
     // API may return either `photo_url` (face-scan flow) or `image_path` (SUHI-ID flow)
     const imagePath = user?.data?.photo_url || user?.data?.image_path || ""
-
-    // safer extraction
-    const folderName = imagePath.substring(imagePath.lastIndexOf("/") + 1)
-
-    console.log("imagePath:", imagePath)
-    console.log("folderName:", folderName)
 
     const [isAudioPlaying, setIsAudioPlaying] = useState(false)
     const audioRef = React.useRef(null)
 
     const profileImageSrc = buildProfileImage(imagePath)
 
-    console.log("profileImageSrc:", profileImageSrc)
     useEffect(() => {
-        // Play audio when component mounts
         playAudio()
     }, [])
 
@@ -64,10 +61,9 @@ export default function RegisterCard() {
                 console.log("Audio playback failed:", err)
                 setIsAudioPlaying(false)
             })
-        } else if (!audioPath) {
-            console.log("No audio for confirm_user in current language")
         }
     }
+
     const stopAudio = () => {
         if (audioRef.current) {
             audioRef.current.pause()
@@ -80,26 +76,17 @@ export default function RegisterCard() {
         setIsAudioPlaying(false)
     }
 
-    console.log("users", user, screening, nextStage)
-    const navigate = useNavigate()
-    const { t } = useTranslation()
-
     const studentName = user?.data?.name || user?.data?.student_name || "Student"
     const studentAge = user?.data?.age || "15"
     const studentClass = user?.data?.class_section || user?.class_section || "II-A"
-    // console.log("gender", user?.data?.gender, user?.data?.gender.toLowerCase())
+
     const handleLetsGo = () => {
         stopAudio()
-        // Use the next_stage from the backend (stored in Redux during login)
-        // 1. Screening 1 fully done (is_pending_transition) OR
-        //    Screening 2 fully done (next_stage null + no pending stages)
-        //    → always go to the result page
         if (isPendingTransition || (nextStage === null && pendingStages.length === 0)) {
             console.log("[RegisterCard] screening complete — navigating to result page")
             navigate("/bia/result")
             return
         }
-        // 2. Normal next-stage routing
         const nextRoute = getNextRoute(nextStage, "/bia/leg50")
         console.log("[RegisterCard] navigating to next stage:", nextRoute)
         navigate(nextRoute)
@@ -126,20 +113,26 @@ export default function RegisterCard() {
                 <img
                     src={frame1}
                     alt="frame"
-                    className="absolute inset-0    z-0 pointer-events-none "
+                    className="absolute inset-0 z-0 pointer-events-none"
                 />
 
                 {/* ── Layer 2: All content — centered inside the frame ── */}
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-12 px-16 bg-black/20 ">
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-12 px-16 bg-black/20">
                     {/* Greeting */}
-                    <div className="text-center flex flex-col gap-3">
+                    <div className="text-center flex flex-col gap-3 mt-12">
                         <h1 className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta">
                             {t("common.hi")}, {studentName}
                         </h1>
-                        <p className="text-[40px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta">
+                        <p className="text-[35px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta">
                             {t("profile.welcome_suhi")}
                             <br />
-                            {t("profile.let_start_your_journey")}
+                            <span className="text-[30px]"> {t("profile.let_start_your_journey")}</span>
+                        </p>
+                        <p className="text-[20px] w-3/4 leading-relaxed tracking-normal text-white/70 font-anta max-w-[750px] mx-auto mt-1">
+                            {t(
+                                "profile.wellness_agreement",
+                                "By tapping Start, you agree to today's wellness check. You can stop anytime by stepping away"
+                            )}
                         </p>
                     </div>
 
@@ -186,13 +179,13 @@ export default function RegisterCard() {
                     <button
                         onClick={handleLetsGo}
                         className="
-            relative w-[480px] h-[100px]
-            flex items-center justify-center
-            rounded-[28px] border-[3px] border-white
-            text-white text-[48px] tracking-[-0.6px]
-            active:scale-[0.98] transition-transform duration-200
-            overflow-hidden
-          "
+                            relative w-[480px] h-[100px]
+                            flex items-center justify-center
+                            rounded-[28px] border-[3px] border-white
+                            text-white text-[48px] tracking-[-0.6px]
+                            active:scale-[0.98] transition-transform duration-200
+                            overflow-hidden
+                        "
                         style={{ fontFamily: "'Anta', sans-serif" }}
                     >
                         <span
@@ -212,10 +205,10 @@ export default function RegisterCard() {
                         <span className="relative">{t("common.let_go")}</span>
                     </button>
 
-                    {/* Not you? — no margin, gap handles spacing */}
+                    {/* Not you? */}
                     <button
                         onClick={handleNotYou}
-                        className="text-white text-[40px] underline pt-28 underline-offset-4  active:opacity-70 transition-opacity"
+                        className="text-white text-[40px] underline pt-28 underline-offset-4 active:opacity-70 transition-opacity"
                         style={{ fontFamily: "'Anta', sans-serif" }}
                     >
                         {t("common.not_me")}
@@ -234,37 +227,3 @@ export default function RegisterCard() {
         </div>
     )
 }
-
-// {
-//   "success": true,
-//   "data": {
-//     "buffer_id": "60f3ed9e-2c21-43d1-8363-9a08d9186baa",
-//     "status": "COMPLETED",
-//     "student_status": "REGISTERED",
-//     "user_id": "a158d845-5c4e-42f1-bff5-1c6e66fa2746",
-//     "face_id": "f2107488-5f4a-4095-a5f5-d2a7a4bcbb15",
-//     "student_name": "Ayaan Bajaj",
-//     "gender": "FEMALE",
-//     "age": 7,
-//     "video_path": null,
-//     "image_path": "/var/lib/suhi/.images/a158d845-5c4e-42f1-bff5-1c6e66fa2746_20260512_052503_aabbcc44",
-//     "frames_processed": 1,
-//     "elapsed_seconds": 1.434
-//   },
-//   "error": null,
-//    "suhi_id":null,
-//    "class_section":"II-A"
-//   "screening": {
-//     "session_id": "4928fe65-3973-4738-8820-8d2e19e2837f",
-//     "is_resumed": true,
-//     "resume_count": 1,
-//     "next_stage": {
-//       "stage_key": "bia",
-//       "display_name": "BIA",
-//       "stage_order": 2
-//     },
-//     "completed_stages": [
-//       "login"
-//     ]
-//   }
-// }

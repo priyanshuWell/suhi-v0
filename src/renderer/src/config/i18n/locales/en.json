@@ -157,8 +157,8 @@
         "kapha": "Kapha",
         "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!",
         "default_name": "Student",
-        "congratulations_named": "Congratulations, {{name}}!",
-        "download_report": "Download Report",
+        "congratulations_named": "Congratulations, {{name}}!, Here are you Results",
+        "download_report": "Download Suhi Holistic Wellness report for more details",
         "sections": {
             "mind": "Mind",
             "brain": "Brain",
@@ -211,6 +211,20 @@
     "error": {
         "no_result": "Failed to load result data",
         "redirecting": "Redirecting to home..."
+    },
+    "identifyStudent": {
+        "title_name": "We've recognised you!",
+        "subtitle_name": "Just enter your full name so we can confirm it's you",
+        "title_id": "Log in using your SUHI Id",
+        "name_label": "Full Name",
+        "name_placeholder": "Enter your full name",
+        "enter_name": "Please enter your full name",
+        "enter_suhi_id": "Please enter your SUHI Id",
+        "student_not_found_redirect": "Profile not found in detected faces. Redirecting to start...",
+        "multiple_found": "{{count}} students found with this name. Please enter your SUHI Id.",
+        "not_found_hint": "Name not found in detected students. Please enter your SUHI Id.",
+        "back_to_name": "← Back to Name",
+        "use_suhi_id": "Log in using SUHI Id instead"
     },
     "loginSuhi": {
         "title": "Log in using your SUHI Id",
@@ -271,7 +285,8 @@
         "bia_error_title": "BIA Error",
         "moving_to_next_scan": "Moving to Next Scan",
         "stand_straight": "Stand straight",
-        "stand_straight_still": "We are measuring your height & weight"
+        "stand_straight_still": "We are measuring your height & weight",
+        "no_activity_session_desc":"We are not able to detect any activity. We are redirecting to home page."
     },
     "auto_idle": {
         "no_activity_detected": "No Activity Detected",
@@ -434,11 +449,11 @@
     "progress_stages": {
         "login": "Face Scan",
         "bia": "Body Scan",
-        "smoothie_slash": "Mind Scan",
+        "smoothie_slash": "Smoothie Slash",
         "voice_analysis": "Voice Scan",
         "color_blindness": "Vision Scan",
         "height_weight": "BMI Scan",
-        "perilous_path": "Mind Scan",
+        "perilous_path": "Perilous Path",
         "visual_acuity": "Vision Test",
         "beat_drop": "Beat Drop",
         "result": "Result"

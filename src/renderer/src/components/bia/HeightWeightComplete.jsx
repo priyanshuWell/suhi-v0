@@ -3,8 +3,7 @@ import textbgframe from "../../assets/bia/biatextbgframe.svg"
 export default function HeightWeightComplete({
     heightValue,
     weightValue,
-    onNextClick,
-    isAudioPlaying
+    onNextClick
 }) {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -19,7 +18,6 @@ export default function HeightWeightComplete({
                 heightCm={heightValue}
                 weightKg={weightValue}
                 onNextClick={onNextClick}
-                isAudioPlaying={isAudioPlaying}
             />
         </div>
     )

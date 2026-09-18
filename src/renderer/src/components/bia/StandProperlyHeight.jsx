@@ -58,7 +58,7 @@ const StandProperlyHeight = ({
     }, [videoSrc])
 
     return (
-        <div className="fixed inset-0 w-screen h-screen overflow-hidden" style={{ zIndex: 50 }}>
+        <div className="fixed inset-0  w-screen h-screen overflow-hidden" style={{ zIndex: 50 }}>
             {/* Background */}
             <div
                 className="absolute inset-0 bg-center bg-cover z-0"
@@ -67,8 +67,7 @@ const StandProperlyHeight = ({
 
             {/* Dark translucent overlay so the modal reads clearly */}
             <div
-                className="absolute inset-0 z-10"
-                style={{ background: "rgba(0,0,0,0.45)" }}
+                className="absolute inset-0 z-10 bg-black"
             />
 
             {/* Title + Description */}
