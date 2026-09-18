@@ -66,7 +66,7 @@ export default function BIACalculate({ user, onComplete }) {
     const [errorState, setErrorState] = useState(null)
     const [isSameUser, setSameUser] = useState(false)
     const [showHeightError, setShowHeightError] = useState(true)
-    const [heightErrorCountdown, setHeightErrorCountdown] = useState(10)
+    const [heightErrorCountdown, setHeightErrorCountdown] = useState(5)
     const [showStandOnKioskModal, setShowStandOnKioskModal] = useState(false)
     const [showDifferentUserModal, setShowDifferentUserModal] = useState(false)
     const [isComplete, setIsComplete] = useState(false)

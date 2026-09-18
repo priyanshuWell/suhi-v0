@@ -119,7 +119,7 @@ export default function RegisterCard() {
                 {/* ── Layer 2: All content — centered inside the frame ── */}
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-12 px-16 bg-black/20">
                     {/* Greeting */}
-                    <div className="text-center flex flex-col gap-3">
+                    <div className="text-center flex flex-col gap-3 mt-12">
                         <h1 className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta">
                             {t("common.hi")}, {studentName}
                         </h1>
@@ -127,6 +127,12 @@ export default function RegisterCard() {
                             {t("profile.welcome_suhi")}
                             <br />
                             {t("profile.let_start_your_journey")}
+                        </p>
+                        <p className="text-[20px] w-3/4 leading-relaxed tracking-normal text-white/70 font-anta max-w-[750px] mx-auto mt-1">
+                            {t(
+                                "profile.wellness_agreement",
+                                "By tapping Start, you agree to today's wellness check. You can stop anytime by stepping away"
+                            )}
                         </p>
                     </div>
 
