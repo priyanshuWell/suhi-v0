@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react"
 
 import BlueGradientButton from "../../ui/BlueGradientButton"
 import { useTranslation } from "react-i18next"
-import { getAudioForCurrentLanguage } from "../../../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../../../constants/audio"
 import { Volume2 } from "lucide-react"
 
 export function SpaceConvoyText({ onStartDemo }) {

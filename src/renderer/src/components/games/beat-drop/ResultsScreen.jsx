@@ -1,4 +1,5 @@
 import { motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import bg from "../../../assets/beat-drop/result/result_card_bg.png"
 import resultText from "../../../assets/beat-drop/result/result_text.png"
 import scoreCard from "../../../assets/beat-drop/result/score_star_card.png"
@@ -159,25 +160,26 @@ export default function ResultsScreen({
     streak = 10,
     onNext
 }) {
+    const { t } = useTranslation()
     const cards = [
         {
             key: "score",
             bg: scoreCard,
-            label: "Score",
+            label: t("beatDrop.results.score"),
             value: String(score),
             icon: null
         },
         {
             key: "coins",
             bg: neuroCard,
-            label: "NeuroArc Coins",
+            label: t("beatDrop.results.coins"),
             value: `+${coins}`,
             icon: neuroIcon
         },
         {
             key: "streak",
             bg: fireCard,
-            label: "Longest Streak",
+            label: t("beatDrop.results.streak"),
             value: String(streak),
             icon: null
         }
@@ -246,7 +248,7 @@ export default function ResultsScreen({
             >
                 <PillButton
                     variant="next"
-                    label="Next"
+                    label={t("common.next")}
                     textColor="#390500"
                     fontSize={64}
                     onClick={onNext}

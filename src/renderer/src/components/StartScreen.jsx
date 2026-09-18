@@ -7,8 +7,9 @@ import { useNavigate } from "react-router"
 import { Setting } from "./Setting"
 import { useTranslation } from "react-i18next"
 import StartButton from "./ui/BlueGradientButton"
-import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../constants/audio"
 import CalibrationModal from "./bia/CalibrationModal"
+import { releaseAllResources } from "../utils/cleanup"
 
 
 
@@ -18,6 +19,12 @@ export const StartScreen = () => {
     const [isActive, setIsActive] = useState(false)
     const [isAudioPlaying, setIsAudioPlaying] = useState(false)
     const audioRef = React.useRef(null)
+
+    // ── Release all resources (cameras + ports) left open from a previous screening ─
+    useEffect(() => {
+        releaseAllResources()
+        console.log("[StartScreen] All resources released on welcome screen mount.")
+    }, [])
 
     // ── Calibration state ────────────────────────────────────────────────────
     const [calStatus, setCalStatus] = useState(null) // null = loading, object = loaded

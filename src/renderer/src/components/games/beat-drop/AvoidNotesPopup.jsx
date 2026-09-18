@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import avoidCard from "../../../assets/beat-drop/popup/avoid_notes_card.png"
 import PillButton from "./PillButton"
 import { anton, cqw, FRAME_W, pct } from "./frame"
@@ -16,6 +17,7 @@ const CARD_TOP = 560
  * Title / body / button use % of the card box (same box the image fills).
  */
 export default function AvoidNotesPopup({ onGotIt }) {
+    const { t } = useTranslation()
     return (
         <div
             style={{
@@ -76,7 +78,7 @@ export default function AvoidNotesPopup({ onGotIt }) {
                             whiteSpace: "nowrap"
                         }}
                     >
-                        Avoid These Notes!
+                        {t("beatDrop.popups.avoid_title")}
                     </p>
                 </div>
 
@@ -102,19 +104,19 @@ export default function AvoidNotesPopup({ onGotIt }) {
                             color: "#FFFFFF"
                         }}
                     >
-                        These are decoy notes.{" "}
-                        <span style={{ color: "#F2F14F" }}>Do not press</span>
+                        {t("beatDrop.popups.avoid_line1_prefix")}{" "}
+                        <span style={{ color: "#F2F14F" }}>{t("beatDrop.popups.avoid_line1_highlight")}</span>
                         <br />
-                        the piano key when you see these
+                        {t("beatDrop.popups.avoid_line2")}
                         <br />
-                        notes.
+                        {t("beatDrop.popups.avoid_line3")}
                     </p>
                 </div>
 
                 {/* Got it — bottom of card, centered */}
                 <PillButton
                     variant="gotIt"
-                    label="Got it!"
+                    label={t("beatDrop.popups.got_it")}
                     textColor="#390500"
                     fontSize={64}
                     onClick={onGotIt}

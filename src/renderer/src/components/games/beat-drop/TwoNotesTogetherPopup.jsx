@@ -1,16 +1,18 @@
+import { useTranslation } from "react-i18next"
 import chordArt from "../../../assets/beat-drop/popup/two_nodes_together.png"
 import InstructionPopup from "./InstructionPopup"
 
 /** Level C — Two Notes Together! */
 export default function TwoNotesTogetherPopup({ onGotIt }) {
+    const { t } = useTranslation()
     return (
         <InstructionPopup
-            title="Two Notes Together!"
+            title={t("beatDrop.popups.two_notes_title")}
             body={
                 <>
-                    Now two notes will fall together.
+                    {t("beatDrop.popups.two_notes_line1")}
                     <br />
-                    You have to press both the keys!
+                    {t("beatDrop.popups.two_notes_line2")}
                 </>
             }
             illustration={chordArt}

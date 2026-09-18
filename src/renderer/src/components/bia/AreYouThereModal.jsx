@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react"
 import textbgframe from "../../assets/textbgframe.svg"
+import { ERROR_AUDIO } from "../../constants/audio"
 
 /**
  * Reusable "Are you there?" modal with a visible countdown.
@@ -32,7 +33,7 @@ export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, playAu
 
     useEffect(() => {
         // Play the "are you still there?" audio on mount
-        playAudio?.("errors/are_you_still_there")?.then?.(() => {
+        playAudio?.(ERROR_AUDIO.ARE_YOU_STILL_THERE)?.then?.(() => {
             setIsAudioPlaying(false)
         })
 

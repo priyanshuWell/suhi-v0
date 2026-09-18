@@ -7,7 +7,7 @@ import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
 import { setUser, setLoginScreening, setCandidates } from "../features/common/commonSlice"
 import { getKioskId, trackStage } from "../utils/config"
-import { useKioskAudio } from "../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO, INSTRUCTION_AUDIO } from "../constants/audio"
 import { useTranslation } from "react-i18next"
 import i18n from "../config/i18n/i18n"
 import NoActivityFrame from "./ui/NoActivityFrame"
@@ -392,7 +392,7 @@ const VideoCaptureScreen = () => {
 
             // Single call: interrupts instruction audio (or previous error clip)
             // and starts the new one, or just silences everything if step has no clip.
-            const errorAudioKey = step.audio ? `errors/${step.audio}` : null
+            const errorAudioKey = step.audio ? ERROR_AUDIO[step.audio] ?? `errors/${step.audio}` : null
             currentErrorAudioKeyRef.current = errorAudioKey
             pendingAudioRef.current = playKioskAudio(errorAudioKey)
 
@@ -498,7 +498,7 @@ const VideoCaptureScreen = () => {
             )
 
             // Wait for the error clip before leaving the screen
-            await playKioskAudio("errors/face_not_detected")
+            await playKioskAudio(ERROR_AUDIO.FACE_NOT_DETECTED)
             navigate("/login-suhi")
             return true
         }
@@ -597,7 +597,7 @@ const VideoCaptureScreen = () => {
 
                 // Fire-and-forget: instruction audio plays via single-channel hook.
                 // If a decision occurs, it will interrupt this seamlessly.
-                pendingAudioRef.current = playKioskAudio("instructions/camera_scan")
+                pendingAudioRef.current = playKioskAudio(INSTRUCTION_AUDIO.CAMERA_SCAN)
 
                 measurementPromiseRef.current = getMeasurements()
                 setStatus("Processing scan and measurements...")

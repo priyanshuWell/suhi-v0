@@ -11,9 +11,16 @@ import AvoidNotesPopup from "./AvoidNotesPopup"
 import PlayArea from "./PlayArea"
 import ResultsScreen from "./ResultsScreen"
 import {
+    startBackgroundMusic,
+    pauseBackgroundMusic,
+    resumeBackgroundMusic,
+    stopBackgroundMusic
+} from "./piano"
+import {
     AVOID_POPUP_AT_MS,
     CHORD_POPUP_AT_MS,
     DEVICE_LATENCY_MS,
+    FOLLOW_POPUP_AT_MS,
     POPUP_AUTO_CLOSE_MS,
     SESSION_DURATION_MS,
     SPEED_POPUP_AT_MS
@@ -26,7 +33,6 @@ import {
 } from "./beatDropApi"
 import { getKioskId } from "../../../utils/config"
 import { getNextRoute } from "../../../utils/stageRouter"
-import backingTrack from "../../../assets/beat-drop/audio/beatdrop_backing_44k1_16bit.wav"
 import { useSetProgressStage } from "../../ProgressStageContext"
 
 const SCREENS = {
@@ -41,11 +47,11 @@ const APP_VERSION = "1.0.3"
  * Beat Drop — chart session + music + backend start/complete.
  *
  * Instruction popups (pause clock + music; auto-close 5s):
- *   A Follow the Beat     → at play start
+ *   A (none — starts directly)
  *   B Notes Speed Increase → before Block B
  *   C Two Notes Together  → before Block C
  *   D Avoid These Notes   → before Block D
- *   E (none)
+ *   E Follow the Beat     → before Block E (last level)
  */
 export default function BeatDropGame() {
     const navigate = useNavigate()
@@ -70,6 +76,7 @@ export default function BeatDropGame() {
     const sessionIdRef = useRef(null)
     const nextRouteRef = useRef(null)
     const endedRef = useRef(false)
+    const followShownRef = useRef(false)
     const speedShownRef = useRef(false)
     const chordShownRef = useRef(false)
     const avoidShownRef = useRef(false)
@@ -91,21 +98,23 @@ export default function BeatDropGame() {
     }, [setProgressStage])
 
     useEffect(() => {
-        const audio = new Audio(backingTrack)
-        audio.loop = true
-        audio.volume = 0.55
-        audioRef.current = audio
-        return () => {
-            audio.pause()
-            audioRef.current = null
+        if (playing) {
+            resumeBackgroundMusic()
+        } else {
+            pauseBackgroundMusic()
         }
+    }, [playing])
+
+    // Stop + rewind on unmount
+    useEffect(() => {
+        return () => stopBackgroundMusic()
     }, [])
 
     useEffect(() => {
         const audio = audioRef.current
         if (!audio) return undefined
         if (playing) {
-            audio.play().catch(() => {})
+            audio.play().catch(() => { })
         } else {
             audio.pause()
         }
@@ -158,6 +167,7 @@ export default function BeatDropGame() {
 
     const handleStart = async () => {
         endedRef.current = false
+        followShownRef.current = false
         speedShownRef.current = false
         chordShownRef.current = false
         avoidShownRef.current = false
@@ -172,7 +182,8 @@ export default function BeatDropGame() {
         setScore(0)
         setStreak(0)
         setCoins(500)
-        if (audioRef.current) audioRef.current.currentTime = 0
+        stopBackgroundMusic()
+        startBackgroundMusic({ volume: 0.35 })
 
         const userId = storeUser?.data?.user_id
         const screeningSessionId =
@@ -197,8 +208,6 @@ export default function BeatDropGame() {
             console.warn("[BeatDrop] /session/start failed — continuing offline:", e.message)
         }
 
-        // Level A intro — pause play until dismissed
-        setShowFollow(true)
         setScreen(SCREENS.PLAY)
     }
 
@@ -223,6 +232,12 @@ export default function BeatDropGame() {
         setShowAvoid(true)
     }, [])
 
+    const handleFollowPopup = useCallback(() => {
+        if (followShownRef.current) return
+        followShownRef.current = true
+        setShowFollow(true)
+    }, [])
+
     const handleSessionEnd = useCallback(async (log, stats) => {
         if (endedRef.current) return
         endedRef.current = true
@@ -231,10 +246,7 @@ export default function BeatDropGame() {
         setShowSpeed(false)
         setShowChord(false)
         setShowAvoid(false)
-        if (audioRef.current) {
-            audioRef.current.pause()
-            audioRef.current.currentTime = 0
-        }
+        stopBackgroundMusic()
 
         const local = {
             score: stats.score,
@@ -342,9 +354,11 @@ export default function BeatDropGame() {
                     onSpeedPopup={handleSpeedPopup}
                     onChordPopup={handleChordPopup}
                     onAvoidPopup={handleAvoidPopup}
+                    onFollowPopup={handleFollowPopup}
                     speedAtMs={SPEED_POPUP_AT_MS}
                     chordAtMs={CHORD_POPUP_AT_MS}
                     avoidAtMs={AVOID_POPUP_AT_MS}
+                    followAtMs={FOLLOW_POPUP_AT_MS}
                     engineRef={engineRef}
                 />
             )}

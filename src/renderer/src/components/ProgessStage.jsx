@@ -1,5 +1,6 @@
 import { Fragment } from "react"
 import { useSelector } from "react-redux"
+import { useTranslation } from "react-i18next"
 
 // ─── Screening 1 stages ──────────────────────────────────────────────────────
 const SCREENING_1_STEPS = [
@@ -35,6 +36,7 @@ function deriveActiveStep(steps, completedStages) {
 }
 
 export default function ProgressStage({ current = null }) {
+    const { t } = useTranslation()
     const screening = useSelector((state) => state.common.screening)
     const completedStages = screening?.completedStages || []
     const screeningOrder = screening?.screeningOrder ?? 1
@@ -144,7 +146,7 @@ export default function ProgressStage({ current = null }) {
                   ${labelClass}
                 `}
                             >
-                                {step.label}
+                                {t(`progress_stages.${step.key}`, step.label)}
                             </span>
                         </div>
 

@@ -125,7 +125,7 @@ const GlowSlider = ({ min = 0, max = 100, value, onChange }) => {
 
 export default GlowSlider
 export const Setting = ({ setIsActive, isActive }) => {
-    const { i18n } = useTranslation()
+    const { i18n, t } = useTranslation()
     const [selectedLanguage, setSelectedLanguage] = useState(i18n.language || "en")
     const [isSoundActive, setIsSoundActive] = useState(false)
     const [volume, setVolume] = useState(50)
@@ -261,7 +261,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                     >
                         <img src={settingbg} alt="setting-bg" className="w-230" />
                         <h3 className="text-4xl font-bold text-white absolute landscape:left-[8vw] landscape:top-[7vh] top-[5vh] left-[11vw]">
-                            Language
+                            {t("settings.language", "Language")}
                         </h3>
                         <div className="absolute top-[10vh] left-[11vw] landscape:top-[16vh] landscape:left-[7vw] grid grid-cols-3 gap-4">
                             <label className="flex items-center text-white text-2xl cursor-pointer">
@@ -273,7 +273,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                English
+                                {t("settings.lang_en", "English")}
                             </label>
                             <label className="flex items-center text-white text-2xl cursor-pointer">
                                 <input
@@ -284,7 +284,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                Hindi
+                                {t("settings.lang_hi", "Hindi")}
                             </label>
                             <label className="flex items-center text-white text-2xl cursor-pointer">
                                 <input
@@ -295,7 +295,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                Gujarati
+                                {t("settings.lang_gu", "Gujarati")}
                             </label>
                             <label className="flex items-center text-white text-2xl cursor-pointer">
                                 <input
@@ -306,7 +306,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                Marathi
+                                {t("settings.lang_mr", "Marathi")}
                             </label>
                             <label className="flex items-center text-white text-2xl cursor-pointer">
                                 <input
@@ -317,7 +317,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                Bengali
+                                {t("settings.lang_bn", "Bengali")}
                             </label>
                             <label className="flex items-center text-white text-2xl cursor-pointer">
                                 <input
@@ -328,7 +328,7 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onChange={(e) => handleLanguageChange(e.target.value)}
                                     className="mr-3 w-5 h-5 accent-blue-500"
                                 />
-                                Arabic
+                                {t("settings.lang_ar", "Arabic")}
                             </label>
                         </div>
                         <div className="absolute top-[16vh] left-[11vw] landscape:left-[7vw] landscape:top-[28vh] max-w-full">
@@ -337,13 +337,13 @@ export const Setting = ({ setIsActive, isActive }) => {
                                     onClick={handleReset}
                                     className="w-[clamp(16rem,30vw,31.25rem)] h-[clamp(4rem,8vh,6.25rem)] flex items-center justify-center text-center rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm shadow-[0px_5px_40px_0px_rgba(154,217,255,0.3)] text-white text-[clamp(1.25rem,3vw,3rem)] tracking-wide active:scale-[0.98] transition-all duration-300 ease-in-out hover:bg-white/10 hover:border-white/50"
                                 >
-                                    Reset
+                                    {t("settings.reset", "Reset")}
                                 </button>
                                 <button
                                     onClick={handleApply}
                                     className="w-[clamp(16rem,30vw,31.25rem)] h-[clamp(4rem,8vh,6.25rem)] flex items-center justify-center text-center rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5),inset_0px_0px_20px_rgba(255,255,255,0.3)] text-white text-[clamp(1.5rem,3vw,3rem)] tracking-wide active:scale-[0.98] transition-all duration-300 ease-in-out hover:border-white"
                                 >
-                                    Apply
+                                    {t("settings.apply", "Apply")}
                                 </button>
                             </div>
                         </div>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from "react"
+import { useTranslation } from "react-i18next"
 import bg from "../../../assets/beat-drop/playArea/play_area_bg_card.png"
 import timeBox from "../../../assets/beat-drop/playArea/time_box_blank.png"
 import scoreBox from "../../../assets/beat-drop/playArea/score_blank.png"
@@ -11,6 +12,7 @@ import decoySquare from "../../../assets/beat-drop/playArea/decoy_square.png"
 import decoyTriangle from "../../../assets/beat-drop/playArea/decoy_triangle.png"
 import decoyStar from "../../../assets/beat-drop/playArea/decoy_star.png"
 import Piano from "../../Piano"
+// import { playPianoNote } from "./piano"
 import { PIANO_SPEC } from "../../pianoSpec"
 import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, oswald, pct } from "./frame"
 import { createBeatDropEngine } from "./beatDropEngine"
@@ -51,13 +53,13 @@ function imgForEvent(event) {
     return NOTE_BY_LANE[event.lane_intended - 1] || yellow
 }
 
-const FIELD_MARGIN = 72
+const FIELD_MARGIN = 50
 const FIELD_LEFT = FIELD_MARGIN
 const FIELD_WIDTH = FRAME_W - FIELD_MARGIN * 2
-const PIANO_FIELD_INSET = 58
+const PIANO_FIELD_INSET = 12
 const PIANO_WIDTH = FIELD_WIDTH - PIANO_FIELD_INSET * 2
 const PIANO_LEFT = FIELD_LEFT + PIANO_FIELD_INSET
-const PIANO_BOTTOM = 220
+const PIANO_BOTTOM = 140
 const PIANO_SCALE = PIANO_WIDTH / PIANO_SPEC.frameW
 const PIANO_HEIGHT = PIANO_SPEC.frameH * PIANO_SCALE
 const PIANO_TOP = FRAME_H - PIANO_BOTTOM - PIANO_HEIGHT
@@ -79,7 +81,7 @@ const DIVIDER_TOP = 0
 const DIVIDER_HEIGHT = HIT_LINE_TOP - DIVIDER_TOP
 const DIVIDER_WIDTH = 3
 
-const HEAD_TARGET = LANE_W * 0.38
+const HEAD_TARGET = LANE_W * 0.92
 
 function formatTime(sec) {
     const s = Math.max(0, Math.floor(sec))
@@ -200,11 +202,14 @@ export default function PlayArea({
     onSpeedPopup,
     onChordPopup,
     onAvoidPopup,
+    onFollowPopup,
     speedAtMs = 20000,
     chordAtMs = 37918,
     avoidAtMs = 53000,
+    followAtMs = 88800,
     engineRef
 }) {
+    const { t } = useTranslation()
     const [notes, setNotes] = useState([])
     const engine = useRef(null)
     const raf = useRef(0)
@@ -218,6 +223,7 @@ export default function PlayArea({
     const speedPopupSent = useRef(false)
     const chordPopupSent = useRef(false)
     const avoidPopupSent = useRef(false)
+    const followPopupSent = useRef(false)
     const startedRef = useRef(false)
     const endedGuard = useRef(false)
 
@@ -237,12 +243,6 @@ export default function PlayArea({
     }, [engineRef])
 
     useEffect(() => {
-        if (!engine.current) return
-        if (paused) engine.current.pause()
-        else if (startedRef.current) engine.current.resume()
-    }, [paused])
-
-    useEffect(() => {
         if (!active || !engine.current) {
             cancelAnimationFrame(raf.current)
             if (!active) {
@@ -252,10 +252,19 @@ export default function PlayArea({
             return undefined
         }
 
+        if (paused) {
+            cancelAnimationFrame(raf.current)
+            if (startedRef.current) {
+                engine.current.pause()
+            }
+            return undefined
+        }
+
         if (!startedRef.current) {
             speedPopupSent.current = false
             chordPopupSent.current = false
             avoidPopupSent.current = false
+            followPopupSent.current = false
             endedGuard.current = false
             fallProbeRef.current = {
                 firstByLevel: getFirstNodePerLevel(),
@@ -264,6 +273,8 @@ export default function PlayArea({
             }
             engine.current.start()
             startedRef.current = true
+        } else {
+            engine.current.resume()
         }
 
         const tick = () => {
@@ -272,17 +283,21 @@ export default function PlayArea({
             setNotes(snap.notes)
             onScore?.(snap.score)
 
-            if (!speedPopupSent.current && snap.t >= speedAtMs) {
+            if (!speedPopupSent.current && snap.t >= speedAtMs && !snap.notes.some((n) => n.event.block_id === "A")) {
                 speedPopupSent.current = true
                 onSpeedPopup?.()
             }
-            if (!chordPopupSent.current && snap.t >= chordAtMs) {
+            if (!chordPopupSent.current && snap.t >= chordAtMs && !snap.notes.some((n) => n.event.block_id === "B")) {
                 chordPopupSent.current = true
                 onChordPopup?.()
             }
-            if (!avoidPopupSent.current && snap.t >= avoidAtMs) {
+            if (!avoidPopupSent.current && snap.t >= avoidAtMs && !snap.notes.some((n) => n.event.block_id === "C")) {
                 avoidPopupSent.current = true
                 onAvoidPopup?.()
+            }
+            if (!followPopupSent.current && snap.t >= followAtMs && !snap.notes.some((n) => n.event.block_id === "D")) {
+                followPopupSent.current = true
+                onFollowPopup?.()
             }
 
             if (snap.done && !endedGuard.current) {
@@ -301,14 +316,17 @@ export default function PlayArea({
         return () => cancelAnimationFrame(raf.current)
     }, [
         active,
+        paused,
         onScore,
         onSessionEnd,
         onSpeedPopup,
         onChordPopup,
         onAvoidPopup,
+        onFollowPopup,
         speedAtMs,
         chordAtMs,
-        avoidAtMs
+        avoidAtMs,
+        followAtMs
     ])
 
     // After notes paint: measure real on-screen box-center vs hit-line mid
@@ -329,6 +347,7 @@ export default function PlayArea({
     const handleNoteOn = useCallback(
         (_note, info) => {
             if (paused || info.lane == null || !engine.current) return
+            // playPianoNote(info.lane)              // ← add this line
             engine.current.handleLaneTap(info.lane, info.pointer)
             const snap = engine.current.getSnapshot()
             onScore?.(snap.score)
@@ -384,8 +403,7 @@ export default function PlayArea({
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        justifyContent: "center",
-                        paddingTop: "6%"
+                        justifyContent: "center"
                     }}
                 >
                     <span
@@ -397,7 +415,7 @@ export default function PlayArea({
                             letterSpacing: "0%"
                         }}
                     >
-                        Time
+                        {t("beatDrop.playArea.time")}
                     </span>
                     <span
                         style={{
@@ -458,7 +476,7 @@ export default function PlayArea({
                             letterSpacing: "0%"
                         }}
                     >
-                        Score
+                        {t("beatDrop.playArea.score")}
                     </span>
                     <span
                         style={{
@@ -481,6 +499,7 @@ export default function PlayArea({
             <NeonHitLine lineRef={hitLineRef} />
 
             {notes.map((n) => {
+                if (n.event.tapped) return null
                 const img = imgForEvent(n.event)
                 const native = NOTE_NATIVE.get(img) ?? { w: 1, h: 1 }
                 const width = noteDisplayWidth(img, HEAD_TARGET)

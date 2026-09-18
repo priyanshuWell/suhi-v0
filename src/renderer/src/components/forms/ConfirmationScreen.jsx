@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import lightbg from "../../assets/lightbg.png"
 import projector from "../../assets/projector.png"
 import frame1 from "../../assets/verfied-frame.svg"
@@ -8,6 +9,7 @@ import StartButton from "../ui/BlueGradientButton"
 import GradientButton from "../ui/BlackGradientButton"
 
 export default function ConfirmationScreen() {
+    const { t } = useTranslation()
     const user = useSelector((state) => state.common.user)
 
     return (
@@ -50,24 +52,25 @@ export default function ConfirmationScreen() {
                     {/* text */}
                     <div className="text flex flex-col items-center ">
                         <p className="text-white text-3xl tracking-wide leading-relaxed">
-                            Name: Lorem ipsum
+                            {t("forms.confirmation.name_label", "Name: ")} {user?.name || "Lorem ipsum"}
                         </p>
                         <p className="text-white text-3xl tracking-wide leading-relaxed">
-                            Class: 8th A
+                            {t("forms.confirmation.class_label", "Class: ")} {user?.class || "8th A"}
                         </p>
-                        <p className="text-white text-3xl tracking-wide leading-relaxed">Age: 20</p>
                         <p className="text-white text-3xl tracking-wide leading-relaxed">
-                            Contact Number: 987654321
+                            {t("forms.confirmation.age_label", "Age: ")} {user?.age || "20"}
+                        </p>
+                        <p className="text-white text-3xl tracking-wide leading-relaxed">
+                            {t("forms.confirmation.contact_label", "Contact Number: ")} {user?.mobile || "987654321"}
                         </p>
                     </div>
 
                     <div className="buttons flex flex-col gap-y-10">
                         <StartButton width="w-[clamp(16rem,32vw,31.25rem)]">
-                            Register User
+                            {t("forms.confirmation.register_user", "Register User")}
                         </StartButton>
                         <GradientButton width="w-[clamp(16rem,32vw,31.25rem)]">
-                            {" "}
-                            Go Back
+                            {t("forms.confirmation.go_back", "Go Back")}
                         </GradientButton>
                     </div>
                 </div>

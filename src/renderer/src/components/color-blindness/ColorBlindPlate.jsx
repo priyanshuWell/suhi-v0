@@ -9,7 +9,7 @@ import BlueGradientButton from "../ui/BlueGradientButton"
 import { getColorBlindessPlates, colorBlindessStart } from "../../utils/api"
 import { useSelector } from "react-redux"
 import { getKioskId } from "../../utils/config"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../../constants/audio"
 
 export const ColorBlindPlate = () => {
     const user = useSelector((state) => state.common.user)

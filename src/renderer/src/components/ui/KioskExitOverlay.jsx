@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import KeyboardContainer from "./KeyboardContainer"
 
 const MAX_PASSWORD_LENGTH = 128
@@ -11,6 +12,7 @@ const CORNER_TAP_WINDOW_MS = 4000
 // <input>) or the in-app on-screen keyboard other screens already use —
 // both write into the same `password` state.
 export default function KioskExitOverlay() {
+    const { t } = useTranslation()
     const [visible, setVisible] = useState(false)
     const [password, setPassword] = useState("")
     const [error, setError] = useState("")
@@ -111,13 +113,13 @@ export default function KioskExitOverlay() {
                             className="w-[600px] max-w-full rounded-[24px] border border-white/10 bg-[#0d0d0d] px-10 py-10 shadow-[0_0_60px_rgba(70,168,203,0.25)]"
                         >
                             <p className="text-center text-sm font-semibold uppercase tracking-[0.2em] text-[#46a8cb]">
-                                Administrator access
+                                {t("kiosk.admin_access", "Administrator access")}
                             </p>
                             <h2 className="mt-3 text-center text-2xl font-semibold text-white">
-                                Enter password to exit kiosk mode
+                                {t("kiosk.enter_password", "Enter password to exit kiosk mode")}
                             </h2>
                             <p className="mt-2 text-center text-sm text-gray-400">
-                                This returns the device to a normal desktop for troubleshooting.
+                                {t("kiosk.desktop_desc", "This returns the device to a normal desktop for troubleshooting.")}
                             </p>
 
                             <input
@@ -157,14 +159,14 @@ export default function KioskExitOverlay() {
                                     disabled={submitting}
                                     className="h-14 flex-1 rounded-full border border-white/20 text-base font-semibold text-gray-300"
                                 >
-                                    Cancel
+                                    {t("kiosk.cancel", "Cancel")}
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={!password || submitting}
                                     className="h-14 flex-1 rounded-full bg-[#46a8cb] text-base font-semibold text-black disabled:opacity-40"
                                 >
-                                    {submitting ? "Checking…" : "Exit kiosk mode"}
+                                    {submitting ? t("kiosk.checking", "Checking…") : t("kiosk.exit_kiosk", "Exit kiosk mode")}
                                 </button>
                             </div>
                         </form>

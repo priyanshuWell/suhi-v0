@@ -243,6 +243,7 @@ export function createBeatDropEngine({
     }
 
     function tryCloseExpired(t) {
+        if (!running) return
         for (const e of chart) {
             if (e.closed) continue
             // Strict > so a tap exactly at trail tip still counts
@@ -381,9 +382,11 @@ export function createBeatDropEngine({
     }
 
     function getVisibleNotes(t) {
+        if (!running) return []
         tryCloseExpired(t)
         const visible = []
         for (const e of chart) {
+            if (e.tapped) continue
             if (t < e.t_spawn) continue
             if (t > windowCloseAt(e) + 500) continue
             const yb = yBottomAt(e, t)

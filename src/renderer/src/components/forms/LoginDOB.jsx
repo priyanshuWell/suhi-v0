@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch } from "react-redux"
+import { useTranslation } from "react-i18next"
 import { setUser, setScreening } from "../../features/common/commonSlice"
 import LoginComponent from "../ui/LoginComponent"
 import BlueGradientButton from "../ui/BlueGradientButton"
@@ -8,6 +9,7 @@ import { API_BASE_URL } from "../../utils/config"
 import axios from "axios"
 
 const LoginDOB = () => {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const [suhiId, setSuhiId] = useState("")
@@ -59,7 +61,7 @@ const LoginDOB = () => {
         <>
             <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[820px]">
                 <p className="text-5xl text-center font-light leading-snug text-white ">
-                    Log in via your name and date of birth
+                    {t("forms.login_dob.title", "Log in via your name and date of birth")}
                 </p>
             </div>
             <LoginComponent />
@@ -70,7 +72,7 @@ const LoginDOB = () => {
                 <div className="w-full flex flex-col gap-10 cursor-pointer ">
                     <div className="suhi-id">
                         <div className=" leading-[28px] relative text-white text-xl tracking-wide">
-                            Suhi ID{" "}
+                            {t("forms.login_dob.suhi_id", "Suhi ID")}{" "}
                             <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
                         </div>
                         <div className="min-h-[50px] text-3xl flex items-center">
@@ -78,7 +80,7 @@ const LoginDOB = () => {
                                 type="text"
                                 value={suhiId}
                                 onChange={(e) => setSuhiId(e.target.value)}
-                                placeholder="Enter Your Suhi ID"
+                                placeholder={t("forms.login_dob.enter_suhi_id", "Enter Your Suhi ID")}
                                 className="w-full bg-transparent border-none outline-none text-white placeholder:text-[rgba(255,255,255,0.5)]"
                             />
                         </div>
@@ -86,7 +88,7 @@ const LoginDOB = () => {
                     </div>
                     <div className="dob">
                         <div className=" leading-[28px] relative text-white text-xl tracking-wide">
-                            Date Of Birth{" "}
+                            {t("forms.login_dob.dob", "Date Of Birth")}{" "}
                             <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
                         </div>
                         <div className="min-h-[50px] text-3xl flex items-center">
@@ -94,7 +96,7 @@ const LoginDOB = () => {
                                 type="text"
                                 value={dob}
                                 onChange={handleDobChange}
-                                placeholder="DD/MM/YY"
+                                placeholder={t("forms.login_dob.dob_placeholder", "DD/MM/YY")}
                                 className="w-full bg-transparent border-none outline-none text-white placeholder:text-[rgba(255,255,255,0.5)]"
                             />
                         </div>
@@ -111,7 +113,7 @@ const LoginDOB = () => {
                     disabled={isButtonDisabled}
                     onClick={handleSubmit} //  wired up
                 >
-                    {loading ? "Verifying..." : "Next"}
+                    {loading ? t("forms.login_dob.verifying", "Verifying...") : t("forms.login_dob.next", "Next")}
                 </BlueGradientButton>
             </div>
         </>

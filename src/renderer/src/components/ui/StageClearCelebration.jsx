@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import { useSelector } from "react-redux"
+import { useTranslation } from "react-i18next"
 import { motion, AnimatePresence } from "framer-motion"
 import { Award, Sparkles, ChevronRight, Zap } from "lucide-react"
 
@@ -18,6 +19,7 @@ const STAGE_LABELS = {
 }
 
 export default function StageClearCelebration() {
+    const { t } = useTranslation()
     const screening = useSelector((state) => state.common.screening)
     const completedStages = screening?.completedStages || []
     const [celebrationData, setCelebrationData] = useState(null)
@@ -31,7 +33,7 @@ export default function StageClearCelebration() {
             // Find newly added stage(s)
             const newlyCompleted = completedStages.filter((k) => !prev.includes(k))
             const lastStageKey = newlyCompleted[newlyCompleted.length - 1]
-            const stageTitle = STAGE_LABELS[lastStageKey] || "Stage"
+            const stageTitle = t(`stage_celebration.titles.${lastStageKey}`, STAGE_LABELS[lastStageKey] || "Stage")
 
             setCelebrationData({
                 key: lastStageKey,
@@ -112,7 +114,7 @@ export default function StageClearCelebration() {
                             className="flex items-center gap-2 px-4 py-1 rounded-full bg-cyan-400/15 border border-cyan-400/40 text-cyan-300 text-sm font-anta tracking-widest uppercase"
                         >
                             <Sparkles className="w-4 h-4 text-cyan-300" />
-                            STAGE {celebrationData.stageNumber} CLEARED!
+                            {t("stage_celebration.stage_cleared", { stageNumber: celebrationData.stageNumber, defaultValue: `STAGE ${celebrationData.stageNumber} CLEARED!` })}
                             <Sparkles className="w-4 h-4 text-cyan-300" />
                         </motion.div>
 
@@ -134,7 +136,7 @@ export default function StageClearCelebration() {
                             className="text-cyan-200/80 font-anta text-base flex items-center gap-2"
                         >
                             <Zap className="w-4 h-4 text-cyan-400 animate-pulse" />
-                            Next Challenge Unlocked! Advancing...
+                            {t("stage_celebration.next_challenge_unlocked", "Next Challenge Unlocked! Advancing...")}
                         </motion.p>
 
                         {/* Progress Bar / Countdown indicator */}
@@ -149,7 +151,7 @@ export default function StageClearCelebration() {
 
                         {/* Tap hint */}
                         <span className="text-xs font-anta text-cyan-300/60 mt-1 flex items-center gap-1">
-                            Tap to continue <ChevronRight className="w-3 h-3" />
+                            {t("stage_celebration.tap_to_continue", "Tap to continue")} <ChevronRight className="w-3 h-3" />
                         </span>
                     </motion.div>
                 </motion.div>

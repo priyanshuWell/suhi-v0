@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import speedCard from "../../../assets/beat-drop/popup/speed_increase_blank_card.png"
 import PillButton from "./PillButton"
 import { anton, cqw, FRAME_W, pct } from "./frame"
@@ -15,6 +16,7 @@ const CARD_TOP = 560
  * Card art includes header pill, note lanes, chevrons, sparkles.
  */
 export default function SpeedIncreasePopup({ onGotIt }) {
+    const { t } = useTranslation()
     return (
         <div
             style={{
@@ -75,7 +77,7 @@ export default function SpeedIncreasePopup({ onGotIt }) {
                             whiteSpace: "nowrap"
                         }}
                     >
-                        Notes Speed will Increase!
+                        {t("beatDrop.popups.speed_title")}
                     </p>
                 </div>
 
@@ -101,16 +103,16 @@ export default function SpeedIncreasePopup({ onGotIt }) {
                             color: "#FFFFFF"
                         }}
                     >
-                        Get Ready!
+                        {t("beatDrop.popups.speed_get_ready")}
                         <br />
-                        The notes will <span style={{ color: "#F2F14F" }}>come faster</span> now!
+                        {t("beatDrop.popups.speed_notes_will")} <span style={{ color: "#F2F14F" }}>{t("beatDrop.popups.speed_come_faster")}</span> {t("beatDrop.popups.speed_now")}
                     </p>
                 </div>
 
                 {/* Got it — lift off card bottom so it isn’t flush with the frame */}
                 <PillButton
                     variant="gotIt"
-                    label="Got it!"
+                    label={t("beatDrop.popups.got_it")}
                     textColor="#390500"
                     fontSize={64}
                     onClick={onGotIt}

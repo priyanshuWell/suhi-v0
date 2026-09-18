@@ -6,7 +6,7 @@ import profilepic from "../assets/profile-pic.png"
 import { useNavigate } from "react-router"
 import { useTranslation } from "react-i18next"
 import { useSelector } from "react-redux"
-import { getAudioForCurrentLanguage } from "../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../constants/audio"
 import { getNextRoute } from "../utils/stageRouter"
 
 const buildProfileImage = (imagePath) => {

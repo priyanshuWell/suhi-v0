@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useNavigate } from "react-router"
 import { AnimatePresence, motion } from "framer-motion"
+import { useTranslation } from "react-i18next"
 import PerilousPathGame from "./PerilousPathGame"
 import PerilousPathIntro from "./PerilousPathIntro"
 import PerilousScoreBoard from "./PerilousScoreBoard"
@@ -12,7 +13,7 @@ import { setScreening } from "../../../features/common/commonSlice"
 import { getNextRoute } from "../../../utils/stageRouter"
 import { getKioskId } from "../../../utils/config"
 import { useSetProgressStage } from "../../ProgressStageContext"
-import { perilousPathSfx } from "../../../utils/soundManager"
+import { perilousPathSfx } from "../../../constants/audio"
 
 const SCREENS = {
     INTRO: "intro",
@@ -46,6 +47,7 @@ const dummyFlag = DUMMY_FLAG
  * not a per-level / per-phase countdown.
  */
 export default function PerilousPath() {
+    const { t } = useTranslation()
     const dispatch = useDispatch()
     const storeUser = useSelector((state) => state.common.user)
     const screeningState = useSelector((state) => state.common.screening)
@@ -94,13 +96,13 @@ export default function PerilousPath() {
                 perilousPathSfx.stopBg()
             } catch (err) {
                 setErrorInfo({
-                    message: err.message || "Couldn't finalize your results.",
+                    message: err.message || t("perilousPath.error_finalize"),
                     onRetry: () => finalizeGame(targetSessionId),
                 })
                 setScreen(SCREENS.ERROR)
             }
         },
-        [gameSessionId, dispatch]
+        [gameSessionId, dispatch, t]
     )
 
     // Navigate to the next screening stage — called when player taps "Next"
@@ -136,8 +138,8 @@ export default function PerilousPath() {
 
             const message =
                 err.status === 503
-                    ? "Perilous Path isn't ready yet. Please try again shortly."
-                    : err.message || "Something went wrong loading the next level."
+                    ? t("perilousPath.error_not_ready")
+                    : err.message || t("perilousPath.error_loading_level")
 
             setErrorInfo({
                 message,
@@ -145,7 +147,7 @@ export default function PerilousPath() {
             })
             setScreen(SCREENS.ERROR)
         }
-    }, [storeUser, screeningState, finalizeGame, gameSessionId])
+    }, [storeUser, screeningState, finalizeGame, gameSessionId, t])
 
     // ── Handlers ─────────────────────────────────────────────────────────
     const handleStart = useCallback(() => {
@@ -183,7 +185,7 @@ export default function PerilousPath() {
             />
         ) : (
             <div className="absolute inset-0 flex items-center justify-center text-white">
-                <p className="animate-pulse font-anton text-[3.2cqw]">Loading next challenge…</p>
+                <p className="animate-pulse font-anton text-[3.2cqw]">{t("perilousPath.loading_next")}</p>
             </div>
         )
     } else if (screen === SCREENS.SCOREBOARD) {
@@ -197,7 +199,7 @@ export default function PerilousPath() {
                     className="rounded-full bg-cyan-500 px-[4cqw] py-[1.5cqw] font-anton text-[2.6cqw] text-black"
                     onClick={errorInfo?.onRetry}
                 >
-                    Retry
+                    {t("common.retry")}
                 </button>
             </div>
         )
