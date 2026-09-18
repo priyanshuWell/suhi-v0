@@ -33,7 +33,8 @@ const IdentifyStudent = () => {
     }, [candidates, user, navigate])
 
     const currentValue = step === "NAME" ? nameInput : suhiIdInput
-    const isButtonDisabled = !currentValue.trim() || loading
+    const minLength = step === "NAME" ? 3 : 1
+    const isButtonDisabled = currentValue.trim().length < minLength || loading
 
     // Merge matched_student (user.data) and candidates array to form complete searchable candidate list
     // (Filtering out candidates with ambiguity_score > 0.07)
