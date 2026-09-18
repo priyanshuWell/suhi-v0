@@ -9,6 +9,11 @@
  * Scoring (HUD):
  *  - +5 per successful note hit
  *  - +10 bonus at 5x streak, +20 at 10x, +30 at 20x
+ *
+ * Hit classification:
+ *  - hit / false_alarm / omission / correct_rejection
+ *  - mis-hit-adjacent — wrong key ±1 lane while note is on the hit line
+ *  - mis-hit-far — wrong key ±2+ lanes while note is on the hit line
  */
 import {
     DEVICE_LATENCY_MS,
@@ -165,6 +170,39 @@ export function createBeatDropEngine({
         }
     }
 
+    /**
+     * Wrong-lane tap while a note overlaps the hit line:
+     *   |lane_intended − lane_tapped| === 1 → mis-hit-adjacent
+     *   |lane_intended − lane_tapped|  >= 2 → mis-hit-far
+     */
+    function classifyMisHit(laneIntended, laneTapped) {
+        const laneDist = Math.abs(laneIntended - laneTapped)
+        return laneDist === 1 ? "mis-hit-adjacent" : "mis-hit-far"
+    }
+
+    function logNodeClassification(row) {
+        const laneDist =
+            row.lane_intended != null && row.lane_tapped != null
+                ? Math.abs(row.lane_intended - row.lane_tapped)
+                : null
+        console.log("[BeatDrop] node", {
+            row_num: row.row_num,
+            event_type: row.event_type,
+            lane_intended: row.lane_intended,
+            lane_tapped: row.lane_tapped,
+            lane_distance: laneDist,
+            hit_classification: row.hit_classification,
+            t_expected: row.t_expected,
+            t_tap: row.t_tap,
+            x_tap: row.x_tap,
+            y_tap: row.y_tap,
+            chord_pair_id: row.chord_pair_id,
+            chord_complete: row.chord_complete,
+            combo: row.combo ?? null,
+            score: row.score ?? null
+        })
+    }
+
     function chordPartner(event) {
         // Chart pairing id (always set for chord_L / chord_R). Logged only when both hit.
         if (!event.chord_pair_id) return null
@@ -238,11 +276,13 @@ export function createBeatDropEngine({
         log.push(row)
 
         resolveChordPair(event)
+        logNodeClassification(row)
 
         if (event.event_type !== "decoy_note") combo = 0
     }
 
     function tryCloseExpired(t) {
+        if (!running) return
         for (const e of chart) {
             if (e.closed) continue
             // Strict > so a tap exactly at trail tip still counts
@@ -254,6 +294,12 @@ export function createBeatDropEngine({
      * White-key press. laneIndex 0–4.
      * Logs x_tap/y_tap based on user's actual touch/click location on the key,
      * mapped into chart space (lane centers 100..500, hit line at 500).
+     *
+     * Classification:
+     *  - same lane + real note → hit
+     *  - same lane + decoy → false_alarm
+     *  - wrong lane ±1 while a real note is on the hit line → mis-hit-adjacent
+     *  - wrong lane ±2+ while a real note is on the hit line → mis-hit-far
      */
     function handleLaneTap(laneIndex, pointer = null) {
         if (!running || paused) return { accepted: false, score }
@@ -264,6 +310,8 @@ export function createBeatDropEngine({
         // so the trail tip on the line is still hittable.
         let best = null
         let bestDist = Infinity
+
+        // 1) Prefer same-lane note overlapping the hit line
         for (const e of chart) {
             if (e.closed || e.tapped) continue
             if (e.lane_intended !== lane) continue
@@ -275,6 +323,7 @@ export function createBeatDropEngine({
             }
         }
 
+        // 2) Same-lane decoy (if no real note matched)
         if (!best) {
             for (const e of chart) {
                 if (e.closed || e.tapped) continue
@@ -283,6 +332,28 @@ export function createBeatDropEngine({
                 if (!overlapsHitLine(e, t)) continue
                 best = e
                 break
+            }
+        }
+
+        // 3) Wrong-lane: real note overlapping hit line → mis-hit-adjacent / mis-hit-far
+        if (!best) {
+            bestDist = Infinity
+            let bestLaneDist = Infinity
+            for (const e of chart) {
+                if (e.closed || e.tapped) continue
+                if (e.event_type === "decoy_note") continue
+                if (e.lane_intended === lane) continue
+                if (!overlapsHitLine(e, t)) continue
+                const timeDist = Math.abs(t - e.t_expected)
+                const laneDist = Math.abs(e.lane_intended - lane)
+                if (
+                    timeDist < bestDist ||
+                    (timeDist === bestDist && laneDist < bestLaneDist)
+                ) {
+                    bestDist = timeDist
+                    bestLaneDist = laneDist
+                    best = e
+                }
             }
         }
 
@@ -297,6 +368,9 @@ export function createBeatDropEngine({
         let classification = "hit"
         if (best.event_type === "decoy_note") {
             classification = "false_alarm"
+            combo = 0
+        } else if (best.lane_intended !== lane) {
+            classification = classifyMisHit(best.lane_intended, lane)
             combo = 0
         } else {
             classification = "hit"
@@ -358,32 +432,17 @@ export function createBeatDropEngine({
 
         resolveChordPair(best)
         tryCloseExpired(t)
-
-        // Temporary: log tap coordinates whenever x_tap / y_tap are set
-        if (row.x_tap != null || row.y_tap != null) {
-            console.log("[BeatDrop] tap", {
-                x_tap: row.x_tap,
-                y_tap: row.y_tap,
-                lane_tapped: row.lane_tapped,
-                lane_intended: row.lane_intended,
-                t_tap: row.t_tap,
-                t_expected: row.t_expected,
-                event_type: row.event_type,
-                chord_pair_id: row.chord_pair_id,
-                chord_complete: row.chord_complete,
-                hit_classification: row.hit_classification,
-                combo: row.combo,
-                score: row.score
-            })
-        }
+        logNodeClassification(row)
 
         return { accepted: true, event: best, score, classification }
     }
 
     function getVisibleNotes(t) {
+        if (!running) return []
         tryCloseExpired(t)
         const visible = []
         for (const e of chart) {
+            if (e.tapped) continue
             if (t < e.t_spawn) continue
             if (t > windowCloseAt(e) + 500) continue
             const yb = yBottomAt(e, t)

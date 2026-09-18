@@ -1,6 +1,10 @@
 {
     "name": "suhi",
+<<<<<<< HEAD
     "version": "1.0.8",
+=======
+    "version": "1.0.5",
+>>>>>>> 21e3d533d9e4930ad0724bf5c64b0c03e4922fd3
     "description": "suhi application",
     "main": "./out/main/index.js",
     "author": "SUHI",
@@ -31,6 +35,7 @@
         "loudness": "^0.4.2",
         "lucide-react": "^0.562.0",
         "react-i18next": "^16.5.1",
+        "react-idle-timer": "^5.7.3",
         "react-redux": "^9.2.0",
         "react-router": "^7.11.0",
         "serialport": "^13.0.0",

@@ -65,6 +65,30 @@ export const INSTRUCTION_AUDIO = {
     WH_COMPLETE: "instructions/wh_complete",
     WH_MEASURING: "instructions/wh_measuring",
 
+    // Perilous Path intro instructions
+    PERILOUS_LETS_LEARN_HOW_TO_PLAY: "instructions/perilous_path_lets_learn_how_to_play",
+    PERILOUS_COMPLETE_THE_PATH: "instructions/perilous_path_complete_the_path",
+    PERILOUS_REMEMBER_DANGER: "instructions/perilous_path_remember_danger",
+    PERILOUS_AVOID_AND_COMPLETE: "instructions/perilous_path_avoid_and_complete",
+    PERILOUS_PRESS_START_WHEN_READY: "instructions/perilous_path_press_start_when_ready",
+
+    // Visual Acuity intro instructions
+    VISUAL_ACUITY_LETS_LEARN_HOW_TO_PLAY: "instructions/visual_acuity_lets_learn_how_to_play",
+    VISUAL_ACUITY_COVER_YOUR_LEFT_EYE: "instructions/visual_acuity_cover_your_left_eye",
+    VISUAL_ACUITY_COVER_YOUR_RIGHT_EYE: "instructions/visual_acuity_cover_your_right_eye",
+    VISUAL_ACUITY_LOOK_CAREFULLY_AT_THE_C_SHAPE: "instructions/visual_acuity_look_carefully_at_the_c_shape",
+    VISUAL_ACUITY_PRESS_START_WHEN_READY: "instructions/visual_acuity_press_start_when_ready",
+
+    // Beat Drop intro instructions
+    BEAT_DROP_LETS_LEARN_HOW_TO_PLAY: "instructions/beat_drop_lets_learn_how_to_play",
+    BEAT_DROP_PRESS_THE_PIANO_KEY: "instructions/beat_drop_press_the_piano_key",
+    BEAT_DROP_HIT_EACH_NOTE: "instructions/beat_drop_hit_each_note",
+    BEAT_DROP_KEEP_ACCURATE_TIMING: "instructions/beat_drop_keep_accurate_timing",
+    BEAT_DROP_PRESS_START_WHEN_READY: "instructions/beat_drop_press_start_when_ready",
+
+    // Smoothie Slash intro instructions
+    SMOOTHIE_SLASH_INSTRUCTION: "instructions/smoothie_slash_instruction",
+
     // Raw key aliases for dynamic lookups
     camera_scan: "instructions/camera_scan",
     cognitive_game_instruction: "instructions/cognitive_game_instruction",
@@ -77,7 +101,23 @@ export const INSTRUCTION_AUDIO = {
     voice_instruction: "instructions/voice_instruction",
     welcome_screen: "instructions/welcome_screen",
     wh_complete: "instructions/wh_complete",
-    wh_measuring: "instructions/wh_measuring"
+    wh_measuring: "instructions/wh_measuring",
+    perilous_lets_learn_how_to_play: "instructions/perilous_path_lets_learn_how_to_play",
+    perilous_complete_the_path: "instructions/perilous_path_complete_the_path",
+    perilous_remember_danger: "instructions/perilous_path_remember_danger",
+    perilous_avoid_and_complete: "instructions/perilous_path_avoid_and_complete",
+    perilous_press_start_when_ready: "instructions/perilous_path_press_start_when_ready",
+    visual_acuity_lets_learn_how_to_play: "instructions/visual_acuity_lets_learn_how_to_play",
+    visual_acuity_cover_your_left_eye: "instructions/visual_acuity_cover_your_left_eye",
+    visual_acuity_cover_your_right_eye: "instructions/visual_acuity_cover_your_right_eye",
+    visual_acuity_look_carefully_at_the_c_shape: "instructions/visual_acuity_look_carefully_at_the_c_shape",
+    visual_acuity_press_start_when_ready: "instructions/visual_acuity_press_start_when_ready",
+    beat_drop_lets_learn_how_to_play: "instructions/beat_drop_lets_learn_how_to_play",
+    beat_drop_press_the_piano_key: "instructions/beat_drop_press_the_piano_key",
+    beat_drop_hit_each_note: "instructions/beat_drop_hit_each_note",
+    beat_drop_keep_accurate_timing: "instructions/beat_drop_keep_accurate_timing",
+    beat_drop_press_start_when_ready: "instructions/beat_drop_press_start_when_ready",
+    smoothie_slash_instruction: "instructions/smoothie_slash_instruction"
 }
 
 // Aliases for user-specified naming

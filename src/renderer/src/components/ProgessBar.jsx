@@ -1,10 +1,12 @@
 import PropTypes from "prop-types"
+import { useTranslation } from "react-i18next"
 import lightbg from "../assets/lightbg.png"
 // import textframe from '../assets/text-frame1.png'
 import video1 from "../assets/videos/measureHeightWeight.mp4"
 import progressBg from "../assets/progress-bg.svg"
 
 const Progressbar = ({ percent = 50, total = 28 }) => {
+    const { t } = useTranslation()
     const activeCount = Math.round((percent / 100) * total)
 
     return (
@@ -20,18 +22,9 @@ const Progressbar = ({ percent = 50, total = 28 }) => {
                 style={{ backgroundImage: `url(${lightbg})` }}
             />
 
-            {/* head text */}
-            {/* <div className="absolute left-1/2 portrait:top-[7vh] landscape:top-[5vh] -translate-x-1/2 portrait:w-[85%] landscape:w-1/2 flex flex-col items-center">
-        <img src={textframe} alt="text-frame" />
-        <p className="head-txt text-white text-center portrait:text-[40px] xl:text-[35px]  2xl:text-2xl tracking-wider my-6 2xl:my-4">
-          Height and Weight and Measurement
-        </p>
-        <img src={textframe} alt="text-frame" className="rotate-180" />
-      </div> */}
-
             {/* instructions */}
             <p className="absolute portrait:top-[20%] landscape:top-[21%] left-1/2 -translate-x-1/2 text-white portrait:text-[40px] xl:text-[35px]  2xl:text-2xl text-center tracking-wider leading-relaxed w-full">
-                Stand straight on the platform, facing forward.
+                {t("instructions.stand_straight_platform", "Stand straight on the platform, facing forward.")}
             </p>
 
             {/* progress bar */}

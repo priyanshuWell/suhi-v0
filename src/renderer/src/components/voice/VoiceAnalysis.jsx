@@ -7,7 +7,7 @@ import { sendVoiceToBackend, runVoice, voiceBufferApi } from "../../utils/api"
 import { getKioskId } from "../../utils/config"
 import { setScreening } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage, INSTRUCTION_AUDIO } from "../../constants/audio"
 import ReplayAudio from "../ReplayAudio"
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg"
 import Kinesthetic from "../../assets/voice/kinesthic.jpeg"
@@ -118,7 +118,7 @@ export default function VoiceAnalysis() {
             instructionAudioRef.current.pause()
             instructionAudioRef.current.currentTime = 0
         }
-        const audioPath = await getAudioForCurrentLanguage("voice_instruction")
+        const audioPath = await getAudioForCurrentLanguage(INSTRUCTION_AUDIO.VOICE_INSTRUCTION)
         if (audioPath && instructionAudioRef.current) {
             instructionAudioRef.current.src = audioPath
             setIsAudioPlaying(true)
@@ -315,51 +315,43 @@ export default function VoiceAnalysis() {
     const smoothRef = useRef(Array(9).fill(0))
 
     const visualizeVoice = useCallback(() => {
-        // The loop has to keep scheduling itself no matter what happens below —
-        // an early `return` here (as this used to have on a falsy analyser)
-        // drops the last requestAnimationFrame call and nothing else ever
-        // queues another one, so the wave freezes at whatever height it last
-        // drew and never recovers for the rest of the recording.
+        if (!analyserRef.current) return
+
         const analyser = analyserRef.current
 
-        if (analyser) {
-            // getByteTimeDomainData wants a buffer sized to fftSize (not
-            // frequencyBinCount, which is fftSize/2 and is for the frequency-
-            // domain methods) — undersizing it here was throwing away half of
-            // every waveform sample, so the RMS lagged the actual voice and
-            // the bars read as sluggish/stuck relative to what was being said.
-            const buffer = new Uint8Array(analyser.fftSize)
+        // ✅ FIX: getByteTimeDomainData fills frequencyBinCount (=fftSize/2) samples,
+        //    NOT fftSize — using fftSize left the second half zeroed, halving the RMS.
+        const buffer = new Uint8Array(analyser.frequencyBinCount)
 
-            analyser.getByteTimeDomainData(buffer)
+        analyser.getByteTimeDomainData(buffer)
 
-            let sumSquares = 0
+        let sumSquares = 0
 
-            for (let i = 0; i < buffer.length; i++) {
-                const sample = (buffer[i] - 128) / 128
+        for (let i = 0; i < buffer.length; i++) {
+            const sample = (buffer[i] - 128) / 128
 
-                sumSquares += sample * sample
-            }
-
-            const rms = Math.sqrt(sumSquares / buffer.length)
-
-            const energy = Math.min(rms * 6, 1)
-
-            const nextBars = smoothRef.current.map((_, i) => {
-                const distance = Math.abs(i - 4)
-
-                const weight = 1 - distance * 0.12
-
-                const random = 0.85 + Math.random() * 0.3
-
-                return Math.min(energy * weight * random, 1)
-            })
-
-            const smoothed = nextBars.map((v, i) => smoothRef.current[i] * 0.75 + v * 0.25)
-
-            smoothRef.current = smoothed
-
-            setVoiceBars(smoothed)
+            sumSquares += sample * sample
         }
+
+        const rms = Math.sqrt(sumSquares / buffer.length)
+
+        const energy = Math.min(rms * 6, 1)
+
+        const nextBars = smoothRef.current.map((_, i) => {
+            const distance = Math.abs(i - 4)
+
+            const weight = 1 - distance * 0.12
+
+            const random = 0.85 + Math.random() * 0.3
+
+            return Math.min(energy * weight * random, 1)
+        })
+
+        const smoothed = nextBars.map((v, i) => smoothRef.current[i] * 0.75 + v * 0.25)
+
+        smoothRef.current = smoothed
+
+        setVoiceBars(smoothed)
 
         animFrameRef.current = requestAnimationFrame(visualizeVoice)
     }, [])

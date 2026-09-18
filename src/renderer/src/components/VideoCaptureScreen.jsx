@@ -7,7 +7,7 @@ import { storeFptMeasurements } from "../utils/measurementRedux"
 import { useDispatch } from "react-redux"
 import { setUser, setLoginScreening, setCandidates } from "../features/common/commonSlice"
 import { getKioskId, trackStage } from "../utils/config"
-import { useKioskAudio } from "../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO, INSTRUCTION_AUDIO } from "../constants/audio"
 import { useTranslation } from "react-i18next"
 import i18n from "../config/i18n/i18n"
 import NoActivityFrame from "./ui/NoActivityFrame"
@@ -392,7 +392,7 @@ const VideoCaptureScreen = () => {
 
             // Single call: interrupts instruction audio (or previous error clip)
             // and starts the new one, or just silences everything if step has no clip.
-            const errorAudioKey = step.audio ? `errors/${step.audio}` : null
+            const errorAudioKey = step.audio ? ERROR_AUDIO[step.audio] ?? `errors/${step.audio}` : null
             currentErrorAudioKeyRef.current = errorAudioKey
             pendingAudioRef.current = playKioskAudio(errorAudioKey)
 
@@ -457,7 +457,20 @@ const VideoCaptureScreen = () => {
 
         const data = fptResponse?.data ?? {}
         const { face_detected, confidence_band, matched_student, candidates, screening } = data
-        const multiple_matches = false
+
+        // Only take candidates with ambiguity_score <= 0.07 (ignore low similarity / distant matches)
+        const validCandidates = (candidates ?? []).filter((c) => {
+            if (typeof c.ambiguity_score === "number") {
+                return c.ambiguity_score <= 0.07
+            }
+            return true
+        })
+
+        const multiple_matches = Boolean(
+            (data.multiple_matches || data.multiface_detected)
+                ? validCandidates.length > 0
+                : validCandidates.length > 1
+        )
 
         if (!face_detected) {
             const errorConfig = getFaceNotDetectedError(measurements, t)
@@ -485,12 +498,73 @@ const VideoCaptureScreen = () => {
             )
 
             // Wait for the error clip before leaving the screen
-            await playKioskAudio("errors/face_not_detected")
+            await playKioskAudio(ERROR_AUDIO.FACE_NOT_DETECTED)
             navigate("/login-suhi")
             return true
         }
 
-        if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && !multiple_matches) {
+        if (HIGH_CONFIDENCE_BANDS.includes(confidence_band)) {
+            const hasMultipleMatchesFlag = Boolean(
+                data.multiple_matches ||
+                data.multiface_detected ||
+                (candidates && candidates.length > 1)
+            )
+
+            if (hasMultipleMatchesFlag) {
+                if (validCandidates.length > 0) {
+                    dispatch(setCandidates(validCandidates))
+                    dispatch(
+                        setUser({
+                            success: true,
+                            data: {
+                                ...matched_student,
+                                buffer_id: data.buffer_id,
+                                multiple_matches: true,
+                                multiface_detected: true,
+                                candidates: validCandidates
+                            }
+                        })
+                    )
+                    dispatch(setLoginScreening(screening))
+                    trackStage(
+                        STAGES.FACE_SCAN,
+                        STATUS_KEYS.SUCCESS,
+                        {
+                            weight_kg: measurements?.weight,
+                            height_cm: measurements?.height
+                        },
+                        null,
+                        null,
+                        null
+                    )
+                    stopKioskAudio()
+                    navigate("/identify-student")
+                    return true
+                } else {
+                    // Multiple matches flagged but all candidates exceeded ambiguity threshold (> 0.07)
+                    // -> matched_student is still a valid high-confidence result, use it directly
+                    dispatch(
+                        setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } })
+                    )
+                    dispatch(setLoginScreening(screening))
+                    trackStage(
+                        STAGES.FACE_SCAN,
+                        STATUS_KEYS.SUCCESS,
+                        {
+                            weight_kg: measurements?.weight,
+                            height_cm: measurements?.height
+                        },
+                        null,
+                        null,
+                        matched_student?.user_id
+                    )
+                    stopKioskAudio()
+                    navigate("/verified")
+                    return true
+                }
+            }
+
+            // Single match without multiple matches flag
             dispatch(
                 setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } })
             )
@@ -511,28 +585,6 @@ const VideoCaptureScreen = () => {
             return true
         }
 
-        if (HIGH_CONFIDENCE_BANDS.includes(confidence_band) && multiple_matches) {
-            dispatch(setCandidates(candidates ?? []))
-            dispatch(
-                setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } })
-            )
-            dispatch(setLoginScreening(screening))
-            trackStage(
-                STAGES.FACE_SCAN,
-                STATUS_KEYS.SUCCESS,
-                {
-                    weight_kg: measurements?.weight,
-                    height_cm: measurements?.height
-                },
-                null,
-                null,
-                null
-            )
-            stopKioskAudio()
-            navigate("/identify-student")
-            return true
-        }
-
         return false
     }
 
@@ -545,7 +597,7 @@ const VideoCaptureScreen = () => {
 
                 // Fire-and-forget: instruction audio plays via single-channel hook.
                 // If a decision occurs, it will interrupt this seamlessly.
-                pendingAudioRef.current = playKioskAudio("instructions/camera_scan")
+                pendingAudioRef.current = playKioskAudio(INSTRUCTION_AUDIO.CAMERA_SCAN)
 
                 measurementPromiseRef.current = getMeasurements()
                 setStatus("Processing scan and measurements...")

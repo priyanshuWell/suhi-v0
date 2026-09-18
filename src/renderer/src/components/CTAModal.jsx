@@ -1,4 +1,9 @@
-const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
+import React, { useState } from "react"
+import { useTranslation } from "react-i18next"
+import textbgframe from "../assets/textbgframe.svg"
+
+export const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
+    const { t } = useTranslation()
     const [step, setStep] = useState("choose") // "choose" | "barefoot"
 
     return (
@@ -25,7 +30,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                             {/* Title */}
                             <div className="flex items-center justify-center mb-10">
                                 <h2 className="text-[#8BC3E5] text-[35px]  m-0 font-anta w-2/3 text-center">
-                                    Choose how you'd like to continue.
+                                    {t("bia_component.choose_how", "Choose how you'd like to continue.")}
                                 </h2>
                             </div>
 
@@ -54,7 +59,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                                 >
-                                    🦶 Without Shoes
+                                    {t("bia_component.without_shoes", "🦶 Without Shoes")}
                                 </button>
 
                                 <button
@@ -77,7 +82,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                     font-anta
                   "
                                 >
-                                    👟 With Shoes
+                                    {t("bia_component.with_shoes", "👟 With Shoes")}
                                 </button>
                             </div>
                         </>
@@ -86,7 +91,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                             {/* Instruction screen */}
                             <div className="flex items-center gap-2.5 mb-[6%]">
                                 <p className="text-[#8BC3E5] text-3xl font-anta text-center">
-                                    Remove your socks and shoes and click on start.
+                                    {t("bia_component.remove_socks_shoes", "Remove your socks and shoes and click on start.")}
                                 </p>
                             </div>
 
@@ -112,7 +117,7 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
                 "
                                 style={{ fontFamily: "'Share Tech Mono', monospace" }}
                             >
-                                Start
+                                {t("bia_component.start", "Start")}
                             </button>
                         </>
                     )}
@@ -121,3 +126,5 @@ const BarefootCTAModal = ({ onRemoveShoe, onContinueWithShoes, onClose }) => {
         </div>
     )
 }
+
+export default BarefootCTAModal

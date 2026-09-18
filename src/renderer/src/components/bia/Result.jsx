@@ -15,7 +15,7 @@ import { useTranslation } from "react-i18next"
 import { releaseAllResources } from "../../utils/cleanup"
 import { BrainIconS, MindIcon } from "../../assets"
 import { API_BASE_URL } from "../../utils/config"
-
+import { localToCloudSync } from "../../utils/api"
 /*
   ─────────────────────────────────────────────────────────────
   KIOSK SCALING STRATEGY
@@ -630,7 +630,12 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
     /* ── derived values ── */
     const finalHeight = storeHeight?.finalHeight || apiReport?.height || 170
     const finalWeight = storeWeight?.finalWeight || apiReport?.weight || 70
-    const rawUserName = storeUser?.data?.name || t("bia_result.default_name", "there")
+    const rawUserName =
+        storeUser?.data?.name ||
+        storeUser?.data?.student_name ||
+        apiReport?.student_name ||
+        apiReport?.name ||
+        t("bia_result.default_name", "Student")
     const userName = capitalizeFirstLetter(rawUserName)
 
     const formatLabel = (value, fallback = "—") => {
@@ -690,6 +695,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
         ? capitalizeFirstLetter(learnerType)
         : "Visual"
 
+    const tLevel = (val, fallback) => {
+        if (!val && fallback) val = fallback
+        if (!val) return "—"
+        const clean = String(val).toLowerCase().replace(/[\s-]+/g, "_")
+        return t(`bia_result.levels.${clean}`, formatLabel(val, fallback))
+    }
+
     const getBoxContent = (screeningOrder, apiReport) => {
         // SCREENING 1
         if (
@@ -699,22 +711,22 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
             return {
                 mind: [
                     {
-                        label: "Emotion Regulation",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.emotion_regulation", "Emotion Regulation"),
+                        value: tLevel(
                             apiReport?.emotional_regulation?.level,
                             "Good"
                         )
                     },
                     {
-                        label: "Self-Esteem",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.self_esteem", "Self-Esteem"),
+                        value: tLevel(
                             apiReport?.self_esteem?.level,
                             "Well Developed"
                         )
                     },
                     {
-                        label: "Personality",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.personality", "Personality"),
+                        value: tLevel(
                             apiReport?.personality?.animal,
                             "Dominant"
                         )
@@ -723,43 +735,43 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                 brain: [
                     {
-                        label: "Divided Attention",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.divided_attention", "Divided Attention"),
+                        value: tLevel(
                             apiReport?.attention?.level,
                             "Good"
                         )
                     },
                     {
-                        label: "Cognitive Flexibility",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.cognitive_flexibility", "Cognitive Flexibility"),
+                        value: tLevel(
                             apiReport?.memory?.level,
                             "Developing"
                         )
                     },
                     {
-                        label: "Learning Style",
-                        value: learnerStyleLabel
+                        label: t("bia_result.metrics.learning_style", "Learning Style"),
+                        value: tLevel(learnerStyleLabel, "Visual")
                     }
                 ],
 
                 body: [
                     {
-                        label: "Hydration",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.hydration", "Hydration"),
+                        value: tLevel(
                             apiReport?.hydration?.level,
                             "Ideal"
                         )
                     },
                     {
-                        label: "Muscle Mass",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.muscle_mass", "Muscle Mass"),
+                        value: tLevel(
                             apiReport?.muscle_mass?.level,
                             "Ideal"
                         )
                     },
                     {
-                        label: "Fat Mass",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.fat_mass", "Fat Mass"),
+                        value: tLevel(
                             apiReport?.fat_mass?.level,
                             "Low"
                         )
@@ -778,24 +790,24 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
             return {
                 mind: [
                     {
-                        label: "Short Term Recall",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.short_term_recall", "Short Term Recall"),
+                        value: tLevel(
                             apiReport?.mind?.short_term_recall?.level ??
                             apiReport?.mind?.short_term_recall,
                             "Developing"
                         )
                     },
                     {
-                        label: "Fine Motor Skills",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.fine_motor_skills", "Fine Motor Skills"),
+                        value: tLevel(
                             apiReport?.mind?.fine_motor_skills?.level ??
                             apiReport?.mind?.fine_motor_skills,
                             "Strong"
                         )
                     },
                     {
-                        label: "Visual Spatial Judgement",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.visual_spatial_judgement", "Visual Spatial Judgement"),
+                        value: tLevel(
                             apiReport?.mind?.visual_spatial_judgement?.level ??
                             apiReport?.mind?.visual_spatial_judgement,
                             "Strong"
@@ -805,23 +817,23 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                 brain: [
                     {
-                        label: "Musical Preference",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.musical_preference", "Musical Preference"),
+                        value: tLevel(
                             apiReport?.brain?.musical_preference?.level ??
                             apiReport?.brain?.musical_preference,
                             "Strong"
                         )
                     },
                     {
-                        label: "Learning Style",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.learning_style", "Learning Style"),
+                        value: tLevel(
                             apiReport?.brain?.learning_style,
                             "Reader"
                         )
                     },
                     {
-                        label: "Stress",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.stress", "Stress"),
+                        value: tLevel(
                             apiReport?.brain?.stress,
                             "Low"
                         )
@@ -830,23 +842,23 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                 body: [
                     {
-                        label: "Visual Acuity",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.visual_acuity", "Visual Acuity"),
+                        value: tLevel(
                             apiReport?.body?.visual_acuity,
                             "Good"
                         )
                     },
                     {
-                        label: "Reaction Time",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.reaction_time", "Reaction Time"),
+                        value: tLevel(
                             apiReport?.body?.reaction_time?.level ??
                             apiReport?.body?.reaction_time,
                             "Strong"
                         )
                     },
                     {
-                        label: "Motor Coordination",
-                        value: formatLabel(
+                        label: t("bia_result.metrics.motor_coordination", "Motor Coordination"),
+                        value: tLevel(
                             apiReport?.body?.motor_coordination?.level ??
                             apiReport?.body?.motor_coordination,
                             "Developing"
@@ -856,19 +868,19 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                 vitals: [
                     {
-                        label: "Heart Rate",
+                        label: t("bia_result.metrics.heart_rate", "Heart Rate"),
                         value: apiReport?.vitals?.heart_rate != null
                             ? `${apiReport.vitals.heart_rate} bpm`
                             : "—"
                     },
                     {
-                        label: "Breathing Rate",
+                        label: t("bia_result.metrics.breathing_rate", "Breathing Rate"),
                         value: apiReport?.vitals?.breathing_rate != null
                             ? `${apiReport.vitals.breathing_rate} breaths/min`
                             : "—"
                     },
                     {
-                        label: "BP",
+                        label: t("bia_result.metrics.bp", "BP"),
                         value: formatLabel(
                             apiReport?.vitals?.blood_pressure,
                             "—"
@@ -981,7 +993,8 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     >
                         {t(
                             "bia_result.congratulations_named",
-                            `Congratulations ${userName}, Here are your results`
+                            `Congratulations ${userName}, Here are your results`,
+                            { name: userName }
                         )}
                     </h1>
 
@@ -1042,13 +1055,13 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {/* Mind + Brain row */}
                     <div className="flex w-full" style={{ gap: "24px" }}>
                         <StatCard
-                            title="Mind"
+                            title={t("bia_result.sections.mind", "Mind")}
                             icon={<MindIcon style={{ width: "100%", height: "100%" }} />}
                             color="#29ABE2"
                             rows={boxContent.mind}
                         />
                         <StatCard
-                            title="Brain"
+                            title={t("bia_result.sections.brain", "Brain")}
                             icon={<BrainIconS style={{ width: "100%", height: "100%" }} />}
                             color="#2CEF94"
                             rows={boxContent.brain}
@@ -1058,7 +1071,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                     {/* Body + Vitals row */}
                     <div className="flex w-full" style={{ gap: "24px" }}>
                         <StatCard
-                            title="Body"
+                            title={t("bia_result.sections.body", "Body")}
                             icon={
                                 <img
                                     src={BodyIcon}
@@ -1070,7 +1083,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                             rows={boxContent.body}
                         />
                         <StatCard
-                            title="Vitals"
+                            title={t("bia_result.sections.vitals", "Vitals")}
                             icon={
                                 <img
                                     src={vitalsIcon}
@@ -1094,7 +1107,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                                         className="w-full h-full object-contain"
                                     />
                                 }
-                                label="Color Blindness"
+                                label={t("bia_result.sections.color_blindness", "Color Blindness")}
                                 value={formatColorBlindness(
                                     apiReport?.color_blindness?.result,
                                     apiReport?.color_blindness?.deficiency_type
@@ -1104,11 +1117,12 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                         )}
                         <InfoPill
                             icon={<p className="text-4xl">😌</p>}
-                            label="Emotion"
-                            value={formatLabel(
+                            label={t("bia_result.metrics.emotion", "Emotion")}
+                            value={tLevel(
                                 apiReport?.emotion?.label === "neutral"
                                     ? "Calm"
-                                    : apiReport?.emotion?.label
+                                    : apiReport?.emotion?.label,
+                                "Calm"
                             )}
                             color="#FFE15C"
                         />
@@ -1116,6 +1130,9 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
 
                     <button
                         onClick={() => {
+                            localToCloudSync().catch(err =>{
+                                console.log("background localtocloud",err)
+                            })
                             releaseAllResources()
                             navigate("/welcome")
                         }}

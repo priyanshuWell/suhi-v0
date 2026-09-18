@@ -16,7 +16,12 @@
         "no": "No",
         "are_you_there": "Are you there?",
         "retry": "Retry",
-        "retrying_in": "Retrying in {countdown}s…"
+        "retrying_in": "Retrying in {{countdown}}s...",
+        "retry_in": "Retrying in {{countdown}}s...",
+        "try_again": "Try again",
+        "going_to_home": "Going to home",
+        "seconds_remaining": "{{count}}s remaining",
+        "redirecting_in": "{{label}} in {{remaining}} secs..."
     },
     "profile": {
         "welcome_suhi": "Welcome ",
@@ -30,7 +35,6 @@
         "let_measure": "Your body scan is starting",
         "basic_body_scan": "Basic Body Scan",
         "core_body_scan": "Core Body Scan",
-
         "scan_done": "Scan Completed!",
         "weight_height_measurement": "Stand Straight! \n we're measuring your height and weight",
         "measuring_body_composition": "Measuring your fat and muscle mass",
@@ -65,7 +69,9 @@
             "red_lines": "Red Lines",
             "three_lines": "Three lines",
             "no_lines": "No lines"
-        }
+        },
+        "instructions_line1": "You have to click the number/shape for each image.",
+        "instructions_line2": "If you don't see anything just click on Cannot read plate."
     },
     "dmit": {
         "hand_labels": {
@@ -149,7 +155,50 @@
         "vata": "Vata",
         "pitta": "Pitta",
         "kapha": "Kapha",
-        "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!"
+        "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!",
+        "default_name": "Student",
+        "congratulations_named": "Congratulations, {{name}}!, Here are you Results",
+        "download_report": "Download Suhi Holistic Wellness report for more details",
+        "sections": {
+            "mind": "Mind",
+            "brain": "Brain",
+            "body": "Body",
+            "vitals": "Vitals",
+            "persona": "Persona",
+            "color_blindness": "Color Blindness -"
+        },
+        "metrics": {
+            "emotion_regulation": "Emotion Regulation",
+            "self_esteem": "Self-Esteem",
+            "personality": "Personality",
+            "divided_attention": "Divided Attention",
+            "cognitive_flexibility": "Cognitive Flexibility",
+            "learning_style": "Learning Style",
+            "hydration": "Hydration",
+            "muscle_mass": "Muscle Mass",
+            "fat_mass": "Fat Mass",
+            "stress": "Stress",
+            "visual_acuity": "Visual Acuity",
+            "short_term_recall": "Short Term Recall",
+            "fine_motor_skills": "Fine Motor Skills",
+            "visual_spatial_judgement": "Visual Spatial Judgement",
+            "musical_preference": "Musical Preference",
+            "heart_rate": "Heart Rate",
+            "breathing_rate": "Breathing Rate",
+            "bp": "BP",
+            "reaction_time": "Reaction Time",
+            "motor_coordination": "Motor Coordination"
+        },
+        "levels": {
+            "good": "Good",
+            "developing": "Developing",
+            "strong": "Strong",
+            "ideal": "Ideal",
+            "low": "Low",
+            "dominant": "Dominant",
+            "well_developed": "Well Developed",
+            "cannot_read_plate": "Cannot Read Plate"
+        }
     },
     "bia_component": {
         "attempt": "Attempt",
@@ -162,6 +211,20 @@
     "error": {
         "no_result": "Failed to load result data",
         "redirecting": "Redirecting to home..."
+    },
+    "identifyStudent": {
+        "title_name": "We've recognised you!",
+        "subtitle_name": "Just enter your full name so we can confirm it's you",
+        "title_id": "Log in using your SUHI Id",
+        "name_label": "Full Name",
+        "name_placeholder": "Enter your full name",
+        "enter_name": "Please enter your full name",
+        "enter_suhi_id": "Please enter your SUHI Id",
+        "student_not_found_redirect": "Profile not found in detected faces. Redirecting to start...",
+        "multiple_found": "{{count}} students found with this name. Please enter your SUHI Id.",
+        "not_found_hint": "Name not found in detected students. Please enter your SUHI Id.",
+        "back_to_name": "← Back to Name",
+        "use_suhi_id": "Log in using SUHI Id instead"
     },
     "loginSuhi": {
         "title": "Log in using your SUHI Id",
@@ -221,7 +284,16 @@
         "different_user_found_desc": "Looks like someone appeared in front of the kiosk!",
         "bia_error_title": "BIA Error",
         "moving_to_next_scan": "Moving to Next Scan",
-        "stand_straight_still": "Stand Straight &amp; Still"
+        "stand_straight": "Stand straight",
+        "stand_straight_still": "We are measuring your height & weight",
+        "no_activity_session_desc":"We are not able to detect any activity. We are redirecting to home page."
+    },
+    "auto_idle": {
+        "no_activity_detected": "No Activity Detected",
+        "redirecting_to_home": "Redirecting to home",
+        "are_you_there": "Are you still there?",
+        "continue_screening": "Continue Screening",
+        "no_user_detected": "No User Detected"
     },
     "smoothieSlash": {
         "beAware": {
@@ -256,6 +328,235 @@
             "desc_recipe_card": "Recipe Card",
             "desc_line2_suffix": "at the top of the",
             "desc_line3": "screen"
+        }
+    },
+    "perilousPath": {
+        "loading_next": "Loading next challenge…",
+        "error_finalize": "Couldn't finalize your results.",
+        "error_not_ready": "Perilous Path isn't ready yet. Please try again shortly.",
+        "error_loading_level": "Something went wrong loading the next level.",
+        "intro": {
+            "how_to_play": "How to Play?",
+            "step1_title": "Complete the Path",
+            "step1_trace": "Trace the path from",
+            "step1_start": "Start",
+            "step1_to": "to",
+            "step1_end": "End",
+            "step2_title": "Remember Danger",
+            "step2_some": "Some tiles are",
+            "step2_danger": "dangerous,",
+            "step2_memorize": "Memorize their position",
+            "step3_title": "Avoid & Complete",
+            "step3_avoid": "Avoid the danger tiles",
+            "step3_complete": "and complete the path",
+            "step3_to": "to",
+            "step3_win": "win!",
+            "start_game": "Start Game",
+            "starting": "Starting…"
+        },
+        "game": {
+            "time": "Time",
+            "score": "Score",
+            "memorize_danger": "Memorize the danger tiles!",
+            "get_ready": "Get ready…",
+            "trace_safe_path": "Trace the safe path!",
+            "submitting": "Submitting…",
+            "safe_crossing": "+{{count}} Safe crossing",
+            "crossed_no_points": "Crossed — no points",
+            "time_ran_out": "Time ran out",
+            "path_not_completed": "Path not completed",
+            "error_submit": "Couldn't submit your run."
+        },
+        "scoreboard": {
+            "results": "Results",
+            "total_points": "Total Points",
+            "neurocoins": "NeuroCoins",
+            "best_streak": "Best Consecutive Run"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "How to Play?",
+            "start_game": "Start Game",
+            "card1_line1": "Press the piano key that",
+            "card1_line2": "matches",
+            "card1_line3": "the falling note's",
+            "card1_line4": "lane",
+            "card2_line1": "Hit each note as it",
+            "card2_line2": "reaches",
+            "card2_line3": "the line at the",
+            "card2_line4": "bottom",
+            "card3_line1": "Keep accurate timing",
+            "card3_line2": "to build combos, score",
+            "card3_line3": "multipliers",
+            "card3_line4": "and crowd energy"
+        },
+        "popups": {
+            "got_it": "Got it!",
+            "follow_title": "Follow the Beat!",
+            "follow_body": "Hit each note as it reaches the line at bottom",
+            "speed_title": "Notes Speed will Increase!",
+            "speed_get_ready": "Get Ready!",
+            "speed_notes_will": "The notes will",
+            "speed_come_faster": "come faster",
+            "speed_now": "now!",
+            "two_notes_title": "Two Notes Together!",
+            "two_notes_line1": "Now two notes will fall together.",
+            "two_notes_line2": "You have to press both the keys!",
+            "avoid_title": "Avoid These Notes!",
+            "avoid_line1_prefix": "These are decoy notes.",
+            "avoid_line1_highlight": "Do not press",
+            "avoid_line2": "the piano key when you see these",
+            "avoid_line3": "notes."
+        },
+        "playArea": {
+            "time": "Time",
+            "score": "Score"
+        },
+        "results": {
+            "results": "Results",
+            "score": "Score",
+            "coins": "NeuroArc Coins",
+            "streak": "Longest Streak"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "Vision Test",
+            "cover_eye": "Cover your {{eye}} eye with your hand.",
+            "tap_gap": "Look at the C shape and tap the matching gap button"
+        },
+        "eyes": {
+            "right": "right",
+            "left": "left",
+            "right_eye": "Right Eye",
+            "left_eye": "Left Eye"
+        },
+        "game": {
+            "tap_gap": "Look at the C shape and tap the matching gap button",
+            "correct": "Correct!",
+            "try_again": "Incorrect — try again",
+            "incorrect": "Incorrect"
+        },
+        "modal": {
+            "title": "Task Completed",
+            "responses_saved": "Responses saved."
+        },
+        "results": {
+            "below_6_60": "Below 6/60"
+        }
+    },
+    "progress_stages": {
+        "login": "Face Scan",
+        "bia": "Body Scan",
+        "smoothie_slash": "Smoothie Slash",
+        "voice_analysis": "Voice Scan",
+        "color_blindness": "Vision Scan",
+        "height_weight": "BMI Scan",
+        "perilous_path": "Perilous Path",
+        "visual_acuity": "Vision Test",
+        "beat_drop": "Beat Drop",
+        "result": "Result"
+    },
+    "stage_celebration": {
+        "stage_cleared": "STAGE {{stageNumber}} CLEARED!",
+        "next_challenge_unlocked": "Next Challenge Unlocked! Advancing...",
+        "tap_to_continue": "Tap to continue",
+        "titles": {
+            "login": "Face Biometrics Scan",
+            "bia": "Full Body Composition Scan",
+            "height_weight": "BMI & Physical Dimension Scan",
+            "smoothie_slash": "Mind Reaction Challenge",
+            "perilous_path": "Spatial Cognition Trial",
+            "voice_analysis": "Vocal Biometrics Analysis",
+            "color_blindness": "Color Spectrum Vision Test",
+            "visual_acuity": "Visual Acuity Precision Test",
+            "beat_drop": "Rhythm & Coordination Arena",
+            "result": "Comprehensive Health Dossier"
+        }
+    },
+    "settings": {
+        "language": "Language",
+        "reset": "Reset",
+        "apply": "Apply",
+        "lang_en": "English",
+        "lang_hi": "Hindi",
+        "lang_gu": "Gujarati",
+        "lang_mr": "Marathi",
+        "lang_bn": "Bengali",
+        "lang_ar": "Arabic"
+    },
+    "kiosk": {
+        "admin_access": "Administrator access",
+        "enter_password": "Enter password to exit kiosk mode",
+        "desktop_desc": "This returns the device to a normal desktop for troubleshooting.",
+        "cancel": "Cancel",
+        "exit_kiosk": "Exit kiosk mode",
+        "checking": "Checking…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "Log in via Father's name and phone number",
+            "father_name": "Father's name",
+            "enter_father_name": "Enter Your Father's name",
+            "registered_mobile": "Registered Mobile number",
+            "enter_number": "Enter number",
+            "next": "Next"
+        },
+        "login_dob": {
+            "title": "Log in via your name and date of birth",
+            "suhi_id": "Suhi ID",
+            "enter_suhi_id": "Enter Your Suhi ID",
+            "dob": "Date Of Birth",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "Next",
+            "fill_all_fields": "Please fill all fields",
+            "invalid_date": "Please enter a valid date (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "Log in using fingerprint",
+            "instruction": "Place your thumb on the fingerprint scanner below the screen.",
+            "verified": "Fingerprint verified",
+            "not_recognised": "Fingerprint not recognised. Please try again."
+        },
+        "user_details": {
+            "male": "Male",
+            "female": "Female",
+            "mobile_number": "Mobile number",
+            "enter_number": "Enter number",
+            "take_face_picture": "Take face picture"
+        },
+        "confirmation": {
+            "name_label": "Name: ",
+            "class_label": "Class: ",
+            "age_label": "Age: ",
+            "contact_label": "Contact Number: ",
+            "register_user": "Register User",
+            "go_back": "Go Back"
+        },
+        "identified_student": {
+            "enter_suhi_id": "Enter your SUHI Id",
+            "suhi_id_placeholder": "e.g. SUHI_210S0A642",
+            "checking": "Checking...",
+            "transcribing": "Transcribing...",
+            "confirm": "Confirm",
+            "try_another_way": "Let's try another way",
+            "login_using_id": "Please log in using your SuHi ID.",
+            "going_to_login": "Going to SUHI Id login"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "TODAY'S RECIPE BOARD",
+            "next": "NEXT",
+            "start": "START",
+            "recipes_made_correctly": "RECIPES MADE CORRECTLY",
+            "blend_smarter": "Blend smarter, score higher."
+        },
+        "spaceConvoy": {
+            "submit": "Submit",
+            "tap_targets_first": "Tap the targets first",
+            "level_up": "LEVEL UP →"
         }
     }
 }

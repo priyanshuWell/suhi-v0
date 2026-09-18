@@ -19,10 +19,11 @@ import { StartScreen } from "./components/StartScreen"
 import NoActivityFrame from "./components/ui/NoActivityFrame"
 import VideoCaptureScreen from "./components/VideoCaptureScreen"
 import VoiceAnalysis from "./components/voice/VoiceAnalysis"
-import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
+import { useBackgroundAudio } from "./constants/audio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
 import SplashScreen from "./components/SplashScreen"
+import AutoIdleRedirect from "./components/AutoIdleRedirect"
 import KioskExitOverlay from "./components/ui/KioskExitOverlay"
 function App() {
     // Play looping background music on all routes except voice & game sections
@@ -50,15 +51,13 @@ function App() {
         <>
             <BufferCollectionManager />
             <KioskExitOverlay />
-            {/* <AutoIdleRedirect
-        timeoutMs={10000}
-        promptBeforeMs={5000}
-        redirectTo="/welcome"
-      /> */}
+            <AutoIdleRedirect
+                redirectTo="/welcome"
+            />
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<SplashScreen />} />
+                <Route path="/" element={<StartScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />
@@ -66,6 +65,7 @@ function App() {
                 <Route path="/divide-attention" element={<DivideAttentionGame />} />
                 <Route path="/colorblindness/quiz" element={<ColorBlindQuiz />} />
                 <Route path="/bia/result" element={<BiaReportRouter />} />
+                <Route path="/identify-student" element={<IdentifyStudent />} />
                 {/* All screening routes — get the top progress bar automatically */}
                 <Route element={<ScreeningLayout />}>
                     <Route path="/faceCapture" element={<FaceCapture />} />
@@ -79,8 +79,6 @@ function App() {
                     <Route path="/perilous-path" element={<PerilousPath />} />
                     <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
                     <Route path="/beat-drop" element={<BeatDropGame />} />
-
-                    <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />

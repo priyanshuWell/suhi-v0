@@ -970,16 +970,27 @@ export const BIAComplete = async (result) => {
  * Calls: GET /sync/cloud-to-local
  */
 export const cloudToLocalSync = async () => {
-    try {
-        const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, {
-            timeout: 60000, // sync may take time
-            headers: { "Content-Type": "application/json" }
-        })
-        return res.data
-    } catch (error) {
-        console.error("❌ cloudToLocalSync API failed:", error?.message || error)
-        throw error
-    }
+    try {
+        const res = await axios.post(`${API_BASE_URL}/sync/cloud-to-local`, {}, {
+            headers: { "Content-Type": "application/json" }
+        })
+        return res.data
+    } catch (error) {
+        console.error(":x: cloudToLocalSync API failed:", error?.message || error)
+        throw error
+    }
+}
+
+export const localToCloudSync = async () => {
+    try {
+        const res = await axios.post(`${API_BASE_URL}/sync/local-to-cloud`, {}, {
+            headers: { "Content-Type": "application/json" }
+        })
+        return res.data
+    } catch (error) {
+        console.error(":x: localToCloudSync API failed:", error?.message || error)
+        throw error
+    }
 }
 export const SmoothieSession = async (userId, screeningSessionId) => {}
 export const SmoothieSlashBatch = async (gameSessionId, events) => {}
