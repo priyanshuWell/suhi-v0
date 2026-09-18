@@ -1,6 +1,7 @@
-import { Eye, Hand } from 'lucide-react';
+import { Eye } from 'lucide-react';
 import BlueGradientButton from '../../ui/BlueGradientButton';
 import adaptive from '../../../assets/adaptive-c/AdaptiveEyeVisionC.png';
+import handCoverGif from '../../../assets/adaptive-c/hand_cover.gif';
 import { EYE_INFO } from './constants';
 
 /* ------------------------------------------------------------------ */
@@ -8,6 +9,8 @@ import { EYE_INFO } from './constants';
 /* ------------------------------------------------------------------ */
 export default function InstructionScreen({ eye, onStart, disabled = false, loading = false }) {
   const info = EYE_INFO[eye];
+  const isLeftCover = info.cover === 'left';
+
   return (
     <>
       {/* Title */}
@@ -30,10 +33,15 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
         Cover your {info.cover} eye with your hand.
       </p>
 
-      {/* Eye / Hand icons */}
-      <div className="flex items-center gap-6 text-white">
-        <Eye className="w-14 h-14 sm:w-16 sm:h-16" strokeWidth={2.5} />
-        <Hand className="w-14 h-14 sm:w-16 sm:h-16" strokeWidth={2.5} />
+      {/* Eye with Hand covering it */}
+      <div className="relative flex items-center justify-center w-72 h-36 sm:w-96 sm:h-48 md:w-[460px] md:h-[230px] text-white my-2">
+        <Eye className="w-20 h-20 sm:w-20 sm:h-20 text-white" strokeWidth={2.5} />
+        <img
+          src={handCoverGif}
+          alt={`Cover ${info.cover} eye`}
+          className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${isLeftCover ? 'scale-x-[-1]' : ''
+            }`}
+        />
       </div>
 
       {/* How-to instruction */}

@@ -36,8 +36,14 @@ const IdentifyStudent = () => {
     const isButtonDisabled = !currentValue.trim() || loading
 
     // Merge matched_student (user.data) and candidates array to form complete searchable candidate list
+    // (Filtering out candidates with ambiguity_score > 0.07)
     const getAllCandidates = () => {
-        const list = [...candidates]
+        const list = candidates.filter((c) => {
+            if (typeof c.ambiguity_score === "number") {
+                return c.ambiguity_score <= 0.07
+            }
+            return true
+        })
         if (user?.data) {
             const exists = list.some(
                 (c) =>

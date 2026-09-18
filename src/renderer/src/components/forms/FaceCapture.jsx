@@ -80,13 +80,37 @@ function FaceCapture() {
             }
 
             if (response.student_status === "REGISTERED") {
-                if (response.candidates || response.data?.candidates) {
-                    dispatch(setCandidates(response.candidates || response.data?.candidates))
+                const rawCandidates = response.candidates || response.data?.candidates || []
+                const validCandidates = rawCandidates.filter((c) => {
+                    if (typeof c.ambiguity_score === "number") {
+                        return c.ambiguity_score <= 0.07
+                    }
+                    return true
+                })
+
+                const hasMultipleMatchesFlag = Boolean(
+                    response.multiple_matches ||
+                    response.multiface_detected ||
+                    response.data?.multiple_matches ||
+                    response.data?.multiface_detected ||
+                    (rawCandidates && rawCandidates.length > 1)
+                )
+
+                if (hasMultipleMatchesFlag) {
+                    if (validCandidates.length > 0) {
+                        dispatch(setCandidates(validCandidates))
+                        dispatch(setUser(response))
+                        dispatch(setLoginScreening(response.screening || null))
+                        navigate("/identify-student")
+                        return
+                    } else {
+                        // Multiple matches flagged but none within ambiguity threshold (<= 0.07)
+                        navigate("/login-suhi")
+                        return
+                    }
                 }
+
                 dispatch(setUser(response))
-                // FaceCapture calls realtime/capture — this IS the login step.
-                //    Was previously missing entirely, leaving Redux screening stale/null
-                //    and breaking the nextStage check immediately below.
                 dispatch(setLoginScreening(response.screening || null))
 
                 // If this is a resumed session, skip the RegisterCard and go straight to next stage
