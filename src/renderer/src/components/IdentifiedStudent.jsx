@@ -7,6 +7,7 @@ import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
 import { useTranslation } from "react-i18next"
 import { useKioskAudio } from "../hooks/useKioskAudio"
+import NoActivityFrame from "./ui/NoActivityFrame"
 
 const IdentifyStudent = () => {
     const navigate = useNavigate()
@@ -25,6 +26,7 @@ const IdentifyStudent = () => {
     const [inputFocused, setInputFocused] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+    const [noMatchError, setNoMatchError] = useState(false)
 
     // Guard: if neither candidates nor user exist, return to welcome
     useEffect(() => {
