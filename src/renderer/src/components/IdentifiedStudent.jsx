@@ -6,7 +6,7 @@ import LoginComponent from "./ui/LoginComponent"
 import BlueGradientButton from "./ui/BlueGradientButton"
 import KeyboardContainer from "./ui/KeyboardContainer"
 import { useTranslation } from "react-i18next"
-import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
+import { useKioskAudio } from "../hooks/useKioskAudio"
 
 const IdentifyStudent = () => {
     const navigate = useNavigate()
@@ -100,7 +100,6 @@ const IdentifyStudent = () => {
 
         // 2. Fallback to partial / contains match
         if (matches.length === 0) {
-<<<<<<< HEAD
             matches = allCandidates.filter((c) => {
                 const cName = (c.student_name || c.name || "").trim().toLowerCase()
                 return cName && (cName.includes(normalizedQuery) || normalizedQuery.includes(cName))
@@ -110,19 +109,6 @@ const IdentifyStudent = () => {
         if (matches.length === 1) {
             // Exactly 1 match found in matched student or candidate array!
             confirmStudent(matches[0])
-=======
-            retryRef.current += 1
-            if (retryRef.current < MAX_RETRIES) {
-                // Play "invalid SUHI Id" audio feedback
-                playAudio(ERROR_AUDIO.INVALID_SUHI_ID_COORDINATE)
-                setError("No match found. Please check and try again.")
-                setLoading(false)
-                return
-            }
-            // Max retries reached — play redirect audio then show fullscreen error
-            playAudio(ERROR_AUDIO.LET_TRY_SUHI_ID)
-            setNoMatchError(true)
->>>>>>> 65aff95efeedaa04913264b4dcbb19239a184cc9
             setLoading(false)
             return
         }
@@ -270,57 +256,27 @@ const IdentifyStudent = () => {
                                 : t("loginSuhi.id_label", "SUHI Id")}{" "}
                             <span className="text-[#ff0000cc] font-['Noto_Sans'] absolute">*</span>
                         </div>
-                        <div
-                            className="relative min-h-[50px] text-3xl flex items-center cursor-text"
-                            onClick={() => {
-                                setKeyboardVisible(true)
-                                setInputFocused(true)
-                                setError("")
-                            }}
-                        >
-                            {/* Hidden real input keeps keyboard/physical-key events working */}
+                        <div className="relative min-h-[50px] text-3xl flex items-center">
                             <input
                                 type="text"
                                 value={step === "NAME" ? nameInput : suhiIdInput}
                                 autoCapitalize={step === "NAME" ? "words" : "characters"}
                                 readOnly
-                                className="absolute inset-0 w-full opacity-0 cursor-text"
+                                placeholder={
+                                    step === "NAME"
+                                        ? t("identifyStudent.name_placeholder", "Enter your full name")
+                                        : "e.g. SUHI_210S0A..."
+                                }
+                                className="w-full bg-transparent border-none outline-none text-white caret-transparent placeholder:text-white/25 placeholder:text-2xl"
                                 onFocus={() => {
                                     setKeyboardVisible(true)
-                                    setInputFocused(true)
                                     setError("")
                                 }}
-                                onBlur={() => setInputFocused(false)}
+                                onClick={() => {
+                                    setKeyboardVisible(true)
+                                    setError("")
+                                }}
                             />
-
-                            {/* Custom display row */}
-                            <div className="flex items-center w-full">
-                                {currentValue ? (
-                                    <span className="text-white text-3xl tracking-wide">{currentValue}</span>
-                                ) : (
-                                    <span className={`text-2xl transition-colors duration-200 ${
-                                        inputFocused ? "text-white/20" : "text-white/25"
-                                    }`}>
-                                        {step === "NAME"
-                                            ? t("identifyStudent.name_placeholder", "Enter your full name")
-                                            : "e.g. SUHI_210S0A..."}
-                                    </span>
-                                )}
-                                {/* Blinking cursor — visible whenever keyboard is open */}
-                                {keyboardVisible && (
-                                    <span
-                                        className="inline-block w-[2px] h-[36px] bg-white ml-1 align-middle"
-                                        style={{ animation: "identCursorBlink 1s step-end infinite" }}
-                                    />
-                                )}
-                            </div>
-
-                            <style>{`
-                                @keyframes identCursorBlink {
-                                    0%, 100% { opacity: 1; }
-                                    50%       { opacity: 0; }
-                                }
-                            `}</style>
                         </div>
                         <div className="border-t-2 border-white w-full mt-2" />
 
@@ -439,8 +395,6 @@ const IdentifyStudent = () => {
                     onClose={() => setKeyboardVisible(false)}
                 />
             )}
-<<<<<<< HEAD
-=======
 
             {/* Fullscreen error */}
             {noMatchError && (
@@ -458,7 +412,6 @@ const IdentifyStudent = () => {
                     }}
                 />
             )}
->>>>>>> 65aff95efeedaa04913264b4dcbb19239a184cc9
         </>
     )
 }
