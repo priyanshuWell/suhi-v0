@@ -295,7 +295,8 @@ const IdentifyStudent = () => {
                                 {duplicateCandidates.length > 0
                                     ? t(
                                         "identifyStudent.multiple_found",
-                                        `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`
+                                        `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`,
+                                        { count: duplicateCandidates.length }
                                     )
                                     : t(
                                         "identifyStudent.not_found_hint",
