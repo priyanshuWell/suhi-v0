@@ -3,7 +3,6 @@ import { useIdleTimer } from "react-idle-timer"
 import { useNavigate, useLocation } from "react-router"
 import { useDispatch } from "react-redux"
 import { resetCommonState } from "../features/common/commonSlice"
-import AreYouThereModal from "./ui/AreYouThereModal"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
 import { useTranslation } from "react-i18next"
@@ -71,9 +70,12 @@ const AutoIdleRedirect = ({
     }, [isIdleExempt, playErrorAudio])
 
     const handleActive = useCallback(() => {
-        stopErrorAudio() // stop any playing error audio when user resumes
-        setStage(null)
-    }, [stopErrorAudio])
+        // If in 'are-you-there' stage, user activity means they are still present
+        if (stage === "are-you-there") {
+            stopErrorAudio() // stop any playing error audio when user resumes
+            setStage(null)
+        }
+    }, [stage, stopErrorAudio])
 
     // Fired when the "continue-screening" countdown ends with no response.
     const handleFinalTimeout = useCallback(() => {
@@ -123,7 +125,10 @@ const AutoIdleRedirect = ({
                     variant="are-you-there"
                     timeoutSecs={Math.ceil(promptBeforeMs / 1000)}
                     onButtonClick={handleYes}
-                    onTimeout={() => setStage("continue-screening")}
+                    onTimeout={() => {
+                        setStage("continue-screening")
+                        playErrorAudio(ERROR_AUDIO.UNABLE_TO_DETECT_ANY_ACTIVITY)
+                    }}
                 />
             )}
             {stage === "continue-screening" && !isIdleExempt && (
@@ -132,6 +137,7 @@ const AutoIdleRedirect = ({
                     continueScreeningSecs={Math.ceil(continueScreeningMs / 1000)}
                     continueButtonDelaySecs={Math.ceil(continueButtonDelayMs / 1000)}
                     onTimeout={handleFinalTimeout}
+                    onRedirect={handleFinalTimeout}
                     onButtonClick={handleYes}
                 />
             )}

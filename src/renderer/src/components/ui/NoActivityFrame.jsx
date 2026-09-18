@@ -36,7 +36,7 @@ export default function NoActivityFrame({
     const defaults = {
         "no-user": {
             title: `${t("auto_idle.no_user_detected")}`,
-            subtitle: `${t("errors.face_not_detected_camera_desc")}`,
+            subtitle: `${t("errors.no_activity_session_desc")}`,
             buttonLabel: `${t("auto_idle.redirecting_to_home")}`
         },
         "are-you-there": {
@@ -44,7 +44,7 @@ export default function NoActivityFrame({
         },
         "continue-screening": {
             title: `${t("auto_idle.no_activity_detected")}`,
-            subtitle: `${t("errors.face_not_detected_camera_desc")}`,
+            subtitle: `${t("errors.no_activity_session_desc")}`,
             buttonText: `${t("auto_idle.continue_screening")}`
         }
     }
@@ -101,7 +101,7 @@ export default function NoActivityFrame({
     }
 
     useEffect(() => {
-        if (variant !== "no-user" && variant !== "continue-screening") return
+        if (variant === "are-you-there" || variant === "continue-screening") return
         if (showRetry) return // retry mode: no auto-timer
 
         redirectFiredRef.current = false
@@ -143,7 +143,7 @@ export default function NoActivityFrame({
         if (csFiredRef.current) return
         csFiredRef.current = true
         clearInterval(csTimerRef.current)
-        onTimeout?.()
+            ; (onTimeout ?? onRedirect)?.()
     }
 
     useEffect(() => {
@@ -317,7 +317,8 @@ export default function NoActivityFrame({
                     {/* Variant-specific footer */}
                     <div className="mt-1">
                         {/* ═══ VARIANT 1: Full-Color Sliding Fill Redirect Button, or Retry Button ═══ */}
-                        {variant === "no-user" &&
+                        {variant !== "are-you-there" &&
+                            variant !== "continue-screening" &&
                             showButton &&
                             (showRetry ? (
                                 // ── Retry mode: manual button, no auto-timer ──
