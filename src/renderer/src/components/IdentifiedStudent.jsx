@@ -212,22 +212,32 @@ const IdentifyStudent = () => {
         <>
             {/* Top Title */}
             <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[650px]">
-                <p className="text-5xl text-center font-light leading-snug text-white">
-                    {step === "NAME"
-                        ? t("identifyStudent.title_name", "Log in using your Full Name")
-                        : t("identifyStudent.title_id", "Log in using your SUHI Id")}
-                </p>
+                {step === "NAME" ? (
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-5xl text-center font-light leading-snug text-[#8BC3E5]">
+                            {t("identifyStudent.title_name", "We've recognised you!")}
+                        </p>
+                        <p className="text-xl text-center text-white/70 font-light leading-relaxed">
+                            {t(
+                                "identifyStudent.subtitle_name",
+                                "Just enter your full name so\nwe can confirm it's you"
+                            )}
+                        </p>
+                    </div>
+                ) : (
+                    <p className="text-5xl text-center font-light leading-snug text-white">
+                        {t("identifyStudent.title_id", "Log in using your SUHI Id")}
+                    </p>
+                )}
                 {/* Step indicator dots */}
                 <div className="flex justify-center gap-2 mt-4">
                     <div
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                            step === "NAME" ? "w-8 bg-white" : "w-4 bg-white/60"
-                        }`}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${step === "NAME" ? "w-8 bg-white" : "w-4 bg-white/60"
+                            }`}
                     />
                     <div
-                        className={`h-1.5 rounded-full transition-all duration-300 ${
-                            step === "SUHI_ID" ? "w-8 bg-white" : "w-4 bg-white/20"
-                        }`}
+                        className={`h-1.5 rounded-full transition-all duration-300 ${step === "SUHI_ID" ? "w-8 bg-white" : "w-4 bg-white/20"
+                            }`}
                     />
                 </div>
             </div>
@@ -280,13 +290,13 @@ const IdentifyStudent = () => {
                             <p className="text-white/60 text-sm mt-3 text-center">
                                 {duplicateCandidates.length > 0
                                     ? t(
-                                          "identifyStudent.multiple_found",
-                                          `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`
-                                      )
+                                        "identifyStudent.multiple_found",
+                                        `${duplicateCandidates.length} students found with this name. Please enter your SUHI Id.`
+                                    )
                                     : t(
-                                          "identifyStudent.not_found_hint",
-                                          "Name not found in detected students. Please enter your SUHI Id."
-                                      )}
+                                        "identifyStudent.not_found_hint",
+                                        "Name not found in detected students. Please enter your SUHI Id."
+                                    )}
                             </p>
                         )}
 

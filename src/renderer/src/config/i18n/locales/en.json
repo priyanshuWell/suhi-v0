@@ -163,6 +163,10 @@
         "no_result": "Failed to load result data",
         "redirecting": "Redirecting to home..."
     },
+    "identifyStudent": {
+        "title_name": "We've recognised you!",
+        "subtitle_name": "Just enter your full name so we can confirm it's you"
+    },
     "loginSuhi": {
         "title": "Log in using your SUHI Id",
         "id_label": "SUHI Id",

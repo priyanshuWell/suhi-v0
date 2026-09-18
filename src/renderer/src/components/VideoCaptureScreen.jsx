@@ -541,19 +541,25 @@ const VideoCaptureScreen = () => {
                     navigate("/identify-student")
                     return true
                 } else {
-                    // Multiple matches flagged but no candidate within threshold (<= 0.07)
-                    // -> Redirect to SUHI ID login rather than moving to verified
+                    // Multiple matches flagged but all candidates exceeded ambiguity threshold (> 0.07)
+                    // -> matched_student is still a valid high-confidence result, use it directly
+                    dispatch(
+                        setUser({ success: true, data: { ...matched_student, buffer_id: data.buffer_id } })
+                    )
+                    dispatch(setLoginScreening(screening))
                     trackStage(
                         STAGES.FACE_SCAN,
-                        STATUS_KEYS.ERROR,
+                        STATUS_KEYS.SUCCESS,
                         {
                             weight_kg: measurements?.weight,
                             height_cm: measurements?.height
                         },
-                        "Multiple matches flagged but no candidates within ambiguity threshold"
+                        null,
+                        null,
+                        matched_student?.user_id
                     )
-                    await playKioskAudio("errors/let_try_suhi_id")
-                    navigate("/login-suhi")
+                    stopKioskAudio()
+                    navigate("/verified")
                     return true
                 }
             }
