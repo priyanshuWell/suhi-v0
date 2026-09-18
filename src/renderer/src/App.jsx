@@ -55,7 +55,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                {/* <Route path="/" element={<PerilousPath />} /> */}
+                <Route path="/" element={<PerilousPath />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />
@@ -75,7 +75,7 @@ function App() {
                     <Route path="/colorblindness" element={<ColorBlindPlate />} />
                     <Route path="/perilous-path" element={<PerilousPath />} />
                     <Route path="/adaptive-eye" element={<AdaptiveEyeVisionC />} />
-                    <Route path="/" element={<BeatDropGame />} />
+                    <Route path="/beat-drop" element={<BeatDropGame />} />
 
                     <Route path="/identify-student" element={<IdentifyStudent />} />
                     <Route path="/play" element={<NoActivityFrame />} />
