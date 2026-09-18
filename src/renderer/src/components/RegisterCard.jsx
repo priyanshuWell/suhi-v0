@@ -123,10 +123,10 @@ export default function RegisterCard() {
                         <h1 className="text-[62px] leading-tight tracking-[-1.5px] text-[rgba(255,255,255,0.87)] font-anta">
                             {t("common.hi")}, {studentName}
                         </h1>
-                        <p className="text-[40px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta">
+                        <p className="text-[35px] leading-[1.3] tracking-[-0.25px] text-[rgba(255,255,255,0.87)] font-anta">
                             {t("profile.welcome_suhi")}
                             <br />
-                            {t("profile.let_start_your_journey")}
+                            <span className="text-[30px]"> {t("profile.let_start_your_journey")}</span>
                         </p>
                         <p className="text-[20px] w-3/4 leading-relaxed tracking-normal text-white/70 font-anta max-w-[750px] mx-auto mt-1">
                             {t(

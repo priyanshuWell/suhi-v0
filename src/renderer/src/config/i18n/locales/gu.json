@@ -454,11 +454,11 @@
     "progress_stages": {
         "login": "ફેસ સ્કેન",
         "bia": "બોડી સ્કેન",
-        "smoothie_slash": "માઇન્ડ સ્કેન",
+        "smoothie_slash": "સ્મૂદી સ્લેશ",
         "voice_analysis": "વોઇસ સ્કેન",
         "color_blindness": "વિઝન સ્કેન",
         "height_weight": "બીએમઆઇ સ્કેન",
-        "perilous_path": "માઇન્ડ સ્કેન",
+        "perilous_path": "પેરિલસ પાથ",
         "visual_acuity": "વિઝન ટેસ્ટ",
         "beat_drop": "બીટ ડ્રોપ",
         "result": "રિઝલ્ટ"

@@ -26,7 +26,6 @@
     "profile": {
         "welcome_suhi": "Welcome ",
         "let_start_your_journey": "let's start your journey",
-        "wellness_agreement": "By tapping Start, you agree to today's wellness check. You can stop anytime by stepping away",
         "name": "Name",
         "class": "Class",
         "age": "Age",
@@ -158,7 +157,7 @@
         "kapha": "Kapha",
         "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!",
         "default_name": "Student",
-        "congratulations_named": "Congratulations, {{name}}! Here are your results",
+        "congratulations_named": "Congratulations, {{name}}!, Here are you Results",
         "download_report": "Download Suhi Holistic Wellness report for more details",
         "sections": {
             "mind": "Mind",
@@ -450,11 +449,11 @@
     "progress_stages": {
         "login": "Face Scan",
         "bia": "Body Scan",
-        "smoothie_slash": "Mind Scan",
+        "smoothie_slash": "Smoothie Slash",
         "voice_analysis": "Voice Scan",
         "color_blindness": "Vision Scan",
         "height_weight": "BMI Scan",
-        "perilous_path": "Mind Scan",
+        "perilous_path": "Perilous Path",
         "visual_acuity": "Vision Test",
         "beat_drop": "Beat Drop",
         "result": "Result"

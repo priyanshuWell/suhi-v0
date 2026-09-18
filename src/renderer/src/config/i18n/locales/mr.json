@@ -455,11 +455,11 @@
     "progress_stages": {
         "login": "फेस स्कॅन",
         "bia": "बॉडी स्कॅन",
-        "smoothie_slash": "माइंड स्कॅन",
+        "smoothie_slash": "स्मूदी स्लॅश",
         "voice_analysis": "व्हॉइस स्कॅन",
         "color_blindness": "व्हिजन स्कॅन",
         "height_weight": "बीएमआय स्कॅन",
-        "perilous_path": "माइंड स्कॅन",
+        "perilous_path": "पेरिलस पाथ",
         "visual_acuity": "व्हिजन टेस्ट",
         "beat_drop": "बीट ड्रॉप",
         "result": "रिझल्ट"
