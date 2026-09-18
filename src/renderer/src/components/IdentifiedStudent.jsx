@@ -8,7 +8,7 @@ import KeyboardContainer from "./ui/KeyboardContainer"
 import NoActivityFrame from "./ui/NoActivityFrame"
 import useVoiceRecorder, { VOICE_STATE } from "../hooks/useVoiceRecorder"
 import { useTranslation } from "react-i18next"
-import { useKioskAudio } from "../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO } from "../constants/audio"
 
 const STEPS = ["suhi_id"]
 const RECORD_DURATION_S = 5
@@ -220,13 +220,13 @@ const IdentifyStudent = () => {
             retryRef.current += 1
             if (retryRef.current < MAX_RETRIES) {
                 // Play "invalid SUHI Id" audio feedback
-                playAudio("errors/invalid_suhi_id_coordinate")
+                playAudio(ERROR_AUDIO.INVALID_SUHI_ID_COORDINATE)
                 setError("No match found. Please check and try again.")
                 setLoading(false)
                 return
             }
             // Max retries reached — play redirect audio then show fullscreen error
-            playAudio("errors/let_try_suhi_id")
+            playAudio(ERROR_AUDIO.LET_TRY_SUHI_ID)
             setNoMatchError(true)
             setLoading(false)
             return
@@ -394,10 +394,10 @@ const IdentifyStudent = () => {
             {noMatchError && (
                 <NoActivityFrame
                     variant="error"
-                    title="Let's try another way"
-                    description="Please log in using your SuHi ID."
+                    title={t("forms.identified_student.try_another_way", "Let's try another way")}
+                    description={t("forms.identified_student.login_using_id", "Please log in using your SuHi ID.")}
                     showDescription={true}
-                    redirectLabel="Going to SUHI Id login"
+                    redirectLabel={t("forms.identified_student.going_to_login", "Going to SUHI Id login")}
                     autoRedirectDelay={5000}
                     showRetry={false}
                     onRedirect={() => {

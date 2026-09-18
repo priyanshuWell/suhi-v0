@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from "react"
 import { useNavigate, useLocation } from "react-router"
-import { sfx } from "../../../utils/soundManager"
+import { sfx } from "../../../constants/audio"
 import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav"
+import i18n from "../../../config/i18n/i18n"
 // ── Stimulus sets (3 sets, one per stimulus image)
 import stimulus_1 from "../../../assets/games/stimulus_1.svg"
 import stimulus_2 from "../../../assets/games/stimulus_2.svg"
@@ -385,12 +386,12 @@ function drawSubmitButton(ctx, g, cfg, globalTime) {
     ctx.font = `bold 44px 'Arial Black', Arial, sans-serif`
     ctx.textAlign = "center"
     ctx.fillStyle = anySelected ? "#ffffff" : "rgba(255,255,255,0.35)"
-    ctx.fillText("Submit", CW / 2, by + bh * 0.62)
+    ctx.fillText(i18n.t("games.spaceConvoy.submit", "Submit"), CW / 2, by + bh * 0.62)
 
     if (!anySelected) {
         ctx.font = "400 26px Arial, sans-serif"
         ctx.fillStyle = "rgba(255,255,255,0.22)"
-        ctx.fillText("Tap the targets first", CW / 2, by + bh * 0.85)
+        ctx.fillText(i18n.t("games.spaceConvoy.tap_targets_first", "Tap the targets first"), CW / 2, by + bh * 0.85)
     }
 
     ctx.restore()
@@ -477,9 +478,9 @@ function drawTransition(ctx, trans, bgCanvas) {
         ctx.font = `bold 60px 'Arial Black', Arial, sans-serif`
         ctx.textAlign = "center"
         ctx.fillStyle = "rgba(0,0,0,0.5)"
-        ctx.fillText("LEVEL UP →", CW / 2 + 3, CH / 2 + 3)
+        ctx.fillText(i18n.t("games.spaceConvoy.level_up", "LEVEL UP →"), CW / 2 + 3, CH / 2 + 3)
         ctx.fillStyle = tc.primary
-        ctx.fillText("LEVEL UP →", CW / 2, CH / 2)
+        ctx.fillText(i18n.t("games.spaceConvoy.level_up", "LEVEL UP →"), CW / 2, CH / 2)
         ctx.restore()
     }
 }

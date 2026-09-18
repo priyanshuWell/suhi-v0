@@ -11,23 +11,31 @@ import textbgframe from "../../assets/textbgframe.svg"
  * @param {Function} onYes        Called when user taps "Yes"
  * @param {Function} onNo         Called when user taps "No" OR timer reaches 0
  */
-export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, onStay, onTimeout }) {
+export default function AreYouThereModal({ timeoutSecs = 10, onYes, onNo, onStay, onTimeout, playAudio }) {
     const { t } = useTranslation()
     const handleYes = onYes ?? onStay
     const handleNo = onNo ?? onTimeout
     const [remaining, setRemaining] = useState(timeoutSecs)
     const intervalRef = useRef(null)
     const firedRef = useRef(false) // prevent double-fire
+    const [isAudioPlaying, setIsAudioPlaying] = useState(false)
+
+    useEffect(() => {
+        if (playAudio) {
+            setIsAudioPlaying(true)
+            Promise.resolve(playAudio()).finally(() => setIsAudioPlaying(false))
+        }
+    }, [playAudio])
 
     const fireNo = () => {
-        if (firedRef.current) return
+        if (firedRef.current || isAudioPlaying) return
         firedRef.current = true
         clearInterval(intervalRef.current)
         handleNo?.()
     }
 
     const fireYes = () => {
-        if (firedRef.current) return
+        if (firedRef.current || isAudioPlaying) return
         firedRef.current = true
         clearInterval(intervalRef.current)
         handleYes?.()

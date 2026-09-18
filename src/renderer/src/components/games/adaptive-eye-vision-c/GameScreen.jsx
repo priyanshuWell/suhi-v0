@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import DirectionPad from './DirectionPad';
 import { SIZE_LEVELS } from './constants';
 
@@ -5,9 +6,14 @@ import { SIZE_LEVELS } from './constants';
 /*  Active test screen                                                 */
 /* ------------------------------------------------------------------ */
 export default function GameScreen({ eye, level, attempt, direction, feedback, locked, onAnswer }) {
+  const { t } = useTranslation();
   let statusText = null;
   if (feedback) {
-    statusText = feedback.correct ? 'Correct!' : attempt === 1 ? 'Incorrect — try again' : 'Incorrect';
+    statusText = feedback.correct
+      ? t('adaptiveEye.game.correct')
+      : attempt === 1
+        ? t('adaptiveEye.game.try_again')
+        : t('adaptiveEye.game.incorrect');
   }
 
   // Ring size is driven by the current level — this is the actual adaptive
@@ -23,7 +29,7 @@ export default function GameScreen({ eye, level, attempt, direction, feedback, l
         className="text-[#8BC3E5] text-center font-anta w-[90%] max-w-[900px] pt-20"
         style={{ fontSize: 'clamp(1rem, 3vw, 2rem)' }}
       >
-        Look at the C shape and tap the matching gap button
+        {t('adaptiveEye.game.tap_gap')}
       </p>
 
       <div className="w-[75%] max-w-[920px] h-screen">

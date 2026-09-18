@@ -6,9 +6,9 @@
 export const PIANO_SPEC = {
     pitch: 192,
     whiteW: 166,
-    whiteH: 313,
+    whiteH: 380,
     blackW: 81,
-    blackH: 184,
+    blackH: 224,
     padX: 52,
     padT: 36,
     padB: 60,

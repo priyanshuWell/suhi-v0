@@ -22,7 +22,7 @@ import { useSelector, useDispatch } from "react-redux"
 import { setScreening } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
 import { getRgbCamera } from "../../utils/getRgbCamera"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage } from "../../constants/audio"
 import { getKioskId, API_BASE_URL } from "../../utils/config"
 // import { DMITComplete } from "../../utils/api"
 

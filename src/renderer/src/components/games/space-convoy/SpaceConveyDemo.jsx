@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react"
 import { useNavigate } from "react-router"
 import { useSelector } from "react-redux"
 import { useTranslation } from "react-i18next"
+import i18n from "../../../config/i18n/i18n"
 import gameBgMusic from "../../../assets/audio/space_convoy/game_background.wav"
 import stimulus_1 from "../../../assets/games/stimulus_1.svg"
 import stimulus_glow_1 from "../../../assets/games/stimulus_glow_1.svg"
@@ -298,13 +299,13 @@ function drawSubmitButton(ctx, ps, globalTime) {
     ctx.font = `bold 44px 'Arial Black', Arial, sans-serif`
     ctx.textAlign = "center"
     ctx.fillStyle = anySelected ? "#ffffff" : "rgba(255,255,255,0.35)"
-    ctx.fillText("Submit", CW / 2, by + bh * 0.62)
+    ctx.fillText(i18n.t("games.spaceConvoy.submit", "Submit"), CW / 2, by + bh * 0.62)
 
     // Hint
     if (!anySelected) {
         ctx.font = "400 26px Arial, sans-serif"
         ctx.fillStyle = "rgba(255,255,255,0.22)"
-        ctx.fillText("Tap the targets first", CW / 2, by + bh * 0.85)
+        ctx.fillText(i18n.t("games.spaceConvoy.tap_targets_first", "Tap the targets first"), CW / 2, by + bh * 0.85)
     }
 
     ctx.restore()

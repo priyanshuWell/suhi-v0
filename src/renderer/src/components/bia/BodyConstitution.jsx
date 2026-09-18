@@ -33,7 +33,7 @@ const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
             key: "vata",
             color: "#9EE2F8",
             emoji: "💨",
-            label: "Vata",
+            label: t("bia_result.vata", "Vata"),
             percentage: vataPercent,
             normalizedPercent: normalizedVata
         },
@@ -41,7 +41,7 @@ const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
             key: "pitta",
             color: "#FEE45A",
             emoji: "🔥",
-            label: "Pitta",
+            label: t("bia_result.pitta", "Pitta"),
             percentage: pittaPercent,
             normalizedPercent: normalizedPitta
         },
@@ -49,7 +49,7 @@ const BodyConstitution = ({ vata = 20, pitta = 20, kapha = 60 }) => {
             key: "kapha",
             color: "#74CD65",
             emoji: "🌍",
-            label: "Kapha",
+            label: t("bia_result.kapha", "Kapha"),
             percentage: kaphaPercent,
             normalizedPercent: normalizedKapha
         }

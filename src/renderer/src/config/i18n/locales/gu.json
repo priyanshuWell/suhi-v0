@@ -13,7 +13,15 @@
         "let_go": "ચાલો શરૂ કરીએ",
         "hi": "નમસ્તે",
         "yes": "હા",
-        "no": "ના"
+        "no": "ના",
+        "retry": "ફરી પ્રયાસ કરો",
+        "retry_in": "રીટ્રાઇંગ ઇન {{countdown}}s...",
+        "retrying_in": "રીટ્રાઇંગ ઇન {{countdown}}s...",
+        "try_again": "ટ્રાય અગેન",
+        "going_to_home": "ગોઇંગ ટુ હોમ",
+        "seconds_remaining": "{{count}}s રિમેનિંગ",
+        "redirecting_in": "{{label}} ઇન {{remaining}} સેક...",
+        "are_you_there": "શું તમે હજી કિઓસ્ક પર છો?"
     },
     "profile": {
         "welcome_suhi": "SUHI માં આપનું સ્વાગત છે ",
@@ -105,7 +113,9 @@
         "different_user_found": "અલગ વપરાશકર્તા મળ્૯ો",
         "different_user_found_desc": "લાગે છે કોઈ કિયોસ્કની સામે આવ્૯ા!",
         "bia_error_title": "BIA ભૂલ",
-        "moving_to_next_scan": "આગળાના સ્કેન પર જઈ રહ્૯ા છીએ"
+        "moving_to_next_scan": "આગળાના સ્કેન પર જઈ રહ્૯ા છીએ",
+        "stand_straight": "સીધા ઉભા રહો",
+        "stand_straight_still": "અમે તમારી ઊંચાઈ અને વજન માપી રહ্যા છીએ"
     },
     "smoothieSlash": {
         "beAware": {
@@ -159,7 +169,9 @@
             "red_lines": "લાલ લાઇનો",
             "three_lines": "ત્રણ લાઇનો",
             "no_lines": "કોઈ લાઇન નથી"
-        }
+        },
+        "instructions_line1": "યુ હેવ ટુ ક્લિક ધ નંબર/શેપ ફોર ઈચ ઇમેજ.",
+        "instructions_line2": "ઇફ યુ ડોન્ટ સી એનીથિંગ જસ્ટ ક્લિક ઓન કેનોટ રીડ પ્લેટ."
     },
     "dmit": {
         "hand_labels": {
@@ -243,7 +255,50 @@
         "vata": "વાત",
         "pitta": "પિત્ત",
         "kapha": "કફ",
-        "head_desc": "પ્રાચીન ભારતીય જ્ઞાન અનુસાર, દરેક વ્યક્તિમાં દોષ નામની 3 ઊર્જાઓનું ખાસ મિશ્રણ હોય છે. અહીં તમારું છે!"
+        "head_desc": "પ્રાચીન ભારતીય જ્ઞાન અનુસાર, દરેક વ્યક્તિમાં દોષ નામની 3 ઊર્જાઓનું ખાસ મિશ્રણ હોય છે. અહીં તમારું છે!",
+        "default_name": "સ્ટુડન્ટ",
+        "congratulations_named": "કોન્ગ્રેચ્યુલેશન્સ, {{name}}!",
+        "download_report": "ડાઉનલોડ રિપોર્ટ",
+        "sections": {
+            "mind": "માઇન્ડ",
+            "brain": "બ્રેઇન",
+            "body": "બોડી",
+            "vitals": "વાઇટલ્સ",
+            "persona": "પર્સોના",
+            "color_blindness": "કલર બ્લાઇન્ડનેસ -"
+        },
+        "metrics": {
+            "emotion_regulation": "ઇમોશન રેગ્યુલેશન",
+            "self_esteem": "સેલ્ફ-એસ્ટીમ",
+            "personality": "પર્સનાલિટી",
+            "divided_attention": "ડિવાઇડેડ અટેન્શન",
+            "cognitive_flexibility": "કોગ્નિટીવ ફ્લેક્સિબિલિટી",
+            "learning_style": "લર્નિંગ સ્ટાઇલ",
+            "hydration": "હાઇડ્રેશન",
+            "muscle_mass": "મસલ માસ",
+            "fat_mass": "ફેટ માસ",
+            "stress": "સ્ટ્રેસ",
+            "visual_acuity": "વિઝ્યુઅલ એક્યુટી",
+            "short_term_recall": "શોર્ટ ટર્મ રિકોલ",
+            "fine_motor_skills": "ફાઇન મોટર સ્કિલ્સ",
+            "visual_spatial_judgement": "વિઝ્યુઅલ સ્પેશિયલ જજમેન્ટ",
+            "musical_preference": "મ્યુઝિકલ પ્રેફરન્સ",
+            "heart_rate": "હાર્ટ રેટ",
+            "breathing_rate": "બ્રીધિંગ રેટ",
+            "bp": "બીપી",
+            "reaction_time": "રિએક્શન ટાઇમ",
+            "motor_coordination": "મોટર કોઓર્ડિનેશન"
+        },
+        "levels": {
+            "good": "ગુડ",
+            "developing": "ડેવલપિંગ",
+            "strong": "સ્ટ્રોંગ",
+            "ideal": "આઇડિયલ",
+            "low": "લો",
+            "dominant": "ડોમિનન્ટ",
+            "well_developed": "વેલ ડેવલપ્ડ",
+            "cannot_read_plate": "કેનોટ રીડ પ્લેટ"
+        }
     },
     "bia_component": {
         "attempt": "પ્રયાસ",
@@ -263,5 +318,234 @@
         "are_you_there": "શું તમે હજી પણ ત્યાં છો?",
         "continue_screening": "તપાસ ચાલુ રાખો",
         "no_user_detected": "કોઈ વપરાશકર્તા મળ્યા નથી"
+    },
+    "perilousPath": {
+        "loading_next": "આગળનો પડકાર લોડ થઈ રહ્યો છે…",
+        "error_finalize": "તમારા પરિણામો અંતિમ કરી શકાયા નથી.",
+        "error_not_ready": "પેરિલસ પાથ હજી તૈયાર નથી. કૃપા કરીને થોડી વાર પછી ફરી પ્રયાસ કરો.",
+        "error_loading_level": "આગળનું સ્તર લોડ કરવામાં કંઈક ખોટું થયું.",
+        "intro": {
+            "how_to_play": "કેવી રીતે રમવું?",
+            "step1_title": "માર્ગ પૂર્ણ કરો",
+            "step1_trace": "માર્ગ અનુસરો",
+            "step1_start": "શરૂઆત",
+            "step1_to": "થી",
+            "step1_end": "અંત સુધી",
+            "step2_title": "જોખમ યાદ રાખો",
+            "step2_some": "કેટલીક ટાઇલ્સ",
+            "step2_danger": "જોખમી છે,",
+            "step2_memorize": "તેમની સ્થિતિ યાદ રાખો",
+            "step3_title": "બચો અને પૂર્ણ કરો",
+            "step3_avoid": "જોખમી ટાઇલ્સથી બચો",
+            "step3_complete": "અને માર્ગ પૂર્ણ કરો",
+            "step3_to": "જીતવા",
+            "step3_win": "માટે!",
+            "start_game": "રમત શરૂ કરો",
+            "starting": "શરૂ થઈ રહ્યું છે…"
+        },
+        "game": {
+            "time": "સમય",
+            "score": "સ્કોર",
+            "memorize_danger": "જોખમી ટાઇલ્સ યાદ રાખો!",
+            "get_ready": "તૈયાર થઈ જાઓ…",
+            "trace_safe_path": "સુરક્ષિત માર્ગ ટ્રેસ કરો!",
+            "submitting": "સબમિટ થઈ રહ્યું છે…",
+            "safe_crossing": "+{{count}} સુરક્ષિત ક્રોસિંગ",
+            "crossed_no_points": "પાર કર્યું — કોઈ પોઇન્ટ નહીં",
+            "time_ran_out": "સમય પૂરો થઈ ગયો",
+            "path_not_completed": "માર્ગ પૂર્ણ થયો નથી",
+            "error_submit": "તમારું રન સબમિટ થઈ શક્યું નથી."
+        },
+        "scoreboard": {
+            "results": "પરિણામો",
+            "total_points": "કુલ પોઇન્ટ",
+            "neurocoins": "ન્યુરોકોઇન્સ",
+            "best_streak": "શ્રેષ્ઠ સતત રન"
+        }
+    },
+    "beatDrop": {
+        "intro": {
+            "how_to_play": "કેવી રીતે રમવું?",
+            "start_game": "રમત શરૂ કરો",
+            "card1_line1": "તે પિયાનો કી દબાવો જે",
+            "card1_line2": "પડતા નોટની",
+            "card1_line3": "લેન સાથે",
+            "card1_line4": "મેળ ખાય છે",
+            "card2_line1": "દરેક નોટને ત્યારે હિટ કરો જ્યારે તે",
+            "card2_line2": "નીચેની",
+            "card2_line3": "લાઇન સુધી",
+            "card2_line4": "પહોંચે",
+            "card3_line1": "ચોક્કસ સમય જાળવો",
+            "card3_line2": "કોમ્બોઝ બનાવવા, સ્કોર",
+            "card3_line3": "મલ્ટિપ્લાયર્સ",
+            "card3_line4": "અને ઉર્જા વધારવા"
+        },
+        "popups": {
+            "got_it": "સમજાઈ ગયું!",
+            "follow_title": "બીટને અનુસરો!",
+            "follow_body": "દરેક નોટ નીચેની લાઇન સુધી પહોંચતાં જ દબાવો",
+            "speed_title": "નોટ્સની ઝડપ વધશે!",
+            "speed_get_ready": "તૈયાર થઈ જાઓ!",
+            "speed_notes_will": "હવે નોટ્સ",
+            "speed_come_faster": "ઝડપથી આવશે",
+            "speed_now": "!",
+            "two_notes_title": "બે નોટ્સ એકસાથે!",
+            "two_notes_line1": "હવે બે નોટ્સ એકસાથે પડશે.",
+            "two_notes_line2": "તમારે બંને કી દબાવવી પડશે!",
+            "avoid_title": "આ નોટ્સથી બચો!",
+            "avoid_line1_prefix": "આ નકલી નોટ્સ છે.",
+            "avoid_line1_highlight": "દબાવશો નહીં",
+            "avoid_line2": "જ્યારે તમે આ નોટ્સ જુઓ ત્યારે",
+            "avoid_line3": "પિયાનો કી ન દબાવો."
+        },
+        "playArea": {
+            "time": "સમય",
+            "score": "સ્કોર"
+        },
+        "results": {
+            "results": "પરિણામો",
+            "score": "સ્કોર",
+            "coins": "ન્યુરોઆર્ક કોઈન્સ",
+            "streak": "સૌથી લાંબી સ્ટ્રીક"
+        }
+    },
+    "adaptiveEye": {
+        "instruction": {
+            "title": "દ્રષ્ટિ પરીક્ષણ",
+            "cover_eye": "તમારી {{eye}} આંખને હાથથી ઢાંકો.",
+            "tap_gap": "C આકાર જુઓ અને મેળ ખાતા ગેપ બટન પર ટેપ કરો"
+        },
+        "eyes": {
+            "right": "જમણી",
+            "left": "ડાબી",
+            "right_eye": "જમણી આંખ",
+            "left_eye": "ડાબી આંખ"
+        },
+        "game": {
+            "tap_gap": "C આકાર જુઓ અને મેળ ખાતા ગેપ બટન પર ટેપ કરો",
+            "correct": "સાચું!",
+            "try_again": "ખોટું — ફરી પ્રયાસ કરો",
+            "incorrect": "ખોટું"
+        },
+        "modal": {
+            "title": "કાર્ય પૂર્ણ થયું",
+            "responses_saved": "પ્રતિસાદો સાચવવામાં આવ્યા."
+        },
+        "results": {
+            "below_6_60": "6/60 થી નીચે"
+        }
+    },
+    "progress_stages": {
+        "login": "ફેસ સ્કેન",
+        "bia": "બોડી સ્કેન",
+        "smoothie_slash": "માઇન્ડ સ્કેન",
+        "voice_analysis": "વોઇસ સ્કેન",
+        "color_blindness": "વિઝન સ્કેન",
+        "height_weight": "બીએમઆઇ સ્કેન",
+        "perilous_path": "માઇન્ડ સ્કેન",
+        "visual_acuity": "વિઝન ટેસ્ટ",
+        "beat_drop": "બીટ ડ્રોપ",
+        "result": "રિઝલ્ટ"
+    },
+    "stage_celebration": {
+        "stage_cleared": "સ્ટેજ {{stageNumber}} ક્લિયર્ડ!",
+        "next_challenge_unlocked": "નેક્સ્ટ ચેલેન્જ અનલોક્ડ! એડવાન્સિંગ...",
+        "tap_to_continue": "ટેપ ટુ કંટીન્યુ",
+        "titles": {
+            "login": "ફેસ બાયોમેટ્રિક્સ સ્કેન",
+            "bia": "ફુલ બોડી કમ્પોઝિશન સ્કેન",
+            "height_weight": "બીએમઆઇ એન્ડ ફિઝિકલ ડાયમેન્શન સ્કેન",
+            "smoothie_slash": "માઇન્ડ રિએક્શન ચેલેન્જ",
+            "perilous_path": "સ્પેશિયલ કોગ્નિશન ટ્રાયલ",
+            "voice_analysis": "વોકલ બાયોમેટ્રિક્સ એનાલિસિસ",
+            "color_blindness": "કલર સ્પેક્ટ્રમ વિઝન ટેસ્ટ",
+            "visual_acuity": "વિઝ્યુઅલ એક્યુટી પ્રિસિઝન ટેસ્ટ",
+            "beat_drop": "રિધમ એન્ડ કોઓર્ડિનેશન એરેના",
+            "result": "કોમ્પ્રીહેન્સિવ હેલ્થ ડોઝિયર"
+        }
+    },
+    "settings": {
+        "language": "લેંગ્વેજ",
+        "reset": "રીસેટ",
+        "apply": "અપ્લાય",
+        "lang_en": "ઇંગ્લિશ",
+        "lang_hi": "હિન્દી",
+        "lang_gu": "ગુજરાતી",
+        "lang_mr": "મરાઠી",
+        "lang_bn": "બંગાળી",
+        "lang_ar": "અરેબિક"
+    },
+    "kiosk": {
+        "admin_access": "એડમિનિસ્ટ્રેટર એક્સેસ",
+        "enter_password": "એન્ટર પાસવર્ડ ટુ એક્ઝિટ કિયોસ્ક મોડ",
+        "desktop_desc": "ધિસ રિટર્ન્સ ધ ડિવાઇસ ટુ અ નોર્મલ ડેસ્કટોપ ફોર ટ્રબલશૂટિંગ.",
+        "cancel": "કેન્સલ",
+        "exit_kiosk": "એક્ઝિટ કિયોસ્ક મોડ",
+        "checking": "ચેકિંગ…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "લૉગ ઇન વાયા ફાધર્સ નેમ એન્ડ ફોન નંબર",
+            "father_name": "ફાધર્સ નેમ",
+            "enter_father_name": "એન્ટર યોર ફાધર્સ નેમ",
+            "registered_mobile": "રજિસ્ટર્ડ મોબાઇલ નંબર",
+            "enter_number": "એન્ટર નંબર",
+            "next": "નેક્સ્ટ"
+        },
+        "login_dob": {
+            "title": "લૉગ ઇન વાયા યોર નેમ એન્ડ ડેટ ઓફ બર્થ",
+            "suhi_id": "સુહી આઇડી",
+            "enter_suhi_id": "એન્ટર યોર સુહી આઇડી",
+            "dob": "ડેટ ઓફ બર્થ",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "નેક્સ્ટ",
+            "fill_all_fields": "પ્લીઝ ફિલ ઓલ ફીલ્ડ્સ",
+            "invalid_date": "પ્લીઝ એન્ટર અ વેલિડ ડેટ (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "લૉગ ઇન યુઝિંગ ફિંગરપ્રિન્ટ",
+            "instruction": "પ્લેસ યોર થમ્બ ઓન ધ ફિંગરપ્રિન્ટ સ્કેનર બિલો ધ સ્ક્રીન.",
+            "verified": "ફિંગરપ્રિન્ટ વેરિફાઇડ",
+            "not_recognised": "ફિંગરપ્રિન્ટ નોટ રિકગ્નાઇઝ્ડ. પ્લીઝ ટ્રાય અગેન."
+        },
+        "user_details": {
+            "male": "મેલ",
+            "female": "ફીમેલ",
+            "mobile_number": "મોબાઇલ નંબર",
+            "enter_number": "એન્ટર નંબર",
+            "take_face_picture": "ટેક ફેસ પિક્ચર"
+        },
+        "confirmation": {
+            "name_label": "નેમ: ",
+            "class_label": "ક્લાસ: ",
+            "age_label": "એજ: ",
+            "contact_label": "કોન્ટેક્ટ નંબર: ",
+            "register_user": "રજિસ્ટર યુઝર",
+            "go_back": "ગો બેક"
+        },
+        "identified_student": {
+            "enter_suhi_id": "એન્ટર યોર સુહી આઇડી",
+            "suhi_id_placeholder": "દા.ત. SUHI_210S0A642",
+            "checking": "ચેકિંગ...",
+            "transcribing": "ટ્રાન્સક્રાઇબિંગ...",
+            "confirm": "કન્ફર્મ",
+            "try_another_way": "લેટ્સ ટ્રાય અનધર વે",
+            "login_using_id": "પ્લીઝ લૉગ ઇન યુઝિંગ યોર સુહી આઇડી.",
+            "going_to_login": "ગોઇંગ ટુ સુહી આઇડી લૉગિન"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "ટુડેઝ રેસિપી બોર્ડ",
+            "next": "નેક્સ્ટ",
+            "start": "સ્ટાર્ટ",
+            "recipes_made_correctly": "રેસિપીઝ મેડ કરેક્ટલી",
+            "blend_smarter": "બ્લેન્ડ સ્માર્ટર, સ્કોર હાયર."
+        },
+        "spaceConvoy": {
+            "submit": "સબમિટ",
+            "tap_targets_first": "ટેપ ધ ટાર્ગેટ્સ ફર્સ્ટ",
+            "level_up": "લેવલ અપ →"
+        }
     }
 }

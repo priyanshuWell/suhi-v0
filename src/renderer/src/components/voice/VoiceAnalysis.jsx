@@ -7,7 +7,7 @@ import { sendVoiceToBackend, runVoice, voiceBufferApi } from "../../utils/api"
 import { getKioskId } from "../../utils/config"
 import { setScreening } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
-import { getAudioForCurrentLanguage } from "../../utils/audioUtils"
+import { getAudioForCurrentLanguage, INSTRUCTION_AUDIO } from "../../constants/audio"
 import ReplayAudio from "../ReplayAudio"
 import Interpersonal from "../../assets/voice/intrapersonal.jpeg"
 import Kinesthetic from "../../assets/voice/kinesthic.jpeg"
@@ -118,7 +118,7 @@ export default function VoiceAnalysis() {
             instructionAudioRef.current.pause()
             instructionAudioRef.current.currentTime = 0
         }
-        const audioPath = await getAudioForCurrentLanguage("voice_instruction")
+        const audioPath = await getAudioForCurrentLanguage(INSTRUCTION_AUDIO.VOICE_INSTRUCTION)
         if (audioPath && instructionAudioRef.current) {
             instructionAudioRef.current.src = audioPath
             setIsAudioPlaying(true)

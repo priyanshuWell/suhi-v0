@@ -19,7 +19,7 @@ import { StartScreen } from "./components/StartScreen"
 import NoActivityFrame from "./components/ui/NoActivityFrame"
 import VideoCaptureScreen from "./components/VideoCaptureScreen"
 import VoiceAnalysis from "./components/voice/VoiceAnalysis"
-import { useBackgroundAudio } from "./hooks/useBackgroundAudio"
+import { useBackgroundAudio } from "./constants/audio"
 import AdaptiveEyeVisionC from "./components/games/adaptive-eye-vision-c/AdaptiveEyeVisionC"
 import BeatDropGame from "./components/games/beat-drop/BeatDropGame"
 import SplashScreen from "./components/SplashScreen"
@@ -55,7 +55,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<SplashScreen />} />
+                <Route path="/" element={<PerilousPath />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />

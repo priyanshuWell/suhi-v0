@@ -13,7 +13,7 @@ import { setUser, setLoginScreening } from "../../features/common/commonSlice"
 import { getNextRoute } from "../../utils/stageRouter"
 import { useTranslation } from "react-i18next"
 import { getSessionId } from "../../utils/config"
-import { useKioskAudio } from "../../hooks/useKioskAudio"
+import { useKioskAudio, ERROR_AUDIO } from "../../constants/audio"
 
 const MAX_RETRIES = 2
 
@@ -113,13 +113,13 @@ const LoginSuhi = () => {
             if (attempt < MAX_RETRIES) {
                 retryRef.current = attempt
                 // Play "invalid SUHI Id" audio feedback
-                playAudio("errors/invalid_suhi_id_coordinate")
+                playAudio(ERROR_AUDIO.INVALID_SUHI_ID_COORDINATE)
                 setError(err.message || t("loginSuhi.student_not_found"))
                 setShowErrorAlert(true)
             } else {
                 retryRef.current = 0
                 // Play "let's try another way" audio before redirecting
-                playAudio("errors/let_try_suhi_id")
+                playAudio(ERROR_AUDIO.LET_TRY_SUHI_ID)
                 setError(t("loginSuhi.student_not_found"))
                 setTimeout(() => {
                     navigate("/welcome")
