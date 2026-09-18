@@ -15,6 +15,7 @@ import {
     setSessionId,
     setScreening
 } from "../../features/common/commonSlice"
+
 import { measureHeight } from "../../utils/measurementUtils"
 import { storePreliminaryMeasurements } from "../../utils/measurementRedux"
 import { BIAComplete, BIAMeasurementStage, heightWeightSubmit, realtimeCapture } from "../../utils/api"
@@ -34,6 +35,8 @@ import bmiWH_male from "../../assets/bia/bia-hwmeasuring_male.mp4"
 import biaIm_male from "../../assets/bia/bia-immeasuring_male.mp4"
 import bmiWH_female from "../../assets/bia/bia-hwmeasuring_female.mp4"
 import biaIm_female from "../../assets/bia/bia-immeasuring_female.mp4"
+import stand_pose_male from "../../assets/bia/standing_pose_male.mp4"
+import stand_pose_female from "../../assets/bia/standing_pose_female.mp4"
 import biaHold_female from "../../assets/bia/bia-hold_female.mp4"
 import biaHold_male from "../../assets/bia/bia-hold_male.mp4"
 
@@ -45,6 +48,7 @@ import BlackGradientButton from "../ui/BlackGradientButton"
 import AreYouThereModal from "./AreYouThereModal"
 import NoActivityFrame from "../ui/NoActivityFrame"
 import { useKioskAudio, ERROR_AUDIO } from "../../constants/audio"
+import StandProperlyHeight from "./StandProperlyHeight"
 export default function BIACalculate({ user, onComplete }) {
     const { t } = useTranslation()
     const navigate = useNavigate()
@@ -61,7 +65,7 @@ export default function BIACalculate({ user, onComplete }) {
     const [currentStatus, setCurrentStatus] = useState("")
     const [errorState, setErrorState] = useState(null)
     const [isSameUser, setSameUser] = useState(false)
-    const [showHeightError, setShowHeightError] = useState(false)
+    const [showHeightError, setShowHeightError] = useState(true)
     const [heightErrorCountdown, setHeightErrorCountdown] = useState(10)
     const [showStandOnKioskModal, setShowStandOnKioskModal] = useState(false)
     const [showDifferentUserModal, setShowDifferentUserModal] = useState(false)
@@ -2175,7 +2179,7 @@ export default function BIACalculate({ user, onComplete }) {
             />
 
             {/* Stand Properly Modal — shown when height measurement fails */}
-            {showHeightError && <StandProperlyModal countdown={heightErrorCountdown} t={t} />}
+            {showHeightError && <StandProperlyHeight video={{ male: stand_pose_male, female: stand_pose_female }} title={t("errors.stand_straight")} subtitle={t("errors.stand_straight_still")} gender={user} countdown={heightErrorCountdown} t={t} />}
 
             {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
             {showStandOnKioskModal && (

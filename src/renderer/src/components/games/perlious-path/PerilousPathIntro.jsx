@@ -18,6 +18,13 @@ import PerilousButton from "./PerilousButton"
 export default function PerilousPathIntro({ onStart }) {
     const { t } = useTranslation()
     const [starting, setStarting] = useState(false)
+    const { play, stop } = useKioskAudio()
+
+    // Play the how-to-play instruction audio when the intro screen mounts
+    useEffect(() => {
+        play(INSTRUCTION_AUDIO.PERILOUS_LETS_LEARN_HOW_TO_PLAY)
+        return () => stop()
+    }, [])
 
     const steps = [
         {

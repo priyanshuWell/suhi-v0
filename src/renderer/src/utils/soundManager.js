@@ -610,9 +610,12 @@ export class PerilousPathSoundManager {
 
     /** Start looping background music. Safe to call multiple times. */
     startBg() {
+        // Always mark as requested FIRST — _preloadAll() checks this flag
+        // and will call _startBgNow() once buffers finish loading, even if
+        // the AudioContext isn't ready at the moment startBg() is called.
+        this._bgRequested = true
         if (!this._ready) return
         if (this._bgSrc) return // already playing
-        this._bgRequested = true
         // If buffer already loaded, play immediately; otherwise _preloadAll will pick it up
         this._startBgNow()
     }
