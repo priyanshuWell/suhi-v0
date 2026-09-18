@@ -626,36 +626,60 @@ ipcMain.handle("save-recording", async (event, request) => {
 
 //case41_WeightMeasurement
 function createWindow() {
-    // Create the browser window.
     const iconPath = join(__dirname, "../../resources/icon.png")
     const icon = nativeImage.createFromPath(iconPath)
+
     mainWindow = new BrowserWindow({
-        // width: 1014,
-        // height: 1773,
         width: 1080,
         height: 1920,
+
+        // Kiosk
         show: false,
-        autoHideMenuBar: false,
-        fullscreen: false,
+        fullscreen: true,
+        kiosk: true,
+
+        // Hide all browser chrome
+        frame: false,
+        autoHideMenuBar: true,
+        menuBarVisible: false,
+
+        // Prevent resizing/minimizing/maximizing
+        resizable: false,
+        maximizable: false,
+        minimizable: false,
+
+        // Keep window above other windows
+        alwaysOnTop: true,
+
         icon,
+
         webPreferences: {
             preload: join(__dirname, "../preload/index.js"),
             sandbox: false,
-            autoplayPolicy: "no-user-gesture-required"
+            autoplayPolicy: "no-user-gesture-required",
+
+            // Don't allow renderer to directly use Node
+            nodeIntegration: false,
+            contextIsolation: true,
+
+            // Disable DevTools
+            devTools: false
         }
     })
 
     mainWindow.on("ready-to-show", () => {
         mainWindow.show()
+
+        // Force fullscreen/kiosk again after showing
+        mainWindow.setFullScreen(true)
+        mainWindow.setKiosk(true)
     })
 
     mainWindow.webContents.setWindowOpenHandler((details) => {
-        shell.openExternal(details.url)
+        // Don't allow external windows from kiosk
         return { action: "deny" }
     })
 
-    // HMR for renderer base on electron-vite cli.
-    // Load the remote URL for development or the local html file for production.
     if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
         mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"])
     } else {
