@@ -671,6 +671,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     const handleWhNextClick = async () => {
         console.log("[BIA DEBUG] whComplete Next button clicked")
+        stopErrorAudio?.()
 
         const screeningOrder = screeningState?.screeningOrder ?? 1
         console.log("[BIA DEBUG] Current screening order:", screeningState, screeningOrder)
@@ -714,6 +715,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     const handleImNextClick = () => {
         console.log("[BIA DEBUG] imcomplete Next button clicked")
+        stopErrorAudio?.()
         if (imCompleteResolver.current) {
             imCompleteResolver.current()
             imCompleteResolver.current = null
@@ -751,6 +753,7 @@ export default function BIACalculate({ user, onComplete }) {
 
     const handleStandOnKioskRetry = () => {
         console.log("[BIA DEBUG] StandOnKiosk — Retry clicked")
+        stopErrorAudio?.()
         setShowStandOnKioskModal(false)
         if (standOnKioskResolverRef.current) {
             standOnKioskResolverRef.current()
@@ -2179,7 +2182,7 @@ export default function BIACalculate({ user, onComplete }) {
             />
 
             {/* Stand Properly Modal — shown when height measurement fails */}
-            {showHeightError && <StandProperlyHeight video={{ male: stand_pose_male, female: stand_pose_female }} title={t("errors.stand_straight")} subtitle={t("errors.stand_straight_still")} gender={user} countdown={heightErrorCountdown} t={t} />}
+            {showHeightError && <StandProperlyHeight video={{ male: stand_pose_male, female: stand_pose_female }} title={t("errors.stand_straight")} subtitle={t("errors.stand_straight_still")} gender={storeUser} countdown={heightErrorCountdown} t={t} />}
 
             {/* Stand On Kiosk Modal — shown when W❌ H❌ F✅ (face present, scale empty) */}
             {showStandOnKioskModal && (
@@ -2188,6 +2191,7 @@ export default function BIACalculate({ user, onComplete }) {
                     description={t("errors.face_height_not_detected_desc")}
                     onRetry={handleStandOnKioskRetry}
                     playAudio={playErrorAudio}
+                    stopAudio={stopErrorAudio}
                     t={t}
                 />
             )}
@@ -2218,6 +2222,7 @@ export default function BIACalculate({ user, onComplete }) {
                     onYes={shoesCtaHandlersRef.current.onCtaAYes}
                     onNo={shoesCtaHandlersRef.current.onCtaANo}
                     playAudio={playErrorAudio}
+                    stopAudio={stopErrorAudio}
                     t={t}
                 />
             )}
@@ -2230,6 +2235,7 @@ export default function BIACalculate({ user, onComplete }) {
                             : shoesCtaHandlersRef.current.onCtaB2ndStart
                     }
                     playAudio={playErrorAudio}
+                    stopAudio={stopErrorAudio}
                     t={t}
                 />
             )}
@@ -2239,6 +2245,7 @@ export default function BIACalculate({ user, onComplete }) {
                     onYes={shoesCtaHandlersRef.current.onCtaCYes}
                     onNo={shoesCtaHandlersRef.current.onCtaCNoOrTimeout}
                     playAudio={playErrorAudio}
+                    stopAudio={stopErrorAudio}
                 />
             )}
             {shoesCtaStep === "ctaD" && (
@@ -2247,6 +2254,7 @@ export default function BIACalculate({ user, onComplete }) {
                     onYes={shoesCtaHandlersRef.current.onCtaDYes}
                     onNo={shoesCtaHandlersRef.current.onCtaDNoOrTimeout}
                     playAudio={playErrorAudio}
+                    stopAudio={stopErrorAudio}
                     t={t}
                 />
             )}
@@ -2255,30 +2263,29 @@ export default function BIACalculate({ user, onComplete }) {
 }
 
 /* ── CTA A: Continue with shoes? ─────────────────────────────────── */
-const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
+const ContinueWithShoesModal = ({ onYes, onNo, playAudio, stopAudio, t }) => {
     const [remaining, setRemaining] = React.useState(15)
     const firedRef = React.useRef(false)
     const intervalRef = React.useRef(null)
-    const [isAudioPlaying, setIsAudioPlaying] = React.useState(true)
 
     const fireNo = () => {
-        if (firedRef.current || isAudioPlaying) return
+        if (firedRef.current) return
         firedRef.current = true
         clearInterval(intervalRef.current)
+        stopAudio?.()
         onNo?.()
     }
     const fireYes = () => {
-        if (firedRef.current || isAudioPlaying) return
+        if (firedRef.current) return
         firedRef.current = true
         clearInterval(intervalRef.current)
+        stopAudio?.()
         onYes?.()
     }
 
     React.useEffect(() => {
         // Play the shoes/barefoot prompt audio on mount
-        playAudio?.(ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS)?.then?.(() => {
-            setIsAudioPlaying(false)
-        })
+        playAudio?.(ERROR_AUDIO.REMOVE_YOUR_SHOES_AND_SOCKS)
 
         intervalRef.current = setInterval(() => {
             setRemaining((p) => {
@@ -2290,7 +2297,10 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
                 return p - 1
             })
         }, 1000)
-        return () => clearInterval(intervalRef.current)
+        return () => {
+            clearInterval(intervalRef.current)
+            stopAudio?.()
+        }
     }, [])
 
     return (
@@ -2312,15 +2322,13 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
                     <div className="flex gap-10">
                         <button
                             onClick={fireNo}
-                            disabled={isAudioPlaying}
-                            className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/30 bg-white/5 backdrop-blur-sm text-white text-2xl font-anta hover:bg-white/10 active:scale-[0.98] transition-all duration-200"
                         >
                             🦶 {t("common.no")}
                         </button>
                         <button
                             onClick={fireYes}
-                            disabled={isAudioPlaying}
-                            className={`w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : ""}`}
+                            className="w-[220px] h-[90px] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-2xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200"
                         >
                             👟 {t("common.yes")}
                         </button>
@@ -2332,24 +2340,22 @@ const ContinueWithShoesModal = ({ onYes, onNo, playAudio, t }) => {
 }
 
 /* ── CTA B: Press Start ───────────────────────────────────────────── */
-const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
+const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, stopAudio, t }) => {
     const [remaining, setRemaining] = React.useState(timeoutSecs)
     const firedRef = React.useRef(false)
     const intervalRef = React.useRef(null)
-    const [isAudioPlaying, setIsAudioPlaying] = React.useState(true)
 
     const fireStart = () => {
-        if (firedRef.current || isAudioPlaying) return
+        if (firedRef.current) return
         firedRef.current = true
         clearInterval(intervalRef.current)
+        stopAudio?.()
         onStart?.()
     }
 
     React.useEffect(() => {
         // Play the "press start when ready" audio on mount
-        playAudio?.(ERROR_AUDIO.PRESS_START_ONCE_YOU_ARE_READY)?.then?.(() => {
-            setIsAudioPlaying(false)
-        })
+        playAudio?.(ERROR_AUDIO.PRESS_START_ONCE_YOU_ARE_READY)
 
         intervalRef.current = setInterval(() => {
             setRemaining((p) => {
@@ -2360,7 +2366,10 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
                 return p - 1
             })
         }, 1000)
-        return () => clearInterval(intervalRef.current)
+        return () => {
+            clearInterval(intervalRef.current)
+            stopAudio?.()
+        }
     }, [])
 
     return (
@@ -2382,8 +2391,7 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
                     </p>
                     <button
                         onClick={fireStart}
-                        disabled={isAudioPlaying}
-                        className={`w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200 ${isAudioPlaying ? "opacity-50 cursor-not-allowed" : ""}`}
+                        className="w-[clamp(18rem,30vw,28rem)] h-[clamp(4rem,8vh,6rem)] rounded-[30px] border-2 border-white/50 bg-[radial-gradient(43.11%_181.04%_at_50%_50%,#003FFD_0%,#00B3FF_100%)] shadow-[0px_0px_30px_rgba(0,179,255,0.5)] text-white text-3xl font-anta hover:border-white active:scale-[0.98] transition-all duration-200"
                     >
                         {t("common.start")}
                     </button>
@@ -2660,14 +2668,18 @@ const StandProperlyModal = ({ countdown, t }) => {
 }
 
 /* ── Stand On Kiosk Modal — W❌ H❌ F✅: face detected, scale empty ──── */
-const StandOnKioskModal = ({ onRetry, title, description, playAudio, t }) => {
-    const [isAudioPlaying, setIsAudioPlaying] = React.useState(true)
-
+const StandOnKioskModal = ({ onRetry, title, description, playAudio, stopAudio, t }) => {
     React.useEffect(() => {
-        playAudio?.(ERROR_AUDIO.stand_on_the_kiosk)?.then?.(() => {
-            setIsAudioPlaying(false)
-        })
+        playAudio?.(ERROR_AUDIO.stand_on_the_kiosk)
+        return () => {
+            stopAudio?.()
+        }
     }, [])
+
+    const handleRetry = () => {
+        stopAudio?.()
+        onRetry?.()
+    }
 
     return (
         <div
@@ -2762,8 +2774,7 @@ const StandOnKioskModal = ({ onRetry, title, description, playAudio, t }) => {
                     </p>
 
                     <BlackGradientButton
-                        onClick={onRetry}
-                        disabled={isAudioPlaying}
+                        onClick={handleRetry}
                         className="w-32 mt-10 text-4xl bg-black/35 tracking-widest font-anta"
                     >
                         {t("common.retry")}
