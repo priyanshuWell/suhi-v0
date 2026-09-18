@@ -26,35 +26,6 @@ const AUDIO_SEQUENCE = [
     { key: INSTRUCTION_AUDIO.BEAT_DROP_PRESS_START_WHEN_READY, delay: 300 }
 ]
 
-/** Exact Figma line breaks + colors (line 1 white, rest #FFB703). */
-const CARDS = [
-    {
-        img: htp1,
-        lines: [
-            { t: "Press the piano key that", c: "#FFFFFF" },
-            { t: "matches", c: HIGHLIGHT },
-            { t: "the falling note's", c: HIGHLIGHT },
-            { t: "lane", c: HIGHLIGHT }
-        ]
-    },
-    {
-        img: htp2,
-        lines: [
-            { t: "Hit each note as it", c: "#FFFFFF" },
-            { t: "reaches", c: HIGHLIGHT },
-            { t: "the line at the", c: HIGHLIGHT },
-            { t: "bottom", c: HIGHLIGHT }
-        ]
-    },
-    {
-        img: htp3,
-        lines: [
-            { t: "Keep accurate timing", c: "#FFFFFF" },
-            { t: "to build combos", c: HIGHLIGHT },
-            { t: "", c: HIGHLIGHT }
-        ]
-    }
-]
 
 /**
  * Figma card layout (percent of card height):

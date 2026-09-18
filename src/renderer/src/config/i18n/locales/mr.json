@@ -12,7 +12,16 @@
         "replay": "ऑडिओ पुन्हा ऐका",
         "let_go": "चला सुरू करूया",
         "hi": "नमस्ते",
-        "retry": "पुन्हा प्रयत्न करा"
+        "retry": "पुन्हा प्रयत्न करा",
+        "retry_in": "रीट्राइंग इन {{countdown}}s...",
+        "retrying_in": "रीट्राइंग इन {{countdown}}s...",
+        "try_again": "ट्राई अगेन",
+        "going_to_home": "गोइंग टू होम",
+        "seconds_remaining": "{{count}}s रिमेनिंग",
+        "redirecting_in": "{{label}} इन {{remaining}} सेक...",
+        "yes": "हो",
+        "no": "नाही",
+        "are_you_there": "तुम्ही अजूनही किऑस्कवर आहात का?"
     },
     "profile": {
         "welcome_suhi": "SUHI मध्ये तुमचे स्वागत आहे ",
@@ -97,7 +106,17 @@
         "redirect_login_label": "SUHI Id लॉगिनवर जात आहोत",
         "redirect_home_label": "मुख्यपृष्ठावर जात आहोत",
         "stand_straight": "सीधे उभे रहा",
-        "stand_straight_still": "आम्ही तुमची उंची आणि वजन मोजत आहोत"
+        "stand_straight_still": "आम्ही तुमची उंची आणि वजन मोजत आहोत",
+        "different_user_found": "वेगळा वापरकर्ता आढळला",
+        "bia_error_title": "बीआयए रिझल्ट एरर",
+        "bia_error_description": "बीआयए रिझल्ट डेटा लोड करण्यात अयशस्वी. होमवर जात आहे...",
+        "barefoot_required": "प्लीज मेक श्योर यू आर बेअरफुट.",
+        "height_port_not_connected": "हाइट पोर्ट इज नॉट कनेक्टेड.",
+        "retrying": "रीट्राइंग",
+        "last_retry_title": "उप्स! आय कॅनॉट डिटेक्ट यू",
+        "suhi_coordinator_contact": "प्लीज कॉन्टॅक्ट युअर सुही किऑस्क कोऑर्डिनेटर फॉर असिस्टन्स.",
+        "different_user_found_desc": "लुक्स लाइक समवन अपिअर्ड इन फ्रंट ऑफ द किऑस्क!",
+        "moving_to_next_scan": "मूव्हिंग टू नेक्स्ट स्कॅन"
     },
     "colorBlindness": {
         "title": "रंग दृष्टी स्कॅन",
@@ -116,7 +135,9 @@
             "red_lines": "लाल रेषा",
             "three_lines": "तीन रेषा",
             "no_lines": "कोणतीही रेषा नाही"
-        }
+        },
+        "instructions_line1": "यू हॅव टू क्लिक द नंबर/शेप फॉर ईच इमेज.",
+        "instructions_line2": "इफ यू डोन्ट सी एनीथिंग जस्ट क्लिक ऑन कॅनॉट रीड प्लेट."
     },
     "dmit": {
         "hand_labels": {
@@ -200,7 +221,50 @@
         "vata": "वात",
         "pitta": "पित्त",
         "kapha": "कफ",
-        "head_desc": "प्राचीन भारतीय ज्ञानानुसार, प्रत्येकाकडे दोष नावाच्या 3 शक्तींचे विशेष मिश्रण असते. हे तुमचे आहे!"
+        "head_desc": "प्राचीन भारतीय ज्ञानानुसार, प्रत्येकाकडे दोष नावाच्या 3 शक्तींचे विशेष मिश्रण असते. हे तुमचे आहे!",
+        "default_name": "स्टुडंट",
+        "congratulations_named": "काँग्रॅच्युलेशन्स, {{name}}!",
+        "download_report": "डाऊनलोड रिपोर्ट",
+        "sections": {
+            "mind": "माइंड",
+            "brain": "ब्रेन",
+            "body": "बॉडी",
+            "vitals": "व्हाइटल्स",
+            "persona": "पर्सोना",
+            "color_blindness": "कलर ब्लाइंडनेस -"
+        },
+        "metrics": {
+            "emotion_regulation": "इमोशन रेग्युलेशन",
+            "self_esteem": "सेल्फ-एस्टीम",
+            "personality": "पर्सनॅलिटी",
+            "divided_attention": "डिव्हायडेड अटेंशन",
+            "cognitive_flexibility": "कॉग्निटिव्ह फ्लेक्सिबिलिटी",
+            "learning_style": "लर्निंग स्टाइल",
+            "hydration": "हायड्रेशन",
+            "muscle_mass": "मसल मास",
+            "fat_mass": "फॅट मास",
+            "stress": "स्ट्रेस",
+            "visual_acuity": "व्हिज्युअल अ‍ॅक्युइटी",
+            "short_term_recall": "शॉर्ट टर्म रिकॉल",
+            "fine_motor_skills": "फाइन मोटर स्किल्स",
+            "visual_spatial_judgement": "व्हिज्युअल स्पेशल जजमेंट",
+            "musical_preference": "म्युझिकल प्रेफरन्स",
+            "heart_rate": "हार्ट रेट",
+            "breathing_rate": "ब्रीदिंग रेट",
+            "bp": "बीपी",
+            "reaction_time": "रिएक्शन टाइम",
+            "motor_coordination": "मोटर कोऑर्डिनेशन"
+        },
+        "levels": {
+            "good": "गुड",
+            "developing": "डेव्हलपिंग",
+            "strong": "स्ट्रॉन्ग",
+            "ideal": "आयडियल",
+            "low": "लो",
+            "dominant": "डॉमिनंट",
+            "well_developed": "वेल डेव्हलप्ड",
+            "cannot_read_plate": "कॅनॉट रीड प्लेट"
+        }
     },
     "bia_component": {
         "attempt": "प्रयत्न",
@@ -370,6 +434,119 @@
         },
         "results": {
             "below_6_60": "6/60 पेक्षा कमी"
+        }
+    },
+    "progress_stages": {
+        "login": "फेस स्कॅन",
+        "bia": "बॉडी स्कॅन",
+        "smoothie_slash": "माइंड स्कॅन",
+        "voice_analysis": "व्हॉइस स्कॅन",
+        "color_blindness": "व्हिजन स्कॅन",
+        "height_weight": "बीएमआय स्कॅन",
+        "perilous_path": "माइंड स्कॅन",
+        "visual_acuity": "व्हिजन टेस्ट",
+        "beat_drop": "बीट ड्रॉप",
+        "result": "रिझल्ट"
+    },
+    "stage_celebration": {
+        "stage_cleared": "स्टेज {{stageNumber}} क्लिअर्ड!",
+        "next_challenge_unlocked": "नेक्स्ट चॅलेंज अनलॉक्ड! अ‍ॅडव्हान्सिंग...",
+        "tap_to_continue": "टॅप टू कंटिन्यू",
+        "titles": {
+            "login": "फेस बायोमेट्रिक्स स्कॅन",
+            "bia": "फुल बॉडी कॉम्पोझिशन स्कॅन",
+            "height_weight": "बीएमआय अँड फिजिकल डायमेन्शन स्कॅन",
+            "smoothie_slash": "माइंड रिएक्शन चॅलेंज",
+            "perilous_path": "स्पेशल कॉग्निशन ट्रायल",
+            "voice_analysis": "व्होकल बायोमेट्रिक्स अ‍ॅनॅलिसिस",
+            "color_blindness": "कलर स्पेक्ट्रम व्हिजन टेस्ट",
+            "visual_acuity": "व्हिज्युअल अ‍ॅक्युइटी प्रिसिजन टेस्ट",
+            "beat_drop": "रिदम अँड कोऑर्डिनेशन अ‍ॅरिना",
+            "result": "कॉम्प्रिहेन्सिव्ह हेल्थ डॉसियर"
+        }
+    },
+    "settings": {
+        "language": "लँग्वेज",
+        "reset": "रीसेट",
+        "apply": "अप्लाय",
+        "lang_en": "इंग्लिश",
+        "lang_hi": "हिंदी",
+        "lang_gu": "गुजराती",
+        "lang_mr": "मराठी",
+        "lang_bn": "बंगाली",
+        "lang_ar": "अरेबिक"
+    },
+    "kiosk": {
+        "admin_access": "अ‍ॅडमिनिस्ट्रेटर अ‍ॅक्सेस",
+        "enter_password": "एंटर पासवर्ड टू एक्झिट किऑस्क मोड",
+        "desktop_desc": "धिस रिटर्न्स द डिव्हाइस टू अ नॉर्मल डेस्कटॉप फॉर ट्रबलशूटिंग.",
+        "cancel": "कॅन्सल",
+        "exit_kiosk": "एक्झिट किऑस्क मोड",
+        "checking": "चेकिंग…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "लॉग इन व्हाया फादर्स नेम अँड फोन नंबर",
+            "father_name": "फादर्स नेम",
+            "enter_father_name": "एंटर युअर फादर्स नेम",
+            "registered_mobile": "रजिस्टर्ड मोबाईल नंबर",
+            "enter_number": "एंटर नंबर",
+            "next": "नेक्स्ट"
+        },
+        "login_dob": {
+            "title": "लॉग इन व्हाया युअर नेम अँड डेट ऑफ बर्थ",
+            "suhi_id": "सुही आयडी",
+            "enter_suhi_id": "एंटर युअर सुही आयडी",
+            "dob": "डेट ऑफ बर्थ",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "नेक्स्ट",
+            "fill_all_fields": "प्लीज फिल ऑल फील्ड्स",
+            "invalid_date": "प्लीज एंटर अ व्हॅलिड डेट (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "लॉग इन युझिंग फिंगरप्रिंट",
+            "instruction": "प्लेस युअर थंब ऑन द फिंगरप्रिंट स्कॅनर बिलो द स्क्रीन.",
+            "verified": "फिंगरप्रिंट व्हेरिफाइड",
+            "not_recognised": "फिंगरप्रिंट नॉट रेकग्नाइझ्ड. प्लीज ट्राई अगेन."
+        },
+        "user_details": {
+            "male": "मेल",
+            "female": "फिमेल",
+            "mobile_number": "मोबाईल नंबर",
+            "enter_number": "एंटर नंबर",
+            "take_face_picture": "टेक फेस पिक्चर"
+        },
+        "confirmation": {
+            "name_label": "नेम: ",
+            "class_label": "क्लास: ",
+            "age_label": "एज: ",
+            "contact_label": "कॉन्टॅक्ट नंबर: ",
+            "register_user": "रजिस्टर युझर",
+            "go_back": "गो बॅक"
+        },
+        "identified_student": {
+            "enter_suhi_id": "एंटर युअर सुही आयडी",
+            "suhi_id_placeholder": "उदा. SUHI_210S0A642",
+            "checking": "चेकिंग...",
+            "transcribing": "ट्रान्सक्राइबिंग...",
+            "confirm": "कन्फर्म",
+            "try_another_way": "लेट्स ट्राई अनदर वे",
+            "login_using_id": "प्लीज लॉग इन युझिंग युअर सुही आयडी.",
+            "going_to_login": "गोइंग टू सुही आयडी लॉगिन"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "टुडेज रेसिपी बोर्ड",
+            "next": "नेक्स्ट",
+            "start": "स्टार्ट",
+            "recipes_made_correctly": "रेसिपीज मेड करेक्टली",
+            "blend_smarter": "ब्लेंड स्मार्टर, स्कोर हायर."
+        },
+        "spaceConvoy": {
+            "submit": "सबमिट",
+            "tap_targets_first": "टॅप द टार्गेट्स फर्स्ट",
+            "level_up": "लेव्हल अप →"
         }
     }
 }

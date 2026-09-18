@@ -20,6 +20,7 @@ export const LANE_CENTER = {
 export const SPEED_POPUP_AT_MS = 22000 // after Block A ends, before Block B
 export const CHORD_POPUP_AT_MS = 41800 // after Block B ends, before Block C
 export const AVOID_POPUP_AT_MS = 59300 // after Block C ends, before Block D
+export const FOLLOW_POPUP_AT_MS = 88800 // after Block D ends, before Block E
 export const POPUP_AUTO_CLOSE_MS = 5000
 
 /**

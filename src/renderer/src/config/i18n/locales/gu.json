@@ -14,7 +14,14 @@
         "hi": "નમસ્તે",
         "yes": "હા",
         "no": "ના",
-        "retry": "ફરી પ્રયાસ કરો"
+        "retry": "ફરી પ્રયાસ કરો",
+        "retry_in": "રીટ્રાઇંગ ઇન {{countdown}}s...",
+        "retrying_in": "રીટ્રાઇંગ ઇન {{countdown}}s...",
+        "try_again": "ટ્રાય અગેન",
+        "going_to_home": "ગોઇંગ ટુ હોમ",
+        "seconds_remaining": "{{count}}s રિમેનિંગ",
+        "redirecting_in": "{{label}} ઇન {{remaining}} સેક...",
+        "are_you_there": "શું તમે હજી કિઓસ્ક પર છો?"
     },
     "profile": {
         "welcome_suhi": "SUHI માં આપનું સ્વાગત છે ",
@@ -162,7 +169,9 @@
             "red_lines": "લાલ લાઇનો",
             "three_lines": "ત્રણ લાઇનો",
             "no_lines": "કોઈ લાઇન નથી"
-        }
+        },
+        "instructions_line1": "યુ હેવ ટુ ક્લિક ધ નંબર/શેપ ફોર ઈચ ઇમેજ.",
+        "instructions_line2": "ઇફ યુ ડોન્ટ સી એનીથિંગ જસ્ટ ક્લિક ઓન કેનોટ રીડ પ્લેટ."
     },
     "dmit": {
         "hand_labels": {
@@ -246,7 +255,50 @@
         "vata": "વાત",
         "pitta": "પિત્ત",
         "kapha": "કફ",
-        "head_desc": "પ્રાચીન ભારતીય જ્ઞાન અનુસાર, દરેક વ્યક્તિમાં દોષ નામની 3 ઊર્જાઓનું ખાસ મિશ્રણ હોય છે. અહીં તમારું છે!"
+        "head_desc": "પ્રાચીન ભારતીય જ્ઞાન અનુસાર, દરેક વ્યક્તિમાં દોષ નામની 3 ઊર્જાઓનું ખાસ મિશ્રણ હોય છે. અહીં તમારું છે!",
+        "default_name": "સ્ટુડન્ટ",
+        "congratulations_named": "કોન્ગ્રેચ્યુલેશન્સ, {{name}}!",
+        "download_report": "ડાઉનલોડ રિપોર્ટ",
+        "sections": {
+            "mind": "માઇન્ડ",
+            "brain": "બ્રેઇન",
+            "body": "બોડી",
+            "vitals": "વાઇટલ્સ",
+            "persona": "પર્સોના",
+            "color_blindness": "કલર બ્લાઇન્ડનેસ -"
+        },
+        "metrics": {
+            "emotion_regulation": "ઇમોશન રેગ્યુલેશન",
+            "self_esteem": "સેલ્ફ-એસ્ટીમ",
+            "personality": "પર્સનાલિટી",
+            "divided_attention": "ડિવાઇડેડ અટેન્શન",
+            "cognitive_flexibility": "કોગ્નિટીવ ફ્લેક્સિબિલિટી",
+            "learning_style": "લર્નિંગ સ્ટાઇલ",
+            "hydration": "હાઇડ્રેશન",
+            "muscle_mass": "મસલ માસ",
+            "fat_mass": "ફેટ માસ",
+            "stress": "સ્ટ્રેસ",
+            "visual_acuity": "વિઝ્યુઅલ એક્યુટી",
+            "short_term_recall": "શોર્ટ ટર્મ રિકોલ",
+            "fine_motor_skills": "ફાઇન મોટર સ્કિલ્સ",
+            "visual_spatial_judgement": "વિઝ્યુઅલ સ્પેશિયલ જજમેન્ટ",
+            "musical_preference": "મ્યુઝિકલ પ્રેફરન્સ",
+            "heart_rate": "હાર્ટ રેટ",
+            "breathing_rate": "બ્રીધિંગ રેટ",
+            "bp": "બીપી",
+            "reaction_time": "રિએક્શન ટાઇમ",
+            "motor_coordination": "મોટર કોઓર્ડિનેશન"
+        },
+        "levels": {
+            "good": "ગુડ",
+            "developing": "ડેવલપિંગ",
+            "strong": "સ્ટ્રોંગ",
+            "ideal": "આઇડિયલ",
+            "low": "લો",
+            "dominant": "ડોમિનન્ટ",
+            "well_developed": "વેલ ડેવલપ્ડ",
+            "cannot_read_plate": "કેનોટ રીડ પ્લેટ"
+        }
     },
     "bia_component": {
         "attempt": "પ્રયાસ",
@@ -381,6 +433,119 @@
         },
         "results": {
             "below_6_60": "6/60 થી નીચે"
+        }
+    },
+    "progress_stages": {
+        "login": "ફેસ સ્કેન",
+        "bia": "બોડી સ્કેન",
+        "smoothie_slash": "માઇન્ડ સ્કેન",
+        "voice_analysis": "વોઇસ સ્કેન",
+        "color_blindness": "વિઝન સ્કેન",
+        "height_weight": "બીએમઆઇ સ્કેન",
+        "perilous_path": "માઇન્ડ સ્કેન",
+        "visual_acuity": "વિઝન ટેસ્ટ",
+        "beat_drop": "બીટ ડ્રોપ",
+        "result": "રિઝલ્ટ"
+    },
+    "stage_celebration": {
+        "stage_cleared": "સ્ટેજ {{stageNumber}} ક્લિયર્ડ!",
+        "next_challenge_unlocked": "નેક્સ્ટ ચેલેન્જ અનલોક્ડ! એડવાન્સિંગ...",
+        "tap_to_continue": "ટેપ ટુ કંટીન્યુ",
+        "titles": {
+            "login": "ફેસ બાયોમેટ્રિક્સ સ્કેન",
+            "bia": "ફુલ બોડી કમ્પોઝિશન સ્કેન",
+            "height_weight": "બીએમઆઇ એન્ડ ફિઝિકલ ડાયમેન્શન સ્કેન",
+            "smoothie_slash": "માઇન્ડ રિએક્શન ચેલેન્જ",
+            "perilous_path": "સ્પેશિયલ કોગ્નિશન ટ્રાયલ",
+            "voice_analysis": "વોકલ બાયોમેટ્રિક્સ એનાલિસિસ",
+            "color_blindness": "કલર સ્પેક્ટ્રમ વિઝન ટેસ્ટ",
+            "visual_acuity": "વિઝ્યુઅલ એક્યુટી પ્રિસિઝન ટેસ્ટ",
+            "beat_drop": "રિધમ એન્ડ કોઓર્ડિનેશન એરેના",
+            "result": "કોમ્પ્રીહેન્સિવ હેલ્થ ડોઝિયર"
+        }
+    },
+    "settings": {
+        "language": "લેંગ્વેજ",
+        "reset": "રીસેટ",
+        "apply": "અપ્લાય",
+        "lang_en": "ઇંગ્લિશ",
+        "lang_hi": "હિન્દી",
+        "lang_gu": "ગુજરાતી",
+        "lang_mr": "મરાઠી",
+        "lang_bn": "બંગાળી",
+        "lang_ar": "અરેબિક"
+    },
+    "kiosk": {
+        "admin_access": "એડમિનિસ્ટ્રેટર એક્સેસ",
+        "enter_password": "એન્ટર પાસવર્ડ ટુ એક્ઝિટ કિયોસ્ક મોડ",
+        "desktop_desc": "ધિસ રિટર્ન્સ ધ ડિવાઇસ ટુ અ નોર્મલ ડેસ્કટોપ ફોર ટ્રબલશૂટિંગ.",
+        "cancel": "કેન્સલ",
+        "exit_kiosk": "એક્ઝિટ કિયોસ્ક મોડ",
+        "checking": "ચેકિંગ…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "લૉગ ઇન વાયા ફાધર્સ નેમ એન્ડ ફોન નંબર",
+            "father_name": "ફાધર્સ નેમ",
+            "enter_father_name": "એન્ટર યોર ફાધર્સ નેમ",
+            "registered_mobile": "રજિસ્ટર્ડ મોબાઇલ નંબર",
+            "enter_number": "એન્ટર નંબર",
+            "next": "નેક્સ્ટ"
+        },
+        "login_dob": {
+            "title": "લૉગ ઇન વાયા યોર નેમ એન્ડ ડેટ ઓફ બર્થ",
+            "suhi_id": "સુહી આઇડી",
+            "enter_suhi_id": "એન્ટર યોર સુહી આઇડી",
+            "dob": "ડેટ ઓફ બર્થ",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "નેક્સ્ટ",
+            "fill_all_fields": "પ્લીઝ ફિલ ઓલ ફીલ્ડ્સ",
+            "invalid_date": "પ્લીઝ એન્ટર અ વેલિડ ડેટ (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "લૉગ ઇન યુઝિંગ ફિંગરપ્રિન્ટ",
+            "instruction": "પ્લેસ યોર થમ્બ ઓન ધ ફિંગરપ્રિન્ટ સ્કેનર બિલો ધ સ્ક્રીન.",
+            "verified": "ફિંગરપ્રિન્ટ વેરિફાઇડ",
+            "not_recognised": "ફિંગરપ્રિન્ટ નોટ રિકગ્નાઇઝ્ડ. પ્લીઝ ટ્રાય અગેન."
+        },
+        "user_details": {
+            "male": "મેલ",
+            "female": "ફીમેલ",
+            "mobile_number": "મોબાઇલ નંબર",
+            "enter_number": "એન્ટર નંબર",
+            "take_face_picture": "ટેક ફેસ પિક્ચર"
+        },
+        "confirmation": {
+            "name_label": "નેમ: ",
+            "class_label": "ક્લાસ: ",
+            "age_label": "એજ: ",
+            "contact_label": "કોન્ટેક્ટ નંબર: ",
+            "register_user": "રજિસ્ટર યુઝર",
+            "go_back": "ગો બેક"
+        },
+        "identified_student": {
+            "enter_suhi_id": "એન્ટર યોર સુહી આઇડી",
+            "suhi_id_placeholder": "દા.ત. SUHI_210S0A642",
+            "checking": "ચેકિંગ...",
+            "transcribing": "ટ્રાન્સક્રાઇબિંગ...",
+            "confirm": "કન્ફર્મ",
+            "try_another_way": "લેટ્સ ટ્રાય અનધર વે",
+            "login_using_id": "પ્લીઝ લૉગ ઇન યુઝિંગ યોર સુહી આઇડી.",
+            "going_to_login": "ગોઇંગ ટુ સુહી આઇડી લૉગિન"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "ટુડેઝ રેસિપી બોર્ડ",
+            "next": "નેક્સ્ટ",
+            "start": "સ્ટાર્ટ",
+            "recipes_made_correctly": "રેસિપીઝ મેડ કરેક્ટલી",
+            "blend_smarter": "બ્લેન્ડ સ્માર્ટર, સ્કોર હાયર."
+        },
+        "spaceConvoy": {
+            "submit": "સબમિટ",
+            "tap_targets_first": "ટેપ ધ ટાર્ગેટ્સ ફર્સ્ટ",
+            "level_up": "લેવલ અપ →"
         }
     }
 }

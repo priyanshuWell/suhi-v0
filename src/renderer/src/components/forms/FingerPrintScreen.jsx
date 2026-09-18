@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from "react"
 import { useNavigate } from "react-router"
 import { useDispatch } from "react-redux"
+import { useTranslation } from "react-i18next"
 import { setUser, setScreening } from "../../features/common/commonSlice"
 import LoginComponent from "../ui/LoginComponent"
 import fingerprintImg from "../../assets/fingerprint.svg"
 import ArrowDown from "../../assets/ArrowDown.png"
 
 const FingerPrintScreen = () => {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const dispatch = useDispatch()
     const [status, setStatus] = useState("waiting") // waiting | scanning | success | error
     const [message, setMessage] = useState(
-        "Place your thumb on the fingerprint scanner below the screen."
+        t("forms.fingerprint.instruction", "Place your thumb on the fingerprint scanner below the screen.")
     )
 
     useEffect(() => {
@@ -20,24 +22,27 @@ const FingerPrintScreen = () => {
         const cleanup = window.api.onFingerprintResult((result) => {
             if (result?.success) {
                 setStatus("success")
-                setMessage("Fingerprint verified ")
+                setMessage(t("forms.fingerprint.verified", "Fingerprint verified"))
                 dispatch(setUser(result.user))
                 dispatch(setScreening(result.screening))
                 setTimeout(() => navigate("/register"), 800)
             } else {
                 setStatus("error")
-                setMessage("Fingerprint not recognised. Please try again.")
-                setTimeout(() => setStatus("waiting"), 2000)
+                setMessage(t("forms.fingerprint.not_recognised", "Fingerprint not recognised. Please try again."))
+                setTimeout(() => {
+                    setStatus("waiting")
+                    setMessage(t("forms.fingerprint.instruction", "Place your thumb on the fingerprint scanner below the screen."))
+                }, 2000)
             }
         })
         return cleanup
-    }, [dispatch, navigate])
+    }, [dispatch, navigate, t])
 
     return (
         <>
             <div className="fixed top-1/16 left-1/2 -translate-x-1/2 z-30 w-[600px]">
                 <p className="text-5xl text-center font-light leading-snug text-white ">
-                    Log in using fingerprint
+                    {t("forms.fingerprint.title", "Log in using fingerprint")}
                 </p>
             </div>
             <LoginComponent />
@@ -50,8 +55,8 @@ const FingerPrintScreen = () => {
                         <button className="border border-white rounded-3xl p-6 w-[100px]">
                             <img src={fingerprintImg} alt="finger-print" />
                         </button>
-                        <p className=" text-center text-white text-4xl mt-10   tracking-wide">
-                            Place your thumb on the fingerprint scanner below the screen.
+                        <p className=" text-center text-white text-4xl mt-10 tracking-wide">
+                            {message}
                         </p>
                     </div>
                     <div className="flex flex-col justify-center items-center w-full">

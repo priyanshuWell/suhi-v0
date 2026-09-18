@@ -16,7 +16,12 @@
         "no": "No",
         "are_you_there": "Are you there?",
         "retry": "Retry",
-        "retrying_in": "Retrying in {countdown}s…"
+        "retrying_in": "Retrying in {{countdown}}s...",
+        "retry_in": "Retrying in {{countdown}}s...",
+        "try_again": "Try again",
+        "going_to_home": "Going to home",
+        "seconds_remaining": "{{count}}s remaining",
+        "redirecting_in": "{{label}} in {{remaining}} secs..."
     },
     "profile": {
         "welcome_suhi": "Welcome ",
@@ -30,7 +35,6 @@
         "let_measure": "Your body scan is starting",
         "basic_body_scan": "Basic Body Scan",
         "core_body_scan": "Core Body Scan",
-
         "scan_done": "Scan Completed!",
         "weight_height_measurement": "Stand Straight! \n we're measuring your height and weight",
         "measuring_body_composition": "Measuring your fat and muscle mass",
@@ -65,7 +69,9 @@
             "red_lines": "Red Lines",
             "three_lines": "Three lines",
             "no_lines": "No lines"
-        }
+        },
+        "instructions_line1": "You have to click the number/shape for each image.",
+        "instructions_line2": "If you don't see anything just click on Cannot read plate."
     },
     "dmit": {
         "hand_labels": {
@@ -149,7 +155,50 @@
         "vata": "Vata",
         "pitta": "Pitta",
         "kapha": "Kapha",
-        "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!"
+        "head_desc": "In ancient Indian wisdom, everyone has a special mix of 3 energies called Doshas. Here’s yours!",
+        "default_name": "Student",
+        "congratulations_named": "Congratulations, {{name}}!",
+        "download_report": "Download Report",
+        "sections": {
+            "mind": "Mind",
+            "brain": "Brain",
+            "body": "Body",
+            "vitals": "Vitals",
+            "persona": "Persona",
+            "color_blindness": "Color Blindness -"
+        },
+        "metrics": {
+            "emotion_regulation": "Emotion Regulation",
+            "self_esteem": "Self-Esteem",
+            "personality": "Personality",
+            "divided_attention": "Divided Attention",
+            "cognitive_flexibility": "Cognitive Flexibility",
+            "learning_style": "Learning Style",
+            "hydration": "Hydration",
+            "muscle_mass": "Muscle Mass",
+            "fat_mass": "Fat Mass",
+            "stress": "Stress",
+            "visual_acuity": "Visual Acuity",
+            "short_term_recall": "Short Term Recall",
+            "fine_motor_skills": "Fine Motor Skills",
+            "visual_spatial_judgement": "Visual Spatial Judgement",
+            "musical_preference": "Musical Preference",
+            "heart_rate": "Heart Rate",
+            "breathing_rate": "Breathing Rate",
+            "bp": "BP",
+            "reaction_time": "Reaction Time",
+            "motor_coordination": "Motor Coordination"
+        },
+        "levels": {
+            "good": "Good",
+            "developing": "Developing",
+            "strong": "Strong",
+            "ideal": "Ideal",
+            "low": "Low",
+            "dominant": "Dominant",
+            "well_developed": "Well Developed",
+            "cannot_read_plate": "Cannot Read Plate"
+        }
     },
     "bia_component": {
         "attempt": "Attempt",
@@ -380,6 +429,119 @@
         },
         "results": {
             "below_6_60": "Below 6/60"
+        }
+    },
+    "progress_stages": {
+        "login": "Face Scan",
+        "bia": "Body Scan",
+        "smoothie_slash": "Mind Scan",
+        "voice_analysis": "Voice Scan",
+        "color_blindness": "Vision Scan",
+        "height_weight": "BMI Scan",
+        "perilous_path": "Mind Scan",
+        "visual_acuity": "Vision Test",
+        "beat_drop": "Beat Drop",
+        "result": "Result"
+    },
+    "stage_celebration": {
+        "stage_cleared": "STAGE {{stageNumber}} CLEARED!",
+        "next_challenge_unlocked": "Next Challenge Unlocked! Advancing...",
+        "tap_to_continue": "Tap to continue",
+        "titles": {
+            "login": "Face Biometrics Scan",
+            "bia": "Full Body Composition Scan",
+            "height_weight": "BMI & Physical Dimension Scan",
+            "smoothie_slash": "Mind Reaction Challenge",
+            "perilous_path": "Spatial Cognition Trial",
+            "voice_analysis": "Vocal Biometrics Analysis",
+            "color_blindness": "Color Spectrum Vision Test",
+            "visual_acuity": "Visual Acuity Precision Test",
+            "beat_drop": "Rhythm & Coordination Arena",
+            "result": "Comprehensive Health Dossier"
+        }
+    },
+    "settings": {
+        "language": "Language",
+        "reset": "Reset",
+        "apply": "Apply",
+        "lang_en": "English",
+        "lang_hi": "Hindi",
+        "lang_gu": "Gujarati",
+        "lang_mr": "Marathi",
+        "lang_bn": "Bengali",
+        "lang_ar": "Arabic"
+    },
+    "kiosk": {
+        "admin_access": "Administrator access",
+        "enter_password": "Enter password to exit kiosk mode",
+        "desktop_desc": "This returns the device to a normal desktop for troubleshooting.",
+        "cancel": "Cancel",
+        "exit_kiosk": "Exit kiosk mode",
+        "checking": "Checking…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "Log in via Father's name and phone number",
+            "father_name": "Father's name",
+            "enter_father_name": "Enter Your Father's name",
+            "registered_mobile": "Registered Mobile number",
+            "enter_number": "Enter number",
+            "next": "Next"
+        },
+        "login_dob": {
+            "title": "Log in via your name and date of birth",
+            "suhi_id": "Suhi ID",
+            "enter_suhi_id": "Enter Your Suhi ID",
+            "dob": "Date Of Birth",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "Next",
+            "fill_all_fields": "Please fill all fields",
+            "invalid_date": "Please enter a valid date (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "Log in using fingerprint",
+            "instruction": "Place your thumb on the fingerprint scanner below the screen.",
+            "verified": "Fingerprint verified",
+            "not_recognised": "Fingerprint not recognised. Please try again."
+        },
+        "user_details": {
+            "male": "Male",
+            "female": "Female",
+            "mobile_number": "Mobile number",
+            "enter_number": "Enter number",
+            "take_face_picture": "Take face picture"
+        },
+        "confirmation": {
+            "name_label": "Name: ",
+            "class_label": "Class: ",
+            "age_label": "Age: ",
+            "contact_label": "Contact Number: ",
+            "register_user": "Register User",
+            "go_back": "Go Back"
+        },
+        "identified_student": {
+            "enter_suhi_id": "Enter your SUHI Id",
+            "suhi_id_placeholder": "e.g. SUHI_210S0A642",
+            "checking": "Checking...",
+            "transcribing": "Transcribing...",
+            "confirm": "Confirm",
+            "try_another_way": "Let's try another way",
+            "login_using_id": "Please log in using your SuHi ID.",
+            "going_to_login": "Going to SUHI Id login"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "TODAY'S RECIPE BOARD",
+            "next": "NEXT",
+            "start": "START",
+            "recipes_made_correctly": "RECIPES MADE CORRECTLY",
+            "blend_smarter": "Blend smarter, score higher."
+        },
+        "spaceConvoy": {
+            "submit": "Submit",
+            "tap_targets_first": "Tap the targets first",
+            "level_up": "LEVEL UP →"
         }
     }
 }

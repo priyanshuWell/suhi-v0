@@ -394,10 +394,10 @@ const IdentifyStudent = () => {
             {noMatchError && (
                 <NoActivityFrame
                     variant="error"
-                    title="Let's try another way"
-                    description="Please log in using your SuHi ID."
+                    title={t("forms.identified_student.try_another_way", "Let's try another way")}
+                    description={t("forms.identified_student.login_using_id", "Please log in using your SuHi ID.")}
                     showDescription={true}
-                    redirectLabel="Going to SUHI Id login"
+                    redirectLabel={t("forms.identified_student.going_to_login", "Going to SUHI Id login")}
                     autoRedirectDelay={5000}
                     showRetry={false}
                     onRedirect={() => {

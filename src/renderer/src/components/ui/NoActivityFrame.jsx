@@ -280,8 +280,7 @@ export default function NoActivityFrame({
             {/* Label with live inline countdown */}
             <div className="absolute inset-0 flex items-center justify-center px-4">
                 <span className="text-white text-[22px] font-medium tracking-wide relative z-10 text-center">
-                    {label} in{" "}
-                    <span style={{ fontWeight: 700, color: "#fff" }}>{remaining}</span> secs...
+                    {t("common.redirecting_in", { label, remaining, defaultValue: `${label} in ${remaining} secs...` })}
                 </span>
             </div>
         </div>
@@ -451,7 +450,7 @@ export default function NoActivityFrame({
                         {variant === "continue-screening" && (
                             <div className="flex flex-col items-center gap-6">
                                 {renderGradientButton({
-                                    label: "Redirecting",
+                                    label: t("auto_idle.redirecting_to_home", "Redirecting"),
                                     remaining: csRemaining,
                                     totalSecs: continueScreeningSecs,
                                     filling: csFilling,

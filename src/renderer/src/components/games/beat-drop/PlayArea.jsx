@@ -12,6 +12,7 @@ import decoySquare from "../../../assets/beat-drop/playArea/decoy_square.png"
 import decoyTriangle from "../../../assets/beat-drop/playArea/decoy_triangle.png"
 import decoyStar from "../../../assets/beat-drop/playArea/decoy_star.png"
 import Piano from "../../Piano"
+// import { playPianoNote } from "./piano"
 import { PIANO_SPEC } from "../../pianoSpec"
 import { anton, cqw, FRAME_H, FRAME_W, NEON_GLOW, oswald, pct } from "./frame"
 import { createBeatDropEngine } from "./beatDropEngine"
@@ -201,9 +202,11 @@ export default function PlayArea({
     onSpeedPopup,
     onChordPopup,
     onAvoidPopup,
+    onFollowPopup,
     speedAtMs = 20000,
     chordAtMs = 37918,
     avoidAtMs = 53000,
+    followAtMs = 88800,
     engineRef
 }) {
     const { t } = useTranslation()
@@ -220,6 +223,7 @@ export default function PlayArea({
     const speedPopupSent = useRef(false)
     const chordPopupSent = useRef(false)
     const avoidPopupSent = useRef(false)
+    const followPopupSent = useRef(false)
     const startedRef = useRef(false)
     const endedGuard = useRef(false)
 
@@ -260,6 +264,7 @@ export default function PlayArea({
             speedPopupSent.current = false
             chordPopupSent.current = false
             avoidPopupSent.current = false
+            followPopupSent.current = false
             endedGuard.current = false
             fallProbeRef.current = {
                 firstByLevel: getFirstNodePerLevel(),
@@ -290,6 +295,10 @@ export default function PlayArea({
                 avoidPopupSent.current = true
                 onAvoidPopup?.()
             }
+            if (!followPopupSent.current && snap.t >= followAtMs && !snap.notes.some((n) => n.event.block_id === "D")) {
+                followPopupSent.current = true
+                onFollowPopup?.()
+            }
 
             if (snap.done && !endedGuard.current) {
                 endedGuard.current = true
@@ -313,9 +322,11 @@ export default function PlayArea({
         onSpeedPopup,
         onChordPopup,
         onAvoidPopup,
+        onFollowPopup,
         speedAtMs,
         chordAtMs,
-        avoidAtMs
+        avoidAtMs,
+        followAtMs
     ])
 
     // After notes paint: measure real on-screen box-center vs hit-line mid
@@ -336,6 +347,7 @@ export default function PlayArea({
     const handleNoteOn = useCallback(
         (_note, info) => {
             if (paused || info.lane == null || !engine.current) return
+            // playPianoNote(info.lane)              // ← add this line
             engine.current.handleLaneTap(info.lane, info.pointer)
             const snap = engine.current.getSnapshot()
             onScore?.(snap.score)
@@ -391,8 +403,7 @@ export default function PlayArea({
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
-                        justifyContent: "center",
-                        paddingTop: "6%"
+                        justifyContent: "center"
                     }}
                 >
                     <span

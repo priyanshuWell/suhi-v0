@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 /**
  * FullscreenError
@@ -27,12 +28,14 @@ const FullscreenError = ({
     title,
     description,
     showDescription = false,
-    redirectLabel = "Going to home",
+    redirectLabel,
     autoRedirectDelay = 5000,
     showRetry = false,
     onRetry,
     onRedirect
 }) => {
+    const { t } = useTranslation()
+    const effectiveRedirectLabel = redirectLabel || t("common.going_to_home", "Going to home")
     const [filling, setFilling] = useState(false)
     const [redirectCancelled, setRedirectCancelled] = useState(false)
     const redirectFiredRef = useRef(false)
@@ -118,7 +121,7 @@ const FullscreenError = ({
             hover:bg-white/10
           "
                 >
-                    Try again
+                    {t("common.try_again", "Try again")}
                 </button>
             )}
 
@@ -149,7 +152,7 @@ const FullscreenError = ({
                 {/* Label */}
                 <div className="absolute inset-0 flex items-center justify-center gap-2 px-4">
                     <span className="text-white/80 text-base font-medium tracking-wide truncate">
-                        {redirectLabel}
+                        {effectiveRedirectLabel}
                     </span>
                     {/* Animated dots */}
                     <span className="flex gap-[3px] items-center mt-0.5">

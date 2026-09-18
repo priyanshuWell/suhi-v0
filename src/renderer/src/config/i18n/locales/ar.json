@@ -12,7 +12,16 @@
         "replay": "إعادة تشغيل الصوت",
         "let_go": "فلنبدأ",
         "hi": "مرحباً",
-        "retry": "إعادة المحاولة"
+        "retry": "إعادة المحاولة",
+        "retry_in": "ريترايينغ إن {{countdown}}s...",
+        "retrying_in": "ريترايينغ إن {{countdown}}s...",
+        "try_again": "تراي أجين",
+        "going_to_home": "غوينغ تو هوم",
+        "seconds_remaining": "{{count}}s ريمينينغ",
+        "redirecting_in": "{{label}} إن {{remaining}} ثوان...",
+        "yes": "نعم",
+        "no": "لا",
+        "are_you_there": "هل ما زلت في الكشك؟"
     },
     "profile": {
         "welcome_suhi": "مرحباً بك في SUHI ",
@@ -97,7 +106,17 @@
         "redirect_login_label": "جاري الانتقال إلى تسجيل الدخول عبر SUHI Id",
         "redirect_home_label": "جاري الانتقال إلى الصفحة الرئيسية",
         "stand_straight": "قف بشكل مستقيم",
-        "stand_straight_still": "نحن نقيس طولك ووزنك"
+        "stand_straight_still": "نحن نقيس طولك ووزنك",
+        "different_user_found": "تم العثور على مستخدم مختلف",
+        "bia_error_title": "خطأ في نتيجة BIA",
+        "bia_error_description": "فشل في تحميل بيانات نتيجة BIA. جاري إعادة التوجيه إلى الصفحة الرئيسية...",
+        "barefoot_required": "بليز ميك شور يو آر بيرفوت.",
+        "height_port_not_connected": "هايت بورت إز نوت كونكتد.",
+        "retrying": "ريترايينغ",
+        "last_retry_title": "أوبس! آي كانوت ديتكت يو",
+        "suhi_coordinator_contact": "بليز كونتاكت يور سوهي كيوسك كوردينيتور فور أسيستانس.",
+        "different_user_found_desc": "لوكس لايك سم وان أبيرد إن فرونت أوف ذا كيوسك!",
+        "moving_to_next_scan": "موفينغ تو نكست سكان"
     },
     "colorBlindness": {
         "title": "فحص رؤية الألوان",
@@ -116,7 +135,9 @@
             "red_lines": "خطوط حمراء",
             "three_lines": "ثلاثة خطوط",
             "no_lines": "لا توجد خطوط"
-        }
+        },
+        "instructions_line1": "يو هاف تو كليك ذا نمبر/شيب فور إيتش إيميج.",
+        "instructions_line2": "إف يو دونت سي إني ثينغ جست كليك أون كانوت ريد بليت."
     },
     "dmit": {
         "hand_labels": {
@@ -200,7 +221,50 @@
         "vata": "فاتا",
         "pitta": "بيتا",
         "kapha": "كافا",
-        "head_desc": "في الحكمة الهندية القديمة، يمتلك كل شخص مزيجاً خاصاً من 3 طاقات تسمى الدوشا. هذا هو مزيجك!"
+        "head_desc": "في الحكمة الهندية القديمة، يمتلك كل شخص مزيجاً خاصاً من 3 طاقات تسمى الدوشا. هذا هو مزيجك!",
+        "default_name": "ستودنت",
+        "congratulations_named": "كونغراتشوليشنز, {{name}}!",
+        "download_report": "داونلود ريبورت",
+        "sections": {
+            "mind": "مايند",
+            "brain": "برين",
+            "body": "بودي",
+            "vitals": "فايتلز",
+            "persona": "بيرسونا",
+            "color_blindness": "كالر بلايندنس -"
+        },
+        "metrics": {
+            "emotion_regulation": "إيموشن ريغيوليشن",
+            "self_esteem": "سيلف-إستيم",
+            "personality": "بيرسوناليتي",
+            "divided_attention": "ديفايديد أتنشن",
+            "cognitive_flexibility": "كوغنيتيف فليكسيبيليتي",
+            "learning_style": "ليرنينغ ستايل",
+            "hydration": "هايدريشن",
+            "muscle_mass": "ماسل ماس",
+            "fat_mass": "فات ماس",
+            "stress": "ستريس",
+            "visual_acuity": "فيجوال أكويتي",
+            "short_term_recall": "شورت تيرم ريكول",
+            "fine_motor_skills": "فاين موتور سكيلز",
+            "visual_spatial_judgement": "فيجوال سباشيال جدجمينت",
+            "musical_preference": "ميوزيكال بريفرنس",
+            "heart_rate": "هارت ريت",
+            "breathing_rate": "بريذينغ ريت",
+            "bp": "بي بي",
+            "reaction_time": "ريأكشن تايم",
+            "motor_coordination": "موتور كوردينيشن"
+        },
+        "levels": {
+            "good": "غود",
+            "developing": "ديفيلوبينغ",
+            "strong": "سترونغ",
+            "ideal": "أيديال",
+            "low": "لو",
+            "dominant": "دومينانت",
+            "well_developed": "ويل ديفيلوبد",
+            "cannot_read_plate": "كانوت ريد بليت"
+        }
     },
     "bia_component": {
         "attempt": "محاولة",
@@ -248,13 +312,6 @@
             "desc_line2_suffix": "في أعلى",
             "desc_line3": "الشاشة"
         }
-    },
-    "auto_idle": {
-        "no_activity_detected": "لم يتم اكتشاف أي نشاط",
-        "redirecting_to_home": "إعادة التوجيه إلى الصفحة الرئيسية",
-        "are_you_there": "هل ما زلت هناك؟",
-        "continue_screening": "متابعة الفحص",
-        "no_user_detected": "لم يتم العثور على مستخدم"
     },
     "auto_idle": {
         "no_activity_detected": "لم يتم اكتشاف أي نشاط",
@@ -377,6 +434,119 @@
         },
         "results": {
             "below_6_60": "أقل من 6/60"
+        }
+    },
+    "progress_stages": {
+        "login": "فيس سكان",
+        "bia": "بودي سكان",
+        "smoothie_slash": "مايند سكان",
+        "voice_analysis": "فويس سكان",
+        "color_blindness": "فيجن سكان",
+        "height_weight": "بي إم آي سكان",
+        "perilous_path": "مايند سكان",
+        "visual_acuity": "فيجن تيست",
+        "beat_drop": "بيت دروب",
+        "result": "ريزلت"
+    },
+    "stage_celebration": {
+        "stage_cleared": "ستيج {{stageNumber}} كليرد!",
+        "next_challenge_unlocked": "نكست تشالنج أنلوكد! أدفانسينغ...",
+        "tap_to_continue": "تاب تو كونتينيو",
+        "titles": {
+            "login": "فيس بايومتريكس سكان",
+            "bia": "فل بودي كومبوزيشن سكان",
+            "height_weight": "بي إم آي أند فيزيكال دايمنشن سكان",
+            "smoothie_slash": "مايند ريأكشن تشالنج",
+            "perilous_path": "سباشيال كوغنيشن ترايل",
+            "voice_analysis": "فوكال بايومتريكس أناليسيس",
+            "color_blindness": "كالر سبكتروم فيجن تيست",
+            "visual_acuity": "فيجوال أكويتي بريسيجن تيست",
+            "beat_drop": "ريذم أند كوردينيشن أرينا",
+            "result": "كومبريهنسيف هيلث دوسييه"
+        }
+    },
+    "settings": {
+        "language": "لانغويج",
+        "reset": "ريست",
+        "apply": "أبلاي",
+        "lang_en": "إنغليش",
+        "lang_hi": "هيندي",
+        "lang_gu": "غوجاراتي",
+        "lang_mr": "ماراثي",
+        "lang_bn": "بنغالي",
+        "lang_ar": "عربي"
+    },
+    "kiosk": {
+        "admin_access": "أدمنستريتور أكسيس",
+        "enter_password": "إنتر باسوورد تو إكزيت كيوسك مود",
+        "desktop_desc": "ذيس ريترنز ذا ديفايس تو أ نورمال ديسكتوب فور ترابلشوتينغ.",
+        "cancel": "كانسل",
+        "exit_kiosk": "إكزيت كيوسك مود",
+        "checking": "تشيكينغ…"
+    },
+    "forms": {
+        "login_father": {
+            "title": "لوغ إن فايا فاذرز نيم أند فون نمبر",
+            "father_name": "فاذرز نيم",
+            "enter_father_name": "إنتر يور فاذرز نيم",
+            "registered_mobile": "ريجستريد موبايل نمبر",
+            "enter_number": "إنتر نمبر",
+            "next": "نكست"
+        },
+        "login_dob": {
+            "title": "لوغ إن فايا يور نيم أند ديت أوف بيرث",
+            "suhi_id": "سوهي آي دي",
+            "enter_suhi_id": "إنتر يور سوهي آي دي",
+            "dob": "ديت أوف بيرث",
+            "dob_placeholder": "DD/MM/YY",
+            "next": "نكست",
+            "fill_all_fields": "بليز فيل أول فيلدز",
+            "invalid_date": "بليز إنتر أ فاليد ديت (DD/MM/YY)"
+        },
+        "fingerprint": {
+            "title": "لوغ إن يوزينغ فينغربيرينت",
+            "instruction": "بليس يور ثامب أون ذا فينغربيرينت سكانر بيلو ذا سكرين.",
+            "verified": "فينغربيرينت فيريفايد",
+            "not_recognised": "فينغربيرينت نوت ريكوغنايزد. بليز تراي أجين."
+        },
+        "user_details": {
+            "male": "ميل",
+            "female": "فيميل",
+            "mobile_number": "موبايل نمبر",
+            "enter_number": "إنتر نمبر",
+            "take_face_picture": "تيك فيس بكتشر"
+        },
+        "confirmation": {
+            "name_label": "نيم: ",
+            "class_label": "كلاس: ",
+            "age_label": "إيج: ",
+            "contact_label": "كونتاكت نمبر: ",
+            "register_user": "ريجستر يوزر",
+            "go_back": "غو باك"
+        },
+        "identified_student": {
+            "enter_suhi_id": "إنتر يور سوهي آي دي",
+            "suhi_id_placeholder": "مثال SUHI_210S0A642",
+            "checking": "تشيكينغ...",
+            "transcribing": "ترانسكرايبينغ...",
+            "confirm": "كونفيرم",
+            "try_another_way": "ليتس تراي أنذر واي",
+            "login_using_id": "بليز لوغ إن يوزينغ يور سوهي آي دي.",
+            "going_to_login": "غوينغ تو سوهي آي دي لوغن"
+        }
+    },
+    "games": {
+        "smoothieSlash": {
+            "todays_recipe_board": "تودايز ريسيبي بورد",
+            "next": "نكست",
+            "start": "ستارت",
+            "recipes_made_correctly": "ريسيبيز ميد كوريكتلي",
+            "blend_smarter": "بليند سمارتير، سكور هاير."
+        },
+        "spaceConvoy": {
+            "submit": "سبميت",
+            "tap_targets_first": "تاب ذا تارغتس فيرست",
+            "level_up": "ليفل أب →"
         }
     }
 }

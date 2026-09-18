@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router"
 import { useSelector } from "react-redux"
+import { useTranslation } from "react-i18next"
 import { motion, motionValue, AnimatePresence } from "framer-motion"
 import scoreFrame from "../../../assets/smoothie/score-frame.png"
 import scoreboardFrame from "../../../assets/smoothie/score-board.png"
@@ -290,6 +291,7 @@ const slideVariants = {
 
 /* ════════════════════════════════════════════════════════════════════════ */
 export default function SmoothieSlashGame() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const storeUser = useSelector((s) => s.common.user)
     const storeScreening = useSelector((s) => s.common.screening)
@@ -689,7 +691,7 @@ export default function SmoothieSlashGame() {
     useEffect(() => {
         const bgm = new Audio(bgMusic)
         bgm.loop = true
-        bgm.volume = 0.25
+        bgm.volume = 0.10
         bgm.play().catch(() => { })
         bgMusicRef.current = bgm
         return () => {
@@ -1345,7 +1347,7 @@ export default function SmoothieSlashGame() {
                                                         letterSpacing: ".22em"
                                                     }}
                                                 >
-                                                    TODAY'S RECIPE BOARD
+                                                    {t("games.smoothieSlash.todays_recipe_board", "TODAY'S RECIPE BOARD")}
                                                 </p>
                                                 <div className="grid grid-cols-2 gap-4">
                                                     {STAGES.map((s) => (
@@ -1488,7 +1490,7 @@ export default function SmoothieSlashGame() {
                                             transition={{ duration: 0.18 }}
                                             className="block"
                                         >
-                                            {introStep < INTRO_SLIDES.length - 1 ? "NEXT" : "START"}
+                                            {introStep < INTRO_SLIDES.length - 1 ? t("games.smoothieSlash.next", "NEXT") : t("games.smoothieSlash.start", "START")}
                                         </motion.span>
                                     </AnimatePresence>
                                 </button>
@@ -2234,7 +2236,7 @@ export default function SmoothieSlashGame() {
                                     className="font-extrabold text-white"
                                     style={{ fontSize: "clamp(20px,2.6vw,32px)" }}
                                 >
-                                    RECIPES MADE CORRECTLY
+                                    {t("games.smoothieSlash.recipes_made_correctly", "RECIPES MADE CORRECTLY")}
                                 </h2>
                                 <span
                                     className="font-extrabold text-white"
@@ -2330,7 +2332,7 @@ export default function SmoothieSlashGame() {
                             className="absolute w-full text-center font-bold text-white"
                             style={{ bottom: "10.5%", left: 0, fontSize: "clamp(30px,3.8vw,40px)" }}
                         >
-                            Blend smarter, score higher.
+                            {t("games.smoothieSlash.blend_smarter", "Blend smarter, score higher.")}
                         </div>
                     </div>
 
@@ -2349,7 +2351,7 @@ export default function SmoothieSlashGame() {
                             borderRadius: 60
                         }}
                     >
-                        NEXT
+                        {t("games.smoothieSlash.next", "NEXT")}
                     </button>
                 </div>
             )}

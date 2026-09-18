@@ -2373,7 +2373,9 @@ const PressStartModal = ({ timeoutSecs = 30, onStart, playAudio, t }) => {
                     <h2 className="text-[#8BC3E5] text-[40px] font-anta text-center m-0">
                         {t("errors.press_start_ready")}{" "}
                     </h2>
-                    <p className="text-white/60 font-anta text-2xl">{remaining}s remaining</p>
+                    <p className="text-white/60 font-anta text-2xl">
+                        {t("common.seconds_remaining", { count: remaining, defaultValue: `${remaining}s remaining` })}
+                    </p>
                     <button
                         onClick={fireStart}
                         disabled={isAudioPlaying}
