@@ -7,13 +7,21 @@ import { Award, Sparkles, ChevronRight, Zap } from "lucide-react"
 // Map stage keys to gamer-friendly mission titles
 const STAGE_LABELS = {
     login: "Face Biometrics Scan",
+    face: "Face Biometrics Scan",
     bia: "Full Body Composition Scan",
     height_weight: "BMI & Physical Dimension Scan",
+    bmi: "BMI & Physical Dimension Scan",
     smoothie_slash: "Mind Reaction Challenge",
+    divide_attention: "Mind Reaction Challenge",
     perilous_path: "Spatial Cognition Trial",
     voice_analysis: "Vocal Biometrics Analysis",
+    voice: "Vocal Biometrics Analysis",
     color_blindness: "Color Spectrum Vision Test",
+    colorblindness: "Color Spectrum Vision Test",
+    congitive: "Color Spectrum Vision Test",
+    cognitive: "Color Spectrum Vision Test",
     visual_acuity: "Visual Acuity Precision Test",
+    adaptive_eye: "Visual Acuity Precision Test",
     beat_drop: "Rhythm & Coordination Arena",
     result: "Comprehensive Health Dossier"
 }

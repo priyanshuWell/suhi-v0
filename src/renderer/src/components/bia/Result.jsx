@@ -8,7 +8,8 @@ import qrCode from "../../assets/bia/qr-code.png" // TODO: save Figma "QR Code" 
 // import emotionIcon from '../../assets/bia/emotion.svg'   // TODO: save Figma "😌" asset locally
 import vitalsIcon from "../../assets/bia/vitals.png" // TODO: save Figma "🫀" asset locally
 import { useNavigate } from "react-router"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { resetCommonState } from "../../features/common/commonSlice"
 import axios from "axios"
 import BodyConstitution from "./BodyConstitution"
 import { useTranslation } from "react-i18next"
@@ -185,6 +186,7 @@ const InfoPill = ({ icon, label, value, color }) => (
 ───────────────────────────────────────────── */
 const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningOrder }) => {
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
     const storeUser = useSelector((s) => s.common.user)
@@ -1134,6 +1136,7 @@ const Result = ({ apiReportRaw, reportError: reportErrorProp = false, screeningO
                                 console.log("background localtocloud",err)
                             })
                             releaseAllResources()
+                            dispatch(resetCommonState())
                             navigate("/welcome")
                         }}
                         className="flex items-center justify-center cursor-pointer font-anta"

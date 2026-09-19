@@ -5,7 +5,8 @@ import WeightIcon from "../../assets/bia/weight.svg"
 import HeightIcon from "../../assets/bia/height.svg"
 import Eye_Icon from "../../assets/bia/Eye_Icon.svg"
 import { useNavigate } from "react-router"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { resetCommonState } from "../../features/common/commonSlice"
 import axios from "axios"
 import BodyConstitution from "./BodyConstitution"
 import droplet from "../../assets/droplet.png"
@@ -156,6 +157,7 @@ const renderInsightCard = ({
 ───────────────────────────────────────────── */
 const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const storeWeight = useSelector((s) => s.common.weight)
     const storeHeight = useSelector((s) => s.common.height)
     const storeUser = useSelector((s) => s.common.user)
@@ -762,6 +764,7 @@ const BIAResult = ({ apiReportRaw, reportError: reportErrorProp = false }) => {
                             <BlackGradientButton
                                 onClick={() => {
                                     releaseAllResources()
+                                    dispatch(resetCommonState())
                                     navigate("/welcome")
                                 }}
                                 style={{

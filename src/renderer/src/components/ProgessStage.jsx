@@ -1,6 +1,72 @@
 import { Fragment } from "react"
 import { useSelector } from "react-redux"
 import { useTranslation } from "react-i18next"
+import PropTypes from "prop-types"
+
+// ─── Known stage key aliases (handles backend variations, typos & legacy keys) ──
+const STAGE_ALIASES = {
+    login: ["login", "face", "face_scan", "face_capture", "facecapture"],
+    bia: ["bia", "body_scan", "bia_scan"],
+    smoothie_slash: [
+        "smoothie_slash",
+        "divide_attention",
+        "smoothie",
+        "smoothieslash",
+        "space_convoy",
+        "spaceconvoy"
+    ],
+    voice_analysis: ["voice_analysis", "voice", "voice_scan", "voicescan", "voiceanalysis"],
+    color_blindness: [
+        "color_blindness",
+        "colorblindness",
+        "congitive", // known backend typo
+        "cognitive",
+        "vision_scan",
+        "visionscan"
+    ],
+    height_weight: ["height_weight", "weight_height", "bmi", "bia", "heightweight", "weightheight"],
+    perilous_path: ["perilous_path", "perilous", "perilouspath", "mind_scan"],
+    visual_acuity: [
+        "visual_acuity",
+        "visual-acuity",
+        "visualacuity",
+        "adaptive_eye",
+        "adaptiveeye",
+        "vision_test",
+        "vision"
+    ],
+    beat_drop: ["beat_drop", "beatdrop"],
+    result: ["result", "report"]
+}
+
+/**
+ * Normalizes a key by stripping hyphens, underscores, spaces and lowercasing.
+ * Handles both string keys and objects like { stage_key: "..." }.
+ */
+function normalizeKey(k) {
+    if (!k) return ""
+    const raw = typeof k === "object" ? k.stage_key || k.key || k.name || "" : k
+    return String(raw)
+        .trim()
+        .toLowerCase()
+        .replace(/[-_\s]/g, "")
+}
+
+/**
+ * Checks if a step's key (or any of its known aliases) is present in completedStages.
+ */
+function isStageComplete(step, completedStages) {
+    if (!completedStages || !Array.isArray(completedStages) || completedStages.length === 0) {
+        return false
+    }
+    const stepKey = typeof step === "string" ? step : step.key
+    const customKeys = Array.isArray(step?.keys) ? step.keys : []
+    const aliases = [stepKey, ...customKeys, ...(STAGE_ALIASES[stepKey] || [])]
+    const normalizedAliases = aliases.map(normalizeKey)
+
+    const normalizedCompleted = completedStages.map(normalizeKey)
+    return normalizedAliases.some((alias) => normalizedCompleted.includes(alias))
+}
 
 // ─── Screening 1 stages ──────────────────────────────────────────────────────
 const SCREENING_1_STEPS = [
@@ -22,33 +88,56 @@ const SCREENING_2_STEPS = [
 ]
 
 /**
- * Derives the active step number from completedStages for a given steps array.
- * The active step is the first step whose key is NOT yet in completedStages.
- * Falls back to the last step index if everything is done.
+ * Derives the active step number from completedStages and nextStage for a given steps array.
+ * 1. If nextStage matches a step, that step is active.
+ * 2. Otherwise, first uncompleted step is active.
+ * 3. If all steps are complete, returns steps.length + 1 so all are marked complete.
  */
-function deriveActiveStep(steps, completedStages) {
+function deriveActiveStep(steps, completedStages, nextStage) {
+    if (nextStage) {
+        const nextKey = normalizeKey(nextStage)
+        const match = steps.find((step) => {
+            const aliases = [step.key, ...(STAGE_ALIASES[step.key] || [])].map(normalizeKey)
+            return aliases.includes(nextKey)
+        })
+        if (match) {
+            return match.id
+        }
+    }
+
     for (let i = 0; i < steps.length; i++) {
-        if (!completedStages.includes(steps[i].key)) {
+        if (!isStageComplete(steps[i], completedStages)) {
             return steps[i].id
         }
     }
-    return steps[steps.length - 1].id
+    return steps.length + 1
 }
 
 export default function ProgressStage({ current = null }) {
     const { t } = useTranslation()
     const screening = useSelector((state) => state.common.screening)
-    const completedStages = screening?.completedStages || []
+    const user = useSelector((state) => state.common.user)
+
+    // Gather completed stages from all possible Redux locations
+    const completedStages = [
+        ...(screening?.completedStages || []),
+        ...(screening?.completed_stages || []),
+        ...(user?.screening?.completed_stages || []),
+        ...(user?.screening?.completedStages || [])
+    ]
+    const nextStage = screening?.nextStage
     const screeningOrder = screening?.screeningOrder ?? 1
 
     // Select the correct step set for the current screening phase
     const steps = screeningOrder === 2 ? SCREENING_2_STEPS : SCREENING_1_STEPS
 
     // If a `current` prop is passed (route-based, legacy), use it.
-    // Otherwise derive from completedStages so Screening 2 works without route mapping.
-    const activeStepNum = current !== null ? current : deriveActiveStep(steps, completedStages)
+    // Otherwise derive from completedStages and nextStage.
+    const activeStepNum =
+        current !== null ? current : deriveActiveStep(steps, completedStages, nextStage)
 
-    const isAllDone = activeStepNum >= steps.length
+    const isAllDone =
+        activeStepNum > steps.length || steps.every((s) => isStageComplete(s, completedStages))
 
     return (
         <div
@@ -84,8 +173,8 @@ export default function ProgressStage({ current = null }) {
             )}
 
             {steps.map((step, index) => {
-                const isDone = completedStages.includes(step.key) || step.id < activeStepNum
-                const isActive = step.id === activeStepNum
+                const isDone = isStageComplete(step, completedStages) || step.id < activeStepNum
+                const isActive = step.id === activeStepNum && !isDone
 
                 const circleClass =
                     isDone || isActive
@@ -107,7 +196,7 @@ export default function ProgressStage({ current = null }) {
                         : "text-[rgba(255,255,255,0.6)]"
 
                 const lineClass =
-                    step.id < activeStepNum
+                    isDone || step.id < activeStepNum
                         ? `
               bg-[#9ad9ff]
               shadow-[0_0_10px_rgba(154,217,255,0.9)]
@@ -169,4 +258,8 @@ export default function ProgressStage({ current = null }) {
             })}
         </div>
     )
+}
+
+ProgressStage.propTypes = {
+    current: PropTypes.number
 }

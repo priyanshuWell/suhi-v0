@@ -1,6 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit"
 
-const initialState = {
+const getInitialState = () => ({
     cloudSyncData: null,
 
     user: null,
@@ -45,7 +45,9 @@ const initialState = {
         biaFinal: null
     },
     bmiResult: null
-}
+})
+
+const initialState = getInitialState()
 
 const commonSlice = createSlice({
     name: "common",
@@ -207,7 +209,7 @@ const commonSlice = createSlice({
             // clear the session on logout instead.
         },
 
-        resetCommonState: () => initialState
+        resetCommonState: () => getInitialState()
     }
 })
 
