@@ -55,7 +55,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<ColorBlindQuiz />} />
+                <Route path="/" element={<StartScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />
