@@ -55,7 +55,7 @@ function App() {
 
             <Routes>
                 {/* Routes WITHOUT the progress bar */}
-                <Route path="/" element={<StartScreen />} />
+                <Route path="/" element={<SplashScreen />} />
                 <Route path="/smoothie-slash" element={<SmoothieSlashGame />} />
                 <Route path="/welcome" element={<StartScreen />} />
                 <Route path="/capture" element={<VideoCaptureScreen />} />

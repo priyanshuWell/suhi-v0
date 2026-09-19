@@ -20,11 +20,35 @@ export default function PerilousPathIntro({ onStart }) {
     const [starting, setStarting] = useState(false)
     const { play, stop } = useKioskAudio()
 
+    const AUDIO_SEQUENCE = [
+        { key: INSTRUCTION_AUDIO.PERILOUS_LETS_LEARN_HOW_TO_PLAY, delay: 0 },
+        { key: INSTRUCTION_AUDIO.PERILOUS_COMPLETE_THE_PATH, delay: 300 },
+        { key: INSTRUCTION_AUDIO.PERILOUS_REMEMBER_DANGER, delay: 300 },
+        { key: INSTRUCTION_AUDIO.PERILOUS_AVOID_AND_COMPLETE, delay: 300 },
+        { key: INSTRUCTION_AUDIO.PERILOUS_PRESS_START_WHEN_READY, delay: 300 }
+    ]
     // Play the how-to-play instruction audio when the intro screen mounts
     useEffect(() => {
-        play(INSTRUCTION_AUDIO.PERILOUS_LETS_LEARN_HOW_TO_PLAY)
-        return () => stop()
-    }, [])
+        let cancelled = false
+
+        const runSequence = async () => {
+            for (const { key, delay } of AUDIO_SEQUENCE) {
+                if (cancelled) break
+                if (delay > 0) {
+                    await new Promise((res) => setTimeout(res, delay))
+                }
+                if (cancelled) break
+                await play(key)
+            }
+        }
+
+        runSequence()
+
+        return () => {
+            cancelled = true
+            stop()
+        }
+    }, [play, stop])
 
     const steps = [
         {

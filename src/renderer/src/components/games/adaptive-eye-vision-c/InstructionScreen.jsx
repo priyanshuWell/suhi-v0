@@ -78,15 +78,31 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
         {t('adaptiveEye.instruction.cover_eye', { eye: t(`adaptiveEye.eyes.${info.cover}`) })}
       </p>
 
-      {/* Eye with Hand covering it */}
-      <div className="relative flex items-center justify-center w-72 h-36 sm:w-96 sm:h-48 md:w-[460px] md:h-[230px] text-white my-2">
-        <Eye className="w-20 h-20 sm:w-20 sm:h-20 text-white" strokeWidth={2.5} />
-        <img
-          src={handCoverGif}
-          alt={`Cover ${info.cover} eye`}
-          className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${isLeftCover ? 'scale-x-[-1]' : ''
-            }`}
-        />
+      {/* Eyes with Hand covering the designated eye */}
+      <div className="relative flex items-center justify-center gap-12 sm:gap-16 md:gap-20 h-36 sm:h-48 md:h-[230px] text-white my-2">
+        {/* Left eye (viewer's left / left eye) */}
+        <div className="relative flex items-center justify-center">
+          <Eye className="w-20 h-20 sm:w-20 sm:h-20 text-white" strokeWidth={2.5} />
+          {isLeftCover && (
+            <img
+              src={handCoverGif}
+              alt={`Cover ${info.cover} eye`}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-36 sm:w-80 sm:h-40 md:w-96 md:h-48 max-w-none object-contain pointer-events-none scale-x-[-1]"
+            />
+          )}
+        </div>
+
+        {/* Right eye (viewer's right / right eye) */}
+        <div className="relative flex items-center justify-center">
+          <Eye className="w-20 h-20 sm:w-20 sm:h-20 text-white" strokeWidth={2.5} />
+          {!isLeftCover && (
+            <img
+              src={handCoverGif}
+              alt={`Cover ${info.cover} eye`}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-36 sm:w-80 sm:h-40 md:w-96 md:h-48 max-w-none object-contain pointer-events-none"
+            />
+          )}
+        </div>
       </div>
 
       {/* How-to instruction */}
@@ -104,7 +120,7 @@ export default function InstructionScreen({ eye, onStart, disabled = false, load
 
       {/* Start button */}
       <div className="flex flex-col items-center gap-2 pb-16">
-        <BlueGradientButton onClick={onStart}>
+        <BlueGradientButton onClick={handleStart} disabled={disabled || loading}>
           {t('common.start')}
         </BlueGradientButton>
       </div>
