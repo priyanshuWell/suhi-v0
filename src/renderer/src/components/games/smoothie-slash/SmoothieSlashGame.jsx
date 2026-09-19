@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { setScreening } from "../../../features/common/commonSlice"
 import { useTranslation } from "react-i18next"
 import { motion, motionValue, AnimatePresence } from "framer-motion"
 import scoreFrame from "../../../assets/smoothie/score-frame.png"
@@ -293,6 +294,7 @@ const slideVariants = {
 export default function SmoothieSlashGame() {
     const { t } = useTranslation()
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const storeUser = useSelector((s) => s.common.user)
     const storeScreening = useSelector((s) => s.common.screening)
     const rippleRef = useRef([])
@@ -642,12 +644,16 @@ export default function SmoothieSlashGame() {
         )
 
         // derive next route from screening.next_stage in the final stage/complete response
-        if (finalRes?.screening?.next_stage) {
-            nextRouteRef.current = getNextRoute(finalRes.screening.next_stage, "/voice")
-            console.log("[SmoothieSlash] next route from screening:", nextRouteRef.current)
+        // and update Redux so ProgressStage fills correctly on subsequent screens
+        if (finalRes?.screening) {
+            dispatch(setScreening(finalRes.screening))
+            if (finalRes.screening.next_stage) {
+                nextRouteRef.current = getNextRoute(finalRes.screening.next_stage, "/voice")
+                console.log("[SmoothieSlash] next route from screening:", nextRouteRef.current)
+            }
         } else {
             console.warn(
-                "[SmoothieSlash] no screening.next_stage in final response — using fallback route:",
+                "[SmoothieSlash] no screening in final response — using fallback route:",
                 nextRouteRef.current
             )
         }

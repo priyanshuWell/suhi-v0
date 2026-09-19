@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { setScreening } from "../../../features/common/commonSlice"
 import { AnimatePresence } from "framer-motion"
 import BeatDropStage from "./BeatDropStage"
 import IntroScreen from "./IntroScreen"
@@ -55,6 +56,7 @@ const APP_VERSION = "1.0.3"
  */
 export default function BeatDropGame() {
     const navigate = useNavigate()
+    const dispatch = useDispatch()
     const storeUser = useSelector((s) => s.common.user)
     const storeScreening = useSelector((s) => s.common.screening)
     const setProgressStage = useSetProgressStage()
@@ -284,6 +286,10 @@ export default function BeatDropGame() {
                 const nextStage = data?.next_stage ?? data?.screening?.next_stage ?? null
                 if (nextStage) {
                     nextRouteRef.current = getNextRoute(nextStage, "/bia/result")
+                }
+                // Update Redux so ProgressStage fills correctly on subsequent screens
+                if (data?.screening) {
+                    dispatch(setScreening(data.screening))
                 }
 
                 if (typeof window !== "undefined") {
