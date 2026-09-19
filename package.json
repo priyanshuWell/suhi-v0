@@ -1,10 +1,6 @@
 {
     "name": "suhi",
-<<<<<<< HEAD
     "version": "1.0.8",
-=======
-    "version": "1.0.5",
->>>>>>> 21e3d533d9e4930ad0724bf5c64b0c03e4922fd3
     "description": "suhi application",
     "main": "./out/main/index.js",
     "author": "SUHI",
