@@ -9,7 +9,7 @@ import ar from "./locales/ar.json"
 import { clearAudioCache } from "../../constants/audio"
 
 i18n.use(initReactI18next).init({
-    lng: "hi",
+    lng: "en",
     debug: true,
     fallbackLng: "en",
     returnObjects: true,
