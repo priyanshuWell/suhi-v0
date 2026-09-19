@@ -36,20 +36,25 @@ export default function OptionButton({
 
     const feedbackStyle = showWrong
         ? {
-              background: "rgba(255, 0, 0, 0.35)",
-              backdropFilter: "blur(10px)",
-              border: "4px solid #fff",
-              boxShadow: "0 0 18px rgba(251,0,0,0.25)"
-          }
+            background: "rgba(255, 0, 0, 0.35)",
+            backdropFilter: "blur(10px)",
+            border: "4px solid #fff",
+            boxShadow: "0 0 18px rgba(251,0,0,0.25)"
+        }
         : showRight
-          ? {
+            ? {
                 background: "rgba(9, 255, 0, 0.16)",
                 backdropFilter: "blur(20px)",
                 border: "5px solid #fff",
                 boxShadow: "0 0 18px rgba(9,255,0,0.25)",
                 fill: "rgba(9, 255, 0, 0.15)"
             }
-          : {}
+            : isSelected
+                ? {
+                    border: "4px solid #d1a917",
+                    boxShadow: "0 0 18px rgba(250, 204, 21, 0.45)"
+                }
+                : {}
     return (
         <BlackGradientButton
             onClick={onClick}
